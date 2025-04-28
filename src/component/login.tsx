@@ -4,6 +4,6 @@ export const Login = () => {
     return (
         <>
             <button onClick={() => signIn("google", {redirectTo: "/dashboard"})}>Google</button>
-        </>
+            </>
     );
 };
