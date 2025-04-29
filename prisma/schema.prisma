@@ -6,7 +6,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -14,22 +13,199 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Post {
+model TypeRent {
+  id          String    @id @default(cuid())
+  name        String
+  description String
+  products    Product[]
+}
+
+model Equipment {
+  id       String    @id @default(cuid())
+  name     String
+  products Product[]
+}
+
+model Services {
+  id       String    @id @default(cuid())
+  name     String
+  products Product[]
+}
+
+model Meals {
+  id       String    @id @default(cuid())
+  name     String
+  products Product[]
+}
+
+model Security {
+  id       String    @id @default(cuid())
+  name     String
+  products Product[]
+}
+
+model Product {
+  id               String            @id @default(cuid())
+  name             String
+  description      String
+  address          String
+  basePrice        String
+  room             BigInt?
+  bathroom         BigInt?
+  arriving         BigInt
+  leaving          BigInt
+  autoAccept       Boolean
+  equipement       BigInt?
+  meal             BigInt?
+  services         BigInt?
+  security         BigInt?
+  minRent          BigInt?
+  maxRent          BigInt?
+  advanceRent      BigInt?
+  delayTime        BigInt?
+  phone            String
+  categories       BigInt
+  minPeople        BigInt?
+  maxPeople        BigInt?
+  img              Images[]
+  validate         Boolean
+  userManager      BigInt
+  typeId           String
+  type             TypeRent          @relation(fields: [typeId], references: [id])
+  equipments       Equipment[]
+  servicesList     Services[]
+  mealsList        Meals[]
+  securities       Security[]
+  options          Options[]
+  rents            Rent[]
+  specificRequests SpecificRequest[]
+  specificPrices   SpecificPrices[]
+  reviews          Review[]
+}
+
+model Images {
+  id      String    @id @default(cuid())
+  img     String
+  Product Product[]
+}
+
+model SpecificPrices {
   id        String  @id @default(cuid())
-  title     String
-  content   String?
-  published Boolean @default(false)
-  author    User?   @relation(fields: [authorId], references: [id])
-  authorId  String?
+  productId String
+  day       BigInt
+  price     BigInt
+  active    BigInt
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model SpecificRequest {
+  id        String  @id @default(cuid())
+  productId String
+  name      String
+  text      String
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model Options {
+  id        String  @id @default(cuid())
+  productId String
+  name      String
+  price     BigInt
+  type      BigInt
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model Rent {
+  id           String  @id @default(cuid())
+  productId    String
+  userId       BigInt
+  arrivingDate BigInt
+  leavingDate  BigInt
+  numberPeople BigInt
+  options      BigInt
+  notes        BigInt
+  accepted     Boolean
+  prices       BigInt
+  product      Product @relation(fields: [productId], references: [id])
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  productId   String
+  title       String
+  text        String
+  grade       Int
+  visitDate   DateTime
+  publishDate DateTime
+  product     Product  @relation(fields: [productId], references: [id])
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String?
-  email     String?  @unique
-  createdAt DateTime @default(now()) @map(name: "created_at")
-  updatedAt DateTime @updatedAt @map(name: "updated_at")
-  posts     Post[]
+  id             String          @id @default(cuid())
+  name           String?
+  lastname       String?
+  profilePicture String?
+  info           String?
+  password       String?
+  email          String          @unique
+  emailVerified  DateTime?
+  image          String?
+  accounts       Account[]
+  sessions       Session[]
+  Authenticator  Authenticator[]
 
-  @@map(name: "users")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+// Optional for WebAuthn support
+model Authenticator {
+  credentialID         String  @unique
+  userId               String
+  providerAccountId    String
+  credentialPublicKey  String
+  counter              Int
+  credentialDeviceType String
+  credentialBackedUp   Boolean
+  transports           String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, credentialID])
 }
