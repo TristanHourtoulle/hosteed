@@ -3,6 +3,7 @@ import type { NextAuthConfig} from "next-auth";
 import Credentials from "next-auth/providers/credentials"
 import { UserService } from "@/lib/services/user.service";
 import { signInSchema } from "@/lib/zod/auth.schema";
+import {UserInterface} from "@/lib/interface/userInterface";
 
 export default {
     providers: [
@@ -29,9 +30,10 @@ export default {
                         id: user.id,
                         email: user.email,
                         name: user.name || "",
-                        lastname: user.lastname || "",
+                        lastName: user.lastname || "",
                         emailVerified: user.emailVerified,
-                        image: user.image || null
+                        image: user.image || null,
+                        password: user.password || null
                     };
                 } catch (error) {
                     console.error("Erreur d'authentification:", error);

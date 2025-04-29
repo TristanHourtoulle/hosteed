@@ -1,15 +1,15 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
-export class UserService {
-    static async findUserByEmail(email: string) {
+export class TypeRentService {
+    static async findTypRentById(id: string) {
         try {
-            const user = await prisma.user.findUnique({
-                where: { email },
+            const typeRent = await prisma.typeRent.findUnique({
+                where: { id },
             });
-            return user;
+            return typeRent;
         } catch (error) {
-            console.error("Erreur lors de la recherche de l'utilisateur:", error);
+            console.error("Erreur lors de la recherche du type de location:", error);
             return null;
         }
     }
