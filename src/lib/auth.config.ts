@@ -1,11 +1,13 @@
 import Google from 'next-auth/providers/google'
 import type { NextAuthConfig} from "next-auth";
 import Credentials from "next-auth/providers/credentials"
-import { UserService } from "@/lib/services/user.service";
 import { signInSchema } from "@/lib/zod/auth.schema";
+import { findUserByEmail, verifyPassword} from "@/lib/services/user.service";
+import { UserRole} from "@prisma/client";
 import {UserInterface} from "@/lib/interface/userInterface";
 
 export default {
+    secret: process.env.AUTH_SECRET,
     providers: [
         Google({
             clientId: process.env.AUTH_GOOGLE_ID,
@@ -19,12 +21,11 @@ export default {
             },
             async authorize(credentials) {
                 if (!credentials?.email || !credentials?.password) return null;
-
                 try {
                     const { email, password } = await signInSchema.parseAsync(credentials);
-                    const user = await UserService.findUserByEmail(email);
+                    const user = await findUserByEmail(email);
                     if (!user) return null;
-                    const isPasswordValid = await UserService.verifyPassword(password, user.password || "");
+                    const isPasswordValid = await verifyPassword(password, user.password || "");
                     if (!isPasswordValid) return null;
                     return {
                         id: user.id,
@@ -33,7 +34,8 @@ export default {
                         lastName: user.lastname || "",
                         emailVerified: user.emailVerified,
                         image: user.image || null,
-                        password: user.password || null
+                        password: user.password || null,
+                        roles: user.roles
                     };
                 } catch (error) {
                     console.error("Erreur d'authentification:", error);
@@ -48,6 +50,7 @@ export default {
                 token.id = user.id;
                 token.email = user.email;
                 token.name = user.name;
+                token.role = (user as UserInterface).roles as UserRole;
             }
             return token;
         },
@@ -57,6 +60,7 @@ export default {
                     id: token.id as string,
                     email: token.email as string,
                     name: token.name as string,
+                    roles: token.role as UserRole,
                     emailVerified: token.emailVerified as Date | null
                 };
             }
