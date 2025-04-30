@@ -11,7 +11,7 @@ export default function Dashboard () {
         <>
             {session?.user ? (
                 <div>
-                    <p>Welcome {session.user.name}</p>
+                    <p>Welcome {session.user.name + ' ' + session.user.roles}</p>
                     <button onClick={() => signOut()}>Sign out</button>
                 </div>
             ) : (

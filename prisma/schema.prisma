@@ -153,6 +153,7 @@ model User {
   accounts       Account[]
   sessions       Session[]
   Authenticator  Authenticator[]
+  roles          UserRole        @default(USER)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -208,4 +209,11 @@ model Authenticator {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, credentialID])
+}
+
+enum UserRole {
+  ADMIN
+  BLOGWRITTER
+  HOST
+  USER
 }

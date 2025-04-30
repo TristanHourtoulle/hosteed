@@ -4,6 +4,7 @@ import Credentials from "next-auth/providers/credentials"
 import { UserService } from "@/lib/services/user.service";
 import { signInSchema } from "@/lib/zod/auth.schema";
 import {UserInterface} from "@/lib/interface/userInterface";
+import { UserRole} from "@prisma/client";
 
 export default {
     providers: [
@@ -26,6 +27,7 @@ export default {
                     if (!user) return null;
                     const isPasswordValid = await UserService.verifyPassword(password, user.password || "");
                     if (!isPasswordValid) return null;
+                    console.log("ROLES", user.roles);
                     return {
                         id: user.id,
                         email: user.email,
@@ -33,7 +35,8 @@ export default {
                         lastName: user.lastname || "",
                         emailVerified: user.emailVerified,
                         image: user.image || null,
-                        password: user.password || null
+                        password: user.password || null,
+                        roles: user.roles
                     };
                 } catch (error) {
                     console.error("Erreur d'authentification:", error);
@@ -48,6 +51,7 @@ export default {
                 token.id = user.id;
                 token.email = user.email;
                 token.name = user.name;
+                token.role = (user as any).roles as UserRole;
             }
             return token;
         },
@@ -57,6 +61,7 @@ export default {
                     id: token.id as string,
                     email: token.email as string,
                     name: token.name as string,
+                    roles: token.role as UserRole,
                     emailVerified: token.emailVerified as Date | null
                 };
             }
