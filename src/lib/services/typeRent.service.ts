@@ -40,20 +40,21 @@ export class TypeRentService {
                 updateData.password = await bcrypt.hash(data.password, 10);
             }
 
-            const user = await prisma.user.update({
+            const typeRent = await prisma.typeRent.update({
                 where: { id },
                 data: updateData,
                 select: {
                     id: true,
-                    email: true,
                     name: true,
-                    lastname: true,
-                    emailVerified: true
+                    description: true,
+                    price: true,
+                    createdAt: true,
+                    updatedAt: true
                 }
             });
-            return user;
+            return typeRent;
         } catch (error) {
-            console.error("Erreur lors de la mise à jour de l'utilisateur:", error);
+            console.error("Erreur lors de la mise à jour du type de location:", error);
             return null;
         }
     }
