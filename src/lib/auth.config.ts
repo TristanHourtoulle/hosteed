@@ -1,12 +1,12 @@
 import Google from 'next-auth/providers/google'
 import type { NextAuthConfig} from "next-auth";
 import Credentials from "next-auth/providers/credentials"
-import { UserService } from "@/lib/services/user.service";
 import { signInSchema } from "@/lib/zod/auth.schema";
-import {UserInterface} from "@/lib/interface/userInterface";
+import { findUserByEmail, verifyPassword} from "@/lib/services/user.service";
 import { UserRole} from "@prisma/client";
 
 export default {
+    secret: process.env.AUTH_SECRET,
     providers: [
         Google({
             clientId: process.env.AUTH_GOOGLE_ID,
@@ -20,14 +20,12 @@ export default {
             },
             async authorize(credentials) {
                 if (!credentials?.email || !credentials?.password) return null;
-
                 try {
                     const { email, password } = await signInSchema.parseAsync(credentials);
-                    const user = await UserService.findUserByEmail(email);
+                    const user = await findUserByEmail(email);
                     if (!user) return null;
-                    const isPasswordValid = await UserService.verifyPassword(password, user.password || "");
+                    const isPasswordValid = await verifyPassword(password, user.password || "");
                     if (!isPasswordValid) return null;
-                    console.log("ROLES", user.roles);
                     return {
                         id: user.id,
                         email: user.email,

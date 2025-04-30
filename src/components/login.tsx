@@ -1,6 +1,7 @@
 'use client'
 import { signIn } from "next-auth/react";
 import { useState } from "react";
+import { createUser } from "@/lib/services/user.service";
 
 export const Login = () => {
     const [email, setEmail] = useState("");
@@ -26,6 +27,26 @@ export const Login = () => {
         }
     };
 
+    async function submit() {
+        try {
+            const newUser = await createUser({
+                email: "pierre@pierre.pierre",
+                password: "pierre",
+                name: "Pierre",
+                lastname: "Maurer"
+            });
+
+            if (!newUser) {
+                setError("Erreur lors de la création de l'utilisateur");
+                return;
+            }
+
+            // Redirection après inscription réussie
+            window.location.href = "/dashboard";
+        } catch (error) {
+            setError("Une erreur est survenue lors de l'inscription");
+        }
+    }
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
             <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow-lg">
@@ -89,6 +110,14 @@ export const Login = () => {
                         className="text-indigo-600 hover:text-indigo-500"
                     >
                         Se connecter avec Google
+                    </button>
+                </div>
+                <div className="mt-4 text-center">
+                    <button
+                        onClick={() => submit()}
+                        className="text-indigo-600 hover:text-indigo-500"
+                    >
+                        Register
                     </button>
                 </div>
             </div>
