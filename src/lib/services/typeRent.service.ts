@@ -17,7 +17,7 @@ export async function findAllTypeRent() {
     try {
         return await prisma.typeRent.findMany();
     } catch (error) {
-        console.error("Erreur lors de la recherche de l'utilisateur:", error);
+        console.error("Erreur lors de la recherche des types de location:", error);
         return null;
     }
 }
