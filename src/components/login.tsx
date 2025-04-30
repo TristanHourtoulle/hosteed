@@ -22,7 +22,7 @@ export const Login = () => {
             } else {
                 window.location.href = "/dashboard";
             }
-        } catch (error) {
+        } catch {
             setError("Une erreur est survenue");
         }
     };
@@ -43,7 +43,7 @@ export const Login = () => {
 
             // Redirection après inscription réussie
             window.location.href = "/dashboard";
-        } catch (error) {
+        } catch {
             setError("Une erreur est survenue lors de l'inscription");
         }
     }

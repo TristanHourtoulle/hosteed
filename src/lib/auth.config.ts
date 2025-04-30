@@ -4,6 +4,7 @@ import Credentials from "next-auth/providers/credentials"
 import { signInSchema } from "@/lib/zod/auth.schema";
 import { findUserByEmail, verifyPassword} from "@/lib/services/user.service";
 import { UserRole} from "@prisma/client";
+import {UserInterface} from "@/lib/interface/userInterface";
 
 export default {
     secret: process.env.AUTH_SECRET,
@@ -49,7 +50,7 @@ export default {
                 token.id = user.id;
                 token.email = user.email;
                 token.name = user.name;
-                token.role = (user as any).roles as UserRole;
+                token.role = (user as UserInterface).roles as UserRole;
             }
             return token;
         },
