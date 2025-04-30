@@ -21,8 +21,18 @@ export class TypeRentService {
         lastname?: string;
     }) {
         try {
+            const hashedPassword = await bcrypt.hash(data.password, 10);
+            const newTypeRent = await prisma.typeRent.create({
+                data: {
+                    email: data.email,
+                    password: hashedPassword,
+                    name: data.name,
+                    lastname: data.lastname,
+                },
+            });
+            return newTypeRent;
         } catch (error) {
-            console.error("Erreur lors de la création de l'utilisateur:", error);
+            console.error("Erreur lors de la création du type de location:", error);
             return null;
         }
     }
