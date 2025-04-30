@@ -8,7 +8,7 @@ export async function findTypeById(id: string) {
             where: {id},
         });
     } catch (error) {
-        console.error("Erreur lors de la recherche de l'utilisateur:", error);
+        console.error("Erreur lors de la recherche du type de location:", error);
         return null;
     }
 }
