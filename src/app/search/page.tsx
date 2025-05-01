@@ -70,42 +70,105 @@ export default function SearchResults() {
 
                         // Filtre par équipements
                         const matchesEquipments = filters.selectedEquipments.length === 0 || 
-                            filters.selectedEquipments.some(equipmentId => 
+                            filters.selectedEquipments.every(equipmentId => 
                                 product.equipments?.some(equipment => equipment.id === equipmentId)
                             );
 
                         // Filtre par services
                         const matchesServices = filters.selectedServices.length === 0 || 
-                            filters.selectedServices.some(serviceId => 
+                            filters.selectedServices.every(serviceId => 
                                 product.servicesList?.some(service => service.id === serviceId)
                             );
 
                         // Filtre par repas
                         const matchesMeals = filters.selectedMeals.length === 0 || 
-                            filters.selectedMeals.some(mealId => 
+                            filters.selectedMeals.every(mealId => 
                                 product.mealsList?.some(meal => meal.id === mealId)
                             );
 
                         // Filtre par sécurités
-                        const matchesSecurities = filters.selectedSecurities.length === 0 || 
-                            filters.selectedSecurities.some(securityId => 
-                                product.securities?.some(security => security.id === securityId)
-                            );
+                        console.log('Vérification des sécurités:', {
+                            selectedSecurities: filters.selectedSecurities,
+                            productSecurities: product.securities
+                        });
+
+                        let matchesSecurities = true;
+                        if (filters.selectedSecurities.length > 0) {
+                            if (!product.securities || product.securities.length === 0) {
+                                matchesSecurities = false;
+                            } else {
+                                matchesSecurities = filters.selectedSecurities.some(securityId => 
+                                    product.securities?.some(security => security.id === securityId)
+                                );
+                            }
+                        }
+
+                        console.log('Résultat matchesSecurities:', matchesSecurities);
 
                         // Filtre par dates
                         const matchesDates = !filters.arrivingDate || !filters.leavingDate || 
                             (new Date(product.arriving) <= new Date(filters.arrivingDate) && 
                              new Date(product.leaving) >= new Date(filters.leavingDate));
 
-                        // Retourne true si au moins un des filtres est satisfait
-                        return matchesSearch && (
-                            matchesEquipments || 
-                            matchesServices || 
-                            matchesMeals || 
-                            matchesSecurities || 
-                            matchesDates
-                        );
+                        const shouldShow = matchesSearch && matchesEquipments && matchesServices && 
+                               matchesMeals && matchesSecurities && matchesDates;
+
+                        // Logs de débogage détaillés
+                        console.log('Analyse du produit:', {
+                            name: product.name,
+                            conditions: {
+                                matchesSearch,
+                                matchesEquipments,
+                                matchesServices,
+                                matchesMeals,
+                                matchesSecurities,
+                                matchesDates
+                            },
+                            filtres: {
+                                selectedSecurities: filters.selectedSecurities,
+                                selectedEquipments: filters.selectedEquipments,
+                                selectedServices: filters.selectedServices,
+                                selectedMeals: filters.selectedMeals,
+                                arrivingDate: filters.arrivingDate,
+                                leavingDate: filters.leavingDate
+                            },
+                            produit: {
+                                securities: product.securities,
+                                equipments: product.equipments,
+                                servicesList: product.servicesList,
+                                mealsList: product.mealsList,
+                                arriving: product.arriving,
+                                leaving: product.leaving
+                            }
+                        });
+
+                        if (!shouldShow) {
+                            console.log('Produit filtré:', {
+                                name: product.name,
+                                matchesSearch,
+                                matchesEquipments,
+                                matchesServices,
+                                matchesMeals,
+                                matchesSecurities,
+                                matchesDates,
+                                selectedEquipments: filters.selectedEquipments,
+                                productEquipments: product.equipments,
+                                selectedServices: filters.selectedServices,
+                                productServices: product.servicesList,
+                                selectedMeals: filters.selectedMeals,
+                                productMeals: product.mealsList,
+                                selectedSecurities: filters.selectedSecurities,
+                                productSecurities: product.securities,
+                                arrivingDate: filters.arrivingDate,
+                                leavingDate: filters.leavingDate,
+                                productArriving: product.arriving,
+                                productLeaving: product.leaving
+                            });
+                        }
+
+                        return shouldShow;
                     });
+                    console.log('Nombre de produits filtrés:', filteredProducts.length);
                     setProducts(filteredProducts);
                 }
             } catch (error) {
