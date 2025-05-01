@@ -12,6 +12,24 @@ export async function rentById(id: string) {
     }
 }
 
+export async function CheckRentIsAvailable(productId: string, arrivalDate: Date, leavingDate: Date) {
+    try {
+        const existingRent = await prisma.rent.findFirst({
+            where: {
+                productId: productId,
+                AND: [
+                    { arrivingDate: { lt: leavingDate } },
+                    { leavingDate: { gt: arrivalDate } }
+                ]
+            }
+        });
+        return existingRent === null;
+    } catch (error) {
+        console.error("Erreur lors de la vérification de la disponibilité:", error);
+        return false;
+    }
+}
+
 export async function findAllRentByProduct(id: string) {
     try {
         return await prisma.rent.findFirst({

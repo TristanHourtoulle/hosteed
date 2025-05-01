@@ -2,7 +2,7 @@
 import { useSession} from "next-auth/react";
 import {signOut} from "next-auth/react";
 import Link from "next/link";
-import SearchBar from "@/components/ui/searchBar";
+import HomeSearchBar from "@/components/ui/homeSearchBar";
 import {findAllTypeRent} from "@/lib/services/typeRent.service";
 import {useEffect, useState} from "react";
 
@@ -46,8 +46,8 @@ export default function Dashboard() {
                 </button>
               </Link>
           )}
-          <div>
-            <SearchBar/>
+          <div className="mb-8">
+            <HomeSearchBar/>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {typeRent.map((type) => (

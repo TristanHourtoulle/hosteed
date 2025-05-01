@@ -25,7 +25,6 @@ export async function findProductById(id: string) {
     }
 }
 
-// Fonction pour calculer la distance entre deux points en kilomètres
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
     const R = 6371; // Rayon de la Terre en km
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -126,24 +125,19 @@ export async function findProductAll(params?: {
         searchRadius?: number;
         centerLat?: number;
         centerLon?: number;
+        arrivingDate?: string;
+        leavingDate?: string;
 }) {
     try {
-        console.log('findProductAll appelé avec les paramètres:', params);
-        
         const where: any = {
             validate: true
         };
 
         if (params) {
-            // Filtre par type
             if (params.typeId) {
                 where.typeId = params.typeId;
-                console.log('Filtre par type ajouté:', params.typeId);
             }
-
-            // Filtre par géolocalisation si les coordonnées sont fournies
             if (params.centerLat && params.centerLon && params.searchRadius) {
-                // Conversion du rayon en degrés (approximative)
                 const latDegrees = params.searchRadius / 111.32;
                 const lonDegrees = params.searchRadius / (111.32 * Math.cos(params.centerLat * Math.PI / 180));
 
@@ -155,16 +149,25 @@ export async function findProductAll(params?: {
                     gte: params.centerLon - lonDegrees,
                     lte: params.centerLon + lonDegrees
                 };
-                console.log('Filtre de géolocalisation ajouté:', {
-                    latMin: params.centerLat - latDegrees,
-                    latMax: params.centerLat + latDegrees,
-                    lonMin: params.centerLon - lonDegrees,
-                    lonMax: params.centerLon + lonDegrees
-                });
+            }
+
+            if (params.arrivingDate && params.leavingDate) {
+                where.NOT = {
+                    rents: {
+                        some: {
+                            OR: [
+                                {
+                                    AND: [
+                                        { arrivingDate: { lte: new Date(params.leavingDate) } },
+                                        { leavingDate: { gte: new Date(params.arrivingDate) } }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                };
             }
         }
-
-        console.log('Clause WHERE construite:', where);
 
         const products = await prisma.product.findMany({
             where,
@@ -178,21 +181,26 @@ export async function findProductAll(params?: {
                 specificRequests: true,
                 specificPrices: true,
                 reviews: true,
-                img: true
+                img: true,
+                rents: params?.arrivingDate && params?.leavingDate ? {
+                    where: {
+                        OR: [
+                            {
+                                AND: [
+                                    { arrivingDate: { lte: new Date(params.leavingDate) } },
+                                    { leavingDate: { gte: new Date(params.arrivingDate) } }
+                                ]
+                            }
+                        ]
+                    }
+                } : false
             }
         });
+        const availableProducts = params?.arrivingDate && params?.leavingDate
+            ? products.filter(product => product.rents.length === 0)
+            : products;
 
-        console.log('Nombre de produits trouvés:', products.length);
-        if (products.length > 0) {
-            console.log('Premier produit trouvé:', {
-                id: products[0].id,
-                name: products[0].name,
-                address: products[0].address,
-                latitude: products[0].latitude,
-                longitude: products[0].longitude
-            });
-        }
-        return products;
+        return availableProducts;
     } catch (error) {
         console.error("Erreur lors de la recherche des produits:", error);
         return null;
@@ -225,7 +233,6 @@ export async function createProduct(data: {
     images?: string[]; // Tableau de chaînes base64
 }) {
     try {
-        // Créer le produit avec les relations
         const product = await prisma.product.create({
             data: {
                 name: data.name,
@@ -248,7 +255,6 @@ export async function createProduct(data: {
                 type: {
                     connect: { id: data.typeId }
                 },
-                // Connecter les relations si elles existent
                 ...(data.securities && {
                     securities: {
                         connect: data.securities.map(id => ({ id }))
@@ -269,7 +275,6 @@ export async function createProduct(data: {
                         connect: data.servicesList.map(id => ({ id }))
                     }
                 }),
-                // Créer les images si elles existent
                 ...(data.images && {
                     img: {
                         create: data.images.map(base64Image => ({
