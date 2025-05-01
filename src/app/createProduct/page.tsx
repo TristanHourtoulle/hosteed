@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createProduct, fileToBase64 } from '@/lib/services/product.service';
+import { createProduct } from '@/lib/services/product.service';
 import { findAllTypeRent } from '@/lib/services/typeRent.service';
 import { findAllSecurity } from '@/lib/services/security.services';
 import { findAllMeals } from '@/lib/services/meals.service';
@@ -123,7 +123,7 @@ export default function CreateProduct() {
             const newSelected = selectedArray.includes(id)
                 ? selectedArray.filter(item => item !== id)
                 : [...selectedArray, id];
-            
+
             return {
                 ...prev,
                 [`selected${type.charAt(0).toUpperCase() + type.slice(1)}`]: newSelected
@@ -155,14 +155,13 @@ export default function CreateProduct() {
                 })
             );
 
-            // Créer le produit
             const product = await createProduct({
                 ...formData,
                 images: base64Images,
                 securities: formData.selectedSecurities,
-                mealsList: formData.selectedMeals,
+                meals: formData.selectedMeals,
                 equipments: formData.selectedEquipments,
-                servicesList: formData.selectedServices
+                services: formData.selectedServices
             });
 
             if (product) {
@@ -181,7 +180,7 @@ export default function CreateProduct() {
     return (
         <div className="max-w-4xl mx-auto p-6">
             <h1 className="text-2xl font-bold mb-6">Créer un nouveau produit</h1>
-            
+
             {error && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
                     {error}
@@ -318,7 +317,7 @@ export default function CreateProduct() {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Heure d'arrivée</label>
+                        <label className="block text-sm font-medium text-gray-700">Heure d&apos;arrivée</label>
                         <input
                             type="number"
                             name="arriving"
@@ -473,4 +472,4 @@ export default function CreateProduct() {
             </form>
         </div>
     );
-} 
+}

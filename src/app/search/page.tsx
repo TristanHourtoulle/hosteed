@@ -95,7 +95,6 @@ export default function SearchResults() {
                         let matchesSecurities = true;
                         if (filters.selectedSecurities.length > 0) {
                             if (!product.securities || product.securities.length === 0) {
-                                console.log("AUCUN PRODUIT DE SECURITER")
                                 matchesSecurities = false;
                             } else {
                                 matchesSecurities = filters.selectedSecurities.every(securityId =>
@@ -103,10 +102,6 @@ export default function SearchResults() {
                                 );
                             }
                         }
-
-                        console.log('Résultat matchesSecurities:', matchesSecurities);
-
-                        // Filtre par dates
                         const matchesDates = !filters.arrivingDate || !filters.leavingDate ||
                             (new Date(product.arriving) <= new Date(filters.arrivingDate) &&
                              new Date(product.leaving) >= new Date(filters.leavingDate));
@@ -114,7 +109,6 @@ export default function SearchResults() {
                         const shouldShow = matchesSearch && matchesEquipments && matchesServices &&
                                matchesMeals && matchesSecurities && matchesDates;
 
-                        // Logs de débogage détaillés
                         console.log('Analyse du produit:', {
                             name: product.name,
                             conditions: {
@@ -172,7 +166,7 @@ export default function SearchResults() {
                     console.log('Nombre de produits filtrés:', filteredProducts.length);
                     setProducts(filteredProducts);
                 }
-            } catch (error) {
+            } catch {
                 setError('Erreur lors de la récupération des produits');
             } finally {
                 setLoading(false);

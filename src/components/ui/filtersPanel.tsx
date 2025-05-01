@@ -153,7 +153,7 @@ export default function FiltersPanel({ filters, setFilters }: FiltersPanelProps)
     return (
         <div className="w-64 bg-white p-4 rounded-lg shadow-md">
             <h2 className="text-lg font-semibold mb-4 text-gray-900">Filtres</h2>
-            
+
             <div className="mb-6">
                 <h3 className="text-sm font-medium mb-2 text-gray-900">Options de sécurité</h3>
                 <div className="space-y-2">
@@ -238,7 +238,7 @@ export default function FiltersPanel({ filters, setFilters }: FiltersPanelProps)
             </div>
 
             <div className="mb-6">
-                <h3 className="text-sm font-medium mb-2 text-gray-900">Date d'arrivée</h3>
+                <h3 className="text-sm font-medium mb-2 text-gray-900">Date d&apos;arrivée</h3>
                 <input
                     type="date"
                     value={arrivingDate}

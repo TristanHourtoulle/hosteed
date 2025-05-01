@@ -2,15 +2,6 @@
 import {prisma} from "@/lib/prisma";
 import {Prisma} from "@prisma/client";
 
-// Fonctions utilitaires pour la conversion Date <-> BigInt
-function dateToBigInt(date: Date): bigint {
-    return BigInt(date.getTime());
-}
-
-function bigIntToDate(timestamp: bigint): Date {
-    return new Date(Number(timestamp));
-}
-
 type RentWithRelations = Prisma.RentGetPayload<{
     include: {
         product: {
@@ -30,8 +21,8 @@ type RentWithDates = Omit<RentWithRelations, 'arrivingDate' | 'leavingDate'> & {
 function convertRentToDates(rent: RentWithRelations): RentWithDates {
     return {
         ...rent,
-        arrivingDate: bigIntToDate(rent.arrivingDate),
-        leavingDate: bigIntToDate(rent.leavingDate)
+        arrivingDate: rent.arrivingDate,
+        leavingDate: rent.leavingDate,
     };
 }
 

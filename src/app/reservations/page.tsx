@@ -37,7 +37,7 @@ export default function ReservationsPage() {
             try {
                 setLoading(true);
                 const userRents = await findAllRentByUserId(session.user.id);
-                
+
                 if (userRents) {
                     // Récupérer les détails des produits pour chaque réservation
                     const rentsWithProducts = await Promise.all(
@@ -45,6 +45,9 @@ export default function ReservationsPage() {
                             const product = await findProductById(rent.productId);
                             return {
                                 ...rent,
+                                arrivingDate: new Date(Number(rent.arrivingDate)),
+                                leavingDate: new Date(Number(rent.leavingDate)),
+                                options: [], // Initialiser avec un tableau vide car le type attendu est un tableau
                                 product: product || undefined
                             };
                         })
@@ -90,12 +93,12 @@ export default function ReservationsPage() {
         <div className="min-h-screen bg-white py-12">
             <div className="container mx-auto px-4">
                 <h1 className="text-3xl font-bold text-gray-900 mb-8">Mes réservations</h1>
-                
+
                 {rents.length === 0 ? (
                     <div className="text-center py-12">
-                        <p className="text-gray-600">Vous n'avez pas encore de réservations</p>
-                        <Link 
-                            href="/search" 
+                        <p className="text-gray-600">Vous n&apos;avez pas encore de réservations</p>
+                        <Link
+                            href="/search"
                             className="mt-4 inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                         >
                             Trouver un hébergement
@@ -120,15 +123,15 @@ export default function ReservationsPage() {
                                         </div>
                                     )}
                                 </div>
-                                
+
                                 <div className="p-4">
                                     <h3 className="text-lg font-semibold text-gray-900 mb-2">
                                         {rent.product?.name || 'Hébergement non trouvé'}
                                     </h3>
-                                    
+
                                     <div className="space-y-2 text-gray-600">
                                         <p>
-                                            <span className="font-medium">Date d'arrivée:</span>{' '}
+                                            <span className="font-medium">Date d&apos;arrivée:</span>{' '}
                                             {new Date(rent.arrivingDate).toLocaleDateString()}
                                         </p>
                                         <p>
@@ -164,11 +167,11 @@ export default function ReservationsPage() {
                                         </span>
                                     </div>
 
-                                    <Link 
+                                    <Link
                                         href={`/product/${rent.productId}`}
                                         className="mt-4 inline-block text-blue-600 hover:text-blue-800"
                                     >
-                                        Voir l'hébergement
+                                        Voir l&apos;hébergement
                                     </Link>
                                 </div>
                             </div>
@@ -178,4 +181,4 @@ export default function ReservationsPage() {
             </div>
         </div>
     );
-} 
+}

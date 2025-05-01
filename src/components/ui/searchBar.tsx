@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import {findAllTypeRent} from "@/lib/services/typeRent.service";
 import {TypeRent} from "@prisma/client";
 
@@ -22,7 +21,6 @@ interface SearchBarProps {
 }
 
 export default function SearchBar({ onSearch }: SearchBarProps) {
-    const router = useRouter();
     const [location, setLocation] = useState('');
     const [type, setType] = useState('');
     const [suggestions, setSuggestions] = useState<Suggestion[]>([]);

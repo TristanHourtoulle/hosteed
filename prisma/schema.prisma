@@ -53,8 +53,8 @@ model Product {
   basePrice        String
   room             BigInt?
   bathroom         BigInt?
-  arriving         DateTime
-  leaving          DateTime
+  arriving         Int
+  leaving          Int
   autoAccept       Boolean
   equipement       BigInt?
   meal             BigInt?
@@ -117,7 +117,7 @@ model Options {
   name      String
   price     BigInt
   type      BigInt
-  product   Product @relation(fields: [productId], references: [id])
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   Rent      Rent[]  @relation("OptionsToRent")
 }
 

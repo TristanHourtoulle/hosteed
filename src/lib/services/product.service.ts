@@ -88,9 +88,10 @@ export async function createProduct(params: {
     basePrice: string,
     room: number | null,
     bathroom: number | null,
-    arriving: Date,
-    leaving: Date,
+    arriving: number,
+    leaving: number,
     typeId: string,
+    securities: string[],
     equipments: string[],
     services: string[],
     meals: string[],
@@ -130,6 +131,9 @@ export async function createProduct(params: {
                 },
                 mealsList: {
                     connect: params.meals.map(mealId => ({ id: mealId }))
+                },
+                securities: {
+                    connect: params.securities.map(securityId => ({ id: securityId }))
                 },
                 img: {
                     create: params.images.map(img => ({ img }))

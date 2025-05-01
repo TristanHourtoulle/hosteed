@@ -5,15 +5,16 @@ import { findProductById } from '@/lib/services/product.service';
 import { CheckRentIsAvailable } from '@/lib/services/rents.service';
 import Image from 'next/image';
 import Link from 'next/link';
+import {Equipment, Meals, Services} from "@prisma/client";
 
 interface Product {
     id: string;
     name: string;
     description: string;
     basePrice: string;
-    equipments: any[];
-    servicesList: any[];
-    mealsList: any[];
+    equipments: Equipment[];
+    servicesList: Services[];
+    mealsList: Meals[];
     img: { img: string }[];
 }
 
@@ -41,7 +42,7 @@ export default function ProductDetails() {
                     setError('Produit non trouvé');
                 }
             } catch (error) {
-                setError('Erreur lors de la récupération du produit');
+                setError('Erreur lors de la récupération du produit' + error);
             } finally {
                 setLoading(false);
             }
@@ -67,7 +68,7 @@ export default function ProductDetails() {
 
     const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        
+
         if (name === 'arrivingDate') {
             if (formData.leavingDate && value > formData.leavingDate) {
                 setFormData(prev => ({
@@ -78,7 +79,7 @@ export default function ProductDetails() {
                 return;
             }
         }
-        
+
         if (name === 'leavingDate' && value <= formData.arrivingDate) {
             return;
         }
@@ -114,7 +115,7 @@ export default function ProductDetails() {
         <div className="min-h-screen bg-white py-12">
             <div className="container mx-auto px-4">
                 <h1 className="text-3xl font-bold text-gray-900 mb-8">{product.name}</h1>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div>
                         <div className="relative h-96 w-full mb-6">
@@ -142,7 +143,7 @@ export default function ProductDetails() {
                                 <div>
                                     <h2 className="text-2xl font-semibold mb-4 text-gray-900">Équipements</h2>
                                     <ul className="space-y-2 text-gray-700">
-                                        {product.equipments?.map((equipment: any) => (
+                                        {product.equipments?.map((equipment: Equipment) => (
                                             <li key={equipment.id}>{equipment.name}</li>
                                         ))}
                                     </ul>
@@ -151,7 +152,7 @@ export default function ProductDetails() {
                                 <div>
                                     <h2 className="text-2xl font-semibold mb-4 text-gray-900">Services</h2>
                                     <ul className="space-y-2 text-gray-700">
-                                        {product.servicesList?.map((service: any) => (
+                                        {product.servicesList?.map((service: Services) => (
                                             <li key={service.id}>{service.name}</li>
                                         ))}
                                     </ul>
@@ -160,7 +161,7 @@ export default function ProductDetails() {
                                 <div>
                                     <h2 className="text-2xl font-semibold mb-4 text-gray-900">Repas</h2>
                                     <ul className="space-y-2 text-gray-700">
-                                        {product.mealsList?.map((meal: any) => (
+                                        {product.mealsList?.map((meal: Meals) => (
                                             <li key={meal.id}>{meal.name}</li>
                                         ))}
                                     </ul>
@@ -171,11 +172,11 @@ export default function ProductDetails() {
 
                     <div className="bg-gray-50 p-6 rounded-lg">
                         <h2 className="text-2xl font-semibold mb-6 text-gray-900">Réserver</h2>
-                        
+
                         <div className="space-y-4">
                             <div>
                                 <label htmlFor="arrivingDate" className="block text-sm font-medium text-gray-700">
-                                    Date d'arrivée
+                                    Date d&apos;arrivée
                                 </label>
                                 <input
                                     type="date"
@@ -204,19 +205,19 @@ export default function ProductDetails() {
                                 />
                                 {!formData.arrivingDate && (
                                     <p className="text-sm text-gray-500 mt-1">
-                                        Veuillez d'abord sélectionner une date d'arrivée
+                                        Veuillez d&apos;abord sélectionner une date d&apos;arrivée
                                     </p>
                                 )}
                             </div>
 
                             {!isAvailable && formData.arrivingDate && formData.leavingDate && (
                                 <p className="text-red-600 text-sm">
-                                    Ce logement n'est pas disponible pour les dates sélectionnées.
+                                    Ce logement n&apos;est pas disponible pour les dates sélectionnées.
                                 </p>
                             )}
 
                             <div className="pt-4">
-                                <Link 
+                                <Link
                                     href={`/product/${id}/reservation`}
                                     className={`w-full block text-center py-3 px-6 rounded-lg transition-colors duration-200 ${
                                         !isAvailable || !formData.arrivingDate || !formData.leavingDate
@@ -243,4 +244,4 @@ export default function ProductDetails() {
             </div>
         </div>
     );
-} 
+}

@@ -4,7 +4,6 @@ import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { createRent, CheckRentIsAvailable } from '@/lib/services/rents.service';
 import {findProductById} from "@/lib/services/product.service";
-import Image from 'next/image';
 
 interface Option {
     id: string;
@@ -53,7 +52,7 @@ export default function ReservationPage() {
                     setError('Produit non trouvé');
                 }
             } catch (error) {
-                setError('Erreur lors de la récupération du produit');
+                setError('Erreur lors de la récupération du produit'+ error);
             } finally {
                 setLoading(false);
             }
@@ -207,9 +206,14 @@ export default function ReservationPage() {
                     Réserver {product?.name || 'Hébergement'}
                 </h1>
 
+                {error ? (
+                    <div className="text-center py-12">
+                        <p className="text-red-600">{error}</p>
+                    </div>
+                ): null}
                 {!product ? (
                     <div className="text-center py-12">
-                        <p className="text-red-600">Impossible de charger les informations de l'hébergement</p>
+                        <p className="text-red-600">Impossible de charger les informations de l&apos;hébergement</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -232,7 +236,7 @@ export default function ReservationPage() {
 
                                 <div>
                                     <label htmlFor="arrivingDate" className="block text-sm font-medium text-gray-700">
-                                        Date d'arrivée
+                                        Date d&apos;arrivée
                                     </label>
                                     <input
                                         type="date"
@@ -263,7 +267,7 @@ export default function ReservationPage() {
                                     />
                                     {!formData.arrivingDate && (
                                         <p className="text-sm text-gray-500 mt-1">
-                                            Veuillez d'abord sélectionner une date d'arrivée
+                                            Veuillez d&apos;abord sélectionner une date d&apos;arrivée
                                         </p>
                                     )}
                                 </div>
@@ -308,7 +312,7 @@ export default function ReservationPage() {
 
                                 {!isAvailable && formData.arrivingDate && formData.leavingDate && (
                                     <p className="text-red-600 text-sm mt-2">
-                                        Ce logement n'est pas disponible pour les dates sélectionnées.
+                                        Ce logement n&apos;est pas disponible pour les dates sélectionnées.
                                     </p>
                                 )}
                             </form>
