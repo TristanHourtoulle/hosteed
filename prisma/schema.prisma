@@ -38,6 +38,13 @@ model Meals {
   products Product[]
 }
 
+model TypeRoom {
+  id          String    @id @default(cuid())
+  name        String
+  description String
+  products    Product[]
+}
+
 model Security {
   id       String    @id @default(cuid())
   name     String
@@ -49,9 +56,12 @@ model Product {
   name             String
   description      String
   address          String
+  longitude        Float
+  latitude         Float
   basePrice        String
   room             BigInt?
   bathroom         BigInt?
+  sizeRoom         Int?
   arriving         BigInt
   leaving          BigInt
   autoAccept       Boolean
@@ -75,6 +85,7 @@ model Product {
   equipments       Equipment[]
   servicesList     Services[]
   mealsList        Meals[]
+  typeRoom         TypeRoom[]
   securities       Security[]
   options          Options[]
   rents            Rent[]
@@ -126,7 +137,7 @@ model Rent {
   notes        BigInt
   accepted     Boolean
   prices       BigInt
-  product      Product @relation(fields: [productId], references: [id])
+  product      Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model Review {
