@@ -124,20 +124,22 @@ model Options {
   price     BigInt
   type      BigInt
   product   Product @relation(fields: [productId], references: [id])
+  Rent      Rent[]
 }
 
 model Rent {
-  id           String  @id @default(cuid())
+  id           String    @id @default(cuid())
   productId    String
-  userId       BigInt
-  arrivingDate BigInt
-  leavingDate  BigInt
+  userId       String
+  arrivingDate DateTime
+  leavingDate  DateTime
   numberPeople BigInt
-  options      BigInt
+  options      Options[]
   notes        BigInt
   accepted     Boolean
   prices       BigInt
-  product      Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product      Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Review {
@@ -168,6 +170,8 @@ model User {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  Rent Rent[]
 }
 
 model Account {
