@@ -5,6 +5,8 @@ import { signInSchema } from "@/lib/zod/auth.schema";
 import { findUserByEmail, verifyPassword} from "@/lib/services/user.service";
 import { UserRole} from "@prisma/client";
 import {UserInterface} from "@/lib/interface/userInterface";
+import {prisma} from "@/lib/prisma";
+import {stripe} from "./stripe"
 
 export default {
     secret: process.env.AUTH_SECRET,
@@ -65,6 +67,28 @@ export default {
                 };
             }
             return session;
+        }
+    },
+    events: {
+        createUser: async (message) => {
+            const userId = message.user.id;
+            const email = message.user.email;
+            const name = message.user.name;
+            if (!userId || !email) {
+                return;
+            }
+            const stripeCustomer = await stripe.customers.create({
+                email,
+                name: name ?? undefined
+            })
+            await prisma.user.update({
+                where: {
+                    id: userId
+                },
+                data: {
+                    stripeCustomerId: stripeCustomer.id
+                }
+            })
         }
     }
 } satisfies NextAuthConfig;
