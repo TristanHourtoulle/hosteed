@@ -64,25 +64,25 @@ export default function SearchResults() {
                     // Filtrer les produits en fonction de la recherche et des filtres
                     const filteredProducts = allProducts.filter((product: Product) => {
                         // Filtre par recherche textuelle
-                        const matchesSearch = 
+                        const matchesSearch =
                             product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                             product.description.toLowerCase().includes(searchQuery.toLowerCase());
 
                         // Filtre par équipements
-                        const matchesEquipments = filters.selectedEquipments.length === 0 || 
-                            filters.selectedEquipments.every(equipmentId => 
+                        const matchesEquipments = filters.selectedEquipments.length === 0 ||
+                            filters.selectedEquipments.every(equipmentId =>
                                 product.equipments?.some(equipment => equipment.id === equipmentId)
                             );
 
                         // Filtre par services
-                        const matchesServices = filters.selectedServices.length === 0 || 
-                            filters.selectedServices.every(serviceId => 
+                        const matchesServices = filters.selectedServices.length === 0 ||
+                            filters.selectedServices.every(serviceId =>
                                 product.servicesList?.some(service => service.id === serviceId)
                             );
 
                         // Filtre par repas
-                        const matchesMeals = filters.selectedMeals.length === 0 || 
-                            filters.selectedMeals.every(mealId => 
+                        const matchesMeals = filters.selectedMeals.length === 0 ||
+                            filters.selectedMeals.every(mealId =>
                                 product.mealsList?.some(meal => meal.id === mealId)
                             );
 
@@ -95,9 +95,10 @@ export default function SearchResults() {
                         let matchesSecurities = true;
                         if (filters.selectedSecurities.length > 0) {
                             if (!product.securities || product.securities.length === 0) {
+                                console.log("AUCUN PRODUIT DE SECURITER")
                                 matchesSecurities = false;
                             } else {
-                                matchesSecurities = filters.selectedSecurities.some(securityId => 
+                                matchesSecurities = filters.selectedSecurities.every(securityId =>
                                     product.securities?.some(security => security.id === securityId)
                                 );
                             }
@@ -106,11 +107,11 @@ export default function SearchResults() {
                         console.log('Résultat matchesSecurities:', matchesSecurities);
 
                         // Filtre par dates
-                        const matchesDates = !filters.arrivingDate || !filters.leavingDate || 
-                            (new Date(product.arriving) <= new Date(filters.arrivingDate) && 
+                        const matchesDates = !filters.arrivingDate || !filters.leavingDate ||
+                            (new Date(product.arriving) <= new Date(filters.arrivingDate) &&
                              new Date(product.leaving) >= new Date(filters.leavingDate));
 
-                        const shouldShow = matchesSearch && matchesEquipments && matchesServices && 
+                        const shouldShow = matchesSearch && matchesEquipments && matchesServices &&
                                matchesMeals && matchesSecurities && matchesDates;
 
                         // Logs de débogage détaillés

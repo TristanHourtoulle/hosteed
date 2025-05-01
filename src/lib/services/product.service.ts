@@ -65,6 +65,7 @@ export async function findAllProducts(): Promise<ProductWithDates[] | null> {
                 img: true,
                 type: true,
                 equipments: true,
+                securities: true,
                 servicesList: true,
                 mealsList: true,
                 options: true
