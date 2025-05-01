@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -23,32 +17,32 @@ model TypeRent {
 model Equipment {
   id       String    @id @default(cuid())
   name     String
-  products Product[]
+  products Product[] @relation("EquipmentToProduct")
 }
 
 model Services {
   id       String    @id @default(cuid())
   name     String
-  products Product[]
+  products Product[] @relation("ProductToServices")
 }
 
 model Meals {
   id       String    @id @default(cuid())
   name     String
-  products Product[]
+  products Product[] @relation("MealsToProduct")
 }
 
 model TypeRoom {
   id          String    @id @default(cuid())
   name        String
   description String
-  products    Product[]
+  products    Product[] @relation("ProductToTypeRoom")
 }
 
 model Security {
   id       String    @id @default(cuid())
   name     String
-  products Product[]
+  products Product[] @relation("ProductToSecurity")
 }
 
 model Product {
@@ -56,14 +50,11 @@ model Product {
   name             String
   description      String
   address          String
-  longitude        Float
-  latitude         Float
   basePrice        String
   room             BigInt?
   bathroom         BigInt?
-  sizeRoom         Int?
-  arriving         BigInt
-  leaving          BigInt
+  arriving         DateTime
+  leaving          DateTime
   autoAccept       Boolean
   equipement       BigInt?
   meal             BigInt?
@@ -73,31 +64,34 @@ model Product {
   maxRent          BigInt?
   advanceRent      BigInt?
   delayTime        BigInt?
-  phone            String
   categories       BigInt
   minPeople        BigInt?
   maxPeople        BigInt?
-  img              Images[]
   validate         Boolean
   userManager      BigInt
   typeId           String
-  type             TypeRent          @relation(fields: [typeId], references: [id])
-  equipments       Equipment[]
-  servicesList     Services[]
-  mealsList        Meals[]
-  typeRoom         TypeRoom[]
-  securities       Security[]
+  phone            String
+  latitude         Float
+  longitude        Float
+  sizeRoom         Int?
   options          Options[]
+  type             TypeRent          @relation(fields: [typeId], references: [id])
   rents            Rent[]
-  specificRequests SpecificRequest[]
-  specificPrices   SpecificPrices[]
   reviews          Review[]
+  specificPrices   SpecificPrices[]
+  specificRequests SpecificRequest[]
+  equipments       Equipment[]       @relation("EquipmentToProduct")
+  img              Images[]          @relation("ImagesToProduct")
+  mealsList        Meals[]           @relation("MealsToProduct")
+  securities       Security[]        @relation("ProductToSecurity")
+  servicesList     Services[]        @relation("ProductToServices")
+  typeRoom         TypeRoom[]        @relation("ProductToTypeRoom")
 }
 
 model Images {
   id      String    @id @default(cuid())
   img     String
-  Product Product[]
+  Product Product[] @relation("ImagesToProduct")
 }
 
 model SpecificPrices {
@@ -124,22 +118,22 @@ model Options {
   price     BigInt
   type      BigInt
   product   Product @relation(fields: [productId], references: [id])
-  Rent      Rent[]
+  Rent      Rent[]  @relation("OptionsToRent")
 }
 
 model Rent {
   id           String    @id @default(cuid())
   productId    String
   userId       String
-  arrivingDate DateTime
-  leavingDate  DateTime
   numberPeople BigInt
-  options      Options[]
   notes        BigInt
   accepted     Boolean
   prices       BigInt
+  arrivingDate DateTime
+  leavingDate  DateTime
   product      Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  options      Options[] @relation("OptionsToRent")
 }
 
 model Review {
@@ -156,22 +150,20 @@ model Review {
 model User {
   id             String          @id @default(cuid())
   name           String?
-  lastname       String?
-  profilePicture String?
-  info           String?
-  password       String?
   email          String          @unique
   emailVerified  DateTime?
   image          String?
-  accounts       Account[]
-  sessions       Session[]
-  Authenticator  Authenticator[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  info           String?
+  lastname       String?
+  password       String?
+  profilePicture String?
   roles          UserRole        @default(USER)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  Rent Rent[]
+  accounts       Account[]
+  Authenticator  Authenticator[]
+  Rent           Rent[]
+  sessions       Session[]
 }
 
 model Account {
@@ -197,9 +189,9 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model VerificationToken {
@@ -210,7 +202,6 @@ model VerificationToken {
   @@id([identifier, token])
 }
 
-// Optional for WebAuthn support
 model Authenticator {
   credentialID         String  @unique
   userId               String
@@ -220,8 +211,7 @@ model Authenticator {
   credentialDeviceType String
   credentialBackedUp   Boolean
   transports           String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                 User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, credentialID])
 }

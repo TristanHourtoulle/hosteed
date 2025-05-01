@@ -1,25 +1,71 @@
 'use server'
 import {prisma} from "@/lib/prisma";
+import {Prisma} from "@prisma/client";
 
-export async function rentById(id: string) {
+// Fonctions utilitaires pour la conversion Date <-> BigInt
+function dateToBigInt(date: Date): bigint {
+    return BigInt(date.getTime());
+}
+
+function bigIntToDate(timestamp: bigint): Date {
+    return new Date(Number(timestamp));
+}
+
+type RentWithRelations = Prisma.RentGetPayload<{
+    include: {
+        product: {
+            include: {
+                img: true;
+            };
+        };
+        options: true;
+    };
+}>;
+
+type RentWithDates = Omit<RentWithRelations, 'arrivingDate' | 'leavingDate'> & {
+    arrivingDate: Date;
+    leavingDate: Date;
+};
+
+function convertRentToDates(rent: RentWithRelations): RentWithDates {
+    return {
+        ...rent,
+        arrivingDate: bigIntToDate(rent.arrivingDate),
+        leavingDate: bigIntToDate(rent.leavingDate)
+    };
+}
+
+export async function rentById(id: string): Promise<RentWithDates | null> {
     try {
-        return await prisma.rent.findUnique({
+        const rent = await prisma.rent.findUnique({
             where: {id},
+            include: {
+                product: {
+                    include: {
+                        img: true
+                    }
+                },
+                options: true
+            }
         });
+        if (rent) {
+            return convertRentToDates(rent);
+        }
+        return null;
     } catch (error) {
         console.error("Erreur lors de la recherche du type de location:", error);
         return null;
     }
 }
 
-export async function CheckRentIsAvailable(productId: string, arrivalDate: Date, leavingDate: Date) {
+export async function CheckRentIsAvailable(productId: string, arrivalDate: Date, leavingDate: Date): Promise<boolean> {
     try {
         const existingRent = await prisma.rent.findFirst({
             where: {
                 productId: productId,
                 AND: [
-                    { arrivingDate: { lt: leavingDate } },
-                    { leavingDate: { gt: arrivalDate } }
+                    { arrivingDate: { lte: leavingDate } },
+                    { leavingDate: { gte: arrivalDate } }
                 ]
             }
         });
@@ -30,13 +76,25 @@ export async function CheckRentIsAvailable(productId: string, arrivalDate: Date,
     }
 }
 
-export async function findAllRentByProduct(id: string) {
+export async function findAllRentByProduct(id: string): Promise<RentWithDates | null> {
     try {
-        return await prisma.rent.findFirst({
+        const rent = await prisma.rent.findFirst({
             where: {
                 productId: id
             },
+            include: {
+                product: {
+                    include: {
+                        img: true
+                    }
+                },
+                options: true
+            }
         });
+        if (rent) {
+            return convertRentToDates(rent);
+        }
+        return null;
     } catch (error) {
         console.error("Erreur lors de la recherche du type de location:", error);
         return null;
@@ -50,7 +108,7 @@ export async function createRent(params: {
     leavingDate: Date,
     peopleNumber: number,
     options: string[],
-}) {
+}): Promise<RentWithRelations | null> {
     try {
         const product = await prisma.product.findFirst({
             where: {
@@ -74,6 +132,11 @@ export async function createRent(params: {
                 }
             },
             include: {
+                product: {
+                    include: {
+                        img: true
+                    }
+                },
                 options: true
             }
         });
@@ -85,11 +148,11 @@ export async function createRent(params: {
     }
 }
 
-export async function findAllRentByUserId(id: string) {
+export async function findAllRentByUserId(id: string): Promise<RentWithRelations[] | null> {
     try {
-        return await prisma.rent.findMany({
+        const rents = await prisma.rent.findMany({
             where: {
-                userId: id,
+                userId: id
             },
             include: {
                 product: {
@@ -100,6 +163,8 @@ export async function findAllRentByUserId(id: string) {
                 options: true
             }
         });
+
+        return rents;
     } catch (error) {
         console.error("Erreur lors de la recherche des réservations:", error);
         return null;

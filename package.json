@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.9.0",
-    "@prisma/client": "^6.6.0",
+    "@prisma/client": "^6.7.0",
     "bcryptjs": "^3.0.2",
     "install": "^0.13.0",
     "next": "15.3.1",

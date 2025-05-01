@@ -1,0 +1,164 @@
+'use client';
+
+import { useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import SearchBar from '@/components/ui/searchBar';
+import { findAllProducts } from '@/lib/services/product.service';
+import { useEffect } from 'react';
+import ProductCard from '@/components/ui/ProductCard';
+import FiltersPanel from '@/components/ui/filtersPanel';
+
+interface Product {
+    id: string;
+    name: string;
+    description: string;
+    address: string;
+    longitude: number;
+    latitude: number;
+    img?: { img: string }[];
+    basePrice: string;
+    equipments?: { id: string; name: string; }[];
+    servicesList?: { id: string; name: string; }[];
+    mealsList?: { id: string; name: string; }[];
+    securities?: { id: string; name: string; }[];
+    arriving: Date;
+    leaving: Date;
+}
+
+export default function SearchResults() {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const searchQuery = searchParams.get('q') || '';
+    const [products, setProducts] = useState<Product[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [filters, setFilters] = useState({
+        selectedSecurities: [] as string[],
+        selectedMeals: [] as string[],
+        selectedEquipments: [] as string[],
+        selectedServices: [] as string[],
+        searchRadius: 50,
+        arrivingDate: '',
+        leavingDate: '',
+    });
+
+    const handleSearch = (params: {
+        location: string;
+        type: string;
+        centerLat?: number;
+        centerLon?: number;
+        searchRadius?: number;
+    }) => {
+        const searchParams = new URLSearchParams();
+        if (params.location) searchParams.set('location', params.location);
+        if (params.type) searchParams.set('type', params.type);
+        router.push(`/search?${searchParams.toString()}`);
+    };
+
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                setLoading(true);
+                const allProducts = await findAllProducts();
+                if (allProducts) {
+                    // Filtrer les produits en fonction de la recherche et des filtres
+                    const filteredProducts = allProducts.filter((product: Product) => {
+                        // Filtre par recherche textuelle
+                        const matchesSearch = 
+                            product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            product.description.toLowerCase().includes(searchQuery.toLowerCase());
+
+                        // Filtre par équipements
+                        const matchesEquipments = filters.selectedEquipments.length === 0 || 
+                            filters.selectedEquipments.some(equipmentId => 
+                                product.equipments?.some(equipment => equipment.id === equipmentId)
+                            );
+
+                        // Filtre par services
+                        const matchesServices = filters.selectedServices.length === 0 || 
+                            filters.selectedServices.some(serviceId => 
+                                product.servicesList?.some(service => service.id === serviceId)
+                            );
+
+                        // Filtre par repas
+                        const matchesMeals = filters.selectedMeals.length === 0 || 
+                            filters.selectedMeals.some(mealId => 
+                                product.mealsList?.some(meal => meal.id === mealId)
+                            );
+
+                        // Filtre par sécurités
+                        const matchesSecurities = filters.selectedSecurities.length === 0 || 
+                            filters.selectedSecurities.some(securityId => 
+                                product.securities?.some(security => security.id === securityId)
+                            );
+
+                        // Filtre par dates
+                        const matchesDates = !filters.arrivingDate || !filters.leavingDate || 
+                            (new Date(product.arriving) <= new Date(filters.arrivingDate) && 
+                             new Date(product.leaving) >= new Date(filters.leavingDate));
+
+                        // Retourne true si au moins un des filtres est satisfait
+                        return matchesSearch && (
+                            matchesEquipments || 
+                            matchesServices || 
+                            matchesMeals || 
+                            matchesSecurities || 
+                            matchesDates
+                        );
+                    });
+                    setProducts(filteredProducts);
+                }
+            } catch (error) {
+                setError('Erreur lors de la récupération des produits');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProducts();
+    }, [searchQuery, filters]);
+
+    if (loading) {
+        return <div className="min-h-screen bg-white flex items-center justify-center">Chargement...</div>;
+    }
+
+    if (error) {
+        return <div className="min-h-screen bg-white flex items-center justify-center text-red-600">{error}</div>;
+    }
+
+    return (
+        <div className="min-h-screen bg-white">
+            <div className="container mx-auto px-4 py-8">
+                <div className="mb-8">
+                    <SearchBar onSearch={handleSearch} />
+                </div>
+
+                <div className="flex gap-8">
+                    {/* Side Panel */}
+                    <div className="w-80">
+                        <FiltersPanel filters={filters} setFilters={setFilters} />
+                    </div>
+
+                    {/* Results */}
+                    <div className="flex-1">
+                        <h1 className="text-2xl font-bold mb-6">
+                            {searchQuery
+                                ? `Résultats pour "${searchQuery}"`
+                                : 'Tous les hébergements'}
+                        </h1>
+
+                        {products.length === 0 ? (
+                            <p className="text-gray-600">Aucun résultat trouvé</p>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {products.map((product) => (
+                                    <ProductCard key={product.id} product={product} />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}

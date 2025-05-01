@@ -5,12 +5,7 @@ import Link from "next/link";
 import HomeSearchBar from "@/components/ui/homeSearchBar";
 import {findAllTypeRent} from "@/lib/services/typeRent.service";
 import {useEffect, useState} from "react";
-
-interface TypeRent {
-  id: string;
-  name: string;
-  description?: string;
-}
+import {TypeRent} from "@prisma/client";
 
 export default function Dashboard() {
   const {data: session} = useSession();
@@ -21,6 +16,9 @@ export default function Dashboard() {
       const types = await findAllTypeRent();
       if (types) {
         setTypeRent(types);
+      } else {
+        console.error("Impossible de charger les types de location");
+        setTypeRent([]);
       }
     };
     fetchTypeRent();
