@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { createRent, CheckRentIsAvailable } from '@/lib/services/rents.service';
 import {findProductById} from "@/lib/services/product.service";
+import { PaymentForm } from '@/components/PaymentForm';
 
 interface Option {
     id: string;
@@ -38,6 +39,8 @@ export default function ReservationPage() {
         arrivingDate: '',
         leavingDate: '',
     });
+    const [showPayment, setShowPayment] = useState(false);
+    const [totalAmount, setTotalAmount] = useState<number>(0);
 
     const today = new Date().toISOString().split('T')[0];
     const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
@@ -154,39 +157,77 @@ export default function ReservationPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
         if (!session?.user?.id) {
-            setError('Veuillez vous connecter pour effectuer une réservation');
+            setError('Vous devez être connecté pour effectuer une réservation');
             return;
         }
 
         if (!product) {
-            setError('Impossible de trouver les informations de l\'hébergement');
-            return;
-        }
-
-        if (!isAvailable) {
-            setError('Ce logement n\'est pas disponible pour les dates sélectionnées');
+            setError('Impossible de trouver les informations du produit');
             return;
         }
 
         try {
-            const result = await createRent({
-                productId: product.id,
-                userId: session.user.id,
+            const isAvailable = await CheckRentIsAvailable(
+                id as string,
+                new Date(formData.arrivingDate),
+                new Date(formData.leavingDate)
+            );
+
+            if (!isAvailable) {
+                setError('Les dates sélectionnées ne sont pas disponibles');
+                return;
+            }
+
+            // Calculer le montant total
+            const total = Number(calculateTotalPrice());
+
+            // Créer la session de paiement Stripe
+            const response = await fetch('/api/create-checkout-session', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    amount: total,
+                    productName: product.name,
+                    metadata: {
+                        productId: id,
+                        userId: session.user.id,
+                        arrivingDate: formData.arrivingDate,
+                        leavingDate: formData.leavingDate,
+                        peopleNumber: formData.peopleNumber,
+                        options: selectedOptions,
+                    },
+                }),
+            });
+
+            const data = await response.json();
+
+            if (data.url) {
+                // Rediriger vers la page de paiement Stripe
+                window.location.href = data.url;
+            } else {
+                setError('Erreur lors de la création de la session de paiement');
+            }
+        } catch (err) {
+            setError('Une erreur est survenue lors de la vérification de disponibilité');
+        }
+    };
+
+    const handlePaymentSuccess = async () => {
+        try {
+            await createRent({
+                productId: id as string,
+                userId: session?.user?.id as string,
                 arrivingDate: new Date(formData.arrivingDate),
                 leavingDate: new Date(formData.leavingDate),
                 peopleNumber: formData.peopleNumber,
                 options: selectedOptions,
             });
 
-            if (result) {
-                router.push('/reservations');
-            } else {
-                setError('Erreur lors de la création de la réservation');
-            }
-        } catch (error) {
-            console.error('Erreur lors de la création de la réservation:', error);
+            router.push('/payment/success');
+        } catch (err) {
             setError('Une erreur est survenue lors de la création de la réservation');
         }
     };
@@ -199,6 +240,34 @@ export default function ReservationPage() {
         );
     }
 
+    if (error) {
+        return (
+            <div className="text-red-500">{error}</div>
+        );
+    }
+
+    if (!product) {
+        return (
+            <div className="text-center py-12">
+                <p className="text-red-600">Impossible de charger les informations de l&apos;hébergement</p>
+            </div>
+        );
+    }
+
+    if (showPayment) {
+        return (
+            <div className="max-w-2xl mx-auto p-4">
+                <h2 className="text-2xl font-bold mb-4">Paiement de votre réservation</h2>
+                <p className="mb-4">Montant total : {totalAmount}€</p>
+                <PaymentForm
+                    amount={totalAmount}
+                    onSuccess={handlePaymentSuccess}
+                    onError={(error) => setError(error.message)}
+                />
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-white py-12">
             <div className="container mx-auto px-4">
@@ -206,11 +275,6 @@ export default function ReservationPage() {
                     Réserver {product?.name || 'Hébergement'}
                 </h1>
 
-                {error ? (
-                    <div className="text-center py-12">
-                        <p className="text-red-600">{error}</p>
-                    </div>
-                ): null}
                 {!product ? (
                     <div className="text-center py-12">
                         <p className="text-red-600">Impossible de charger les informations de l&apos;hébergement</p>
