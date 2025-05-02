@@ -18,6 +18,7 @@ interface Product {
     name: string;
     basePrice: string;
     options: Option[];
+    commission: number;
     arriving: Date;
     leaving: Date;
     img?: {
@@ -152,7 +153,14 @@ export default function ReservationPage() {
             .filter(option => selectedOptions.includes(option.id))
             .reduce((sum, option) => sum + option.price, BigInt(0));
 
-        return basePrice + optionsPrice;
+        // Calcul du prix total avant commission
+        const totalBeforeCommission = basePrice + optionsPrice;
+
+        // Calcul de la commission
+        const commission = (totalBeforeCommission * BigInt(product.commission)) / BigInt(100);
+
+        // Prix total avec commission
+        return totalBeforeCommission + commission;
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -427,6 +435,18 @@ export default function ReservationPage() {
                                         <span>
                                             {calculateTotalPrice().toString()}€
                                         </span>
+                                    </div>
+                                </div>
+
+                                <div className="border-t pt-4">
+                                    <h4 className="text-sm font-medium text-gray-900 mb-2">Frais supplémentaires</h4>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-gray-600">Commission ({product.commission}%)</span>
+                                            <span>+{((BigInt(product.basePrice) * BigInt(calculateNights()) + product.options
+                                                .filter(option => selectedOptions.includes(option.id))
+                                                .reduce((sum, option) => sum + option.price, BigInt(0))) * BigInt(product.commission) / BigInt(100)).toString()}€</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

@@ -67,6 +67,7 @@ model Product {
   categories       BigInt
   minPeople        BigInt?
   maxPeople        BigInt?
+  commission       Int               @default(0)
   validate         Boolean
   userManager      BigInt
   typeId           String

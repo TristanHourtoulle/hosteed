@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createRent } from '@/lib/services/rents.service';
 import { prisma } from "@/lib/prisma";
+import { PaymentStatus } from "@prisma/client";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -27,9 +28,8 @@ export async function POST(req: Request) {
 
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
-      console.log('Session complétée:', session);
 
-      // Créer la réservation
+      // Créer la réservation avec le statut de paiement CLIENT_PAID
       const rent = await createRent({
         productId: session.metadata?.productId!,
         userId: session.metadata?.userId!,
@@ -38,8 +38,6 @@ export async function POST(req: Request) {
         peopleNumber: parseInt(session.metadata?.peopleNumber!),
         options: session.metadata?.options ? JSON.parse(session.metadata.options) : [],
       });
-
-      console.log('Réservation créée:', rent);
     }
 
     return NextResponse.json({ received: true });
