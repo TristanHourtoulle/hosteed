@@ -13,7 +13,7 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
 
 interface PaymentFormProps {
   amount: number;
-  onSuccess?: () => void;
+  onSuccess?: (stripeTransactionId: string) => void;
   onError?: (error: Error) => void;
 }
 
@@ -37,7 +37,7 @@ const PaymentFormContent = ({ amount, onSuccess, onError }: PaymentFormProps) =>
         return;
       }
 
-      const { error: confirmError } = await stripe.confirmPayment({
+      const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
           return_url: `${window.location.origin}/payment/success`,
@@ -46,8 +46,8 @@ const PaymentFormContent = ({ amount, onSuccess, onError }: PaymentFormProps) =>
 
       if (confirmError) {
         setError(confirmError.message || 'Une erreur est survenue');
-      } else {
-        onSuccess?.();
+      } else if (paymentIntent) {
+        onSuccess?.(paymentIntent.id);
       }
     } catch (err) {
       setError('Une erreur inattendue est survenue');

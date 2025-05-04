@@ -77,6 +77,8 @@ model Product {
   sizeRoom         Int?
   options          Options[]
   type             TypeRent          @relation(fields: [typeId], references: [id])
+  userId           String
+  user             User              @relation(fields: [userId], references: [id])
   rents            Rent[]
   reviews          Review[]
   specificPrices   SpecificPrices[]
@@ -87,6 +89,16 @@ model Product {
   securities       Security[]        @relation("ProductToSecurity")
   servicesList     Services[]        @relation("ProductToServices")
   typeRoom         TypeRoom[]        @relation("ProductToTypeRoom")
+  discount         Discount[]
+}
+
+model Discount {
+  id            String   @id @default(cuid())
+  productId     String
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  startDiscount DateTime
+  endDiscount   DateTime
+  price         Int
 }
 
 model Images {
@@ -124,6 +136,7 @@ model Options {
 
 model Rent {
   id           String        @id @default(cuid())
+  stripeId     String
   productId    String
   userId       String
   numberPeople BigInt
@@ -167,6 +180,8 @@ model User {
   Authenticator    Authenticator[]
   Rent             Rent[]
   sessions         Session[]
+
+  Product Product[]
 }
 
 model Account {

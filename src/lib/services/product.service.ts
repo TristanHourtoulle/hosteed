@@ -2,15 +2,6 @@
 import {prisma} from "@/lib/prisma";
 import {Prisma} from "@prisma/client";
 
-// Fonctions utilitaires pour la conversion Date <-> BigInt
-function dateToBigInt(date: Date): bigint {
-    return BigInt(date.getTime());
-}
-
-function bigIntToDate(timestamp: bigint): Date {
-    return new Date(Number(timestamp));
-}
-
 type ProductWithRelations = Prisma.ProductGetPayload<{
     include: {
         img: true;
@@ -27,15 +18,7 @@ type ProductWithDates = Omit<ProductWithRelations, 'arriving' | 'leaving'> & {
     leaving: Date;
 };
 
-function convertProductToDates(product: ProductWithRelations): ProductWithDates {
-    return {
-        ...product,
-        arriving: bigIntToDate(product.arriving),
-        leaving: bigIntToDate(product.leaving)
-    };
-}
-
-export async function findProductById(id: string): Promise<ProductWithDates | null> {
+export async function findProductById(id: string) {
     try {
         const product = await prisma.product.findUnique({
             where: {id},
@@ -45,11 +28,14 @@ export async function findProductById(id: string): Promise<ProductWithDates | nu
                 equipments: true,
                 servicesList: true,
                 mealsList: true,
-                options: true
+                options: true,
+                rents: true,
+                discount: true,
+                reviews: true,
             }
         });
         if (product) {
-            return convertProductToDates(product);
+            return product;
         }
         return null;
     } catch (error) {
@@ -58,7 +44,7 @@ export async function findProductById(id: string): Promise<ProductWithDates | nu
     }
 }
 
-export async function findAllProducts(): Promise<ProductWithDates[] | null> {
+export async function findAllProducts() {
     try {
         const products = await prisma.product.findMany({
             include: {
@@ -72,7 +58,7 @@ export async function findAllProducts(): Promise<ProductWithDates[] | null> {
             }
         });
 
-        return products.map(convertProductToDates);
+        return products;
     } catch (error) {
         console.error("Erreur lors de la recherche des produits:", error);
         return null;
@@ -95,8 +81,9 @@ export async function createProduct(params: {
     equipments: string[],
     services: string[],
     meals: string[],
-    images: string[]
-}): Promise<ProductWithDates | null> {
+    images: string[],
+    userId: string
+}) {
     try {
         const type = await prisma.typeRent.findFirst({
             where: {
@@ -123,6 +110,7 @@ export async function createProduct(params: {
                 validate: false,
                 userManager: BigInt(0),
                 type: { connect: { id: params.typeId } },
+                user: {connect: {id: params.userId}},
                 equipments: {
                     connect: params.equipments.map(equipmentId => ({ id: equipmentId }))
                 },
@@ -149,7 +137,7 @@ export async function createProduct(params: {
             }
         });
 
-        return convertProductToDates(createdProduct);
+        return createdProduct;
     } catch (error) {
         console.error("Erreur lors de la création du produit:", error);
         return null;

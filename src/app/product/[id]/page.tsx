@@ -7,6 +7,16 @@ import Image from 'next/image';
 import Link from 'next/link';
 import {Equipment, Meals, Services} from "@prisma/client";
 
+interface Reviews {
+    id: string;
+    title: string;
+    prodictId: string;
+    text: string;
+    grade: number;
+    visitDate: Date;
+    publishDate: Date;
+    product: Product;
+}
 interface Product {
     id: string;
     name: string;
@@ -15,6 +25,7 @@ interface Product {
     equipments: Equipment[];
     servicesList: Services[];
     mealsList: Meals[];
+    reviews: Reviews[];
     img: { img: string }[];
 }
 
@@ -24,6 +35,7 @@ export default function ProductDetails() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isAvailable, setIsAvailable] = useState<boolean>(true);
+    const [globalGrade, setglobalGrade] = useState<number>(0);
     const [formData, setFormData] = useState({
         arrivingDate: '',
         leavingDate: '',
@@ -33,10 +45,24 @@ export default function ProductDetails() {
     const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
 
     useEffect(() => {
+    function getGlobalGrade (reviews: Reviews[]) {
+        if (!reviews) return 0;
+        let grade = 0;
+        let index = 0;
+        reviews.map((review) => {
+            grade += review.grade;
+            index += 1;
+        });
+        setglobalGrade(grade/index);
+    }
+    if (product?.reviews) getGlobalGrade(product.reviews)
+    }, [product]);
+    useEffect(() => {
         const fetchProduct = async () => {
             try {
                 const productData = await findProductById(id as string);
                 if (productData) {
+                    console.log(productData)
                     setProduct(productData);
                 } else {
                     setError('Produit non trouvé');
@@ -47,7 +73,6 @@ export default function ProductDetails() {
                 setLoading(false);
             }
         };
-
         fetchProduct();
     }, [id]);
 
@@ -239,6 +264,25 @@ export default function ProductDetails() {
                                 </Link>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="text-2xl font-semibold mb-4 text-gray-900">
+                    <h1>Reviews</h1>
+                    <div>
+                        <h1>Note: {globalGrade}</h1>
+                    </div>
+
+                    <div>
+                        <p>Avis:</p>
+                        {product.reviews && product.reviews.map((review) => (
+                            <div key={review.id}>
+                                <p>Note: {review.grade}</p>
+                                <p>Avis: {review.title}</p>
+                                <p>{review.text}</p>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>

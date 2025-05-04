@@ -144,22 +144,12 @@ export default function ReservationPage() {
 
         const nights = calculateNights();
         if (nights <= 0) return BigInt(0);
-
-        // Prix de base pour le nombre de nuits
         const basePrice = BigInt(product.basePrice) * BigInt(nights);
-
-        // Prix des options
         const optionsPrice = product.options
             .filter(option => selectedOptions.includes(option.id))
             .reduce((sum, option) => sum + option.price, BigInt(0));
-
-        // Calcul du prix total avant commission
         const totalBeforeCommission = basePrice + optionsPrice;
-
-        // Calcul de la commission
         const commission = (totalBeforeCommission * BigInt(product.commission)) / BigInt(100);
-
-        // Prix total avec commission
         return totalBeforeCommission + commission;
     };
 
@@ -223,8 +213,10 @@ export default function ReservationPage() {
         }
     };
 
-    const handlePaymentSuccess = async () => {
+    const handlePaymentSuccess = async (stripeTransactionId: string) => {
+        console.log('ID de la transaction Stripe:', stripeTransactionId);
         try {
+            console.log("OUIIIIII")
             await createRent({
                 productId: id as string,
                 userId: session?.user?.id as string,
