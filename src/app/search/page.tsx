@@ -23,12 +23,14 @@ interface Product {
     securities?: { id: string; name: string; }[];
     arriving: number;
     leaving: number;
+    typeRentId?: string;
 }
 
 export default function SearchResults() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const searchQuery = searchParams.get('q') || '';
+    const typeRentId = searchParams.get('typeRent') || '';
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -52,6 +54,7 @@ export default function SearchResults() {
         const searchParams = new URLSearchParams();
         if (params.location) searchParams.set('location', params.location);
         if (params.type) searchParams.set('type', params.type);
+        if (typeRentId) searchParams.set('typeRent', typeRentId);
         router.push(`/search?${searchParams.toString()}`);
     };
 
@@ -63,6 +66,9 @@ export default function SearchResults() {
                 if (allProducts) {
                     // Filtrer les produits en fonction de la recherche et des filtres
                     const filteredProducts = allProducts.filter((product: Product) => {
+                        // Filtre par typeRent
+                        const matchesTypeRent = !typeRentId || product.typeRentId === typeRentId;
+
                         // Filtre par recherche textuelle
                         const matchesSearch =
                             product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -87,11 +93,6 @@ export default function SearchResults() {
                             );
 
                         // Filtre par sécurités
-                        console.log('Vérification des sécurités:', {
-                            selectedSecurities: filters.selectedSecurities,
-                            productSecurities: product.securities
-                        });
-
                         let matchesSecurities = true;
                         if (filters.selectedSecurities.length > 0) {
                             if (!product.securities || product.securities.length === 0) {
@@ -102,68 +103,14 @@ export default function SearchResults() {
                                 );
                             }
                         }
+
                         const matchesDates = !filters.arrivingDate || !filters.leavingDate ||
                             (new Date(product.arriving) <= new Date(filters.arrivingDate) &&
                              new Date(product.leaving) >= new Date(filters.leavingDate));
 
-                        const shouldShow = matchesSearch && matchesEquipments && matchesServices &&
+                        return matchesTypeRent && matchesSearch && matchesEquipments && matchesServices &&
                                matchesMeals && matchesSecurities && matchesDates;
-
-                        console.log('Analyse du produit:', {
-                            name: product.name,
-                            conditions: {
-                                matchesSearch,
-                                matchesEquipments,
-                                matchesServices,
-                                matchesMeals,
-                                matchesSecurities,
-                                matchesDates
-                            },
-                            filtres: {
-                                selectedSecurities: filters.selectedSecurities,
-                                selectedEquipments: filters.selectedEquipments,
-                                selectedServices: filters.selectedServices,
-                                selectedMeals: filters.selectedMeals,
-                                arrivingDate: filters.arrivingDate,
-                                leavingDate: filters.leavingDate
-                            },
-                            produit: {
-                                securities: product.securities,
-                                equipments: product.equipments,
-                                servicesList: product.servicesList,
-                                mealsList: product.mealsList,
-                                arriving: product.arriving,
-                                leaving: product.leaving
-                            }
-                        });
-
-                        if (!shouldShow) {
-                            console.log('Produit filtré:', {
-                                name: product.name,
-                                matchesSearch,
-                                matchesEquipments,
-                                matchesServices,
-                                matchesMeals,
-                                matchesSecurities,
-                                matchesDates,
-                                selectedEquipments: filters.selectedEquipments,
-                                productEquipments: product.equipments,
-                                selectedServices: filters.selectedServices,
-                                productServices: product.servicesList,
-                                selectedMeals: filters.selectedMeals,
-                                productMeals: product.mealsList,
-                                selectedSecurities: filters.selectedSecurities,
-                                productSecurities: product.securities,
-                                arrivingDate: filters.arrivingDate,
-                                leavingDate: filters.leavingDate,
-                                productArriving: product.arriving,
-                                productLeaving: product.leaving
-                            });
-                        }
-
-                        return shouldShow;
                     });
-                    console.log('Nombre de produits filtrés:', filteredProducts.length);
                     setProducts(filteredProducts);
                 }
             } catch {
@@ -174,7 +121,7 @@ export default function SearchResults() {
         };
 
         fetchProducts();
-    }, [searchQuery, filters]);
+    }, [searchQuery, filters, typeRentId]);
 
     if (loading) {
         return <div className="min-h-screen bg-white flex items-center justify-center">Chargement...</div>;
@@ -202,6 +149,8 @@ export default function SearchResults() {
                         <h1 className="text-2xl font-bold mb-6">
                             {searchQuery
                                 ? `Résultats pour "${searchQuery}"`
+                                : typeRentId
+                                ? 'Hébergements disponibles'
                                 : 'Tous les hébergements'}
                         </h1>
 
