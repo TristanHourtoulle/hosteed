@@ -8,6 +8,7 @@ import { findAllMeals } from '@/lib/services/meals.service';
 import { findAllEquipments } from '@/lib/services/equipments.service';
 import { findAllServices } from '@/lib/services/services.service';
 import { useRouter } from 'next/navigation';
+import {useSession} from "next-auth/react";
 
 interface TypeRent {
     id: string;
@@ -36,6 +37,7 @@ interface Services {
 
 export default function CreateProduct() {
     const router = useRouter();
+    const { data: session } = useSession();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [types, setTypes] = useState<TypeRent[]>([]);
@@ -154,14 +156,18 @@ export default function CreateProduct() {
                     });
                 })
             );
-
+            if (!session?.user?.id) {
+                setError("No userID available")
+                return
+            }
             const product = await createProduct({
                 ...formData,
                 images: base64Images,
                 securities: formData.selectedSecurities,
                 meals: formData.selectedMeals,
                 equipments: formData.selectedEquipments,
-                services: formData.selectedServices
+                services: formData.selectedServices,
+                userId: session.user.id,
             });
 
             if (product) {

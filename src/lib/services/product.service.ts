@@ -1,23 +1,5 @@
 'use server'
 import {prisma} from "@/lib/prisma";
-import {Prisma} from "@prisma/client";
-
-type ProductWithRelations = Prisma.ProductGetPayload<{
-    include: {
-        img: true;
-        type: true;
-        equipments: true;
-        servicesList: true;
-        mealsList: true;
-        options: true;
-    };
-}>;
-
-type ProductWithDates = Omit<ProductWithRelations, 'arriving' | 'leaving'> & {
-    arriving: Date;
-    leaving: Date;
-};
-
 export async function findProductById(id: string) {
     try {
         const product = await prisma.product.findUnique({

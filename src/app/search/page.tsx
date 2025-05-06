@@ -21,8 +21,8 @@ interface Product {
     servicesList?: { id: string; name: string; }[];
     mealsList?: { id: string; name: string; }[];
     securities?: { id: string; name: string; }[];
-    arriving: Date;
-    leaving: Date;
+    arriving: number;
+    leaving: number;
 }
 
 export default function SearchResults() {

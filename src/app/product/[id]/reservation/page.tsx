@@ -19,8 +19,8 @@ interface Product {
     basePrice: string;
     options: Option[];
     commission: number;
-    arriving: Date;
-    leaving: Date;
+    arriving: number;
+    leaving: number;
     img?: {
         img: string;
     }[];
@@ -40,8 +40,8 @@ export default function ReservationPage() {
         arrivingDate: '',
         leavingDate: '',
     });
-    const [showPayment, setShowPayment] = useState(false);
-    const [totalAmount, setTotalAmount] = useState<number>(0);
+    const [showPayment] = useState(false);
+    const [totalAmount] = useState<number>(0);
 
     const today = new Date().toISOString().split('T')[0];
     const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
@@ -208,7 +208,7 @@ export default function ReservationPage() {
             } else {
                 setError('Erreur lors de la création de la session de paiement');
             }
-        } catch (err) {
+        } catch {
             setError('Une erreur est survenue lors de la vérification de disponibilité');
         }
     };
@@ -216,7 +216,6 @@ export default function ReservationPage() {
     const handlePaymentSuccess = async (stripeTransactionId: string) => {
         console.log('ID de la transaction Stripe:', stripeTransactionId);
         try {
-            console.log("OUIIIIII")
             await createRent({
                 productId: id as string,
                 userId: session?.user?.id as string,
@@ -224,10 +223,11 @@ export default function ReservationPage() {
                 leavingDate: new Date(formData.leavingDate),
                 peopleNumber: formData.peopleNumber,
                 options: selectedOptions,
+                stripeId: stripeTransactionId
             });
 
             router.push('/payment/success');
-        } catch (err) {
+        } catch {
             setError('Une erreur est survenue lors de la création de la réservation');
         }
     };

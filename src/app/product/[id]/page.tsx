@@ -10,12 +10,12 @@ import {Equipment, Meals, Services} from "@prisma/client";
 interface Reviews {
     id: string;
     title: string;
-    prodictId: string;
+    productId: string;
     text: string;
     grade: number;
     visitDate: Date;
     publishDate: Date;
-    product: Product;
+    rentId: string;
 }
 interface Product {
     id: string;

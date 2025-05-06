@@ -1,16 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 export default function PaymentSuccess() {
-  const searchParams = useSearchParams();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
 
   useEffect(() => {
-    // Si nous sommes sur cette page, c'est que le paiement a réussi
-    // car Stripe nous redirige ici uniquement en cas de succès
     setStatus('success');
   }, []);
 
@@ -34,7 +30,7 @@ export default function PaymentSuccess() {
               href="/reservations"
               className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700"
             >
-              Retour à l'accueil
+              Retour à l&apos;accueil
             </Link>
           </div>
         )}
@@ -49,7 +45,7 @@ export default function PaymentSuccess() {
               href="/"
               className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700"
             >
-              Retour à l'accueil
+              Retour à l&apos;accueil
             </Link>
           </div>
         )}

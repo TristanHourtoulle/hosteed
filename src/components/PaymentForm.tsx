@@ -37,7 +37,7 @@ const PaymentFormContent = ({ amount, onSuccess, onError }: PaymentFormProps) =>
         return;
       }
 
-      const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
+      const { error: confirmError } = await stripe.confirmPayment({
         elements,
         confirmParams: {
           return_url: `${window.location.origin}/payment/success`,
@@ -46,8 +46,8 @@ const PaymentFormContent = ({ amount, onSuccess, onError }: PaymentFormProps) =>
 
       if (confirmError) {
         setError(confirmError.message || 'Une erreur est survenue');
-      } else if (paymentIntent) {
-        onSuccess?.(paymentIntent.id);
+      } else {
+        onSuccess?.('success');
       }
     } catch (err) {
       setError('Une erreur inattendue est survenue');

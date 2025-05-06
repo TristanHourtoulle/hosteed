@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createReview } from '@/lib/services/reviews.service'
 import { getRentById } from '@/lib/services/rents.service'
@@ -16,7 +16,7 @@ interface ReviewFormData {
     publishDate: string
 }
 
-export default function CreateReviewPage() {
+function ReviewForm() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const rentId = searchParams.get('rentId')
@@ -223,5 +223,13 @@ export default function CreateReviewPage() {
                 </button>
             </form>
         </div>
+    )
+}
+
+export default function CreateReviewPage() {
+    return (
+        <Suspense fallback={<div>Chargement...</div>}>
+            <ReviewForm />
+        </Suspense>
     )
 }

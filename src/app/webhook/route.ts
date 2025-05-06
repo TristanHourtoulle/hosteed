@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
 import { createRent } from '@/lib/services/rents.service';
-import { prisma } from "@/lib/prisma";
-import { PaymentStatus } from "@prisma/client";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -37,8 +35,6 @@ export async function POST(req: Request) {
         peopleNumber: session.metadata?.peopleNumber,
         options: session.metadata?.options
       });
-
-      // Vérifier que toutes les métadonnées nécessaires sont présentes
       if (!session.metadata?.productId || !session.metadata?.userId ||
           !session.metadata?.arrivingDate || !session.metadata?.leavingDate ||
           !session.metadata?.peopleNumber || !session.id || session.status != "complete") {
@@ -50,7 +46,6 @@ export async function POST(req: Request) {
       }
     console.log(session);
       try {
-        // Créer la réservation avec le statut de paiement CLIENT_PAID
         const rent = await createRent({
           productId: session.metadata.productId,
           userId: session.metadata.userId,
