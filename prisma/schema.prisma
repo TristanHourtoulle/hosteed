@@ -149,17 +149,21 @@ model Rent {
   product      Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   options      Options[]     @relation("OptionsToRent")
+  status       RentStatus    @default(RESERVED)
+  Review       Review[]
 }
 
 model Review {
-  id          String   @id @default(cuid())
-  productId   String
-  title       String
-  text        String
-  grade       Int
-  visitDate   DateTime
-  publishDate DateTime
-  product     Product  @relation(fields: [productId], references: [id])
+  id           String   @id @default(cuid())
+  productId    String
+  title        String
+  text         String
+  grade        Int
+  visitDate    DateTime
+  publishDate  DateTime
+  rentId       String
+  rentRelation Rent     @relation(fields: [rentId], references: [id], onDelete: Cascade)
+  product      Product  @relation(fields: [productId], references: [id])
 }
 
 model User {
@@ -250,4 +254,11 @@ enum PaymentStatus {
   REST_TRANSFER_DONE
   FULL_TRANSFER_REQ
   FULL_TRANSFER_DONE
+}
+
+enum RentStatus {
+  RESERVED
+  CHECKIN
+  CHECKOUT
+  CANCEL
 }

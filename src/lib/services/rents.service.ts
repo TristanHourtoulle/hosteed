@@ -26,7 +26,7 @@ function convertRentToDates(rent: RentWithRelations): RentWithDates {
     };
 }
 
-export async function rentById(id: string): Promise<RentWithDates | null> {
+export async function getRentById(id: string): Promise<RentWithDates | null> {
     try {
         const rent = await prisma.rent.findUnique({
             where: {id},
@@ -184,7 +184,7 @@ export async function findAllRentByUserId(id: string): Promise<RentWithRelations
                         img: true
                     }
                 },
-                options: true
+                options: true,
             }
         });
 

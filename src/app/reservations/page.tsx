@@ -5,6 +5,7 @@ import { findAllRentByUserId } from '@/lib/services/rents.service';
 import { findProductById } from '@/lib/services/product.service';
 import Image from 'next/image';
 import Link from 'next/link';
+import {RentStatus} from "@prisma/client";
 
 interface Rent {
     id: string;
@@ -22,6 +23,7 @@ interface Rent {
         name: string;
         img?: { img: string }[];
     };
+    status: RentStatus;
 }
 
 export default function ReservationsPage() {
@@ -37,6 +39,7 @@ export default function ReservationsPage() {
             try {
                 setLoading(true);
                 const userRents = await findAllRentByUserId(session.user.id);
+                console.log(userRents)
 
                 if (userRents) {
                     // Récupérer les détails des produits pour chaque réservation
@@ -166,7 +169,6 @@ export default function ReservationsPage() {
                                             {rent.accepted ? 'Acceptée' : 'En attente'}
                                         </span>
                                     </div>
-
                                     <Link
                                         href={`/product/${rent.productId}`}
                                         className="mt-4 inline-block text-blue-600 hover:text-blue-800"
@@ -174,6 +176,14 @@ export default function ReservationsPage() {
                                         Voir l&apos;hébergement
                                     </Link>
                                 </div>
+                                {rent.status == "CHECKOUT" ? (
+                                    <Link
+                                        href={`/reviews/create?rentId=${rent.id}`}
+                                        className="mt-4 inline-block text-blue-600 hover:text-blue-800"
+                                    >
+                                        Mettre un avis
+                                    </Link>
+                                ): null}
                             </div>
                         ))}
                     </div>
