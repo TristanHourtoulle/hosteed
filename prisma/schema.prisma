@@ -90,6 +90,8 @@ model Product {
   servicesList     Services[]        @relation("ProductToServices")
   typeRoom         TypeRoom[]        @relation("ProductToTypeRoom")
   discount         Discount[]
+
+  Chat Chat[]
 }
 
 model Discount {
@@ -186,6 +188,8 @@ model User {
   sessions         Session[]
 
   Product Product[]
+
+  Chat Chat[]
 }
 
 model Account {
@@ -236,6 +240,16 @@ model Authenticator {
   user                 User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, credentialID])
+}
+
+model Chat {
+  id         String   @unique @default(cuid())
+  message    String
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  dateSended DateTime
 }
 
 enum UserRole {

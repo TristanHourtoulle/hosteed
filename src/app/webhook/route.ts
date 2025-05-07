@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createRent } from '@/lib/services/rents.service';
 import Stripe from "stripe";
+import {SendMail} from "@/lib/services/email.service";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-04-30.basil',
@@ -44,7 +45,6 @@ export async function POST(req: Request) {
           { status: 400 }
         );
       }
-    console.log(session);
       try {
         const rent = await createRent({
           productId: session.metadata.productId,
@@ -55,7 +55,9 @@ export async function POST(req: Request) {
           options: session.metadata.options ? JSON.parse(session.metadata.options) : [],
           stripeId: session.id
         });
-
+        console.log(session.metadata.userEmail, session.metadata.productName);
+        if (session.metadata.userEmail || session.metadata.productName)
+           await SendMail(session.metadata.userEmail, "Confirmation de demande de reservation", `Nous confirmons votre la bonne recepetion de votre demande de reservation pour ${session.metadata?.peopleNumber} personne dans l'hebergement ${session.metadata.productName}.`);
         if (!rent) {
           console.error('Échec de la création de la réservation');
           return NextResponse.json(

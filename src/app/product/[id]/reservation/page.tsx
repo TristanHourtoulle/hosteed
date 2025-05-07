@@ -1,8 +1,8 @@
 'use client'
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { createRent, CheckRentIsAvailable } from '@/lib/services/rents.service';
+import { CheckRentIsAvailable } from '@/lib/services/rents.service';
 import {findProductById} from "@/lib/services/product.service";
 import { PaymentForm } from '@/components/PaymentForm';
 
@@ -28,7 +28,6 @@ interface Product {
 
 export default function ReservationPage() {
     const { id } = useParams();
-    const router = useRouter();
     const { data: session } = useSession();
     const [product, setProduct] = useState<Product | null>(null);
     const [loading, setLoading] = useState(true);
@@ -192,6 +191,8 @@ export default function ReservationPage() {
                     metadata: {
                         productId: id,
                         userId: session.user.id,
+                        userEmail: session.user.email,
+                        productName: product.name,
                         arrivingDate: formData.arrivingDate,
                         leavingDate: formData.leavingDate,
                         peopleNumber: formData.peopleNumber,
@@ -201,34 +202,13 @@ export default function ReservationPage() {
             });
 
             const data = await response.json();
-
             if (data.url) {
-                // Rediriger vers la page de paiement Stripe
                 window.location.href = data.url;
             } else {
                 setError('Erreur lors de la création de la session de paiement');
             }
         } catch {
             setError('Une erreur est survenue lors de la vérification de disponibilité');
-        }
-    };
-
-    const handlePaymentSuccess = async (stripeTransactionId: string) => {
-        console.log('ID de la transaction Stripe:', stripeTransactionId);
-        try {
-            await createRent({
-                productId: id as string,
-                userId: session?.user?.id as string,
-                arrivingDate: new Date(formData.arrivingDate),
-                leavingDate: new Date(formData.leavingDate),
-                peopleNumber: formData.peopleNumber,
-                options: selectedOptions,
-                stripeId: stripeTransactionId
-            });
-
-            router.push('/payment/success');
-        } catch {
-            setError('Une erreur est survenue lors de la création de la réservation');
         }
     };
 
@@ -261,7 +241,6 @@ export default function ReservationPage() {
                 <p className="mb-4">Montant total : {totalAmount}€</p>
                 <PaymentForm
                     amount={totalAmount}
-                    onSuccess={handlePaymentSuccess}
                     onError={(error) => setError(error.message)}
                 />
             </div>
@@ -429,7 +408,6 @@ export default function ReservationPage() {
                                         </span>
                                     </div>
                                 </div>
-
                                 <div className="border-t pt-4">
                                     <h4 className="text-sm font-medium text-gray-900 mb-2">Frais supplémentaires</h4>
                                     <div className="space-y-2">

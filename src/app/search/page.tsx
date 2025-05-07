@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import SearchBar from '@/components/ui/searchBar';
 import { findAllProducts } from '@/lib/services/product.service';
@@ -27,6 +27,14 @@ interface Product {
 }
 
 export default function SearchResults() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center">Chargement...</div>}>
+            <SearchResultsContent />
+        </Suspense>
+    );
+}
+
+function SearchResultsContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const searchQuery = searchParams.get('q') || '';
