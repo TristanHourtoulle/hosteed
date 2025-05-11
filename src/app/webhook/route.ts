@@ -31,7 +31,8 @@ export async function POST(req: Request) {
       const dispute = event.data.object as Stripe.Dispute;
       const paymentIntent = dispute.payment_intent as string;
 
-      const rent = await prisma.rent.findFirst({
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      const rent = await prisma.rent.findFirstOrThrow({
         where: { stripeId: paymentIntent }
       });
 
@@ -65,10 +66,9 @@ export async function POST(req: Request) {
       const dispute = event.data.object as Stripe.Dispute;
       const paymentIntent = dispute.payment_intent as string;
 
-      const rent = await prisma.rent.findFirst({
+      const rent = await prisma.rent.findFirstOrThrow({
         where: { stripeId: paymentIntent }
       });
-
       if (rent) {
         await prisma.rent.update({
           where: { id: rent.id },
@@ -83,11 +83,11 @@ export async function POST(req: Request) {
     // Gestion des paiements réussis
     if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data.object as Stripe.PaymentIntent;
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
       const rent = await prisma.rent.findFirst({
         where: { stripeId: paymentIntent.id }
       });
-
       if (rent) {
         await prisma.rent.update({
           where: { id: rent.id },
@@ -96,6 +96,47 @@ export async function POST(req: Request) {
             payment: 'CLIENT_PAID'
           }
         });
+        console.log("Location mise à jour avec succès");
+      } else {
+        console.log("Aucune location trouvée pour ce payment_intent, vérification de la session...");
+
+        // Vérifier si une session existe pour ce payment_intent
+        const sessions = await stripe.checkout.sessions.list({
+          payment_intent: paymentIntent.id
+        });
+
+        if (sessions.data.length > 0) {
+          const session = sessions.data[0];
+          console.log("Session trouvée:", session);
+
+          if (session.metadata?.productId && session.metadata?.userId) {
+            console.log("Création de la location à partir de la session...");
+            try {
+              const newRent = await createRent({
+                productId: session.metadata.productId,
+                userId: session.metadata.userId,
+                arrivingDate: new Date(session.metadata.arrivingDate),
+                leavingDate: new Date(session.metadata.leavingDate),
+                peopleNumber: parseInt(session.metadata.peopleNumber),
+                options: session.metadata.options ? JSON.parse(session.metadata.options) : [],
+                stripeId: paymentIntent.id
+              });
+
+              if (newRent) {
+                console.log("Location créée avec succès:", newRent);
+                await prisma.rent.update({
+                  where: { id: newRent.id },
+                  data: {
+                    status: 'RESERVED',
+                    payment: 'CLIENT_PAID'
+                  }
+                });
+              }
+            } catch (error) {
+              console.error("Erreur lors de la création de la location:", error);
+            }
+          }
+        }
       }
     }
 
@@ -103,7 +144,7 @@ export async function POST(req: Request) {
     if (event.type === 'payment_intent.payment_failed') {
       const paymentIntent = event.data.object as Stripe.PaymentIntent;
 
-      const rent = await prisma.rent.findFirst({
+      const rent = await prisma.rent.findFirstOrThrow({
         where: { stripeId: paymentIntent.id }
       });
 
@@ -135,7 +176,7 @@ export async function POST(req: Request) {
     if (event.type === 'charge.refunded') {
       const charge = event.data.object as Stripe.Charge;
 
-      const rent = await prisma.rent.findFirst({
+      const rent = await prisma.rent.findFirstOrThrow({
         where: { stripeId: charge.payment_intent as string }
       });
 

@@ -147,7 +147,7 @@ model Rent {
   prices       BigInt
   arrivingDate DateTime
   leavingDate  DateTime
-  payment      PaymentStatus @default(CLIENT_PAID)
+  payment      PaymentStatus @default(NOT_PAID)
   product      Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   options      Options[]     @relation("OptionsToRent")

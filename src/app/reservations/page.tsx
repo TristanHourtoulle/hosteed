@@ -5,7 +5,7 @@ import { findAllRentByUserId, cancelRent } from '@/lib/services/rents.service';
 import { findProductById } from '@/lib/services/product.service';
 import Image from 'next/image';
 import Link from 'next/link';
-import {RentStatus} from "@prisma/client";
+import {PaymentStatus, RentStatus} from "@prisma/client";
 
 interface Rent {
     id: string;
@@ -24,6 +24,8 @@ interface Rent {
         img?: { img: string }[];
     };
     status: RentStatus;
+    payment: PaymentStatus;
+
 }
 
 export default function ReservationsPage() {
@@ -166,7 +168,7 @@ export default function ReservationsPage() {
                                                 ? 'bg-green-100 text-green-800' 
                                                 : 'bg-yellow-100 text-yellow-800'
                                         }`}>
-                                            {rent.status}
+                                            {rent.payment == 'DISPUTE' ? 'LITIGE' : rent.status}
                                         </span>
                                     </div>
                                     <Link
