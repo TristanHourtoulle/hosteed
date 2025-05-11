@@ -268,6 +268,8 @@ enum PaymentStatus {
   REST_TRANSFER_DONE
   FULL_TRANSFER_REQ
   FULL_TRANSFER_DONE
+  REFUNDED
+  DISPUTE
 }
 
 enum RentStatus {
