@@ -197,6 +197,7 @@ export default function ReservationPage() {
                         leavingDate: formData.leavingDate,
                         peopleNumber: formData.peopleNumber,
                         options: selectedOptions,
+                        prices: total,
                     },
                 }),
             });

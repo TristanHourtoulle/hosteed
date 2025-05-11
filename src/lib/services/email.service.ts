@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import Mail from 'nodemailer/lib/mailer';
 
-export async function SendMail(email: string, name:string, message:string) {
+export async function SendMail(email: string, name: string, message: string, isHtml: boolean = false) {
     const transport = nodemailer.createTransport({
         host: "ssl0.ovh.net",
         port: 465,
@@ -18,7 +18,7 @@ export async function SendMail(email: string, name:string, message:string) {
         from: process.env.EMAIL_LOGIN,
         to: email,
         subject: `${name}`,
-        text: message,
+        ...(isHtml ? { html: message } : { text: message })
     };
     const sendMailPromise = () =>
         new Promise<string>((resolve, reject) => {

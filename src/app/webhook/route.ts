@@ -210,7 +210,7 @@ export async function POST(req: Request) {
 
       if (!session.metadata?.productId || !session.metadata?.userId ||
           !session.metadata?.arrivingDate || !session.metadata?.leavingDate ||
-          !session.metadata?.peopleNumber || !session.payment_intent || session.status != "complete") {
+          !session.metadata?.peopleNumber || !session.payment_intent || session.status != "complete" || !session.metadata.prices) {
         console.error('Métadonnées manquantes dans la session Stripe:', session.metadata);
         return NextResponse.json(
           { error: 'Métadonnées manquantes' },
@@ -226,7 +226,8 @@ export async function POST(req: Request) {
           leavingDate: new Date(session.metadata.leavingDate),
           peopleNumber: parseInt(session.metadata.peopleNumber),
           options: session.metadata.options ? JSON.parse(session.metadata.options) : [],
-          stripeId: session.payment_intent.toString()
+          stripeId: session.payment_intent.toString(),
+          prices: Number(session.metadata.prices),
         });
 
         if (session.metadata.userEmail || session.metadata.productName) {

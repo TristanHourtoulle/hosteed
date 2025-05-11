@@ -1,5 +1,7 @@
 'use server'
 import {prisma} from "@/lib/prisma";
+import {sendTemplatedMail} from "@/lib/services/sendTemplatedMail";
+import {findAllUserByRoles} from "@/lib/services/user.service";
 export async function findProductById(id: string) {
     try {
         const product = await prisma.product.findUnique({
@@ -119,6 +121,20 @@ export async function createProduct(params: {
             }
         });
 
+        if (!createdProduct) throw Error('Erreur lors de la creation du produit')
+        const admin = await findAllUserByRoles('ADMIN');
+        admin?.map(async (user) => {
+            await sendTemplatedMail(
+                user.email,
+                'Une nouvelle annonce est en attente de validation',
+                'annonce-postee.html',
+                {
+                    name: user.name || 'Administrateur',
+                    productName: params.name,
+                    annonceUrl: (process.env.NEXTAUTH_URL + '/product/' + createdProduct.id),
+                }
+            );
+        })
         return createdProduct;
     } catch (error) {
         console.error("Erreur lors de la création du produit:", error);

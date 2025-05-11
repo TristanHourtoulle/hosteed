@@ -2,6 +2,8 @@
 import {prisma} from "@/lib/prisma";
 import {Prisma} from "@prisma/client";
 import {StripeService} from "@/lib/services/stripe";
+import {sendTemplatedMail} from "@/lib/services/sendTemplatedMail";
+import {bigint} from "zod";
 
 type RentWithRelations = Prisma.RentGetPayload<{
     include: {
@@ -101,9 +103,10 @@ export async function createRent(params: {
     peopleNumber: number,
     options: string[],
     stripeId: string,
+    prices: number,
 }): Promise<RentWithRelations | null> {
     try {
-        if (!params.productId || !params.userId || !params.arrivingDate || !params.leavingDate || !params.peopleNumber) {
+        if (!params.productId || !params.userId || !params.arrivingDate || !params.leavingDate || !params.peopleNumber|| !params.prices) {
             console.error("Paramètres manquants pour la création de la réservation:", params);
             return null;
         }
@@ -150,7 +153,7 @@ export async function createRent(params: {
                 numberPeople: BigInt(params.peopleNumber),
                 notes: BigInt(0),
                 accepted: false,
-                prices: BigInt(0),
+                prices: BigInt(params.prices),
                 stripeId: params.stripeId,
                 options: {
                     connect: params.options.map(optionId => ({ id: optionId }))
@@ -219,10 +222,13 @@ export async function cancelRent(id: string) {
             where: {
                 id: id
             },
+            include: {
+                user: true,
+                product: true,
+            }
         });
-        if (!rents) throw Error('No Rents find');
+        if (!rents || !rents.user) throw Error('No Rents find');
         const stripeRequest = await StripeService.RefundPaymentIntent(rents.stripeId);
-        console.log(stripeRequest)
         if (!stripeRequest) throw Error(stripeRequest);
         await prisma.rent.update({
             where: {
@@ -232,6 +238,19 @@ export async function cancelRent(id: string) {
                 status: 'CANCEL',
             }
         })
+        await sendTemplatedMail(
+            rents.user.email,
+            'Annulation de votre réservation',
+            'annulation.html',
+            {
+                name: rents.user.name || 'clients',
+                productName: rents.product.name,
+                arrivingDate: rents.arrivingDate.toDateString(),
+                leavingDate: rents.leavingDate.toDateString(),
+                reservationId: rents.id,
+                refundAmount: BigInt(rents.prices)
+            }
+        );
     } catch (e) {
         console.error('Erreur lors de la création du PaymentIntent:', e);
         return {
