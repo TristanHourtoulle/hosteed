@@ -67,7 +67,7 @@ export class StripeService {
 
   static async RefundPaymentIntent(paymentIntentId: string) {
     try {
-      const request = stripe.refunds.create({
+      await stripe.refunds.create({
         payment_intent: paymentIntentId,
       })
       return {
