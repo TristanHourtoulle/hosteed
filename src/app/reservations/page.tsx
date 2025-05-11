@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { findAllRentByUserId } from '@/lib/services/rents.service';
+import { findAllRentByUserId, cancelRent } from '@/lib/services/rents.service';
 import { findProductById } from '@/lib/services/product.service';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -166,7 +166,7 @@ export default function ReservationsPage() {
                                                 ? 'bg-green-100 text-green-800' 
                                                 : 'bg-yellow-100 text-yellow-800'
                                         }`}>
-                                            {rent.accepted ? 'Acceptée' : 'En attente'}
+                                            {rent.status}
                                         </span>
                                     </div>
                                     <Link
@@ -175,6 +175,9 @@ export default function ReservationsPage() {
                                     >
                                         Voir l&apos;hébergement
                                     </Link>
+                                    {rent.status == 'RESERVED' ? (
+                                    <button onClick={() => cancelRent(rent.id)}>Annuler votre reservation</button>
+                                    ) : null}
                                 </div>
                                 {rent.status == "CHECKOUT" ? (
                                     <Link

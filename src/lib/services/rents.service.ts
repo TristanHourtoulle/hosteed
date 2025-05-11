@@ -1,6 +1,7 @@
 'use server'
 import {prisma} from "@/lib/prisma";
 import {Prisma} from "@prisma/client";
+import {StripeService} from "@/lib/services/stripe";
 
 type RentWithRelations = Prisma.RentGetPayload<{
     include: {
@@ -209,5 +210,32 @@ export async function findRentByHostUserId(id: string) {
     } catch (error) {
         console.error("Erreur lors de la recherche des réservations:", error);
         return null;
+    }
+}
+
+export async function cancelRent(id: string) {
+    try {
+        const rents = await prisma.rent.findUnique({
+            where: {
+                id: id
+            },
+        });
+        if (!rents) throw Error('No Rents find');
+        const stripeRequest = await StripeService.RefundPaymentIntent(rents.stripeId);
+        console.log(stripeRequest)
+        if (!stripeRequest) throw Error(stripeRequest);
+        await prisma.rent.update({
+            where: {
+                id: id,
+            },
+            data: {
+                status: 'CANCEL',
+            }
+        })
+    } catch (e) {
+        console.error('Erreur lors de la création du PaymentIntent:', e);
+        return {
+            error: 'Erreur lors de la création du paiement',
+        };
     }
 }

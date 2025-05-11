@@ -34,11 +34,12 @@ export async function POST(req: Request) {
         arrivingDate: session.metadata?.arrivingDate,
         leavingDate: session.metadata?.leavingDate,
         peopleNumber: session.metadata?.peopleNumber,
-        options: session.metadata?.options
-      });
+        options: session.metadata?.options,
+      },session.metadata, "- ", session.metadata, "- ", session );
+
       if (!session.metadata?.productId || !session.metadata?.userId ||
           !session.metadata?.arrivingDate || !session.metadata?.leavingDate ||
-          !session.metadata?.peopleNumber || !session.id || session.status != "complete") {
+          !session.metadata?.peopleNumber || !session.payment_intent || session.status != "complete") {
         console.error('Métadonnées manquantes dans la session Stripe:', session.metadata);
         return NextResponse.json(
           { error: 'Métadonnées manquantes' },
@@ -53,7 +54,7 @@ export async function POST(req: Request) {
           leavingDate: new Date(session.metadata.leavingDate),
           peopleNumber: parseInt(session.metadata.peopleNumber),
           options: session.metadata.options ? JSON.parse(session.metadata.options) : [],
-          stripeId: session.id
+          stripeId: session.payment_intent.toString()
         });
         console.log(session.metadata.userEmail, session.metadata.productName);
         if (session.metadata.userEmail || session.metadata.productName)

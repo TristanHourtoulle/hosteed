@@ -65,6 +65,24 @@ export class StripeService {
     }
   }
 
+  static async RefundPaymentIntent(paymentIntentId: string) {
+    try {
+      const request = stripe.refunds.create({
+        payment_intent: paymentIntentId,
+      })
+      return {
+        success: true,
+        paymentIntentId
+      }
+    } catch (e) {
+      console.error('Erreur lors de la création du PaymentIntent:', e);
+      return {
+        success: false,
+        error: 'Erreur lors de la création du paiement',
+      };
+    }
+  }
+
   static async createCheckoutSession({
     amount,
     currency = 'eur',
