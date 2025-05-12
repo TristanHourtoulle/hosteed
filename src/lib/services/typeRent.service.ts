@@ -1,8 +1,8 @@
 'use server'
 import {prisma} from "@/lib/prisma";
+import {TypeRent} from "@prisma/client";
 
-
-export async function findTypeById(id: string) {
+export async function findTypeById(id: string): Promise<TypeRent | null> {
     try {
         return await prisma.typeRent.findUnique({
             where: {id},
@@ -13,7 +13,7 @@ export async function findTypeById(id: string) {
     }
 }
 
-export async function findAllTypeRent() {
+export async function findAllTypeRent(): Promise<TypeRent[] | null> {
     try {
         return await prisma.typeRent.findMany();
     } catch (error) {

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Notification de litige - Hosteed</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            background-color: #dc3545;
+            color: white;
+            border-radius: 5px;
+        }
+        .content {
+            padding: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px 0;
+            font-size: 12px;
+            color: #666;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #dc3545;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .details {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Notification de litige</h1>
+    </div>
+    
+    <div class="content">
+        <p>Bonjour {{name}},</p>
+        
+        <p>Nous avons reçu une notification concernant un litige sur votre paiement récent.</p>
+        
+        <div class="details">
+            <h3>Détails du litige :</h3>
+            <p><strong>Numéro de réservation :</strong> {{reservationId}}</p>
+            <p><strong>Date de la transaction :</strong> {{transactionDate}}</p>
+            <p><strong>Montant concerné :</strong> {{amount}} €</p>
+            <p><strong>Raison du litige :</strong> {{disputeReason}}</p>
+        </div>
+        
+        <p>Pour résoudre cette situation dans les meilleures conditions, nous vous invitons à :</p>
+        <ol>
+            <li>Vérifier les détails de votre réservation</li>
+            <li>Nous contacter au plus vite pour nous expliquer la situation</li>
+            <li>Fournir tous les documents nécessaires pour étayer votre position</li>
+        </ol>
+        
+        <p>Vous pouvez nous contacter en cliquant sur le bouton ci-dessous :</p>
+        
+        <div style="text-align: center;">
+            <a href="{{contactUrl}}" class="button">Contacter le support</a>
+        </div>
+        
+        <p>Notre équipe est à votre disposition pour vous accompagner dans la résolution de ce litige.</p>
+        
+        <p>Cordialement,<br>L'équipe Hosteed</p>
+    </div>
+    
+    <div class="footer">
+        <p>Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
+        <p>© 2024 Hosteed. Tous droits réservés.</p>
+    </div>
+</body>
+</html> 

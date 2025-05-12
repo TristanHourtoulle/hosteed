@@ -1,11 +1,25 @@
 'use server'
 import bcrypt from "bcryptjs";
 import {prisma} from "@/lib/prisma";
+import {UserRole} from "@prisma/client";
 
 export async function findUserByEmail(email: string) {
     try {
         return await prisma.user.findUnique({
             where: {email},
+        });
+    } catch (error) {
+        console.error("Erreur lors de la recherche de l'utilisateur:", error);
+        return null;
+    }
+}
+
+export async function findAllUserByRoles(roles: UserRole) {
+    try {
+        return await prisma.user.findMany({
+            where: {
+                roles: roles,
+            },
         });
     } catch (error) {
         console.error("Erreur lors de la recherche de l'utilisateur:", error);

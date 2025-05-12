@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -23,25 +17,32 @@ model TypeRent {
 model Equipment {
   id       String    @id @default(cuid())
   name     String
-  products Product[]
+  products Product[] @relation("EquipmentToProduct")
 }
 
 model Services {
   id       String    @id @default(cuid())
   name     String
-  products Product[]
+  products Product[] @relation("ProductToServices")
 }
 
 model Meals {
   id       String    @id @default(cuid())
   name     String
-  products Product[]
+  products Product[] @relation("MealsToProduct")
+}
+
+model TypeRoom {
+  id          String    @id @default(cuid())
+  name        String
+  description String
+  products    Product[] @relation("ProductToTypeRoom")
 }
 
 model Security {
   id       String    @id @default(cuid())
   name     String
-  products Product[]
+  products Product[] @relation("ProductToSecurity")
 }
 
 model Product {
@@ -52,8 +53,8 @@ model Product {
   basePrice        String
   room             BigInt?
   bathroom         BigInt?
-  arriving         BigInt
-  leaving          BigInt
+  arriving         Int
+  leaving          Int
   autoAccept       Boolean
   equipement       BigInt?
   meal             BigInt?
@@ -63,30 +64,47 @@ model Product {
   maxRent          BigInt?
   advanceRent      BigInt?
   delayTime        BigInt?
-  phone            String
   categories       BigInt
   minPeople        BigInt?
   maxPeople        BigInt?
-  img              Images[]
-  validate         Boolean
+  commission       Int               @default(0)
+  validate         ProductValidation @default(NotVerified)
   userManager      BigInt
   typeId           String
-  type             TypeRent          @relation(fields: [typeId], references: [id])
-  equipments       Equipment[]
-  servicesList     Services[]
-  mealsList        Meals[]
-  securities       Security[]
+  phone            String
+  latitude         Float
+  longitude        Float
+  sizeRoom         Int?
   options          Options[]
+  type             TypeRent          @relation(fields: [typeId], references: [id])
+  user             User[]
   rents            Rent[]
-  specificRequests SpecificRequest[]
-  specificPrices   SpecificPrices[]
   reviews          Review[]
+  specificPrices   SpecificPrices[]
+  specificRequests SpecificRequest[]
+  equipments       Equipment[]       @relation("EquipmentToProduct")
+  img              Images[]          @relation("ImagesToProduct")
+  mealsList        Meals[]           @relation("MealsToProduct")
+  securities       Security[]        @relation("ProductToSecurity")
+  servicesList     Services[]        @relation("ProductToServices")
+  typeRoom         TypeRoom[]        @relation("ProductToTypeRoom")
+  discount         Discount[]
+  Chat             Chat[]
+}
+
+model Discount {
+  id            String   @id @default(cuid())
+  productId     String
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  startDiscount DateTime
+  endDiscount   DateTime
+  price         Int
 }
 
 model Images {
   id      String    @id @default(cuid())
   img     String
-  Product Product[]
+  Product Product[] @relation("ImagesToProduct")
 }
 
 model SpecificPrices {
@@ -112,51 +130,62 @@ model Options {
   name      String
   price     BigInt
   type      BigInt
-  product   Product @relation(fields: [productId], references: [id])
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  Rent      Rent[]  @relation("OptionsToRent")
 }
 
 model Rent {
-  id           String  @id @default(cuid())
+  id           String        @id @default(cuid())
+  stripeId     String?
   productId    String
-  userId       BigInt
-  arrivingDate BigInt
-  leavingDate  BigInt
+  userId       String
   numberPeople BigInt
-  options      BigInt
   notes        BigInt
   accepted     Boolean
   prices       BigInt
-  product      Product @relation(fields: [productId], references: [id])
+  arrivingDate DateTime
+  leavingDate  DateTime
+  payment      PaymentStatus @default(NOT_PAID)
+  product      Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  options      Options[]     @relation("OptionsToRent")
+  status       RentStatus    @default(RESERVED)
+  Review       Review[]
 }
 
 model Review {
-  id          String   @id @default(cuid())
-  productId   String
-  title       String
-  text        String
-  grade       Int
-  visitDate   DateTime
-  publishDate DateTime
-  product     Product  @relation(fields: [productId], references: [id])
+  id           String   @id @default(cuid())
+  productId    String
+  title        String
+  text         String
+  grade        Int
+  visitDate    DateTime
+  publishDate  DateTime
+  rentId       String
+  rentRelation Rent     @relation(fields: [rentId], references: [id], onDelete: Cascade)
+  product      Product  @relation(fields: [productId], references: [id])
 }
 
 model User {
-  id             String          @id @default(cuid())
-  name           String?
-  lastname       String?
-  profilePicture String?
-  info           String?
-  password       String?
-  email          String          @unique
-  emailVerified  DateTime?
-  image          String?
-  accounts       Account[]
-  sessions       Session[]
-  Authenticator  Authenticator[]
-  roles          UserRole        @default(USER)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String          @id @default(cuid())
+  name             String?
+  email            String          @unique
+  emailVerified    DateTime?
+  image            String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  info             String?
+  lastname         String?
+  password         String?
+  profilePicture   String?
+  stripeCustomerId String?
+  roles            UserRole        @default(USER)
+  accounts         Account[]
+  Authenticator    Authenticator[]
+  Rent             Rent[]
+  sessions         Session[]
+  Product          Product[]
+  Chat             Chat[]
 }
 
 model Account {
@@ -182,9 +211,9 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model VerificationToken {
@@ -195,7 +224,6 @@ model VerificationToken {
   @@id([identifier, token])
 }
 
-// Optional for WebAuthn support
 model Authenticator {
   credentialID         String  @unique
   userId               String
@@ -205,10 +233,19 @@ model Authenticator {
   credentialDeviceType String
   credentialBackedUp   Boolean
   transports           String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                 User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, credentialID])
+}
+
+model Chat {
+  id         String   @unique @default(cuid())
+  message    String
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  dateSended DateTime
 }
 
 enum UserRole {
@@ -216,4 +253,31 @@ enum UserRole {
   BLOGWRITTER
   HOST
   USER
+}
+
+enum PaymentStatus {
+  NOT_PAID
+  CLIENT_PAID
+  MID_TRANSFER_REQ
+  MID_TRANSFER_DONE
+  REST_TRANSFER_REQ
+  REST_TRANSFER_DONE
+  FULL_TRANSFER_REQ
+  FULL_TRANSFER_DONE
+  REFUNDED
+  DISPUTE
+}
+
+enum RentStatus {
+  RESERVED
+  CHECKIN
+  CHECKOUT
+  CANCEL
+}
+
+enum ProductValidation {
+  NotVerified
+  Approve
+  Refused
+  RecheckRequest
 }
