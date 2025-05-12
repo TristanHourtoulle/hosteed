@@ -1,6 +1,8 @@
 'use server'
 import {prisma} from "@/lib/prisma";
 import {error} from "next/dist/build/output/log";
+import {findAllUserByRoles} from "@/lib/services/user.service";
+import {sendTemplatedMail} from "@/lib/services/sendTemplatedMail";
 
 export async function findAllReviews() {
     try {
@@ -38,6 +40,17 @@ export async function createReview(params: {
             }
         })
         if (!review) return error("Error while creation of the review");
+        const admin = await findAllUserByRoles('ADMIN');
+        admin?.map(async (user) => {
+            await sendTemplatedMail(
+                user.email,
+                'Nouvel avis posté !',
+                'validation-avis.html',
+                {
+                    reviewUrl: (process.env.NEXTAUTH_URL + '/avis/' + review.id),
+                }
+            );
+        })
         return review;
     } catch (e) {
         console.error("Error: ", e);

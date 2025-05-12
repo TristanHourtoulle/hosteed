@@ -68,7 +68,7 @@ model Product {
   minPeople        BigInt?
   maxPeople        BigInt?
   commission       Int               @default(0)
-  validate         Boolean
+  validate         ProductValidation @default(NotVerified)
   userManager      BigInt
   typeId           String
   phone            String
@@ -77,8 +77,7 @@ model Product {
   sizeRoom         Int?
   options          Options[]
   type             TypeRent          @relation(fields: [typeId], references: [id])
-  userId           String
-  user             User              @relation(fields: [userId], references: [id])
+  user             User[]
   rents            Rent[]
   reviews          Review[]
   specificPrices   SpecificPrices[]
@@ -90,8 +89,7 @@ model Product {
   servicesList     Services[]        @relation("ProductToServices")
   typeRoom         TypeRoom[]        @relation("ProductToTypeRoom")
   discount         Discount[]
-
-  Chat Chat[]
+  Chat             Chat[]
 }
 
 model Discount {
@@ -138,7 +136,7 @@ model Options {
 
 model Rent {
   id           String        @id @default(cuid())
-  stripeId     String
+  stripeId     String?
   productId    String
   userId       String
   numberPeople BigInt
@@ -186,10 +184,8 @@ model User {
   Authenticator    Authenticator[]
   Rent             Rent[]
   sessions         Session[]
-
-  Product Product[]
-
-  Chat Chat[]
+  Product          Product[]
+  Chat             Chat[]
 }
 
 model Account {
@@ -277,4 +273,11 @@ enum RentStatus {
   CHECKIN
   CHECKOUT
   CANCEL
+}
+
+enum ProductValidation {
+  NotVerified
+  Approve
+  Refused
+  RecheckRequest
 }

@@ -167,7 +167,7 @@ export default function CreateProduct() {
                 meals: formData.selectedMeals,
                 equipments: formData.selectedEquipments,
                 services: formData.selectedServices,
-                userId: session.user.id,
+                userId: [session.user.id],
             });
 
             if (product) {

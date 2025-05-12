@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Votre demande a été acceptée</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f9f9f9; }
+    .container { background: #fff; padding: 32px; border-radius: 8px; max-width: 600px; margin: 40px auto; box-shadow: 0 2px 8px #eee; }
+    .header { color: #2d3748; font-size: 24px; font-weight: bold; }
+    .content { margin-top: 24px; color: #444; }
+    .footer { margin-top: 32px; color: #888; font-size: 13px; text-align: center; }
+    .button { display: inline-block; background: #4f46e5; color: #fff; padding: 10px 24px; border-radius: 5px; text-decoration: none; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">Bonne nouvelle !</div>
+    <div class="content">
+      Bonjour {{ name }},<br><br>
+      Votre demande de réservation pour le logement <b>{{productName}}</b> a été acceptée.<br>
+      <a href="{{reservationUrl}}" class="button">Voir ma réservation</a>
+    </div>
+    <div class="footer">
+      Merci de votre confiance.<br>L'équipe Hosteed
+    </div>
+  </div>
+</body>
+</html>

@@ -67,7 +67,7 @@ const Navbar = () => {
               ) : null}
               {session && (session.user.roles == 'ADMIN') ? (
                   <div>
-                    <Link href={"/host_manager"}
+                    <Link href={"/admin"}
                           className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
                               isActive('/reservations')
                                   ? 'border-indigo-500 text-gray-900'

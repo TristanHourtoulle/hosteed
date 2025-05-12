@@ -119,7 +119,8 @@ export async function POST(req: Request) {
                 leavingDate: new Date(session.metadata.leavingDate),
                 peopleNumber: parseInt(session.metadata.peopleNumber),
                 options: session.metadata.options ? JSON.parse(session.metadata.options) : [],
-                stripeId: paymentIntent.id
+                stripeId: paymentIntent.id,
+                prices: Number(session.metadata.prices),
               });
 
               if (newRent) {
@@ -229,14 +230,6 @@ export async function POST(req: Request) {
           stripeId: session.payment_intent.toString(),
           prices: Number(session.metadata.prices),
         });
-
-        if (session.metadata.userEmail || session.metadata.productName) {
-          await SendMail(
-            session.metadata.userEmail,
-            "Confirmation de demande de reservation",
-            `Nous confirmons votre la bonne recepetion de votre demande de reservation pour ${session.metadata?.peopleNumber} personne dans l'hebergement ${session.metadata.productName}.`
-          );
-        }
 
         if (!rent) {
           console.error('Échec de la création de la réservation');

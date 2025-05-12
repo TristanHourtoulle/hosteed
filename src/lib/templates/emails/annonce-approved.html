@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <title>Annonce approuvée</title>
+        <style>
+            body { font-family: Arial, sans-serif; background: #f9f9f9; }
+            .container { background: #fff; padding: 32px; border-radius: 8px; max-width: 600px; margin: 40px auto; box-shadow: 0 2px 8px #eee; }
+            .header { color: #2d3748; font-size: 24px; font-weight: bold; }
+            .content { margin-top: 24px; color: #444; }
+            .footer { margin-top: 32px; color: #888; font-size: 13px; text-align: center; }
+            .button { display: inline-block; background: #4f46e5; color: #fff; padding: 10px 24px; border-radius: 5px; text-decoration: none; margin-top: 16px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">Annonce approuvée</div>
+            <div class="content">
+                Bonjour {{name}},<br><br>
+                Votre nouvelle annonce "{{productName}}" a été approuvée et est maintenant en ligne sur notre site.<br><br>
+                Votre annonce est désormais visible par tous les utilisateurs de notre site.
+                <a href="{{annonceUrl}}" class="button">Voir mon annonce</a>
+
+                <div class="details">
+                    <h3>Rappel ⚠️</h3>
+                    <p>- Conformément aux conditions applicables aux hébergeurs (article 3), vous devez nous informer dès que possible si votre logement ou votre chambre n'est plus disponible. En cas de refus répétés, de réservations pour cause d'indisponibilité non déclarée, votre annonce pourra être définitivement supprimée de la plateforme. Envoyez-nous juste un petit mail
+                        à <strong>welcome-pro@hosteed.com</strong>>.</p>
+                </div>
+                Nous vous souhaitons beaucoup de succès dans votre activité.<br>
+                A bientôt !
+            </div>
+            <div class="footer">
+                Merci de votre confiance.<br>L'équipe Hosteed
+            </div>
+        </div>
+    </body>
+</html>
