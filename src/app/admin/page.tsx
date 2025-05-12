@@ -44,6 +44,14 @@ export default function AdminDashboard() {
                             <p className="text-gray-600">Voir les statistiques du site</p>
                         </div>
                     </Link>
+
+                    {/* Carte des avis */}
+                    <Link href="/admin/reviews" className="block">
+                        <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+                            <h2 className="text-xl font-semibold text-gray-800 mb-2">Avis en attente</h2>
+                            <p className="text-gray-600">Voir les avis en attente de validation</p>
+                        </div>
+                    </Link>
                 </div>
             </div>
         </div>

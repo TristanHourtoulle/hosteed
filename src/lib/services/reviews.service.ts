@@ -12,6 +12,19 @@ export async function findAllReviews() {
         return null;
     }
 }
+
+export async function findAllWaitingReview() {
+    try {
+        return await prisma.review.findMany({
+            where: {
+                approved: false,
+            }
+        });
+    } catch (error) {
+        console.error("Erreur lors de la recherche des avis:", error);
+        return null;
+    }
+}
 export async function createReview(params: {
     productId: string,
     rentId: string
@@ -36,7 +49,8 @@ export async function createReview(params: {
                 rentRelation: {connect: {id: params.rentId}},
                 grade: params.grade,
                 visitDate: params.visitingDate,
-                publishDate: params.publishDate
+                publishDate: params.publishDate,
+                approved: false,
             }
         })
         if (!review) return error("Error while creation of the review");
@@ -55,5 +69,56 @@ export async function createReview(params: {
     } catch (e) {
         console.error("Error: ", e);
         return error("Error: ", e);
+    }
+}
+
+export async function approveReview(id: string) {
+    try {
+        const review = await prisma.review.update({
+            where: {id},
+            data: {
+                approved: true,
+            },
+            include: {
+                rentRelation: {
+                    include: {
+                        product: {
+                            include: {
+                                user: true,
+                            }
+                        },
+                    }
+                }
+            }
+        })
+        console.log(review);
+        if (!review || !review.rentRelation || !review.rentRelation.product) throw Error('No review found or impossible to update');
+        const user = review.rentRelation.product.user;
+        console.log(user);
+        if (!user) throw Error('No user found');
+        user.map(async (userSend) => {
+            await sendTemplatedMail(
+                userSend.email,
+                'Nouvel avis posté !',
+                'new-review.html',
+                {
+                    reviewUrl: (process.env.NEXTAUTH_URL + '/product/' + review.rentRelation.product.id),
+                }
+            );
+        })
+    } catch (e) {
+        console.error(e);
+        return null;
+    }
+}
+export async function deleteReview(id: string) {
+    try {
+        const request = await prisma.review.delete({
+            where: {id}
+        });
+        if (!request) throw Error('Error during delete review');
+    } catch (e) {
+        console.error(e);
+        return null;
     }
 }

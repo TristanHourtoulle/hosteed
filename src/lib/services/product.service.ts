@@ -17,7 +17,18 @@ export async function findProductById(id: string) {
                 options: true,
                 rents: true,
                 discount: true,
-                reviews: true,
+                user: {
+                    select: {
+                        name: true,
+                        email: true
+                    }
+                },
+                securities: true,
+                reviews: {
+                    where: {
+                        approved: true
+                    }
+                },
             }
         });
         if (product) {

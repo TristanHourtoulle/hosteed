@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {findProductByValidation, rejectProduct, validateProduct} from '@/lib/services/product.service';
-import { ProductValidation } from '@prisma/client';
+import { ProductValidation, UserRole } from '@prisma/client';
 import Image from 'next/image';
 import Link from 'next/link';
 import {UserInterface} from "@/lib/interface/userInterface";
@@ -15,9 +15,23 @@ interface Product {
     description: string;
     address: string;
     basePrice: string;
-    validate: ProductValidation,
+    validate: ProductValidation;
     img?: { img: string }[];
-    user: UserInterface[];
+    user: {
+        id: string;
+        email: string;
+        name: string | null;
+        lastname: string | null;
+        image: string | null;
+        info: string | null;
+        emailVerified: Date | null;
+        password: string | null;
+        roles: UserRole;
+        createdAt: Date;
+        updatedAt: Date;
+        profilePicture: string | null;
+        stripeCustomerId: string | null;
+    }[];
 }
 
 export default function ValidationPage() {
@@ -129,7 +143,7 @@ export default function ValidationPage() {
                                     <div className="relative h-48 w-full">
                                         <Image
                                             src={product.img[0].img}
-                                            alt={product.name}
+                                            alt={product.name || 'Image du produit'}
                                             fill
                                             className="object-cover"
                                         />

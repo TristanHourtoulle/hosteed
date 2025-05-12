@@ -162,6 +162,7 @@ model Review {
   visitDate    DateTime
   publishDate  DateTime
   rentId       String
+  approved     Boolean  @default(false)
   rentRelation Rent     @relation(fields: [rentId], references: [id], onDelete: Cascade)
   product      Product  @relation(fields: [productId], references: [id])
 }

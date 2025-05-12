@@ -60,7 +60,6 @@ interface Product {
 export default function EditProductPage({ params }: { params: { id: string } }) {
     const { data: session } = useSession();
     const router = useRouter();
-    const unwrappedParams = React.use(params);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
@@ -95,7 +94,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     const fetchData = async () => {
         try {
             const [productData, typesData, securitiesData, mealsData, equipmentsData, servicesData] = await Promise.all([
-                findProductById(unwrappedParams.id),
+                findProductById(params.id),
                 findAllTypeRent(),
                 findAllSecurity(),
                 findAllMeals(),
@@ -104,7 +103,12 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             ]);
 
             if (productData) {
-                setProduct(productData);
+                const convertedProduct = {
+                    ...productData,
+                    room: productData.room ? Number(productData.room) : null,
+                    bathroom: productData.bathroom ? Number(productData.bathroom) : null
+                };
+                setProduct(convertedProduct);
                 setFormData({
                     name: productData.name,
                     description: productData.description,
@@ -142,7 +146,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         if (session?.user) {
             fetchData();
         }
-    }, [session, unwrappedParams.id]);
+    }, [session, params.id]);
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
@@ -175,7 +179,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                 })
             );
 
-            const result = await resubmitProductWithChange(unwrappedParams.id, {
+            const result = await resubmitProductWithChange(params.id, {
                 name: formData.name,
                 description: formData.description,
                 address: formData.address,
@@ -332,7 +336,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                                 <input
                                     type="number"
                                     value={formData.room}
-                                    onChange={(e) => setFormData({ ...formData, room: parseInt(e.target.value) })}
+                                    onChange={(e) => setFormData({ ...formData, room: Number(e.target.value) })}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                     min="1"
                                     required
@@ -345,7 +349,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                                 <input
                                     type="number"
                                     value={formData.bathroom}
-                                    onChange={(e) => setFormData({ ...formData, bathroom: parseInt(e.target.value) })}
+                                    onChange={(e) => setFormData({ ...formData, bathroom: Number(e.target.value) })}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                     min="1"
                                     required

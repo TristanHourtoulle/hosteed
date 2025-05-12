@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, use } from 'react';
 import { findProductById, validateProduct, rejectProduct } from '@/lib/services/product.service';
-import { ProductValidation } from '@prisma/client';
+import { ProductValidation, RentStatus } from '@prisma/client';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -14,17 +14,21 @@ interface Product {
     description: string;
     address: string;
     basePrice: string;
-    room: number | null;
-    bathroom: number | null;
+    room: bigint | null;
+    bathroom: bigint | null;
     arriving: number;
     leaving: number;
+    validate: ProductValidation;
     img?: { img: string }[];
-    user: { name: string; email: string }[];
+    user: { name: string | null; email: string }[];
     equipments: { id: string; name: string }[];
     servicesList: { id: string; name: string }[];
     mealsList: { id: string; name: string }[];
     securities: { id: string; name: string }[];
-    type: { id: string; name: string };
+    type: { id: string; name: string; description: string };
+    options: { id: string; name: string; productId: string; type: bigint; price: bigint }[];
+    rents: { id: string; status: RentStatus }[];
+    discount: any[];
 }
 
 export default function ValidationPreviewPage({ params }: { params: Promise<{ id: string }> }) {

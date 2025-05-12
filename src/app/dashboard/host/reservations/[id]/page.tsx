@@ -16,7 +16,7 @@ interface Rent {
     id: string;
     name: string;
   };
-  user: {
+  user?: {
     id: string;
     name: string;
     email: string;
