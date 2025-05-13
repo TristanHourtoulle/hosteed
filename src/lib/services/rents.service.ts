@@ -474,3 +474,31 @@ export async function changeRentStatus(id: string, status: RentStatus) {
     }
 }
 
+export async function findAllRentByProductId(productId: string) {
+    try {
+        const rents = await prisma.rent.findMany({
+            where: {
+                productId: productId
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                },
+                options: true
+            },
+            orderBy: {
+                arrivingDate: 'desc'
+            }
+        });
+
+        return rents;
+    } catch (error) {
+        console.error("Erreur lors de la recherche des réservations:", error);
+        return null;
+    }
+}
+

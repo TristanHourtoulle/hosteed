@@ -3,6 +3,54 @@ import bcrypt from "bcryptjs";
 import {prisma} from "@/lib/prisma";
 import {UserRole} from "@prisma/client";
 
+export async function findAllUser() {
+    try {
+        return await prisma.user.findMany({
+            include: {
+                Rent: true,
+                Product: true,
+            },
+            omit: {
+                password: true,
+                stripeCustomerId: true,
+            },
+        });
+    } catch (e) {
+        console.error(e);
+        return null;
+    }
+}
+
+export async function findUserById(id: string) {
+    try {
+        return await prisma.user.findUnique({
+            where: {id},
+            include: {
+                Rent: {
+                    include: {
+                        product: {
+                            select: {
+                                id: true,
+                                name: true,
+                                basePrice: true,
+                                validate: true
+                            }
+                        }
+                    }
+                },
+                Product: true,
+            },
+            omit: {
+                password: true,
+                stripeCustomerId: true,
+            },
+        })
+    } catch (e) {
+        console.error(e);
+        return null;
+    }
+}
+
 export async function findUserByEmail(email: string) {
     try {
         return await prisma.user.findUnique({

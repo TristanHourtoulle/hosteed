@@ -52,6 +52,14 @@ export default function AdminDashboard() {
                             <p className="text-gray-600">Voir les avis en attente de validation</p>
                         </div>
                     </Link>
+
+                    {/* Carte de gestion des produits */}
+                    <Link href="/admin/products" className="block">
+                        <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+                            <h2 className="text-xl font-semibold text-gray-800 mb-2">Gestion des hébergements</h2>
+                            <p className="text-gray-600">Voir et gérer tous les hébergements</p>
+                        </div>
+                    </Link>
                 </div>
             </div>
         </div>
