@@ -74,6 +74,7 @@ model Product {
   phone            String
   latitude         Float
   longitude        Float
+  certified        Boolean           @default(false)
   sizeRoom         Int?
   options          Options[]
   type             TypeRent          @relation(fields: [typeId], references: [id])
@@ -187,6 +188,8 @@ model User {
   sessions         Session[]
   Product          Product[]
   Chat             Chat[]
+
+  PayRequest PayRequest[]
 }
 
 model Account {
@@ -247,6 +250,31 @@ model Chat {
   productId  String
   product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   dateSended DateTime
+}
+
+model PayRequest {
+  id             String           @unique @default(cuid())
+  userId         String
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  PaymentRequest PaymentStatus
+  prices         String
+  notes          String
+  method         PaymentMethod
+  status         PaymentReqStatus
+}
+
+enum PaymentReqStatus {
+  RECEIVED
+  REFUSED
+  DONE
+}
+
+enum PaymentMethod {
+  SEPA_VIREMENT
+  TAPTAP
+  PAYPAL
+  INTERNATIONAL
+  OTHER
 }
 
 enum UserRole {
