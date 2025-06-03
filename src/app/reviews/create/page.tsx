@@ -169,7 +169,7 @@ function ReviewForm() {
 
                 <div className="form-group">
                     <label htmlFor="welcomeGrade" className="block mb-2 font-medium">
-                        Note d'accueil (1-5)
+                        Note d&apos;accueil (1-5)
                     </label>
                     <input
                         type="number"
@@ -220,7 +220,7 @@ function ReviewForm() {
 
                 <div className="form-group">
                     <label htmlFor="equipment" className="block mb-2 font-medium">
-                        Note de l'équipement (1-5)
+                        Note de l&apos;équipement (1-5)
                     </label>
                     <input
                         type="number"

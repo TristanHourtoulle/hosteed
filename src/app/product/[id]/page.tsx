@@ -10,7 +10,6 @@ import {Equipment, Meals, Services} from "@prisma/client";
 interface Reviews {
     id: string;
     title: string;
-    productId: string;
     text: string;
     grade: number;
     welcomeGrade: number;
@@ -20,7 +19,7 @@ interface Reviews {
     cleaning: number;
     visitDate: Date;
     publishDate: Date;
-    rentId: string;
+    approved: boolean;
 }
 interface Product {
     id: string;
@@ -69,8 +68,21 @@ export default function ProductDetails() {
             index += 1;
         });
         setglobalGrade(grade/index);
+        return {
+            global: grade/index,
+            welcome: welcomeGrade/index,
+            staff: staffGrade/index,
+            comfort: comfortGrade/index,
+            equipment: equipmentGrade/index,
+            cleaning: cleaningGrade/index
+        };
     }
-    if (product?.reviews) getGlobalGrade(product.reviews)
+    if (product?.reviews) {
+        const grades = getGlobalGrade(product.reviews);
+        if (typeof grades === 'object') {
+            setglobalGrade(grades.global);
+        }
+    }
     }, [product]);
     useEffect(() => {
         const fetchProduct = async () => {
@@ -78,7 +90,7 @@ export default function ProductDetails() {
                 const productData = await findProductById(id as string);
                 if (productData) {
                     console.log(productData)
-                    setProduct(productData);
+                    setProduct(productData as unknown as Product);
                 } else {
                     setError('Produit non trouvé');
                 }
@@ -297,13 +309,13 @@ export default function ProductDetails() {
                                     <h3 className="text-lg font-semibold mb-2">Note globale : {globalGrade.toFixed(1)}/5</h3>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <p className="text-gray-600">Accueil : {product.reviews.reduce((acc, review) => acc + review.welcomeGrade, 0) / product.reviews.length}/5</p>
-                                            <p className="text-gray-600">Personnel : {product.reviews.reduce((acc, review) => acc + review.staff, 0) / product.reviews.length}/5</p>
-                                            <p className="text-gray-600">Confort : {product.reviews.reduce((acc, review) => acc + review.comfort, 0) / product.reviews.length}/5</p>
+                                            <p className="text-gray-600">Accueil : {(product.reviews.reduce((acc, review) => acc + review.welcomeGrade, 0) / product.reviews.length).toFixed(1)}/5</p>
+                                            <p className="text-gray-600">Personnel : {(product.reviews.reduce((acc, review) => acc + review.staff, 0) / product.reviews.length).toFixed(1)}/5</p>
+                                            <p className="text-gray-600">Confort : {(product.reviews.reduce((acc, review) => acc + review.comfort, 0) / product.reviews.length).toFixed(1)}/5</p>
                                         </div>
                                         <div>
-                                            <p className="text-gray-600">Équipement : {product.reviews.reduce((acc, review) => acc + review.equipment, 0) / product.reviews.length}/5</p>
-                                            <p className="text-gray-600">Nettoyage : {product.reviews.reduce((acc, review) => acc + review.cleaning, 0) / product.reviews.length}/5</p>
+                                            <p className="text-gray-600">Équipement : {(product.reviews.reduce((acc, review) => acc + review.equipment, 0) / product.reviews.length).toFixed(1)}/5</p>
+                                            <p className="text-gray-600">Nettoyage : {(product.reviews.reduce((acc, review) => acc + review.cleaning, 0) / product.reviews.length).toFixed(1)}/5</p>
                                         </div>
                                     </div>
                                 </div>
