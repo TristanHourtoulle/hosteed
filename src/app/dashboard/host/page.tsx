@@ -1,7 +1,6 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { findAllProductByHostId } from '@/lib/services/product.service';
 import { ProductValidation } from '@prisma/client';
@@ -20,28 +19,27 @@ interface Product {
 
 export default function HostDashboard() {
     const { data: session } = useSession();
-    const router = useRouter();
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const fetchProducts = async () => {
-        try {
-            if (session?.user?.id) {
-                const userProducts = await findAllProductByHostId(session.user.id);
-                if (userProducts) {
-                    setProducts(userProducts);
-                }
-            }
-        } catch (err) {
-            setError('Erreur lors du chargement des annonces');
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                if (session?.user?.id) {
+                    const userProducts = await findAllProductByHostId(session.user.id);
+                    if (userProducts) {
+                        setProducts(userProducts);
+                    }
+                }
+            } catch (err) {
+                setError('Erreur lors du chargement des annonces');
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
         if (session?.user) {
             fetchProducts();
         }
@@ -174,7 +172,7 @@ export default function HostDashboard() {
 
                     {products.length === 0 ? (
                         <div className="bg-white rounded-lg shadow-md p-6 text-center">
-                            <p className="text-gray-600 mb-4">Vous n'avez pas encore d'annonces</p>
+                            <p className="text-gray-600 mb-4">Vous n&apos;avez pas encore d&apos;annonces</p>
                             <Link
                                 href="/createProduct"
                                 className="text-blue-600 hover:text-blue-800"
@@ -210,7 +208,7 @@ export default function HostDashboard() {
                                                 href={`/product/${product.id}`}
                                                 className="text-blue-600 hover:text-blue-800"
                                             >
-                                                Voir l'annonce
+                                                Voir l&apos;annonce
                                             </Link>
                                             <div className="flex space-x-4">
                                                 <Link

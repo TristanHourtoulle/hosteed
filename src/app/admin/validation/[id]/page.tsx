@@ -4,9 +4,8 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, use } from 'react';
 import { findProductById, validateProduct, rejectProduct } from '@/lib/services/product.service';
-import { ProductValidation, RentStatus } from '@prisma/client';
+import {Discount, ProductValidation, RentStatus} from '@prisma/client';
 import Image from 'next/image';
-import Link from 'next/link';
 
 interface Product {
     id: string;
@@ -28,7 +27,7 @@ interface Product {
     type: { id: string; name: string; description: string };
     options: { id: string; name: string; productId: string; type: bigint; price: bigint }[];
     rents: { id: string; status: RentStatus }[];
-    discount: any[];
+    discount: Discount[];
 }
 
 export default function ValidationPreviewPage({ params }: { params: Promise<{ id: string }> }) {
@@ -46,26 +45,26 @@ export default function ValidationPreviewPage({ params }: { params: Promise<{ id
         }
     }, [session, router]);
 
-    const fetchProduct = async () => {
-        try {
-            const productData = await findProductById(resolvedParams.id);
-            if (productData) {
-                setProduct(productData);
-                setValidationStatus(productData.validate);
-            }
-        } catch (err) {
-            setError('Erreur lors du chargement de l\'annonce');
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     useEffect(() => {
+        const fetchProduct = async () => {
+            try {
+                const productData = await findProductById(resolvedParams.id);
+                if (productData) {
+                    setProduct(productData);
+                    setValidationStatus(productData.validate);
+                }
+            } catch (err) {
+                setError('Erreur lors du chargement de l\'annonce');
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
         fetchProduct();
     }, [resolvedParams.id]);
 
     const handleValidate = async () => {
+        console.log(validationStatus);
         try {
             await validateProduct(resolvedParams.id);
             setValidationStatus(ProductValidation.Approve);
@@ -139,7 +138,7 @@ export default function ValidationPreviewPage({ params }: { params: Promise<{ id
 
                     <div className="p-6">
                         <h1 className="text-3xl font-bold text-gray-900 mb-4">{product.name}</h1>
-                        
+
                         <div className="mb-6">
                             <h2 className="text-xl font-semibold text-gray-800 mb-2">Description</h2>
                             <p className="text-gray-600">{product.description}</p>
@@ -187,4 +186,4 @@ export default function ValidationPreviewPage({ params }: { params: Promise<{ id
             </div>
         </div>
     );
-} 
+}

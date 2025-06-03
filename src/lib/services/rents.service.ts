@@ -47,7 +47,7 @@ type RentWithRelations = Prisma.RentGetPayload<{
     };
 }>;
 
-type RentWithDates = Omit<RentWithRelations, 'arrivingDate' | 'leavingDate'> & {
+export type RentWithDates = Omit<RentWithRelations, 'arrivingDate' | 'leavingDate'> & {
     arrivingDate: Date;
     leavingDate: Date;
 };
@@ -285,6 +285,72 @@ export async function createRent(params: {
     } catch (error) {
         console.error("Erreur détaillée lors de la création de la réservation:", error);
         return null;
+    }
+}
+
+export async function approveRent(id: string) {
+    const createdRent = await prisma.rent.findFirst({
+        where: {id: id},
+        include: {
+            product: {
+                include: {
+                    img: true,
+                    type: true,
+                    user: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                        }
+                    }
+                }
+            },
+            user: true,
+            options: true
+        }
+    })
+    if (!createdRent || !createdRent.stripeId || !createdRent.user) throw Error();
+    const stripe_request = await StripeService.capturePaymentIntent(createdRent.stripeId);
+    console.log(stripe_request);
+    await prisma.rent.update({
+        where: { id: id },
+        data: {
+            status: 'RESERVED',
+            payment: 'CLIENT_PAID'
+        }
+    });
+    const admin = await findAllUserByRoles('ADMIN');
+    admin?.map(async (user) => {
+        await sendTemplatedMail(
+            user.email,
+            'Nouvelle réservation !',
+            'new-book.html',
+            {
+                bookId: createdRent.id,
+                name: user.name || '',
+                bookUrl: (process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id),
+            }
+        );
+    })
+    await sendTemplatedMail(
+        createdRent.user.email,
+        'Réservation confirmée 🏨',
+        'confirmation-reservation.html',
+        {
+            name: createdRent.user.name || '',
+            listing_title: createdRent.product.name,
+            listing_adress: createdRent.product.address,
+            check_in: createdRent.product.arriving,
+            check_out: createdRent.product.leaving,
+            categories: createdRent.product.type.name,
+            phone_number: createdRent.product.phone,
+            arriving_date: createdRent.arrivingDate.toDateString(),
+            leaving_date: createdRent.leavingDate.toDateString(),
+            reservationUrl: (process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id),
+        }
+    );
+    return {
+        success: true
     }
 }
 

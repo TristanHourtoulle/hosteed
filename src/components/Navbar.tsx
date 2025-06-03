@@ -42,8 +42,7 @@ const Navbar = () => {
               >
                 Réservations actuelles
               </Link>
-              {session && (session.user.roles == 'HOST') ? (
-                    <Link href={"/host_manager"}
+                    <Link href={"/dashboard/host"}
                           className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
                               isActive('/reservations')
                                   ? 'border-indigo-500 text-gray-900'
@@ -52,7 +51,6 @@ const Navbar = () => {
                     >
                       Gestion Host
                     </Link>
-              ) : null}
 
               {session && (session.user.roles == 'BLOGWRITTER' || session.user.roles == 'ADMIN') ? (
                     <Link href={"/host_manager"}

@@ -75,6 +75,7 @@ model Product {
   latitude         Float
   longitude        Float
   certified        Boolean           @default(false)
+  contract         Boolean           @default(false)
   sizeRoom         Int?
   options          Options[]
   type             TypeRent          @relation(fields: [typeId], references: [id])
@@ -151,7 +152,19 @@ model Rent {
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   options      Options[]     @relation("OptionsToRent")
   status       RentStatus    @default(RESERVED)
+  confirmed    Boolean       @default(false)
   Review       Review[]
+  DisableRent  DisableRent[]
+
+  PayRequest PayRequest[]
+}
+
+model DisableRent {
+  id        String   @id @default(cuid())
+  startDate DateTime
+  endDate   DateTime
+  rentId    String
+  rent      Rent     @relation(fields: [rentId], references: [id], onDelete: Cascade)
 }
 
 model Review {
@@ -256,6 +269,8 @@ model PayRequest {
   id             String           @unique @default(cuid())
   userId         String
   user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rentId         String
+  rent           Rent             @relation(fields: [rentId], references: [id], onDelete: Cascade)
   PaymentRequest PaymentStatus
   prices         String
   notes          String

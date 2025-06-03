@@ -56,8 +56,8 @@ interface Product {
     mealsList: { id: string }[];
     securities: { id: string }[];
 }
-
-export default function EditProductPage({ params }: { params: { id: string } }) {
+export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
+    const resolvedParams = React.use(params) as { id: string };
     const { data: session } = useSession();
     const router = useRouter();
     const [loading, setLoading] = useState(true);
@@ -90,63 +90,61 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         selectedServices: [] as string[]
     });
 
-
-    const fetchData = async () => {
-        try {
-            const [productData, typesData, securitiesData, mealsData, equipmentsData, servicesData] = await Promise.all([
-                findProductById(params.id),
-                findAllTypeRent(),
-                findAllSecurity(),
-                findAllMeals(),
-                findAllEquipments(),
-                findAllServices()
-            ]);
-
-            if (productData) {
-                const convertedProduct = {
-                    ...productData,
-                    room: productData.room ? Number(productData.room) : null,
-                    bathroom: productData.bathroom ? Number(productData.bathroom) : null
-                };
-                setProduct(convertedProduct);
-                setFormData({
-                    name: productData.name,
-                    description: productData.description,
-                    address: productData.address,
-                    longitude: productData.longitude,
-                    latitude: productData.latitude,
-                    basePrice: productData.basePrice,
-                    room: productData.room ? Number(productData.room) : 1,
-                    bathroom: productData.bathroom ? Number(productData.bathroom) : 1,
-                    typeId: productData.typeId,
-                    arriving: productData.arriving,
-                    leaving: productData.leaving,
-                    selectedSecurities: productData.securities?.map(s => s.id) || [],
-                    selectedMeals: productData.mealsList?.map(m => m.id) || [],
-                    selectedEquipments: productData.equipments?.map(e => e.id) || [],
-                    selectedServices: productData.servicesList?.map(s => s.id) || []
-                });
-                setPreviewImages(productData.img?.map(img => img.img) || []);
-            }
-
-            if (typesData) setTypes(typesData);
-            if (securitiesData) setSecurities(securitiesData);
-            if (mealsData) setMeals(mealsData);
-            if (equipmentsData) setEquipments(equipmentsData);
-            if (servicesData) setServices(servicesData);
-        } catch (err) {
-            setError('Erreur lors du chargement des données');
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [productData, typesData, securitiesData, mealsData, equipmentsData, servicesData] = await Promise.all([
+                    findProductById(resolvedParams.id),
+                    findAllTypeRent(),
+                    findAllSecurity(),
+                    findAllMeals(),
+                    findAllEquipments(),
+                    findAllServices()
+                ]);
+
+                if (productData) {
+                    const convertedProduct = {
+                        ...productData,
+                        room: productData.room ? Number(productData.room) : null,
+                        bathroom: productData.bathroom ? Number(productData.bathroom) : null
+                    };
+                    setProduct(convertedProduct);
+                    setFormData({
+                        name: productData.name,
+                        description: productData.description,
+                        address: productData.address,
+                        longitude: productData.longitude,
+                        latitude: productData.latitude,
+                        basePrice: productData.basePrice,
+                        room: productData.room ? Number(productData.room) : 1,
+                        bathroom: productData.bathroom ? Number(productData.bathroom) : 1,
+                        typeId: productData.typeId,
+                        arriving: productData.arriving,
+                        leaving: productData.leaving,
+                        selectedSecurities: productData.securities?.map(s => s.id) || [],
+                        selectedMeals: productData.mealsList?.map(m => m.id) || [],
+                        selectedEquipments: productData.equipments?.map(e => e.id) || [],
+                        selectedServices: productData.servicesList?.map(s => s.id) || []
+                    });
+                    setPreviewImages(productData.img?.map(img => img.img) || []);
+                }
+
+                if (typesData) setTypes(typesData);
+                if (securitiesData) setSecurities(securitiesData);
+                if (mealsData) setMeals(mealsData);
+                if (equipmentsData) setEquipments(equipmentsData);
+                if (servicesData) setServices(servicesData);
+            } catch (err) {
+                setError('Erreur lors du chargement des données');
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
         if (session?.user) {
             fetchData();
         }
-    }, [session, params.id]);
+    }, [session, resolvedParams.id]);
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
@@ -179,7 +177,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                 })
             );
 
-            const result = await resubmitProductWithChange(params.id, {
+            const result = await resubmitProductWithChange(resolvedParams.id, {
                 name: formData.name,
                 description: formData.description,
                 address: formData.address,
@@ -202,6 +200,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                 router.push('/dashboard/host/validation');
             } else {
                 setError('Erreur lors de la mise à jour de l\'annonce');
+                console.log(product, securities, meals);
             }
         } catch (err) {
             setError('Erreur lors de la mise à jour de l\'annonce');
@@ -241,7 +240,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     return (
         <div className="min-h-screen bg-gray-100 p-6">
             <div className="max-w-4xl mx-auto">
-                <h1 className="text-3xl font-bold text-gray-900 mb-8">Modifier l'annonce</h1>
+                <h1 className="text-3xl font-bold text-gray-900 mb-8">Modifier l&apos;annonce</h1>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Informations de base */}
@@ -250,7 +249,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Nom de l'annonce
+                                    Nom de l&apos;annonce
                                 </label>
                                 <input
                                     type="text"

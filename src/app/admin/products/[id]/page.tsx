@@ -2,11 +2,33 @@
 
 import { useEffect, useState, use } from 'react'
 import { findProductById, validateProduct, rejectProduct } from '@/lib/services/product.service'
-import { findAllRentByProductId, changeRentStatus } from '@/lib/services/rents.service'
+import { findAllRentByProductId } from '@/lib/services/rents.service'
 import { Product, RentStatus, PaymentStatus, ProductValidation } from '@prisma/client'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
+
+interface ProductWithRelations extends Product {
+    type?: {
+        id: string;
+        name: string;
+    } | null;
+    equipments?: Array<{
+        id: string;
+        name: string;
+    }>;
+    servicesList?: Array<{
+        id: string;
+        name: string;
+    }>;
+    mealsList?: Array<{
+        id: string;
+        name: string;
+    }>;
+    img?: Array<{
+        id: string;
+        img: string;
+    }>;
+}
 
 interface Rent {
     id: string
@@ -29,11 +51,10 @@ interface Rent {
 }
 
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
-    const [product, setProduct] = useState<Product | null>(null)
+    const [product, setProduct] = useState<ProductWithRelations | null>(null)
     const [rents, setRents] = useState<Rent[]>([])
     const [loading, setLoading] = useState(true)
     const router = useRouter()
-    const { data: session } = useSession()
     const resolvedParams = use(params)
 
     useEffect(() => {
@@ -43,7 +64,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                     findProductById(resolvedParams.id),
                     findAllRentByProductId(resolvedParams.id)
                 ])
-                
+
                 if (productData) {
                     setProduct(productData)
                 }
@@ -95,7 +116,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
                     <h2 className="text-2xl font-bold text-gray-800 mb-4">Produit non trouvé</h2>
-                    <button 
+                    <button
                         onClick={() => router.push('/admin/products')}
                         className="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90 transition-colors"
                     >
@@ -109,9 +130,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     return (
         <div className="container mx-auto px-4 py-8">
             <div className="flex justify-between items-center mb-8">
-                <h1 className="text-3xl font-bold text-gray-900">Détails de l'hébergement</h1>
+                <h1 className="text-3xl font-bold text-gray-900">Détails de l&apos;hébergement</h1>
                 <div className="flex gap-4">
-                    <button 
+                    <button
                         onClick={() => router.push('/admin/products')}
                         className="border-2 border-gray-300 px-4 py-2 rounded-md hover:bg-gray-100 transition-colors text-gray-700"
                     >
@@ -119,13 +140,13 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                     </button>
                     {product.validate === ProductValidation.NotVerified && (
                         <>
-                            <button 
+                            <button
                                 onClick={handleValidate}
                                 className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors font-medium"
                             >
                                 Valider
                             </button>
-                            <button 
+                            <button
                                 onClick={handleReject}
                                 className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors font-medium"
                             >
@@ -134,7 +155,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                         </>
                     )}
                     {product.validate === ProductValidation.Approve && (
-                        <button 
+                        <button
                             onClick={handleReject}
                             className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors font-medium"
                         >
@@ -142,7 +163,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                         </button>
                     )}
                     {product.validate === ProductValidation.Refused && (
-                        <button 
+                        <button
                             onClick={handleValidate}
                             className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors font-medium"
                         >
@@ -191,7 +212,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                     <h2 className="text-xl font-bold mb-4 text-gray-900">Caractéristiques</h2>
                     <div className="space-y-4">
                         <div>
-                            <h3 className="font-semibold text-gray-800">Type d'hébergement</h3>
+                            <h3 className="font-semibold text-gray-800">Type d&apos;hébergement</h3>
                             <p className="text-gray-700">{product.type?.name}</p>
                         </div>
                         <div>
@@ -203,7 +224,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                             <p className="text-gray-700">{product.bathroom || 'Non spécifié'}</p>
                         </div>
                         <div>
-                            <h3 className="font-semibold text-gray-800">Heure d'arrivée</h3>
+                            <h3 className="font-semibold text-gray-800">Heure d&apos;arrivée</h3>
                             <p className="text-gray-700">{product.arriving}h</p>
                         </div>
                         <div>
@@ -221,7 +242,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                             <h3 className="font-semibold text-gray-800">Équipements</h3>
                             <div className="flex flex-wrap gap-2 mt-2">
                                 {product.equipments?.map((equipment) => (
-                                    <span 
+                                    <span
                                         key={equipment.id}
                                         className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm border border-gray-200"
                                     >
@@ -234,7 +255,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                             <h3 className="font-semibold text-gray-800">Services</h3>
                             <div className="flex flex-wrap gap-2 mt-2">
                                 {product.servicesList?.map((service) => (
-                                    <span 
+                                    <span
                                         key={service.id}
                                         className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm border border-gray-200"
                                     >
@@ -247,7 +268,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                             <h3 className="font-semibold text-gray-800">Repas</h3>
                             <div className="flex flex-wrap gap-2 mt-2">
                                 {product.mealsList?.map((meal) => (
-                                    <span 
+                                    <span
                                         key={meal.id}
                                         className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm border border-gray-200"
                                     >
@@ -318,18 +339,18 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                                             <h3 className="font-semibold text-gray-800">Statut</h3>
                                             <div className="flex gap-2">
                                                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                                    rent.status === 'ACCEPTED' 
+                                                    rent.status === RentStatus.RESERVED 
                                                         ? 'bg-green-100 text-green-800 border border-green-200'
-                                                        : rent.status === 'REJECTED'
+                                                        : rent.status === RentStatus.CANCEL
                                                         ? 'bg-red-100 text-red-800 border border-red-200'
                                                         : 'bg-yellow-100 text-yellow-800 border border-yellow-200'
                                                 }`}>
                                                     {rent.status}
                                                 </span>
                                                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                                    rent.payment === 'PAID' 
+                                                    rent.payment === PaymentStatus.CLIENT_PAID 
                                                         ? 'bg-green-100 text-green-800 border border-green-200'
-                                                        : rent.payment === 'REFUNDED'
+                                                        : rent.payment === PaymentStatus.REFUNDED
                                                         ? 'bg-blue-100 text-blue-800 border border-blue-200'
                                                         : 'bg-yellow-100 text-yellow-800 border border-yellow-200'
                                                 }`}>

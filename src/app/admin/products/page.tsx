@@ -1,13 +1,20 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { findAllProducts } from '@/lib/services/product.service'
 import { Product } from '@prisma/client'
 import Image from 'next/image'
 import Link from 'next/link'
+import { findAllProducts } from '@/lib/services/product.service'
+import { useEffect, useState } from 'react'
+
+interface ProductWithRelations extends Product {
+    img?: Array<{
+        id: string;
+        img: string;
+    }>;
+}
 
 export default function ProductsPage() {
-    const [products, setProducts] = useState<Product[]>([])
+    const [products, setProducts] = useState<ProductWithRelations[]>([])
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
@@ -15,7 +22,7 @@ export default function ProductsPage() {
             try {
                 const data = await findAllProducts()
                 if (data) {
-                    setProducts(data)
+                    setProducts(data as ProductWithRelations[])
                 }
             } catch (error) {
                 console.error('Erreur lors du chargement des produits:', error)
@@ -31,6 +38,16 @@ export default function ProductsPage() {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>
+        )
+    }
+
+    if (!products.length) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-4">Aucun produit trouvé</h2>
+                </div>
             </div>
         )
     }

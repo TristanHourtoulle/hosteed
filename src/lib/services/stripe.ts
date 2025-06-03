@@ -17,10 +17,14 @@ export interface CreateCheckoutSessionParams {
   successUrl: string;
   cancelUrl: string;
   metadata?: Record<string, string>;
+  mode?: 'payment';
+  payment_intent_data?: {
+    capture_method: 'manual';
+  };
 }
 
-export class StripeService {
-  static async createPaymentIntent({
+export const StripeService = {
+  async createPaymentIntent({
     amount,
     currency = 'eur',
     metadata = {},
@@ -29,6 +33,7 @@ export class StripeService {
       const paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(amount * 100), // Stripe utilise les centimes
         currency,
+        capture_method: 'manual',
         automatic_payment_methods: {
           enabled: true,
         },
@@ -47,9 +52,25 @@ export class StripeService {
         error: 'Erreur lors de la création du paiement',
       };
     }
-  }
+  },
 
-  static async retrievePaymentIntent(paymentIntentId: string) {
+  async capturePaymentIntent(paymentIntentId: string) {
+    try {
+      const paymentIntent = await stripe.paymentIntents.capture(paymentIntentId);
+      return {
+        success: true,
+        paymentIntent,
+      }
+    } catch (e) {
+      console.error(e);
+      return {
+        success: false,
+        e
+      }
+    }
+  },
+
+  async retrievePaymentIntent(paymentIntentId: string) {
     try {
       const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
       return {
@@ -63,9 +84,9 @@ export class StripeService {
         error: 'Erreur lors de la récupération du paiement',
       };
     }
-  }
+  },
 
-  static async RefundPaymentIntent(paymentIntentId: string) {
+  async RefundPaymentIntent(paymentIntentId: string) {
     try {
       await stripe.refunds.create({
         payment_intent: paymentIntentId,
@@ -81,9 +102,9 @@ export class StripeService {
         error: 'Erreur lors de la création du paiement',
       };
     }
-  }
+  },
 
-  static async createCheckoutSession({
+  async createCheckoutSession({
     amount,
     currency = 'eur',
     productName,
@@ -107,6 +128,9 @@ export class StripeService {
           },
         ],
         mode: 'payment',
+        payment_intent_data: {
+          capture_method: 'manual',
+        },
         success_url: successUrl,
         cancel_url: cancelUrl,
         metadata,
@@ -124,4 +148,4 @@ export class StripeService {
       };
     }
   }
-}
+};

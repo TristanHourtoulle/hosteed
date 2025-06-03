@@ -1,14 +1,22 @@
 import { NextResponse } from 'next/server';
-import { createRent } from '@/lib/services/rents.service';
+import {approveRent, createRent} from '@/lib/services/rents.service';
 import Stripe from "stripe";
 import {SendMail} from "@/lib/services/email.service";
 import { prisma } from '@/lib/prisma';
+import { RentStatus } from '@prisma/client';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-04-30.basil',
 });
 
-export async function POST(req: Request) {
+type StripeWebhookEvent = {
+  type: string;
+  data: {
+    object: Stripe.PaymentIntent | Stripe.Dispute | Stripe.Charge | Stripe.Checkout.Session;
+  };
+};
+
+export async function POST(req: Request): Promise<Response> {
   const body = await req.text();
   const signature = req.headers.get('stripe-signature');
 
@@ -24,7 +32,7 @@ export async function POST(req: Request) {
       body,
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!
-    );
+    ) as StripeWebhookEvent;
 
     // Gestion des litiges
     if (event.type === 'charge.dispute.created') {
@@ -41,7 +49,7 @@ export async function POST(req: Request) {
         const updatRequest = await prisma.rent.update({
           where: { id: rent.id },
           data: {
-            status: 'CANCEL',
+            status: 'CANCEL' as RentStatus,
             payment: 'DISPUTE'
           }
         });
@@ -85,6 +93,12 @@ export async function POST(req: Request) {
       const paymentIntent = event.data.object as Stripe.PaymentIntent;
       await new Promise(resolve => setTimeout(resolve, 2000));
 
+      // Vérifier si le paiement a été capturé
+      if (paymentIntent.status !== 'succeeded') {
+        console.log("Paiement non capturé, en attente de capture manuelle");
+        return NextResponse.json({ received: true });
+      }
+
       const rent = await prisma.rent.findFirst({
         where: { stripeId: paymentIntent.id }
       });
@@ -92,7 +106,8 @@ export async function POST(req: Request) {
         await prisma.rent.update({
           where: { id: rent.id },
           data: {
-            status: 'RESERVED',
+            status: 'RESERVED' as RentStatus,
+            accepted: true,
             payment: 'CLIENT_PAID'
           }
         });
@@ -128,7 +143,7 @@ export async function POST(req: Request) {
                 await prisma.rent.update({
                   where: { id: newRent.id },
                   data: {
-                    status: 'RESERVED',
+                    status: 'RESERVED' as RentStatus,
                     payment: 'CLIENT_PAID'
                   }
                 });
@@ -153,7 +168,7 @@ export async function POST(req: Request) {
         await prisma.rent.update({
           where: { id: rent.id },
           data: {
-            status: 'CANCEL',
+            status: 'CANCEL' as RentStatus,
             payment: 'NOT_PAID'
           }
         });
@@ -185,7 +200,7 @@ export async function POST(req: Request) {
         await prisma.rent.update({
           where: { id: rent.id },
           data: {
-            status: 'CANCEL',
+            status: 'CANCEL' as RentStatus,
             payment: 'REFUNDED'
           }
         });
@@ -211,7 +226,7 @@ export async function POST(req: Request) {
 
       if (!session.metadata?.productId || !session.metadata?.userId ||
           !session.metadata?.arrivingDate || !session.metadata?.leavingDate ||
-          !session.metadata?.peopleNumber || !session.payment_intent || session.status != "complete" || !session.metadata.prices) {
+          !session.metadata?.peopleNumber || !session.payment_intent || session.status !== "complete" || !session.metadata.prices) {
         console.error('Métadonnées manquantes dans la session Stripe:', session.metadata);
         return NextResponse.json(
           { error: 'Métadonnées manquantes' },
@@ -238,6 +253,15 @@ export async function POST(req: Request) {
             { status: 500 }
           );
         }
+
+        // Mettre à jour le statut de la location
+        await prisma.rent.update({
+          where: { id: rent.id },
+          data: {
+            status: 'RESERVED' as RentStatus,
+            payment: 'CLIENT_PAID'
+          }
+        });
       } catch (error) {
         console.error('Erreur lors de la création de la réservation:', error);
         return NextResponse.json(
@@ -247,12 +271,47 @@ export async function POST(req: Request) {
       }
     }
 
+    // Gestion de la création d'un paiement
+    if (event.type === 'payment_intent.created') {
+      const paymentIntent = event.data.object as Stripe.PaymentIntent;
+      console.log("Nouveau paiement créé avec capture manuelle:", paymentIntent.id);
+
+      // Mettre à jour le statut de la location en attente de capture
+      const rent = await prisma.rent.findFirst({
+        where: { stripeId: paymentIntent.id }
+      });
+
+      if (rent) {
+        await prisma.rent.update({
+          where: { id: rent.id },
+          data: {
+            status: 'RESERVED' as RentStatus,
+            payment: 'NOT_PAID'
+          }
+        });
+      }
+    }
+
+    // Gestion de la capture du paiement
+    if (event.type === 'payment_intent.captured') {
+      const paymentIntent = event.data.object as Stripe.PaymentIntent;
+      console.log("Paiement capturé:", paymentIntent.id);
+
+      const rent = await prisma.rent.findFirst({
+        where: { stripeId: paymentIntent.id }
+      });
+
+      if (rent) {
+        return NextResponse.json(await approveRent(rent.id));
+      }
+    }
+
     return NextResponse.json({ received: true });
-  } catch (error) {
-    console.error('Erreur webhook:', error);
+  } catch (err) {
+    console.error('Erreur webhook:', err);
     return NextResponse.json(
       { error: 'Erreur webhook' },
       { status: 400 }
     );
   }
-}
+};

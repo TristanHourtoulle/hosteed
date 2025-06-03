@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { findRentByHostUserId } from '@/lib/services/rents.service';
-import { RentStatus } from '@prisma/client';
+import {findRentByHostUserId, approveRent} from '@/lib/services/rents.service';
+import {PaymentStatus, RentStatus} from '@prisma/client';
 import HostNavbar from '../components/HostNavbar';
 
 interface Rent {
@@ -11,6 +11,7 @@ interface Rent {
   arrivingDate: Date;
   leavingDate: Date;
   status: RentStatus;
+  payment: PaymentStatus;
   product: {
     id: string;
     name: string;
@@ -20,6 +21,7 @@ interface Rent {
     name: string | null;
     email: string;
   };
+  stripeId: string | null;
 }
 
 export default function RentsPage() {
@@ -72,6 +74,20 @@ export default function RentsPage() {
     });
   };
 
+  const handleApproveReservation = async (rentId: string, stripeId: string | null) => {
+    try {
+      if (!stripeId) {
+        throw new Error('Aucun paiement associé à cette réservation');
+      }
+      const result = await approveRent(rentId)
+      if (!result?.success) {
+        throw new Error('Erreur lors de la capture du paiement');
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'approbation de la réservation:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -108,6 +124,9 @@ export default function RentsPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Statut
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -128,11 +147,21 @@ export default function RentsPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         {getStatusBadge(rent.status)}
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {rent.status === RentStatus.RESERVED && rent.payment == PaymentStatus.NOT_PAID && (
+                          <button
+                            onClick={() => handleApproveReservation(rent.id, rent.stripeId)}
+                            className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                          >
+                            Approuver
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                   {rents.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
+                      <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
                         Aucune location trouvée
                       </td>
                     </tr>
@@ -145,4 +174,4 @@ export default function RentsPage() {
       </div>
     </div>
   );
-} 
+}

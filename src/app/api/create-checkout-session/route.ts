@@ -6,6 +6,10 @@ export async function POST(req: Request) {
     const { amount, productName, metadata } = await req.json();
 
     const result = await StripeService.createCheckoutSession({
+      mode: 'payment',
+      payment_intent_data: {
+        capture_method: 'manual',
+      },
       amount,
       productName,
       successUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success`,
@@ -28,4 +32,4 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
-} 
+}

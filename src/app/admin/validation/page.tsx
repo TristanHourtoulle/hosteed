@@ -7,7 +7,6 @@ import {findProductByValidation, rejectProduct, validateProduct} from '@/lib/ser
 import { ProductValidation, UserRole } from '@prisma/client';
 import Image from 'next/image';
 import Link from 'next/link';
-import {UserInterface} from "@/lib/interface/userInterface";
 
 interface Product {
     id: string;

@@ -1,6 +1,6 @@
 'use server'
 import { prisma } from '@/lib/prisma';
-import { Rent, RentStatus } from '@prisma/client';
+import { RentStatus } from '@prisma/client';
 
 export interface FormattedRent {
   id: string;

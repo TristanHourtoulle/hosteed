@@ -2,6 +2,7 @@
 import { findAllUser } from '@/lib/services/user.service'
 import Link from 'next/link'
 import {useEffect, useState} from "react";
+import {Product, Rent} from "@prisma/client";
 
 interface User {
     id: string;
@@ -10,8 +11,8 @@ interface User {
     email: string;
     roles: string;
     createdAt: Date;
-    Product: any[];
-    Rent: any[];
+    Product: Product[];
+    Rent: Rent[];
 }
 
 export default function UsersPage() {

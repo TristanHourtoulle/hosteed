@@ -2,16 +2,44 @@
 
 import { useEffect, useState } from 'react'
 import { findUserById } from '@/lib/services/user.service'
-import { useParams, useRouter } from 'next/navigation'
-import { getRentById, cancelRent } from '@/lib/services/rents.service'
+import { useParams } from 'next/navigation'
+import { cancelRent } from '@/lib/services/rents.service'
 import Link from 'next/link'
+import { ProductValidation } from '@prisma/client'
+
+interface Product {
+    id: string;
+    name: string;
+    basePrice: string;
+    validate: ProductValidation;
+}
+
+interface Rent {
+    id: string;
+    product?: Product;
+    arrivingDate: string | Date;
+    leavingDate: string | Date;
+    status: string;
+    numberPeople: bigint;
+    prices: bigint;
+    payment: string;
+}
+
+interface User {
+    name: string | null;
+    lastname: string | null;
+    email: string;
+    roles: string;
+    createdAt: string | Date;
+    Rent: Rent[];
+    Product: Product[];
+}
 
 export default function UserDetailsPage() {
-    const [user, setUser] = useState<any>(null)
+    const [user, setUser] = useState<User | null>(null)
     const [loading, setLoading] = useState(true)
     const [cancelling, setCancelling] = useState<string | null>(null)
     const params = useParams()
-    const router = useRouter()
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -84,7 +112,7 @@ export default function UserDetailsPage() {
             {/* Informations de l'utilisateur */}
             <div className="bg-white rounded-lg shadow-md mb-8">
                 <div className="px-6 py-4 border-b border-gray-200">
-                    <h1 className="text-2xl font-semibold text-gray-800">Informations de l'utilisateur</h1>
+                    <h1 className="text-2xl font-semibold text-gray-800">Informations de l&apos;utilisateur</h1>
                 </div>
                 <div className="p-6">
                     <div className="grid grid-cols-2 gap-4">
@@ -132,7 +160,7 @@ export default function UserDetailsPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
-                                    {user.Rent.map((rent: any) => (
+                                    {user.Rent.map((rent: Rent) => (
                                         <tr key={rent.id} className="hover:bg-gray-50">
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{rent.id}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -193,12 +221,12 @@ export default function UserDetailsPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
-                                    {user.Product.map((product: any) => (
+                                    {user.Product.map((product: Product) => (
                                         <tr key={product.id} className="hover:bg-gray-50">
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{product.id}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{product.name}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{product.basePrice}€</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{product.accepted ? 'Validé' : 'En attente'}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{product.validate === ProductValidation.Approve ? 'Validé' : 'En attente'}</td>
                                         </tr>
                                     ))}
                                 </tbody>

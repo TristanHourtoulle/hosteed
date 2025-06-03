@@ -2,15 +2,39 @@
 
 import { useEffect, useState } from 'react'
 import { getRentById, cancelRent } from '@/lib/services/rents.service'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
 
+interface User {
+    name: string | null;
+    lastname: string | null;
+    email: string;
+    roles: string;
+}
+
+interface Product {
+    name: string;
+    basePrice: string;
+    validate: string;
+}
+
+interface Rent {
+    id: string;
+    status: string;
+    arrivingDate: string | Date;
+    leavingDate: string | Date;
+    prices: bigint;
+    createdAt?: string | Date;
+    product?: Product;
+    user?: User;
+    payment?: string;
+}
+
 export default function ReservationDetailsPage() {
-    const [rent, setRent] = useState<any>(null)
-    const [loading, setLoading] = useState(true)
-    const [cancelling, setCancelling] = useState(false)
-    const params = useParams()
-    const router = useRouter()
+    const [rent, setRent] = useState<Rent | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [cancelling, setCancelling] = useState(false);
+    const params = useParams();
 
     useEffect(() => {
         const fetchRent = async () => {
@@ -47,7 +71,7 @@ export default function ReservationDetailsPage() {
         }
     }
 
-    const formatDate = (dateString: string | Date | null) => {
+    const formatDate = (dateString: string | Date | undefined | null) => {
         if (!dateString) return '-'
         try {
             const date = new Date(dateString)
@@ -117,7 +141,7 @@ export default function ReservationDetailsPage() {
                             <p className="text-lg">{rent.status}</p>
                         </div>
                         <div>
-                            <p className="text-sm text-gray-500">Date d'arrivée</p>
+                            <p className="text-sm text-gray-500">Date d&apos;arrivée</p>
                             <p className="text-lg">{formatDate(rent.arrivingDate)}</p>
                         </div>
                         <div>
