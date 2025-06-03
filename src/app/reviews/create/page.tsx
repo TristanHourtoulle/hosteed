@@ -10,6 +10,11 @@ interface ReviewFormData {
     rentId: string
     userId: string
     grade: number
+    welcomeGrade: number
+    staff: number
+    comfort: number
+    equipment: number
+    cleaning: number
     title: string
     text: string
     visitingDate: string
@@ -26,6 +31,11 @@ function ReviewForm() {
         rentId: rentId || '',
         userId: '',
         grade: 5,
+        welcomeGrade: 5,
+        staff: 5,
+        comfort: 5,
+        equipment: 5,
+        cleaning: 5,
         title: '',
         text: '',
         visitingDate: '',
@@ -79,6 +89,11 @@ function ReviewForm() {
         if (!formData.rentId) newErrors.rentId = "L'ID de la location est requis"
         if (!formData.userId) newErrors.userId = "L'ID de l'utilisateur est requis"
         if (formData.grade < 1 || formData.grade > 5) newErrors.grade = "La note doit être entre 1 et 5"
+        if (formData.welcomeGrade < 1 || formData.welcomeGrade > 5) newErrors.welcomeGrade = "La note d'accueil doit être entre 1 et 5"
+        if (formData.staff < 1 || formData.staff > 5) newErrors.staff = "La note du personnel doit être entre 1 et 5"
+        if (formData.comfort < 1 || formData.comfort > 5) newErrors.comfort = "La note du confort doit être entre 1 et 5"
+        if (formData.equipment < 1 || formData.equipment > 5) newErrors.equipment = "La note de l'équipement doit être entre 1 et 5"
+        if (formData.cleaning < 1 || formData.cleaning > 5) newErrors.cleaning = "La note du nettoyage doit être entre 1 et 5"
         if (!formData.title) newErrors.title = "Le titre est requis"
         if (!formData.text || formData.text.length < 10) newErrors.text = "Le texte doit contenir au moins 10 caractères"
         if (!formData.visitingDate) newErrors.visitingDate = "La date de visite est requise"
@@ -137,7 +152,7 @@ function ReviewForm() {
             <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-6">
                 <div className="form-group">
                     <label htmlFor="grade" className="block mb-2 font-medium">
-                        Note (1-5)
+                        Note globale (1-5)
                     </label>
                     <input
                         type="number"
@@ -150,6 +165,91 @@ function ReviewForm() {
                         className={`w-full p-2 border rounded ${errors.grade ? 'border-red-500' : 'border-gray-300'}`}
                     />
                     {errors.grade && <p className="text-red-500 text-sm mt-1">{errors.grade}</p>}
+                </div>
+
+                <div className="form-group">
+                    <label htmlFor="welcomeGrade" className="block mb-2 font-medium">
+                        Note d'accueil (1-5)
+                    </label>
+                    <input
+                        type="number"
+                        id="welcomeGrade"
+                        name="welcomeGrade"
+                        min="1"
+                        max="5"
+                        value={formData.welcomeGrade}
+                        onChange={handleChange}
+                        className={`w-full p-2 border rounded ${errors.welcomeGrade ? 'border-red-500' : 'border-gray-300'}`}
+                    />
+                    {errors.welcomeGrade && <p className="text-red-500 text-sm mt-1">{errors.welcomeGrade}</p>}
+                </div>
+
+                <div className="form-group">
+                    <label htmlFor="staff" className="block mb-2 font-medium">
+                        Note du personnel (1-5)
+                    </label>
+                    <input
+                        type="number"
+                        id="staff"
+                        name="staff"
+                        min="1"
+                        max="5"
+                        value={formData.staff}
+                        onChange={handleChange}
+                        className={`w-full p-2 border rounded ${errors.staff ? 'border-red-500' : 'border-gray-300'}`}
+                    />
+                    {errors.staff && <p className="text-red-500 text-sm mt-1">{errors.staff}</p>}
+                </div>
+
+                <div className="form-group">
+                    <label htmlFor="comfort" className="block mb-2 font-medium">
+                        Note du confort (1-5)
+                    </label>
+                    <input
+                        type="number"
+                        id="comfort"
+                        name="comfort"
+                        min="1"
+                        max="5"
+                        value={formData.comfort}
+                        onChange={handleChange}
+                        className={`w-full p-2 border rounded ${errors.comfort ? 'border-red-500' : 'border-gray-300'}`}
+                    />
+                    {errors.comfort && <p className="text-red-500 text-sm mt-1">{errors.comfort}</p>}
+                </div>
+
+                <div className="form-group">
+                    <label htmlFor="equipment" className="block mb-2 font-medium">
+                        Note de l'équipement (1-5)
+                    </label>
+                    <input
+                        type="number"
+                        id="equipment"
+                        name="equipment"
+                        min="1"
+                        max="5"
+                        value={formData.equipment}
+                        onChange={handleChange}
+                        className={`w-full p-2 border rounded ${errors.equipment ? 'border-red-500' : 'border-gray-300'}`}
+                    />
+                    {errors.equipment && <p className="text-red-500 text-sm mt-1">{errors.equipment}</p>}
+                </div>
+
+                <div className="form-group">
+                    <label htmlFor="cleaning" className="block mb-2 font-medium">
+                        Note du nettoyage (1-5)
+                    </label>
+                    <input
+                        type="number"
+                        id="cleaning"
+                        name="cleaning"
+                        min="1"
+                        max="5"
+                        value={formData.cleaning}
+                        onChange={handleChange}
+                        className={`w-full p-2 border rounded ${errors.cleaning ? 'border-red-500' : 'border-gray-300'}`}
+                    />
+                    {errors.cleaning && <p className="text-red-500 text-sm mt-1">{errors.cleaning}</p>}
                 </div>
 
                 <div className="form-group">

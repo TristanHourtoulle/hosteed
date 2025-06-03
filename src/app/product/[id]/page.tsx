@@ -13,6 +13,11 @@ interface Reviews {
     productId: string;
     text: string;
     grade: number;
+    welcomeGrade: number;
+    staff: number;
+    comfort: number;
+    equipment: number;
+    cleaning: number;
     visitDate: Date;
     publishDate: Date;
     rentId: string;
@@ -48,9 +53,19 @@ export default function ProductDetails() {
     function getGlobalGrade (reviews: Reviews[]) {
         if (!reviews) return 0;
         let grade = 0;
+        let welcomeGrade = 0;
+        let staffGrade = 0;
+        let comfortGrade = 0;
+        let equipmentGrade = 0;
+        let cleaningGrade = 0;
         let index = 0;
         reviews.map((review) => {
             grade += review.grade;
+            welcomeGrade += review.welcomeGrade;
+            staffGrade += review.staff;
+            comfortGrade += review.comfort;
+            equipmentGrade += review.equipment;
+            cleaningGrade += review.cleaning;
             index += 1;
         });
         setglobalGrade(grade/index);
@@ -275,14 +290,47 @@ export default function ProductDetails() {
                     </div>
 
                     <div>
-                        <p>Avis:</p>
-                        {product.reviews && product.reviews.map((review) => (
-                            <div key={review.id}>
-                                <p>Note: {review.grade}</p>
-                                <p>Avis: {review.title}</p>
-                                <p>{review.text}</p>
+                        <h2 className="text-2xl font-semibold mb-4 text-gray-900">Avis</h2>
+                        {product.reviews && product.reviews.length > 0 ? (
+                            <div className="space-y-4">
+                                <div className="bg-gray-50 p-4 rounded-lg">
+                                    <h3 className="text-lg font-semibold mb-2">Note globale : {globalGrade.toFixed(1)}/5</h3>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p className="text-gray-600">Accueil : {product.reviews.reduce((acc, review) => acc + review.welcomeGrade, 0) / product.reviews.length}/5</p>
+                                            <p className="text-gray-600">Personnel : {product.reviews.reduce((acc, review) => acc + review.staff, 0) / product.reviews.length}/5</p>
+                                            <p className="text-gray-600">Confort : {product.reviews.reduce((acc, review) => acc + review.comfort, 0) / product.reviews.length}/5</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-gray-600">Équipement : {product.reviews.reduce((acc, review) => acc + review.equipment, 0) / product.reviews.length}/5</p>
+                                            <p className="text-gray-600">Nettoyage : {product.reviews.reduce((acc, review) => acc + review.cleaning, 0) / product.reviews.length}/5</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                {product.reviews.map((review) => (
+                                    <div key={review.id} className="border-b border-gray-200 pb-4">
+                                        <h4 className="font-semibold">{review.title}</h4>
+                                        <p className="text-gray-600 text-sm mb-2">
+                                            {new Date(review.publishDate).toLocaleDateString('fr-FR')}
+                                        </p>
+                                        <div className="grid grid-cols-2 gap-4 mb-2">
+                                            <div>
+                                                <p className="text-gray-600">Accueil : {review.welcomeGrade}/5</p>
+                                                <p className="text-gray-600">Personnel : {review.staff}/5</p>
+                                                <p className="text-gray-600">Confort : {review.comfort}/5</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-gray-600">Équipement : {review.equipment}/5</p>
+                                                <p className="text-gray-600">Nettoyage : {review.cleaning}/5</p>
+                                            </div>
+                                        </div>
+                                        <p className="text-gray-700">{review.text}</p>
+                                    </div>
+                                ))}
                             </div>
-                        ))}
+                        ) : (
+                            <p className="text-gray-600">Aucun avis pour le moment</p>
+                        )}
                     </div>
                 </div>
             </div>

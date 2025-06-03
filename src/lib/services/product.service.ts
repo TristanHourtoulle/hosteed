@@ -27,6 +27,20 @@ export async function findProductById(id: string) {
                 reviews: {
                     where: {
                         approved: true
+                    },
+                    select: {
+                        id: true,
+                        title: true,
+                        text: true,
+                        grade: true,
+                        welcomeGrade: true,
+                        staff: true,
+                        comfort: true,
+                        equipment: true,
+                        cleaning: true,
+                        visitDate: true,
+                        publishDate: true,
+                        approved: true
                     }
                 },
             }

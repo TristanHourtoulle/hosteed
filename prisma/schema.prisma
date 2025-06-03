@@ -173,6 +173,11 @@ model Review {
   title        String
   text         String
   grade        Int
+  welcomeGrade Int      @default(0)
+  staff        Int      @default(0)
+  comfort      Int      @default(0)
+  equipment    Int      @default(0)
+  cleaning     Int      @default(0)
   visitDate    DateTime
   publishDate  DateTime
   rentId       String
