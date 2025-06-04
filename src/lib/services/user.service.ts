@@ -2,7 +2,8 @@
 import bcrypt from "bcryptjs";
 import {prisma} from "@/lib/prisma";
 import {UserRole} from "@prisma/client";
-
+import jwt from 'jsonwebtoken';
+import {sendTemplatedMail} from "@/lib/services/sendTemplatedMail";
 export async function findAllUser() {
     try {
         return await prisma.user.findMany({
@@ -92,7 +93,7 @@ export async function createUser(data: {
 }) {
     try {
         const hashedPassword = await bcrypt.hash(data.password, 10);
-        return await prisma.user.create({
+        const user = await prisma.user.create({
             data: {
                 ...data,
                 password: hashedPassword,
@@ -104,6 +105,8 @@ export async function createUser(data: {
                 lastname: true
             }
         });
+        await sendEmailVerification(user.id);
+        return user;
     } catch (error) {
         console.error("Erreur lors de la création de l'utilisateur:", error);
         return null;
@@ -137,5 +140,75 @@ export async function updateUser(id: string, data: Partial<{
     } catch (error) {
         console.error("Erreur lors de la mise à jour de l'utilisateur:", error);
         return null;
+    }
+}
+
+export async function sendEmailVerification(userId:string) {
+    try {
+        const user = await prisma.user.findUnique({
+            where: {
+                id: userId,
+            },
+        })
+        if (!user) throw new Error('User not found');
+        const token = jwt.sign(
+            { email: user.email },
+            process.env.EMAIL_VERIF_TOKEN,
+            { expiresIn: '4h' } // Token valable 1 heure
+        )
+        await prisma.user.update({
+            where: {id: userId},
+            data: {
+                emailToken: token,
+            }
+        });
+        await sendTemplatedMail(
+            user.email,
+            'Verifier votre email !',
+            'checkEmail.html',
+            {
+                verificationUrl: (process.env.NEXTAUTH_URL + '/checkEmail/' + token),
+            }
+        );
+    } catch (e) {
+        console.error(e);
+        return
+    }
+}
+
+export async function validateEmail(token: string) {
+    try {
+        const decoded = jwt.verify(token, process.env.EMAIL_VERIF_TOKEN) as { email: string };
+        const user = await prisma.user.findFirst({
+            where: {
+                email: decoded.email,
+                emailToken: token
+            }
+        });
+
+        if (!user) {
+            throw new Error('Token invalide ou utilisateur non trouvé');
+        }
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                emailVerified: new Date(),
+                emailToken: null
+            }
+        });
+
+        return true;
+    } catch (error) {
+        console.error("Erreur lors de la validation de l'email:", error);
+        if (error instanceof jwt.TokenExpiredError || error instanceof jwt.JsonWebTokenError) {
+            const decoded = jwt.decode(token) as { email: string };
+            const user = await prisma.user.findUnique({
+                where: { email: decoded.email }
+            });
+            if (user) {
+                await sendEmailVerification(user.id);
+            }
+        }
+        return false;
     }
 }

@@ -30,7 +30,7 @@ export const Login = () => {
     async function submit() {
         try {
             const newUser = await createUser({
-                email: "pierre@pierre.pierre",
+                email: "pierre.maurer@epitech.eu",
                 password: "pierre",
                 name: "Pierre",
                 lastname: "Maurer"
