@@ -153,8 +153,8 @@ export async function sendEmailVerification(userId:string) {
         if (!user) throw new Error('User not found');
         const token = jwt.sign(
             { email: user.email },
-            process.env.EMAIL_VERIF_TOKEN,
-            { expiresIn: '4h' } // Token valable 1 heure
+            process.env.EMAIL_VERIF_TOKEN || '',
+            { expiresIn: '4h' }
         )
         await prisma.user.update({
             where: {id: userId},
@@ -178,7 +178,7 @@ export async function sendEmailVerification(userId:string) {
 
 export async function validateEmail(token: string) {
     try {
-        const decoded = jwt.verify(token, process.env.EMAIL_VERIF_TOKEN) as { email: string };
+        const decoded = jwt.verify(token, process.env.EMAIL_VERIF_TOKEN || '') as { email: string };
         const user = await prisma.user.findFirst({
             where: {
                 email: decoded.email,

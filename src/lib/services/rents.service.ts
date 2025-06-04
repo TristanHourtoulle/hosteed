@@ -91,7 +91,7 @@ export async function CheckRentIsAvailable(productId: string, arrivalDate: Date,
         // Normaliser les dates pour la comparaison
         const normalizedArrivalDate = new Date(arrivalDate);
         normalizedArrivalDate.setHours(0, 0, 0, 0);
-        
+
         const normalizedLeavingDate = new Date(leavingDate);
         normalizedLeavingDate.setHours(0, 0, 0, 0);
 
@@ -134,27 +134,22 @@ export async function CheckRentIsAvailable(productId: string, arrivalDate: Date,
                 message: 'Il existe déjà une réservation sur cette période'
             };
         }
-
-        // Vérifier les périodes d'indisponibilité
-        const existingUnavailable = await prisma.UnAvailableProduct.findFirst({
+        const existingUnavailable = await prisma.unAvailableProduct.findFirst({
             where: {
                 productId: productId,
                 OR: [
-                    // Période qui commence pendant la période demandée
                     {
                         startDate: {
                             gte: normalizedArrivalDate,
                             lte: normalizedLeavingDate
                         }
                     },
-                    // Période qui se termine pendant la période demandée
                     {
                         endDate: {
                             gte: normalizedArrivalDate,
                             lte: normalizedLeavingDate
                         }
                     },
-                    // Période qui englobe la période demandée
                     {
                         startDate: {
                             lte: normalizedArrivalDate
