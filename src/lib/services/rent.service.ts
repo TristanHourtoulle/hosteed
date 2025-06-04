@@ -27,6 +27,95 @@ export interface RentDetails {
   payment: string;
 }
 
+export async function checkRentIsAvailable(productId: string, startDate: Date, endDate: Date): Promise<{ available: boolean; message?: string }> {
+  try {
+    // Vérifier s'il existe des réservations sur cette période
+    const existingRents = await prisma.rent.findMany({
+      where: {
+        productId: productId,
+        status: RentStatus.RESERVED,
+        OR: [
+          // Réservation qui commence pendant la période
+          {
+            arrivingDate: {
+              gte: startDate,
+              lte: endDate
+            }
+          },
+          // Réservation qui se termine pendant la période
+          {
+            leavingDate: {
+              gte: startDate,
+              lte: endDate
+            }
+          },
+          // Réservation qui englobe la période
+          {
+            arrivingDate: {
+              lte: startDate
+            },
+            leavingDate: {
+              gte: endDate
+            }
+          }
+        ]
+      }
+    });
+
+    if (existingRents.length > 0) {
+      return {
+        available: false,
+        message: 'Il existe déjà des réservations sur cette période'
+      };
+    }
+
+    // Vérifier s'il existe des périodes d'indisponibilité
+    const existingUnavailable = await prisma.unAvailableProduct.findMany({
+      where: {
+        productId: productId,
+        OR: [
+          // Période qui commence pendant la période demandée
+          {
+            startDate: {
+              gte: startDate,
+              lte: endDate
+            }
+          },
+          // Période qui se termine pendant la période demandée
+          {
+            endDate: {
+              gte: startDate,
+              lte: endDate
+            }
+          },
+          // Période qui englobe la période demandée
+          {
+            startDate: {
+              lte: startDate
+            },
+            endDate: {
+              gte: endDate
+            }
+          }
+        ]
+      }
+    });
+    console.log(existingUnavailable);
+
+    if (existingUnavailable.length > 0) {
+      return {
+        available: false,
+        message: 'Le produit est indisponible sur cette période'
+      };
+    }
+
+    return { available: true };
+  } catch (error) {
+    console.error('Erreur lors de la vérification de la disponibilité:', error);
+    throw error;
+  }
+}
+
 export async function findAllReservationsByHostId(hostId: string): Promise<FormattedRent[]> {
   try {
     const rents = await prisma.rent.findMany({

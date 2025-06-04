@@ -111,7 +111,7 @@ export default function ProductDetails() {
                     new Date(formData.arrivingDate),
                     new Date(formData.leavingDate)
                 );
-                setIsAvailable(available);
+                setIsAvailable(available.available);
             }
         };
 

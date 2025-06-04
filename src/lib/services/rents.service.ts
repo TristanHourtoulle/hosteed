@@ -86,21 +86,101 @@ export async function getRentById(id: string): Promise<RentWithDates | null> {
     }
 }
 
-export async function CheckRentIsAvailable(productId: string, arrivalDate: Date, leavingDate: Date): Promise<boolean> {
+export async function CheckRentIsAvailable(productId: string, arrivalDate: Date, leavingDate: Date): Promise<{ available: boolean; message?: string }> {
     try {
+        // Normaliser les dates pour la comparaison
+        const normalizedArrivalDate = new Date(arrivalDate);
+        normalizedArrivalDate.setHours(0, 0, 0, 0);
+        
+        const normalizedLeavingDate = new Date(leavingDate);
+        normalizedLeavingDate.setHours(0, 0, 0, 0);
+
+        // Vérifier les réservations existantes
         const existingRent = await prisma.rent.findFirst({
             where: {
                 productId: productId,
-                AND: [
-                    { arrivingDate: { lte: leavingDate } },
-                    { leavingDate: { gte: arrivalDate } }
+                status: RentStatus.RESERVED,
+                OR: [
+                    // Réservation qui commence pendant la période demandée
+                    {
+                        arrivingDate: {
+                            gte: normalizedArrivalDate,
+                            lte: normalizedLeavingDate
+                        }
+                    },
+                    // Réservation qui se termine pendant la période demandée
+                    {
+                        leavingDate: {
+                            gte: normalizedArrivalDate,
+                            lte: normalizedLeavingDate
+                        }
+                    },
+                    // Réservation qui englobe la période demandée
+                    {
+                        arrivingDate: {
+                            lte: normalizedArrivalDate
+                        },
+                        leavingDate: {
+                            gte: normalizedLeavingDate
+                        }
+                    }
                 ]
             }
         });
-        return existingRent === null;
+
+        if (existingRent) {
+            return {
+                available: false,
+                message: 'Il existe déjà une réservation sur cette période'
+            };
+        }
+
+        // Vérifier les périodes d'indisponibilité
+        const existingUnavailable = await prisma.UnAvailableProduct.findFirst({
+            where: {
+                productId: productId,
+                OR: [
+                    // Période qui commence pendant la période demandée
+                    {
+                        startDate: {
+                            gte: normalizedArrivalDate,
+                            lte: normalizedLeavingDate
+                        }
+                    },
+                    // Période qui se termine pendant la période demandée
+                    {
+                        endDate: {
+                            gte: normalizedArrivalDate,
+                            lte: normalizedLeavingDate
+                        }
+                    },
+                    // Période qui englobe la période demandée
+                    {
+                        startDate: {
+                            lte: normalizedArrivalDate
+                        },
+                        endDate: {
+                            gte: normalizedLeavingDate
+                        }
+                    }
+                ]
+            }
+        });
+
+        if (existingUnavailable) {
+            return {
+                available: false,
+                message: 'Le produit est indisponible sur cette période'
+            };
+        }
+
+        return { available: true };
     } catch (error) {
         console.error("Erreur lors de la vérification de la disponibilité:", error);
-        return false;
+        return {
+            available: false,
+            message: 'Une erreur est survenue lors de la vérification de la disponibilité'
+        };
     }
 }
 
@@ -176,14 +256,14 @@ export async function createRent(params: {
             return null;
         }
 
-        const isAvailable = await CheckRentIsAvailable(
+        const availabilityCheck = await CheckRentIsAvailable(
             params.productId,
             params.arrivingDate,
             params.leavingDate
         );
 
-        if (!isAvailable) {
-            console.error("Le produit n'est pas disponible pour les dates sélectionnées");
+        if (!availabilityCheck.available) {
+            console.error(availabilityCheck.message);
             return null;
         }
 

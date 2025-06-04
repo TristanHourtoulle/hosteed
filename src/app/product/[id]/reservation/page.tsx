@@ -79,7 +79,7 @@ export default function ReservationPage() {
                     arrivingDate,
                     leavingDate
                 );
-                setIsAvailable(available);
+                setIsAvailable(available.available);
             } else {
                 setIsAvailable(true); // Réinitialiser l'état si une des dates est vide
             }

@@ -92,6 +92,8 @@ model Product {
   typeRoom         TypeRoom[]        @relation("ProductToTypeRoom")
   discount         Discount[]
   Chat             Chat[]
+
+  UnAvailableProduct UnAvailableProduct[]
 }
 
 model Discount {
@@ -157,6 +159,14 @@ model Rent {
   DisableRent  DisableRent[]
 
   PayRequest PayRequest[]
+}
+
+model UnAvailableProduct {
+  id        String   @id @default(cuid())
+  startDate DateTime
+  endDate   DateTime
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model DisableRent {
