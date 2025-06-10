@@ -1,26 +1,26 @@
-import Stripe from 'stripe';
+import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-05-28.basil",
-});
+  apiVersion: '2025-05-28.basil',
+})
 
 export interface CreatePaymentIntentParams {
-  amount: number;
-  currency?: string;
-  metadata?: Record<string, string>;
+  amount: number
+  currency?: string
+  metadata?: Record<string, string>
 }
 
 export interface CreateCheckoutSessionParams {
-  amount: number;
-  currency?: string;
-  productName: string;
-  successUrl: string;
-  cancelUrl: string;
-  metadata?: Record<string, string>;
-  mode?: 'payment';
+  amount: number
+  currency?: string
+  productName: string
+  successUrl: string
+  cancelUrl: string
+  metadata?: Record<string, string>
+  mode?: 'payment'
   payment_intent_data?: {
-    capture_method: 'manual';
-  };
+    capture_method: 'manual'
+  }
 }
 
 export const StripeService = {
@@ -38,51 +38,51 @@ export const StripeService = {
           enabled: true,
         },
         metadata,
-      });
+      })
 
       return {
         success: true,
         clientSecret: paymentIntent.client_secret,
         paymentIntentId: paymentIntent.id,
-      };
+      }
     } catch (error) {
-      console.error('Erreur lors de la création du PaymentIntent:', error);
+      console.error('Erreur lors de la création du PaymentIntent:', error)
       return {
         success: false,
         error: 'Erreur lors de la création du paiement',
-      };
+      }
     }
   },
 
   async capturePaymentIntent(paymentIntentId: string) {
     try {
-      const paymentIntent = await stripe.paymentIntents.capture(paymentIntentId);
+      const paymentIntent = await stripe.paymentIntents.capture(paymentIntentId)
       return {
         success: true,
         paymentIntent,
       }
     } catch (e) {
-      console.error(e);
+      console.error(e)
       return {
         success: false,
-        e
+        e,
       }
     }
   },
 
   async retrievePaymentIntent(paymentIntentId: string) {
     try {
-      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
       return {
         success: true,
         paymentIntent,
-      };
+      }
     } catch (error) {
-      console.error('Erreur lors de la récupération du PaymentIntent:', error);
+      console.error('Erreur lors de la récupération du PaymentIntent:', error)
       return {
         success: false,
         error: 'Erreur lors de la récupération du paiement',
-      };
+      }
     }
   },
 
@@ -93,14 +93,14 @@ export const StripeService = {
       })
       return {
         success: true,
-        paymentIntentId
+        paymentIntentId,
       }
     } catch (e) {
-      console.error('Erreur lors de la création du PaymentIntent:', e);
+      console.error('Erreur lors de la création du PaymentIntent:', e)
       return {
         success: false,
         error: 'Erreur lors de la création du paiement',
-      };
+      }
     }
   },
 
@@ -134,18 +134,18 @@ export const StripeService = {
         success_url: successUrl,
         cancel_url: cancelUrl,
         metadata,
-      });
+      })
 
       return {
         success: true,
         url: session.url,
-      };
+      }
     } catch (error) {
-      console.error('Erreur lors de la création de la session de paiement:', error);
+      console.error('Erreur lors de la création de la session de paiement:', error)
       return {
         success: false,
         error: 'Erreur lors de la création de la session de paiement',
-      };
+      }
     }
-  }
-};
+  },
+}

@@ -14,12 +14,14 @@ pnpm dev
 bun dev
 ```
 
-Dans un autre terminal, lancer cette commande 
+Dans un autre terminal, lancer cette commande
+
 ```bash
 
-stripe listen --forward-to localhost:3000/webhook 
+stripe listen --forward-to localhost:3000/webhook
 
 ```
+
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
@@ -33,6 +35,7 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 #### Endpoints Disponibles
 
 1. **Recherche de Produits**
+
    - `findProductById(id: string)`: Recherche un produit par son ID
    - `findAllProducts()`: Récupère tous les produits validés
    - `findAllProductByHostId(id: string)`: Récupère tous les produits d'un hôte spécifique
@@ -49,6 +52,7 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 #### Endpoints Disponibles
 
 1. **Recherche de Locations**
+
    - `getRentById(id: string)`: Recherche une location par son ID
    - `findAllRentByProduct(id: string)`: Récupère toutes les locations pour un produit spécifique
    - `findAllRentByUserId(id: string)`: Récupère toutes les locations d'un utilisateur
@@ -83,6 +87,7 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 #### Endpoints Disponibles
 
 1. **Recherche d'Utilisateurs**
+
    - `findUserByEmail(email: string)`: Recherche un utilisateur par son email
    - `findAllUserByRoles(roles: UserRole)`: Récupère tous les utilisateurs ayant un rôle spécifique
 
@@ -112,6 +117,7 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
      - `publishDate`: Date de publication
 
 ### Services de Configuration
+
 - `typeRent.service.ts`: Types de location
 - `options.service.ts`: Options disponibles
 - `services.service.ts`: Services proposés
@@ -124,6 +130,7 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 #### Endpoints Disponibles
 
 1. **Gestion des Paiements**
+
    - `createPaymentIntent(params)`: Crée une intention de paiement avec les paramètres suivants:
      - `amount`: Montant en euros
      - `currency`: Devise (optionnel, par défaut: 'eur')

@@ -1,7 +1,7 @@
 // Centralized export for all shadcn/ui components
-export { Button, buttonVariants } from "./button";
-export { Input } from "./input";
-export { Avatar, AvatarImage, AvatarFallback } from "./avatar";
+export { Button, buttonVariants } from './button'
+export { Input } from './input'
+export { Avatar, AvatarImage, AvatarFallback } from './avatar'
 export {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -18,7 +18,7 @@ export {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuRadioGroup,
-} from "./dropdown-menu";
+} from './dropdown-menu'
 export {
   navigationMenuTriggerStyle,
   NavigationMenu,
@@ -29,4 +29,5 @@ export {
   NavigationMenuLink,
   NavigationMenuIndicator,
   NavigationMenuViewport,
-} from "./navigation-menu"; 
+} from './navigation-menu'
+export { SidebarMenuButton } from './sidebar'

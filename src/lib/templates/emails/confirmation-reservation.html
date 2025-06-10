@@ -1,87 +1,156 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <title>Réservation confirmée</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #f9f9f9; }
-    .container { background: #fff; padding: 32px; border-radius: 8px; max-width: 600px; margin: 40px auto; box-shadow: 0 2px 8px #eee; }
-    .header { color: #2d3748; font-size: 24px; font-weight: bold; }
-    .content { margin-top: 24px; color: #444; }
-    .footer { margin-top: 32px; color: #888; font-size: 13px; text-align: center; }
-    .button { display: inline-block; background: #4f46e5; color: #fff; padding: 10px 24px; border-radius: 5px; text-decoration: none; margin-top: 16px; }
-    .section { margin: 20px 0; }
-    .section-title { font-weight: bold; color: #2d3748; margin-bottom: 10px; }
-    .info-item { margin: 8px 0; }
-    .warning { color: #e53e3e; font-weight: bold; }
-    .check { color: #38a169; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">Réservation confirmée 🏨</div>
-    <div class="content">
-      <div class="section">
-        <h2>{{listing_title}}, {{listing_adress}}</h2>
-        <p>Nous avons le plaisir de vous informer que la réservation de {{listing_title}} est confirmée 🎉</p>
-      </div>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Réservation confirmée</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f9f9f9;
+      }
+      .container {
+        background: #fff;
+        padding: 32px;
+        border-radius: 8px;
+        max-width: 600px;
+        margin: 40px auto;
+        box-shadow: 0 2px 8px #eee;
+      }
+      .header {
+        color: #2d3748;
+        font-size: 24px;
+        font-weight: bold;
+      }
+      .content {
+        margin-top: 24px;
+        color: #444;
+      }
+      .footer {
+        margin-top: 32px;
+        color: #888;
+        font-size: 13px;
+        text-align: center;
+      }
+      .button {
+        display: inline-block;
+        background: #4f46e5;
+        color: #fff;
+        padding: 10px 24px;
+        border-radius: 5px;
+        text-decoration: none;
+        margin-top: 16px;
+      }
+      .section {
+        margin: 20px 0;
+      }
+      .section-title {
+        font-weight: bold;
+        color: #2d3748;
+        margin-bottom: 10px;
+      }
+      .info-item {
+        margin: 8px 0;
+      }
+      .warning {
+        color: #e53e3e;
+        font-weight: bold;
+      }
+      .check {
+        color: #38a169;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">Réservation confirmée 🏨</div>
+      <div class="content">
+        <div class="section">
+          <h2>{{listing_title}}, {{listing_adress}}</h2>
+          <p>
+            Nous avons le plaisir de vous informer que la réservation de {{listing_title}} est
+            confirmée 🎉
+          </p>
+        </div>
 
-      <div class="section">
-        <div class="info-item check">✔️ L'établissement est prêt à vous accueillir</div>
-        <div class="info-item check">✔️ Veuillez ne pas divulguer votre numéro de réservation</div>
-        <div class="info-item check">✔️ Utilisez le lien ci-dessous pour voir les détails de votre réservation :</div>
-        <a href="{{reservationUrl}}" class="button">Voir les détails de votre réservation</a>
-      </div>
+        <div class="section">
+          <div class="info-item check">✔️ L'établissement est prêt à vous accueillir</div>
+          <div class="info-item check">
+            ✔️ Veuillez ne pas divulguer votre numéro de réservation
+          </div>
+          <div class="info-item check">
+            ✔️ Utilisez le lien ci-dessous pour voir les détails de votre réservation :
+          </div>
+          <a href="{{reservationUrl}}" class="button">Voir les détails de votre réservation</a>
+        </div>
 
-      <div class="section">
-        <div class="section-title">📅 Dates de votre séjour : {{arriving_date}} - {{leaving_date}}</div>
-        <div class="info-item">Arrivée : À partir de {{check_in}} H</div>
-        <div class="info-item">Départ : Avant {{check_out}} H</div>
-        <div class="info-item">ℹ️ Les horaires sont indiqués dans le fuseau horaire de l'établissement.</div>
-      </div>
+        <div class="section">
+          <div class="section-title">
+            📅 Dates de votre séjour : {{arriving_date}} - {{leaving_date}}
+          </div>
+          <div class="info-item">Arrivée : À partir de {{check_in}} H</div>
+          <div class="info-item">Départ : Avant {{check_out}} H</div>
+          <div class="info-item">
+            ℹ️ Les horaires sont indiqués dans le fuseau horaire de l'établissement.
+          </div>
+        </div>
 
-      <div class="section">
-        <div class="section-title">🏨 Type d'établissement :</div>
-        <div class="info-item">Il s'agit d'un: "{{categories}}"</div>
-      </div>
+        <div class="section">
+          <div class="section-title">🏨 Type d'établissement :</div>
+          <div class="info-item">Il s'agit d'un: "{{categories}}"</div>
+        </div>
 
-      <div class="section">
-        <div class="section-title">📍 Adresse :</div>
-        <div class="info-item">{{listing_adress}}</div>
-        <div class="info-item">ℹ️ Il est important de contacter l'hôte avant de vous y rendre. Il peut vous donner plus de précisions et d'informations sur la situation géographique de l'établissement.</div>
-      </div>
+        <div class="section">
+          <div class="section-title">📍 Adresse :</div>
+          <div class="info-item">{{listing_adress}}</div>
+          <div class="info-item">
+            ℹ️ Il est important de contacter l'hôte avant de vous y rendre. Il peut vous donner plus
+            de précisions et d'informations sur la situation géographique de l'établissement.
+          </div>
+        </div>
 
-      <div class="section">
-        <div class="section-title">📞 Numéro de téléphone de l'hôte :</div>
-        <div class="info-item">{{phone_number}}</div>
-      </div>
+        <div class="section">
+          <div class="section-title">📞 Numéro de téléphone de l'hôte :</div>
+          <div class="info-item">{{phone_number}}</div>
+        </div>
 
-      <div class="section">
-        <div class="section-title">Conditions d'annulation</div>
-        <p>Pour annuler la réservation, vous pourrez contacter l'hôte via la messagerie privée de Hosteed.com. Si vous ne vous présentez pas, des frais de non-présentation équivalant aux frais d'annulation s'appliqueront.</p>
-      </div>
+        <div class="section">
+          <div class="section-title">Conditions d'annulation</div>
+          <p>
+            Pour annuler la réservation, vous pourrez contacter l'hôte via la messagerie privée de
+            Hosteed.com. Si vous ne vous présentez pas, des frais de non-présentation équivalant aux
+            frais d'annulation s'appliqueront.
+          </p>
+        </div>
 
-      <div class="section">
-        <div class="section-title">Clients {{name}}</div>
-      </div>
+        <div class="section">
+          <div class="section-title">Clients {{name}}</div>
+        </div>
 
-      <div class="section">
-        <div class="section-title warning">⚠ Protégez votre activité en ligne</div>
-        <p>Pour assurer votre sécurité, ne partagez jamais vos informations personnelles ou vos coordonnées bancaires par téléphone, par e-mail ou par chat.</p>
-      </div>
+        <div class="section">
+          <div class="section-title warning">⚠ Protégez votre activité en ligne</div>
+          <p>
+            Pour assurer votre sécurité, ne partagez jamais vos informations personnelles ou vos
+            coordonnées bancaires par téléphone, par e-mail ou par chat.
+          </p>
+        </div>
 
-      <div class="section">
-        <div class="section-title">Observations</div>
-        <ul>
-          <li>Veuillez vérifier les éventuelles restrictions dans le pays de destination. Toute taxe de séjour locale doit être payée sur place par les clients, le cas échéant.</li>
-          <li>Il est de la responsabilité de chaque voyageur de se procurer et d'être en mesure de présenter sur demande tout document d'entrée ou de sortie réglementaire des pays de départ, de transit et de destination.</li>
-          <li>Les tarifs non-remboursables n'admettent aucune modification.</li>
-        </ul>
+        <div class="section">
+          <div class="section-title">Observations</div>
+          <ul>
+            <li>
+              Veuillez vérifier les éventuelles restrictions dans le pays de destination. Toute taxe
+              de séjour locale doit être payée sur place par les clients, le cas échéant.
+            </li>
+            <li>
+              Il est de la responsabilité de chaque voyageur de se procurer et d'être en mesure de
+              présenter sur demande tout document d'entrée ou de sortie réglementaire des pays de
+              départ, de transit et de destination.
+            </li>
+            <li>Les tarifs non-remboursables n'admettent aucune modification.</li>
+          </ul>
+        </div>
       </div>
+      <div class="footer">Merci de votre confiance.<br />L'équipe Hosteed</div>
     </div>
-    <div class="footer">
-      Merci de votre confiance.<br>L'équipe Hosteed
-    </div>
-  </div>
-</body>
+  </body>
 </html>
