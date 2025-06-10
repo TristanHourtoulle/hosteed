@@ -3,8 +3,7 @@ import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { createUser } from "@/lib/services/user.service";
-import { Button } from "@/components/ui/shadcnui/button";
-import { Input } from "@/components/ui/shadcnui/input";
+import { Button, Input } from "@/shadcnui";
 import { Eye, EyeOff } from "lucide-react";
 
 type AuthMode = 'login' | 'register' | 'reset';

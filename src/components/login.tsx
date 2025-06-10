@@ -2,8 +2,7 @@
 import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { createUser } from "@/lib/services/user.service";
-import { Button } from "@/components/ui/shadcnui/button";
-import { Input } from "@/components/ui/shadcnui/input";
+import { Button, Input } from "@/shadcnui";
 import Link from "next/link";
 
 export const Login = () => {

@@ -11,21 +11,17 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
-} from "@/components/ui/shadcnui/navigation-menu";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/shadcnui/dropdown-menu";
-import {
   Avatar,
   AvatarFallback,
   AvatarImage,
-} from "@/components/ui/shadcnui/avatar";
-import { Button } from "@/components/ui/shadcnui/button";
+  Button,
+} from "@/shadcnui";
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { findAllTypeRent } from '@/lib/services/typeRent.service';
