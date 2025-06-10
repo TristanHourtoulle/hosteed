@@ -7,8 +7,10 @@ async function main() {
   try {
     console.log('Début du seeding...');
 
-    const user = await prisma.user.create({
-      data: {
+    const user = await prisma.user.upsert({
+      where: { email: "pierre@pierre.pierre" },
+      update: {},
+      create: {
         email: "pierre@pierre.pierre",
         name: "Pierre",
         lastname: "Maurer",
@@ -89,7 +91,7 @@ async function main() {
         categories: BigInt(1),
         minPeople: BigInt(1),
         maxPeople: BigInt(4),
-        validate: true,
+        validate: 'Approve',
         userManager: BigInt(1),
         type: {
           connect: {id: typeRent.id}
