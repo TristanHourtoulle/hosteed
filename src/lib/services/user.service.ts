@@ -25,6 +25,7 @@ export async function findAllUser() {
 
 export async function findUserById(id: string) {
   try {
+    console.log('findUserById', id)
     return await prisma.user.findUnique({
       where: { id },
       include: {

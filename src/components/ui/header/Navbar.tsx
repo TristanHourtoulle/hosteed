@@ -3,7 +3,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useSession, signOut } from 'next-auth/react'
+import { useSession } from 'next-auth/react'
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -12,26 +12,28 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
   Button,
 } from '@/shadcnui'
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetTitle,
+  SheetDescription,
+  SheetHeader,
+} from '@/components/ui/shadcnui/sheet'
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { findAllTypeRent } from '@/lib/services/typeRent.service'
 import { TypeRent } from '@prisma/client'
+import { NavUser } from './nav-user'
+import { Menu } from 'lucide-react'
 
 const Navbar = () => {
   const pathname = usePathname()
   const { data: session } = useSession()
   const [typeRent, setTypeRent] = useState<TypeRent[]>([])
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     const fetchTypeRent = async () => {
@@ -47,17 +49,149 @@ const Navbar = () => {
     return pathname === path
   }
 
-  return (
-    <nav className='bg-white shadow-md'>
-      <div className='container mx-auto px-4 sm:px-6 lg:px-8'>
-        <div className='flex justify-between h-16'>
-          <div className='flex items-center'>
-            <div className='flex-shrink-0 flex items-center mr-8'>
-              <Link href='/' className='text-xl font-bold text-gray-800'>
-                <Image src='/logo-hosteed.png' alt='Hosteed' width={100} height={100} />
-              </Link>
-            </div>
+  const MobileNavLinks = () => (
+    <div className='flex flex-col space-y-4 p-4'>
+      {/* Main Links */}
+      <Link
+        href='/host'
+        className='block py-3 px-4 text-lg font-medium text-gray-900 hover:bg-gray-50 rounded-lg transition-colors'
+        onClick={() => setIsMobileMenuOpen(false)}
+      >
+        Tous les hébergements
+      </Link>
 
+      <Link
+        href='/search'
+        className='block py-3 px-4 text-lg font-medium text-gray-900 hover:bg-gray-50 rounded-lg transition-colors'
+        onClick={() => setIsMobileMenuOpen(false)}
+      >
+        Recherche
+      </Link>
+
+      {/* Quick Access */}
+      <div className='border-t pt-4'>
+        <h3 className='text-sm font-semibold text-gray-500 mb-3 px-4'>Accès rapide</h3>
+        <Link
+          href='/host?featured=true'
+          className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors'
+          onClick={() => setIsMobileMenuOpen(false)}
+        >
+          ⭐ Hébergements vedettes
+        </Link>
+        <Link
+          href='/host?popular=true'
+          className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors'
+          onClick={() => setIsMobileMenuOpen(false)}
+        >
+          🔥 Plus populaires
+        </Link>
+        <Link
+          href='/host?recent=true'
+          className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors'
+          onClick={() => setIsMobileMenuOpen(false)}
+        >
+          🆕 Récemment ajoutés
+        </Link>
+        <Link
+          href='/host?promo=true'
+          className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors'
+          onClick={() => setIsMobileMenuOpen(false)}
+        >
+          💰 Offres spéciales
+        </Link>
+      </div>
+
+      {/* Types d'hébergement */}
+      <div className='border-t pt-4'>
+        <h3 className='text-sm font-semibold text-gray-500 mb-3 px-4'>Types d&apos;hébergement</h3>
+        {typeRent.map(type => (
+          <Link
+            key={type.id}
+            href={`/host?type=${type.id}`}
+            className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors'
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            {type.name}
+          </Link>
+        ))}
+      </div>
+
+      {/* Authenticated User Links */}
+      {session && (
+        <div className='border-t pt-4'>
+          <h3 className='text-sm font-semibold text-gray-500 mb-3 px-4'>Mon compte</h3>
+          <Link
+            href='/reservations'
+            className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors'
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            Réservations actuelles
+          </Link>
+          <Link
+            href='/dashboard/host'
+            className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors'
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            Gestion Host
+          </Link>
+          {(session.user.roles == 'BLOGWRITTER' || session.user.roles == 'ADMIN') && (
+            <Link
+              href='/host_manager'
+              className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors'
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Gestion BLOG
+            </Link>
+          )}
+          {session.user.roles == 'ADMIN' && (
+            <Link
+              href='/admin'
+              className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors'
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Gestion Administrateur
+            </Link>
+          )}
+        </div>
+      )}
+
+      {/* Auth Buttons for non-logged users */}
+      {!session && (
+        <div className='border-t pt-4 space-y-3 px-4'>
+          <Button asChild className='w-full'>
+            <Link href='/auth?mode=login' onClick={() => setIsMobileMenuOpen(false)}>
+              Se connecter
+            </Link>
+          </Button>
+          <Button variant='secondary' asChild className='w-full'>
+            <Link href='/auth?mode=register' onClick={() => setIsMobileMenuOpen(false)}>
+              S&apos;inscrire
+            </Link>
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+
+  return (
+    <nav className='bg-white shadow-md sticky top-0 z-50'>
+      <div className='container mx-auto px-4 sm:px-6 lg:px-8'>
+        <div className='flex justify-between items-center h-16'>
+          {/* Logo */}
+          <div className='flex items-center'>
+            <Link href='/' className='flex items-center'>
+              <Image
+                src='/logo-hosteed.png'
+                alt='Hosteed'
+                width={80}
+                height={80}
+                className='h-8 w-auto'
+              />
+            </Link>
+          </div>
+
+          {/* Desktop Navigation */}
+          <div className='hidden lg:flex items-center'>
             <NavigationMenu>
               <NavigationMenuList>
                 <NavigationMenuItem>
@@ -240,59 +374,55 @@ const Navbar = () => {
             </NavigationMenu>
           </div>
 
-          {/* User Authentication Section */}
-          <div className='flex items-center space-x-4'>
+          {/* Desktop User Auth Section */}
+          <div className='hidden lg:flex items-center space-x-4'>
             {session ? (
-              // User is logged in - show user dropdown
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant='ghost' className='relative h-8 w-8 rounded-full'>
-                    <Avatar className='h-8 w-8'>
-                      <AvatarImage src='' alt={session.user?.name || 'User'} />
-                      <AvatarFallback>{session.user?.name?.charAt(0) || 'U'}</AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className='w-56' align='end' forceMount>
-                  <DropdownMenuLabel className='font-normal'>
-                    <div className='flex flex-col space-y-1'>
-                      <p className='text-sm font-medium leading-none'>{session.user?.name}</p>
-                      <p className='text-xs leading-none text-muted-foreground'>
-                        {session.user?.email}
-                      </p>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href='/dashboard'>📊 Tableau de bord</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href='/reservations'>📋 Mes réservations</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href='/dashboard/host'>🏠 Gestion hébergements</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className='cursor-pointer' onClick={() => signOut()}>
-                    🚪 Se déconnecter
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              <NavUser session={session as any} />
             ) : (
-              // User is not logged in - show login/register buttons
               <div className='flex items-center space-x-2'>
-                <Button asChild>
-                  <Link href='/auth?mode=login' className='cursor-pointer'>
-                    Se connecter
-                  </Link>
+                <Button asChild size='sm'>
+                  <Link href='/auth?mode=login'>Se connecter</Link>
                 </Button>
-                <Button variant='secondary' asChild>
-                  <Link href='/auth?mode=register' className='cursor-pointer'>
-                    S&apos;inscrire
-                  </Link>
+                <Button variant='secondary' asChild size='sm'>
+                  <Link href='/auth?mode=register'>S&apos;inscrire</Link>
                 </Button>
               </div>
             )}
+          </div>
+
+          {/* Mobile Menu */}
+          <div className='lg:hidden flex items-center space-x-3'>
+            {session && (
+              <div className='scale-75'>
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                <NavUser session={session as any} />
+              </div>
+            )}
+
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant='ghost' size='sm' className='p-2'>
+                  <Menu className='h-6 w-6' />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side='right' className='w-full max-w-sm p-0'>
+                <SheetHeader className='sr-only'>
+                  <SheetTitle>Menu de navigation</SheetTitle>
+                  <SheetDescription>
+                    Menu de navigation mobile pour accéder aux différentes sections du site
+                  </SheetDescription>
+                </SheetHeader>
+                <div className='flex flex-col h-full'>
+                  <div className='flex items-center justify-between p-4 border-b'>
+                    <h2 className='text-lg font-semibold'>Menu</h2>
+                  </div>
+                  <div className='flex-1 overflow-y-auto'>
+                    <MobileNavLinks />
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
       </div>
