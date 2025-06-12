@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { Heart, Star, ChevronLeft, ChevronRight, ImageIcon } from 'lucide-react'
 import { useState } from 'react'
 import { getCityFromAddress } from '@/lib/utils'
+import { useFavorites } from '@/hooks/useFavorites'
 
 interface Product {
   id: string
@@ -15,7 +16,7 @@ interface Product {
 }
 
 export default function ProductCard({ product }: { product: Product }) {
-  const [isLiked, setIsLiked] = useState(false)
+  const { isFavorite, isLoading, toggleFavorite } = useFavorites(product.id)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [imageError, setImageError] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
@@ -102,13 +103,14 @@ export default function ProductCard({ product }: { product: Product }) {
             onClick={e => {
               e.preventDefault()
               e.stopPropagation()
-              setIsLiked(!isLiked)
+              toggleFavorite()
             }}
-            className='absolute top-3 right-3 z-10 p-2 rounded-full bg-white/80 hover:bg-white hover:scale-110 active:scale-95 transition-all duration-200 shadow-sm hover:shadow-md group/heart'
+            disabled={isLoading}
+            className='absolute top-3 right-3 z-10 p-2 rounded-full bg-white/80 hover:bg-white hover:scale-110 active:scale-95 transition-all duration-200 shadow-sm hover:shadow-md group/heart disabled:opacity-50 disabled:cursor-not-allowed'
           >
             <Heart
               className={`w-4 h-4 transition-all duration-300 group-hover/heart:scale-110 ${
-                isLiked
+                isFavorite
                   ? 'fill-red-500 text-red-500 drop-shadow-sm'
                   : 'text-gray-700 hover:text-red-400 group-hover/heart:text-red-500'
               }`}

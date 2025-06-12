@@ -15,7 +15,8 @@ import {
   AvatarImage,
   AvatarFallback,
 } from '@/shadcnui'
-import { ChevronsUpDown, LogOut } from 'lucide-react'
+import { ChevronsUpDown, LogOut, Heart } from 'lucide-react'
+import Link from 'next/link'
 import { findUserById } from '@/lib/services/user.service'
 
 export function NavUser({ session }: { session: Session | null }) {
@@ -84,6 +85,13 @@ export function NavUser({ session }: { session: Session | null }) {
             </div>
           </div>
         </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href='/favorites' className='flex items-center'>
+            <Heart className='w-4 h-4 mr-2' />
+            Mes favoris
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>
           <LogOut />

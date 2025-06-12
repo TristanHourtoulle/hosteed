@@ -1,5 +1,6 @@
 import { Star, Heart, Share, MapPin } from 'lucide-react'
 import { getCityFromAddress } from '@/lib/utils'
+import { useFavorites } from '@/hooks/useFavorites'
 
 interface Reviews {
   id: string
@@ -21,6 +22,7 @@ interface PropertyHeaderProps {
   reviews?: Reviews[]
   globalGrade: number
   address?: string
+  productId: string
 }
 
 export default function PropertyHeader({
@@ -28,7 +30,9 @@ export default function PropertyHeader({
   reviews,
   globalGrade,
   address,
+  productId,
 }: PropertyHeaderProps) {
+  const { isFavorite, isLoading, toggleFavorite } = useFavorites(productId)
   return (
     <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6'>
       <div className='flex-1'>
@@ -52,9 +56,15 @@ export default function PropertyHeader({
           <Share className='h-4 w-4' />
           Partager
         </button>
-        <button className='flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors'>
-          <Heart className='h-4 w-4' />
-          Sauvegarder
+        <button
+          onClick={toggleFavorite}
+          disabled={isLoading}
+          className='flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+        >
+          <Heart
+            className={`h-4 w-4 transition-colors ${isFavorite ? 'fill-red-500 text-red-500' : ''}`}
+          />
+          {isFavorite ? 'Sauvegardé' : 'Sauvegarder'}
         </button>
       </div>
     </div>

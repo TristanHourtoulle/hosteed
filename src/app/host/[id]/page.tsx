@@ -215,6 +215,7 @@ export default function ProductDetails() {
           reviews={product.reviews}
           globalGrade={globalGrade}
           address={product.address}
+          productId={product.id}
         />
 
         <ImageGallery

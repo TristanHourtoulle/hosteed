@@ -127,6 +127,7 @@ const Navbar = () => {
           >
             Réservations actuelles
           </Link>
+
           <Link
             href='/dashboard/host'
             className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors'
@@ -201,13 +202,20 @@ const Navbar = () => {
                       <li className='row-span-4'>
                         <NavigationMenuLink asChild>
                           <Link
-                            className='from-muted/50 to-muted flex h-full w-full flex-col justify-end rounded-md bg-gradient-to-b p-6 no-underline outline-none select-none focus:shadow-md'
+                            className='relative flex h-full w-full flex-col justify-end rounded-md p-6 no-underline outline-none select-none focus:shadow-md overflow-hidden bg-gradient-to-b from-blue-500/20 to-blue-900/40'
                             href='/host'
+                            style={{
+                              backgroundImage:
+                                'url(https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80)',
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center',
+                            }}
                           >
-                            <div className='mt-4 mb-2 text-lg font-medium'>
+                            <div className='absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black/60 rounded-md'></div>
+                            <div className='relative z-10 mt-4 mb-2 text-lg font-medium text-white'>
                               Tous les hébergements
                             </div>
-                            <p className='text-muted-foreground text-sm leading-tight'>
+                            <p className='relative z-10 text-white/90 text-sm leading-tight'>
                               Découvrez tous nos hébergements disponibles
                             </p>
                           </Link>
