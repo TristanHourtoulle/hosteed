@@ -10,6 +10,7 @@ import { findAllEquipments } from '@/lib/services/equipments.service'
 import { findAllServices } from '@/lib/services/services.service'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import Image from 'next/image'
 
 interface TypeRent {
   id: string
@@ -448,9 +449,11 @@ export default function CreateProduct() {
           <div className='grid grid-cols-2 md:grid-cols-4 gap-4 mt-4'>
             {previewImages.map((preview, index) => (
               <div key={index} className='relative'>
-                <img
+                <Image
                   src={preview}
                   alt={`Preview ${index + 1}`}
+                  width={200}
+                  height={128}
                   className='w-full h-32 object-cover rounded'
                 />
                 <button

@@ -201,7 +201,7 @@ export async function createProduct(params: {
         {
           name: user.name || 'Administrateur',
           productName: params.name,
-          annonceUrl: process.env.NEXTAUTH_URL + '/product/' + createdProduct.id,
+          annonceUrl: process.env.NEXTAUTH_URL + '/host/' + createdProduct.id,
         }
       )
     })
@@ -254,7 +254,7 @@ export async function validateProduct(id: string) {
           {
             name: user.name || '',
             productName: product.name,
-            annonceUrl: process.env.NEXTAUTH_URL + '/product/' + product.id,
+            annonceUrl: process.env.NEXTAUTH_URL + '/host/' + product.id,
           }
         )
       })

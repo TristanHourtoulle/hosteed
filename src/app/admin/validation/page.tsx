@@ -11,6 +11,7 @@ import {
 import { ProductValidation, UserRole } from '@prisma/client'
 import Image from 'next/image'
 import Link from 'next/link'
+import { getCityFromAddress } from '@/lib/utils'
 
 interface Product {
   id: string
@@ -152,7 +153,7 @@ export default function ValidationPage() {
                 )}
                 <div className='p-4'>
                   <h2 className='text-xl font-semibold text-gray-800 mb-2'>{product.name}</h2>
-                  <p className='text-gray-600 mb-2'>{product.address}</p>
+                  <p className='text-gray-600 mb-2'>{getCityFromAddress(product.address)}</p>
                   <p className='text-gray-600 mb-2'>{product.basePrice}€</p>
                   <p className='text-gray-600 mb-4 line-clamp-2'>{product.description}</p>
                   <div className='flex justify-between items-center'>

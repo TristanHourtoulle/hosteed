@@ -7,6 +7,7 @@ import { findAllRentByProductId } from '@/lib/services/rents.service'
 import { Product, RentStatus, PaymentStatus, ProductValidation } from '@prisma/client'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
+import { getCityFromAddress } from '@/lib/utils'
 
 interface ProductWithRelations extends Product {
   type?: {
@@ -203,7 +204,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             </div>
             <div>
               <h3 className='font-semibold text-gray-800'>Adresse</h3>
-              <p className='text-gray-700'>{product.address}</p>
+              <p className='text-gray-700'>{getCityFromAddress(product.address)}</p>
             </div>
             <div>
               <h3 className='font-semibold text-gray-800'>Prix de base</h3>

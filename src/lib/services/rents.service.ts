@@ -274,6 +274,14 @@ export async function createRent(params: {
       return null
     }
 
+    // Check if the product has autoAccept enabled
+    const productSettings = await prisma.product.findUnique({
+      where: { id: params.productId },
+      select: { autoAccept: true },
+    })
+
+    const shouldAutoAccept = productSettings?.autoAccept || false
+
     const createdRent = await prisma.rent.create({
       data: {
         productId: params.productId,
@@ -282,7 +290,8 @@ export async function createRent(params: {
         leavingDate: params.leavingDate,
         numberPeople: BigInt(params.peopleNumber),
         notes: BigInt(0),
-        accepted: false,
+        accepted: shouldAutoAccept,
+        confirmed: shouldAutoAccept,
         prices: BigInt(params.prices),
         stripeId: params.stripeId || null,
         options: {
@@ -365,6 +374,72 @@ export async function createRent(params: {
   }
 }
 
+export async function confirmRentByHost(id: string) {
+  try {
+    const rent = await prisma.rent.findFirst({
+      where: { id: id },
+      include: {
+        product: {
+          include: {
+            img: true,
+            type: true,
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+        user: true,
+        options: true,
+      },
+    })
+
+    if (!rent || !rent.user) throw new Error('Reservation not found')
+
+    // Update reservation to confirmed and accepted
+    await prisma.rent.update({
+      where: { id: id },
+      data: {
+        accepted: true,
+        confirmed: true,
+      },
+    })
+
+    // Send confirmation email to guest
+    await sendTemplatedMail(
+      rent.user.email,
+      "Réservation confirmée par l'hôte 🎉",
+      'host-confirmation.html',
+      {
+        name: rent.user.name || '',
+        listing_title: rent.product.name,
+        listing_address: rent.product.address,
+        check_in: rent.product.arriving,
+        check_out: rent.product.leaving,
+        categories: rent.product.type.name,
+        phone_number: rent.product.phone,
+        arriving_date: rent.arrivingDate.toDateString(),
+        leaving_date: rent.leavingDate.toDateString(),
+        reservationUrl: process.env.NEXTAUTH_URL + '/reservation/' + rent.id,
+      }
+    )
+
+    return {
+      success: true,
+      message: 'Réservation confirmée avec succès',
+    }
+  } catch (error) {
+    console.error('Error confirming rent:', error)
+    return {
+      success: false,
+      error: 'Erreur lors de la confirmation de la réservation',
+    }
+  }
+}
+
 export async function approveRent(id: string) {
   const createdRent = await prisma.rent.findFirst({
     where: { id: id },
@@ -394,6 +469,8 @@ export async function approveRent(id: string) {
     data: {
       status: 'RESERVED',
       payment: 'CLIENT_PAID',
+      accepted: true,
+      confirmed: true,
     },
   })
   const admin = await findAllUserByRoles('ADMIN')

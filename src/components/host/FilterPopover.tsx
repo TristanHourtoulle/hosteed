@@ -130,7 +130,7 @@ export default function FilterPopover({
       <PopoverTrigger asChild>
         <Button
           variant='outline'
-          className='w-12 h-12 hover:bg-blue-50 hover:text-blue-600 hover:cursor-pointer flex items-center justify-center border border-blue-600 text-blue-600 relative rounded-xl md:rounded-full font-medium'
+          className='w-12 h-12 hover:bg-blue-50 hover:text-blue-600 hover:cursor-pointer flex items-center justify-center border border-blue-600 text-blue-600 relative rounded-xl md:rounded-full font-medium flex-shrink-0'
         >
           <Filter className='h-5 w-5' />
           {activeFiltersCount > 0 && (
@@ -142,18 +142,27 @@ export default function FilterPopover({
       </PopoverTrigger>
 
       <PopoverContent
-        className='w-[800px] max-h-[600px] overflow-y-auto p-0'
+        className='w-[95vw] max-w-[800px] max-h-[80vh] overflow-y-auto p-0'
         align='center'
         side='bottom'
+        avoidCollisions={true}
+        sideOffset={8}
       >
-        <div className='sticky top-0 bg-white border-b border-gray-200 p-4 rounded-t-lg'>
-          <div className='flex items-center space-x-3'>
-            <Filter className='h-5 w-5 text-blue-600' />
-            <h3 className='text-lg font-semibold text-gray-900'>Filtres de recherche</h3>
+        <div className='sticky top-0 bg-white border-b border-gray-200 p-3 sm:p-4 rounded-t-lg'>
+          <div className='flex items-center justify-between'>
+            <div className='flex items-center space-x-3'>
+              <Filter className='h-5 w-5 text-blue-600' />
+              <h3 className='text-lg font-semibold text-gray-900'>Filtres de recherche</h3>
+            </div>
+            {activeFiltersCount > 0 && (
+              <span className='text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium'>
+                {activeFiltersCount} filtre{activeFiltersCount > 1 ? 's' : ''}
+              </span>
+            )}
           </div>
         </div>
 
-        <div className='p-4 space-y-6'>
+        <div className='p-3 sm:p-4 space-y-4 sm:space-y-6'>
           {/* Prix */}
           <Card>
             <CardHeader className='pb-3'>
@@ -163,7 +172,7 @@ export default function FilterPopover({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className='grid grid-cols-2 gap-3'>
+              <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
                 <div>
                   <label className='block text-sm font-medium text-gray-700 mb-1'>
                     Prix minimum
@@ -201,7 +210,7 @@ export default function FilterPopover({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className='grid grid-cols-2 gap-3'>
+              <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
                 <div>
                   <label className='block text-sm font-medium text-gray-700 mb-1'>
                     Minimum de personnes
@@ -239,7 +248,7 @@ export default function FilterPopover({
               </CardTitle>
             </CardHeader>
             <CardContent className='space-y-4'>
-              <div className='grid grid-cols-2 gap-3'>
+              <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
                 <div>
                   <label className='block text-sm font-medium text-gray-700 mb-1'>
                     Chambres min.
@@ -266,7 +275,7 @@ export default function FilterPopover({
                 </div>
               </div>
 
-              <div className='grid grid-cols-2 gap-3'>
+              <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
                 <div>
                   <label className='block text-sm font-medium text-gray-700 mb-1'>
                     Salles de bain min.
@@ -293,7 +302,7 @@ export default function FilterPopover({
                 </div>
               </div>
 
-              <div className='grid grid-cols-2 gap-3'>
+              <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
                 <div>
                   <label className='block text-sm font-medium text-gray-700 mb-1'>
                     Superficie min. (m²)
@@ -372,7 +381,7 @@ export default function FilterPopover({
                 <CardTitle className='text-base'>Équipements</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className='grid grid-cols-2 gap-2'>
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-2'>
                   {_equipments.slice(0, 6).map((equipment: { id: string; name: string }) => (
                     <label
                       key={equipment.id}
@@ -406,7 +415,7 @@ export default function FilterPopover({
                 <CardTitle className='text-base'>Services</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className='grid grid-cols-2 gap-2'>
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-2'>
                   {_services.slice(0, 6).map((service: { id: string; name: string }) => (
                     <label key={service.id} className='flex items-center space-x-2 cursor-pointer'>
                       <input
@@ -432,16 +441,16 @@ export default function FilterPopover({
         </div>
 
         {/* Actions */}
-        <div className='sticky bottom-0 bg-white border-t border-gray-200 p-4 rounded-b-lg'>
-          <div className='flex space-x-3'>
+        <div className='sticky bottom-0 bg-white border-t border-gray-200 p-3 sm:p-4 rounded-b-lg'>
+          <div className='flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3'>
             <Button
               variant='outline'
               onClick={resetFilters}
-              className='flex-1 rounded-full flex items-center justify-center'
+              className='w-full sm:flex-1 rounded-full flex items-center justify-center h-10 sm:h-auto'
             >
               Réinitialiser
             </Button>
-            <Button onClick={applyFilters} className='flex-1'>
+            <Button onClick={applyFilters} className='w-full sm:flex-1 h-10 sm:h-auto'>
               Appliquer
             </Button>
           </div>

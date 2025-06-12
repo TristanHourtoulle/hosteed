@@ -12,8 +12,8 @@ export async function POST(req: Request) {
       },
       amount,
       productName,
-      successUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success`,
-      cancelUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/product/${metadata.productId}/reservation`,
+      successUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/host/${metadata.productId}/reservation`,
       metadata,
     })
 

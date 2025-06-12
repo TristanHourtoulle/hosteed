@@ -6,6 +6,7 @@ import { useEffect, useState, use } from 'react'
 import { findProductById, validateProduct, rejectProduct } from '@/lib/services/product.service'
 import { Discount, ProductValidation, RentStatus } from '@prisma/client'
 import Image from 'next/image'
+import { getCityFromAddress } from '@/lib/utils'
 
 interface Product {
   id: string
@@ -142,7 +143,7 @@ export default function ValidationPreviewPage({ params }: { params: Promise<{ id
             <div className='grid grid-cols-2 gap-6 mb-6'>
               <div>
                 <h2 className='text-xl font-semibold text-gray-800 mb-2'>Adresse</h2>
-                <p className='text-gray-600'>{product.address}</p>
+                <p className='text-gray-600'>{getCityFromAddress(product.address)}</p>
               </div>
               <div>
                 <h2 className='text-xl font-semibold text-gray-800 mb-2'>Prix de base</h2>

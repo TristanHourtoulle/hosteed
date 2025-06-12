@@ -1,8 +1,11 @@
 import Stripe from 'stripe'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-05-28.basil',
-})
+// Initialize Stripe only if the secret key is available
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2025-05-28.basil',
+    })
+  : null
 
 export interface CreatePaymentIntentParams {
   amount: number
@@ -30,6 +33,13 @@ export const StripeService = {
     metadata = {},
   }: CreatePaymentIntentParams) {
     try {
+      if (!stripe) {
+        return {
+          success: false,
+          error: 'Stripe not configured',
+        }
+      }
+
       const paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(amount * 100), // Stripe utilise les centimes
         currency,
@@ -56,6 +66,13 @@ export const StripeService = {
 
   async capturePaymentIntent(paymentIntentId: string) {
     try {
+      if (!stripe) {
+        return {
+          success: false,
+          error: 'Stripe not configured',
+        }
+      }
+
       const paymentIntent = await stripe.paymentIntents.capture(paymentIntentId)
       return {
         success: true,
@@ -72,6 +89,13 @@ export const StripeService = {
 
   async retrievePaymentIntent(paymentIntentId: string) {
     try {
+      if (!stripe) {
+        return {
+          success: false,
+          error: 'Stripe not configured',
+        }
+      }
+
       const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
       return {
         success: true,
@@ -88,6 +112,13 @@ export const StripeService = {
 
   async RefundPaymentIntent(paymentIntentId: string) {
     try {
+      if (!stripe) {
+        return {
+          success: false,
+          error: 'Stripe not configured',
+        }
+      }
+
       await stripe.refunds.create({
         payment_intent: paymentIntentId,
       })
@@ -113,6 +144,13 @@ export const StripeService = {
     metadata = {},
   }: CreateCheckoutSessionParams) {
     try {
+      if (!stripe) {
+        return {
+          success: false,
+          error: 'Stripe not configured',
+        }
+      }
+
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         line_items: [

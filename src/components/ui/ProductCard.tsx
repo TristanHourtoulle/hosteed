@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Heart, Star, ChevronLeft, ChevronRight, ImageIcon } from 'lucide-react'
 import { useState } from 'react'
+import { getCityFromAddress } from '@/lib/utils'
 
 interface Product {
   id: string
@@ -51,7 +52,7 @@ export default function ProductCard({ product }: { product: Product }) {
   }
 
   return (
-    <Link href={`/product/${product.id}`} className='block'>
+    <Link href={`/host/${product.id}`} className='block'>
       <div
         className='bg-white rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 group'
         onMouseEnter={() => setIsHovered(true)}
@@ -141,7 +142,7 @@ export default function ProductCard({ product }: { product: Product }) {
         <div className='p-4 space-y-2'>
           <div className='space-y-1'>
             <h3 className='font-semibold text-gray-900 text-base leading-tight line-clamp-1'>
-              {product.address}
+              {getCityFromAddress(product.address)}
             </h3>
             <p className='text-gray-500 text-sm font-light line-clamp-1'>{product.name}</p>
           </div>

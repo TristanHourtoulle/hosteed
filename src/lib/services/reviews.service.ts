@@ -104,7 +104,7 @@ export async function approveReview(id: string) {
     if (!user) throw Error('No user found')
     user.map(async userSend => {
       await sendTemplatedMail(userSend.email, 'Nouvel avis posté !', 'new-review.html', {
-        reviewUrl: process.env.NEXTAUTH_URL + '/product/' + review.rentRelation.product.id,
+        reviewUrl: process.env.NEXTAUTH_URL + '/host/' + review.rentRelation.product.id,
       })
     })
   } catch (e) {

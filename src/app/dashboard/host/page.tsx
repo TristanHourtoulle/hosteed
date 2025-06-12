@@ -7,6 +7,7 @@ import { findAllProductByHostId } from '@/lib/services/product.service'
 import { ProductValidation } from '@prisma/client'
 import Image from 'next/image'
 import Link from 'next/link'
+import { getCityFromAddress } from '@/lib/utils'
 
 interface Product {
   id: string
@@ -246,11 +247,11 @@ export default function HostDashboard() {
                         {getStatusText(product.validate)}
                       </span>
                     </div>
-                    <p className='text-gray-600 mb-2'>{product.address}</p>
+                    <p className='text-gray-600 mb-2'>{getCityFromAddress(product.address)}</p>
                     <p className='text-gray-600 mb-4'>{product.basePrice}€</p>
                     <div className='flex justify-between items-center'>
                       <Link
-                        href={`/product/${product.id}`}
+                        href={`/host/${product.id}`}
                         className='text-blue-600 hover:text-blue-800'
                       >
                         Voir l&apos;annonce

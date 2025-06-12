@@ -54,7 +54,7 @@ async function main() {
 
     console.log('Users créés')
 
-    // Création des types de location
+    // Création des types de location (seulement maison et appartement)
     const typeRents = []
     const appartement = await prisma.typeRent.create({
       data: {
@@ -71,22 +71,6 @@ async function main() {
       },
     })
     typeRents.push(maison)
-
-    const villa = await prisma.typeRent.create({
-      data: {
-        name: 'Villa',
-        description: 'Villa de luxe avec piscine',
-      },
-    })
-    typeRents.push(villa)
-
-    const studio = await prisma.typeRent.create({
-      data: {
-        name: 'Studio',
-        description: 'Studio confortable',
-      },
-    })
-    typeRents.push(studio)
 
     console.log('TypeRents créés')
 
@@ -176,175 +160,177 @@ async function main() {
     }
     console.log('Securities créés')
 
-    // Création des produits diversifiés
+    // Création des produits - MADAGASCAR UNIQUEMENT
     const productsData = [
       {
-        name: 'Appartement moderne Paris Centre',
-        description: 'Magnifique appartement moderne en plein cœur de Paris, proche des monuments',
-        address: '123 Rue de Rivoli, Paris 1er',
-        basePrice: '150',
+        name: 'Villa moderne Antananarivo',
+        description:
+          "Magnifique villa moderne dans le quartier résidentiel d'Antananarivo avec vue sur la ville",
+        address: 'Rue des Jacarandas, Antananarivo, Madagascar',
+        basePrice: '75',
+        room: 4,
+        bathroom: 3,
+        typeRentId: maison.id,
+        userId: user1.id,
+        latitude: -18.8792,
+        longitude: 47.5079,
+        maxPeople: 8,
+        equipmentIds: [0, 1, 2, 3, 5, 6, 7], // Wi-Fi, Clim, Piscine, Parking, Cuisine, Machine, TV
+        serviceIds: [0, 1, 2], // Ménage, Conciergerie, Navette
+        mealIds: [0, 1], // Petit-déj, Déjeuner
+        securityIds: [0, 1, 2], // Détecteur fumée, Extincteur, Caméra
+        images: [
+          'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=800&h=600&fit=crop',
+        ],
+      },
+      {
+        name: 'Appartement vue mer Toamasina',
+        description:
+          "Appartement confortable avec vue sur l'océan Indien, proche du port de Toamasina",
+        address: 'Boulevard Joffre, Toamasina, Madagascar',
+        basePrice: '45',
         room: 2,
         bathroom: 1,
         typeRentId: appartement.id,
-        userId: user1.id,
-        latitude: 48.8566,
-        longitude: 2.3522,
+        userId: user2.id,
+        latitude: -18.1492,
+        longitude: 49.4024,
         maxPeople: 4,
-        equipmentIds: [0, 1, 5, 6, 7], // Wi-Fi, Clim, Cuisine, Machine, TV
-        serviceIds: [0, 1], // Ménage, Conciergerie
-        mealIds: [0], // Petit-déj
+        equipmentIds: [0, 1, 4, 5, 7], // Wi-Fi, Clim, Balcon, Cuisine, TV
+        serviceIds: [0, 4], // Ménage, Service petit-déj
+        mealIds: [0, 2], // Petit-déj, Dîner
         securityIds: [0, 1], // Détecteur fumée, Extincteur
         images: [
           'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&h=600&fit=crop',
           'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop',
           'https://images.unsplash.com/photo-1616047006789-b7af710a08c3?w=800&h=600&fit=crop',
-          'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop',
         ],
       },
       {
-        name: "Villa luxueuse Côte d'Azur",
-        description: 'Villa avec piscine privée et vue mer exceptionnelle',
-        address: '45 Boulevard de la Croisette, Cannes',
-        basePrice: '500',
-        room: 5,
-        bathroom: 3,
-        typeRentId: villa.id,
-        userId: user2.id,
-        latitude: 43.5528,
-        longitude: 7.0174,
-        maxPeople: 10,
-        equipmentIds: [0, 1, 2, 3, 4, 5, 6, 7], // Tous équipements
-        serviceIds: [0, 1, 2, 3, 4], // Tous services
-        mealIds: [0, 1, 2], // Petit-déj, Déjeuner, Dîner
-        securityIds: [0, 1, 2, 3], // Toutes sécurités sauf alarme
-        images: [
-          'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&h=600&fit=crop',
-          'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=800&h=600&fit=crop',
-          'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=800&h=600&fit=crop',
-          'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=600&fit=crop',
-          'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&h=600&fit=crop',
-        ],
-      },
-      {
-        name: 'Maison familiale Lyon',
-        description: 'Charmante maison familiale avec jardin dans quartier résidentiel',
-        address: '78 Avenue des Frères Lumière, Lyon',
-        basePrice: '120',
-        room: 4,
+        name: 'Maison traditionnelle Antsirabe',
+        description:
+          "Charmante maison traditionnelle malgache avec jardin tropical, dans la ville thermale d'Antsirabe",
+        address: "Avenue de l'Indépendance, Antsirabe, Madagascar",
+        basePrice: '35',
+        room: 3,
         bathroom: 2,
         typeRentId: maison.id,
         userId: user3.id,
-        latitude: 45.764,
-        longitude: 4.8357,
-        maxPeople: 8,
+        latitude: -19.8697,
+        longitude: 47.0317,
+        maxPeople: 6,
         equipmentIds: [0, 3, 5, 6], // Wi-Fi, Parking, Cuisine, Machine
         serviceIds: [0, 3], // Ménage, Location vélo
         mealIds: [0, 3], // Petit-déj, Brunch
         securityIds: [0, 1, 4], // Détecteur, Extincteur, Alarme
         images: [
-          'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800&h=600&fit=crop',
           'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?w=800&h=600&fit=crop',
           'https://images.unsplash.com/photo-1513584684374-8bab748fbf90?w=800&h=600&fit=crop',
         ],
       },
       {
-        name: 'Studio cosy Montmartre',
-        description: 'Petit studio romantique avec vue sur Sacré-Cœur',
-        address: '12 Rue des Abbesses, Paris 18e',
-        basePrice: '80',
-        room: 1,
+        name: 'Appartement centre-ville Fianarantsoa',
+        description: 'Appartement moderne au cœur de Fianarantsoa, proche des sites historiques',
+        address: 'Rue Rainandriamampandry, Fianarantsoa, Madagascar',
+        basePrice: '30',
+        room: 2,
         bathroom: 1,
-        typeRentId: studio.id,
+        typeRentId: appartement.id,
         userId: user1.id,
-        latitude: 48.8847,
-        longitude: 2.334,
-        maxPeople: 2,
+        latitude: -21.4539,
+        longitude: 47.0857,
+        maxPeople: 4,
         equipmentIds: [0, 5, 7], // Wi-Fi, Cuisine, TV
         serviceIds: [0], // Ménage
         mealIds: [0], // Petit-déj
         securityIds: [0], // Détecteur fumée
         images: [
           'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop',
-        ],
-      },
-      {
-        name: 'Appartement design Bordeaux',
-        description: 'Appartement design avec terrasse et vue sur les vignobles',
-        address: "33 Cours de l'Intendance, Bordeaux",
-        basePrice: '110',
-        room: 3,
-        bathroom: 2,
-        typeRentId: appartement.id,
-        userId: user2.id,
-        latitude: 44.8378,
-        longitude: -0.5792,
-        maxPeople: 6,
-        equipmentIds: [0, 1, 4, 5, 6], // Wi-Fi, Clim, Balcon, Cuisine, Machine
-        serviceIds: [0, 4], // Ménage, Service petit-déj
-        mealIds: [0, 2], // Petit-déj, Dîner
-        securityIds: [0, 1, 3], // Détecteur, Extincteur, Coffre
-        images: [
-          'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop',
           'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&h=600&fit=crop',
         ],
       },
       {
-        name: 'Maison de campagne Provence',
-        description: 'Maison provençale authentique avec piscine et oliveraie',
-        address: '156 Chemin des Lavandes, Aix-en-Provence',
-        basePrice: '200',
+        name: 'Maison coloniale Ambovory',
+        description:
+          'Magnifique maison de style colonial avec véranda et jardin luxuriant à Ambovory',
+        address: 'Route Nationale, Ambovory, Madagascar',
+        basePrice: '55',
         room: 4,
-        bathroom: 3,
+        bathroom: 2,
         typeRentId: maison.id,
-        userId: user3.id,
-        latitude: 43.5297,
-        longitude: 5.4474,
+        userId: user2.id,
+        latitude: -18.95,
+        longitude: 47.52,
         maxPeople: 8,
-        equipmentIds: [0, 2, 3, 5, 6], // Wi-Fi, Piscine, Parking, Cuisine, Machine
-        serviceIds: [0, 1, 3], // Ménage, Conciergerie, Location vélo
-        mealIds: [0, 1], // Petit-déj, Déjeuner
-        securityIds: [0, 1, 2], // Détecteur, Extincteur, Caméra
+        equipmentIds: [0, 3, 4, 5, 6], // Wi-Fi, Parking, Balcon, Cuisine, Machine
+        serviceIds: [0, 1], // Ménage, Conciergerie
+        mealIds: [0, 1, 2], // Petit-déj, Déjeuner, Dîner
+        securityIds: [0, 1, 3], // Détecteur, Extincteur, Coffre
         images: [
           'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=600&fit=crop',
         ],
       },
       {
-        name: 'Penthouse Nice',
-        description: 'Penthouse de luxe avec vue panoramique sur la Baie des Anges',
-        address: '88 Promenade des Anglais, Nice',
-        basePrice: '300',
-        room: 3,
-        bathroom: 2,
+        name: 'Appartement moderne Mahajanga',
+        description: 'Appartement climatisé avec terrasse, proche des plages de Mahajanga',
+        address: 'Boulevard Poincaré, Mahajanga, Madagascar',
+        basePrice: '40',
+        room: 2,
+        bathroom: 1,
         typeRentId: appartement.id,
-        userId: user1.id,
-        latitude: 43.6951,
-        longitude: 7.2758,
-        maxPeople: 6,
-        equipmentIds: [0, 1, 4, 5, 6, 7], // Wi-Fi, Clim, Balcon, Cuisine, Machine, TV
-        serviceIds: [0, 1, 2], // Ménage, Conciergerie, Navette
-        mealIds: [0, 2], // Petit-déj, Dîner
-        securityIds: [0, 1, 2, 3], // Détecteur, Extincteur, Caméra, Coffre
+        userId: user3.id,
+        latitude: -15.7167,
+        longitude: 46.3167,
+        maxPeople: 4,
+        equipmentIds: [0, 1, 4, 5, 7], // Wi-Fi, Clim, Balcon, Cuisine, TV
+        serviceIds: [0, 2], // Ménage, Navette
+        mealIds: [0, 4], // Petit-déj, Collation
+        securityIds: [0, 1], // Détecteur, Extincteur
         images: [
           'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=800&h=600&fit=crop',
           'https://images.unsplash.com/photo-1600607687644-aac4c3eac7f4?w=800&h=600&fit=crop',
-          'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?w=800&h=600&fit=crop',
         ],
       },
       {
-        name: 'Studio étudiant Toulouse',
-        description: 'Studio moderne parfait pour étudiants, proche université',
-        address: '25 Rue du Taur, Toulouse',
-        basePrice: '60',
+        name: 'Maison familiale Morondava',
+        description: "Maison spacieuse près de l'Avenue des Baobabs, parfaite pour les familles",
+        address: 'Avenue des Baobabs, Morondava, Madagascar',
+        basePrice: '50',
+        room: 3,
+        bathroom: 2,
+        typeRentId: maison.id,
+        userId: user1.id,
+        latitude: -20.2833,
+        longitude: 44.2833,
+        maxPeople: 6,
+        equipmentIds: [0, 3, 5, 6, 7], // Wi-Fi, Parking, Cuisine, Machine, TV
+        serviceIds: [0, 3], // Ménage, Location vélo
+        mealIds: [0, 1], // Petit-déj, Déjeuner
+        securityIds: [0, 1, 2], // Détecteur, Extincteur, Caméra
+        images: [
+          'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?w=800&h=600&fit=crop',
+        ],
+      },
+      {
+        name: 'Appartement cosy Antsohihy',
+        description: "Petit appartement confortable dans le centre d'Antsohihy, idéal pour couples",
+        address: 'Rue du Commerce, Antsohihy, Madagascar',
+        basePrice: '25',
         room: 1,
         bathroom: 1,
-        typeRentId: studio.id,
+        typeRentId: appartement.id,
         userId: user2.id,
-        latitude: 43.6047,
-        longitude: 1.4442,
+        latitude: -14.8833,
+        longitude: 47.9833,
         maxPeople: 2,
-        equipmentIds: [0, 5, 6, 7], // Wi-Fi, Cuisine, Machine, TV
+        equipmentIds: [0, 5, 7], // Wi-Fi, Cuisine, TV
         serviceIds: [0], // Ménage
-        mealIds: [4], // Collation
+        mealIds: [0], // Petit-déj
         securityIds: [0], // Détecteur fumée
         images: ['https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800&h=600&fit=crop'],
       },
@@ -377,7 +363,7 @@ async function main() {
           maxPeople: BigInt(data.maxPeople),
           validate: 'Approve',
           userManager: BigInt(1),
-          phone: '+33123456789',
+          phone: '+261123456789',
           latitude: data.latitude,
           longitude: data.longitude,
           type: {
@@ -421,7 +407,7 @@ async function main() {
       console.log(`Product ${i + 1} créé: ${product.name}`)
     }
 
-    console.log('Seeding terminé avec succès - 8 produits diversifiés créés')
+    console.log('Seeding terminé avec succès - 8 propriétés Madagascar créées')
   } catch (error) {
     console.error('Erreur lors du seeding:', error)
     throw error
