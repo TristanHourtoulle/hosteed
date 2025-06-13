@@ -258,8 +258,8 @@ export async function POST(req: Request): Promise<Response> {
         await prisma.rent.update({
           where: { id: rent.id },
           data: {
-            status: 'RESERVED' as RentStatus,
-            payment: 'CLIENT_PAID'
+            status: 'WAITING' as RentStatus,
+            payment: 'NOT_PAID'
           }
         });
       } catch (error) {

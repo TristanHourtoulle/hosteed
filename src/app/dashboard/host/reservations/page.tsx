@@ -148,7 +148,7 @@ export default function RentsPage() {
                         {getStatusBadge(rent.status)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {rent.status === RentStatus.RESERVED && rent.payment == PaymentStatus.NOT_PAID && (
+                        {rent.status === RentStatus.WAITING && rent.payment == PaymentStatus.NOT_PAID && (
                           <button
                             onClick={() => handleApproveReservation(rent.id, rent.stripeId)}
                             className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"

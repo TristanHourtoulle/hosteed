@@ -273,7 +273,6 @@ export async function createRent(params: {
                 accepted: false,
                 prices: BigInt(params.prices),
                 stripeId: params.stripeId || null,
-                status: product.autoAccept ? RentStatus.RESERVED : RentStatus.WAITING;
                 options: {
                     connect: params.options.map(optionId => ({ id: optionId }))
                 }
@@ -362,7 +361,7 @@ export async function createRent(params: {
             await sendTemplatedMail(
                 createdRent.user.email,
                 'Réservation en attente 🏨',
-                'waiing-approve.html',
+                'waiting-approve.html',
                 {
                     name: createdRent.user.name || '',
                     listing_title: createdRent.product.name,
