@@ -212,3 +212,81 @@ export async function validateEmail(token: string) {
         return false;
     }
 }
+
+export async function sendResetEmail(userEmail:string) {
+    try {
+        const user = await prisma.user.findUnique({
+            where: {
+                email: userEmail,
+            },
+        })
+        if (!user) throw new Error('User not found');
+        const token = jwt.sign(
+            { id: user.id },
+            process.env.EMAIL_VERIF_TOKEN || '',
+            { expiresIn: '4h' }
+        )
+        await prisma.user.update({
+            where: {id: user.id},
+            data: {
+                resetToken: token,
+            }
+        });
+        await sendTemplatedMail(
+            user.email,
+            'Reinitialisation du mot de passe !',
+            'resetPassword.html',
+            {
+                resetUrl: (process.env.NEXTAUTH_URL + '/forgetPassword/' + token),
+            }
+        );
+    } catch (e) {
+        console.error(e);
+        return
+    }
+}
+
+export async function resetPassword(token: string, newPassword: string) {
+    try {
+        // Vérification du token
+        const decoded = jwt.verify(token, process.env.EMAIL_VERIF_TOKEN || '') as { id: string };
+        if (!decoded || !decoded.id) {
+            throw new Error('Token invalide');
+        }
+
+        // Vérification de l'expiration du token
+        const user = await prisma.user.findFirst({
+            where: {
+                id: decoded.id,
+                resetToken: token
+            }
+        });
+
+        if (!user) {
+            throw new Error('Token invalide ou utilisateur non trouvé');
+        }
+
+        // Hashage du nouveau mot de passe
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        // Mise à jour du mot de passe
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                password: hashedPassword,
+                resetToken: null
+            }
+        });
+
+        return true;
+    } catch (error) {
+        console.error("Erreur lors de la réinitialisation du mot de passe:", error);
+        if (error instanceof jwt.TokenExpiredError) {
+            throw new Error('Le lien de réinitialisation a expiré');
+        }
+        if (error instanceof jwt.JsonWebTokenError) {
+            throw new Error('Token invalide');
+        }
+        throw error;
+    }
+}
