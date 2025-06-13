@@ -273,6 +273,7 @@ export async function createRent(params: {
                 accepted: false,
                 prices: BigInt(params.prices),
                 stripeId: params.stripeId || null,
+                status: product.autoAccept ? RentStatus.RESERVED : RentStatus.WAITING;
                 options: {
                     connect: params.options.map(optionId => ({ id: optionId }))
                 }
@@ -339,23 +340,43 @@ export async function createRent(params: {
                 }
             );
         })
-        await sendTemplatedMail(
-            createdRent.user.email,
-            'Réservation confirmée 🏨',
-            'confirmation-reservation.html',
-            {
-                name: createdRent.user.name || '',
-                listing_title: createdRent.product.name,
-                listing_adress: createdRent.product.address,
-                check_in: createdRent.product.arriving,
-                check_out: createdRent.product.leaving,
-                categories: createdRent.product.type.name,
-                phone_number: createdRent.product.phone,
-                arriving_date: createdRent.arrivingDate.toDateString(),
-                leaving_date: createdRent.leavingDate.toDateString(),
-                reservationUrl: (process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id),
-            }
-        );
+        if (product.autoAccept) {
+            await sendTemplatedMail(
+                createdRent.user.email,
+                'Réservation en confirmé 🏨',
+                'confirmation-reservation.html',
+                {
+                    name: createdRent.user.name || '',
+                    listing_title: createdRent.product.name,
+                    listing_adress: createdRent.product.address,
+                    check_in: createdRent.product.arriving,
+                    check_out: createdRent.product.leaving,
+                    categories: createdRent.product.type.name,
+                    phone_number: createdRent.product.phone,
+                    arriving_date: createdRent.arrivingDate.toDateString(),
+                    leaving_date: createdRent.leavingDate.toDateString(),
+                    reservationUrl: (process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id),
+                }
+            );
+        } else {
+            await sendTemplatedMail(
+                createdRent.user.email,
+                'Réservation en attente 🏨',
+                'waiing-approve.html',
+                {
+                    name: createdRent.user.name || '',
+                    listing_title: createdRent.product.name,
+                    listing_adress: createdRent.product.address,
+                    check_in: createdRent.product.arriving,
+                    check_out: createdRent.product.leaving,
+                    categories: createdRent.product.type.name,
+                    phone_number: createdRent.product.phone,
+                    arriving_date: createdRent.arrivingDate.toDateString(),
+                    leaving_date: createdRent.leavingDate.toDateString(),
+                    reservationUrl: (process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id),
+                }
+            );
+        }
         return createdRent;
     } catch (error) {
         console.error("Erreur détaillée lors de la création de la réservation:", error);
