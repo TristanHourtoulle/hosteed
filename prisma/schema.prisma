@@ -371,4 +371,5 @@ model hotel {
   room   Product[]
   number String
   adress String
+  name   String
 }
