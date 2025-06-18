@@ -202,6 +202,7 @@ model User {
   email            String          @unique
   emailVerified    DateTime?
   emailToken       String?
+  resetToken       String?
   image            String?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt

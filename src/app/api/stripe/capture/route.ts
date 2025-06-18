@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-04-30.basil",
+  apiVersion: "2025-05-28.basil",
 });
 
 export async function POST(request: Request) {
@@ -17,10 +17,10 @@ export async function POST(request: Request) {
     }
 
     const paymentIntent = await stripe.paymentIntents.capture(paymentIntentId);
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       success: true,
-      paymentIntent 
+      paymentIntent
     });
   } catch (error) {
     console.error('Error capturing payment:', error);
@@ -29,4 +29,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-} 
+}
