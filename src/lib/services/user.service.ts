@@ -224,7 +224,7 @@ export async function sendResetEmail(userEmail:string) {
         const token = jwt.sign(
             { id: user.id },
             process.env.EMAIL_VERIF_TOKEN || '',
-            { expiresIn: '4h' }
+            { expiresIn: '24h' }
         )
         await prisma.user.update({
             where: {id: user.id},
