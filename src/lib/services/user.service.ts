@@ -223,7 +223,7 @@ export async function sendResetEmail(userEmail:string) {
         if (!user) throw new Error('User not found');
         const token = jwt.sign(
             { id: user.id },
-            process.env.EMAIL_VERIF_TOKEN || '',
+            process.env.RESET_PASSWORD_SECRET || '',
             { expiresIn: '24h' }
         )
         await prisma.user.update({
