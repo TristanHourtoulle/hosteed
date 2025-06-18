@@ -92,6 +92,7 @@ model Product {
   typeRoom         TypeRoom[]        @relation("ProductToTypeRoom")
   discount         Discount[]
   Chat             Chat[]
+  favorites        Favorite[]
 
   UnAvailableProduct UnAvailableProduct[]
 }
@@ -218,6 +219,7 @@ model User {
   sessions         Session[]
   Product          Product[]
   Chat             Chat[]
+  favorites        Favorite[]
 
   PayRequest PayRequest[]
 }
@@ -341,4 +343,15 @@ enum ProductValidation {
   Approve
   Refused
   RecheckRequest
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
 }

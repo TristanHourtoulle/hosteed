@@ -1,29 +1,64 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <title>Vérifiez votre adresse email</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #f9f9f9; }
-    .container { background: #fff; padding: 32px; border-radius: 8px; max-width: 600px; margin: 40px auto; box-shadow: 0 2px 8px #eee; }
-    .header { color: #2d3748; font-size: 24px; font-weight: bold; }
-    .content { margin-top: 24px; color: #444; line-height: 1.6; }
-    .footer { margin-top: 32px; color: #888; font-size: 13px; text-align: center; }
-    .button { display: inline-block; background: #4f46e5; color: #fff; padding: 12px 28px; border-radius: 5px; text-decoration: none; margin-top: 24px; font-weight: bold; }
-    .highlight { color: #4f46e5; font-weight: bold; }
-  </style>
-</head>
-<body>
-<div class="container">
-  <div class="header">Bienvenue sur Hosteed !</div>
-  <div class="content">
-    Merci de vous être inscrit sur Hosteed. Pour finaliser votre inscription et accéder à toutes les fonctionnalités, veuillez vérifier votre adresse email en cliquant sur le bouton ci-dessous.<br><br>
-    Si vous n'avez pas créé de compte sur Hosteed, vous pouvez ignorer cet email.<br><br>
-    <a href="{{verificationUrl}}" class="button">Vérifier mon email</a>
-  </div>
-  <div class="footer">
-    Merci de votre confiance.<br>L'équipe Hosteed
-  </div>
-</div>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Vérifiez votre adresse email</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f9f9f9;
+      }
+      .container {
+        background: #fff;
+        padding: 32px;
+        border-radius: 8px;
+        max-width: 600px;
+        margin: 40px auto;
+        box-shadow: 0 2px 8px #eee;
+      }
+      .header {
+        color: #2d3748;
+        font-size: 24px;
+        font-weight: bold;
+      }
+      .content {
+        margin-top: 24px;
+        color: #444;
+        line-height: 1.6;
+      }
+      .footer {
+        margin-top: 32px;
+        color: #888;
+        font-size: 13px;
+        text-align: center;
+      }
+      .button {
+        display: inline-block;
+        background: #4f46e5;
+        color: #fff;
+        padding: 12px 28px;
+        border-radius: 5px;
+        text-decoration: none;
+        margin-top: 24px;
+        font-weight: bold;
+      }
+      .highlight {
+        color: #4f46e5;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">Bienvenue sur Hosteed !</div>
+      <div class="content">
+        Merci de vous être inscrit sur Hosteed. Pour finaliser votre inscription et accéder à toutes
+        les fonctionnalités, veuillez vérifier votre adresse email en cliquant sur le bouton
+        ci-dessous.<br /><br />
+        Si vous n'avez pas créé de compte sur Hosteed, vous pouvez ignorer cet email.<br /><br />
+        <a href="{{verificationUrl}}" class="button">Vérifier mon email</a>
+      </div>
+      <div class="footer">Merci de votre confiance.<br />L'équipe Hosteed</div>
+    </div>
+  </body>
 </html>

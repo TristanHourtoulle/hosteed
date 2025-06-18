@@ -1,74 +1,89 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-  <meta charset="UTF-8">
-  <title>Nouvelle réservation</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    .header {
-      text-align: center;
-      padding: 20px 0;
-      background-color: #f8f9fa;
-      border-radius: 5px;
-    }
-    .content {
-      padding: 20px 0;
-    }
-    .footer {
-      text-align: center;
-      padding: 20px 0;
-      font-size: 12px;
-      color: #666;
-    }
-    .button {
-      display: inline-block;
-      padding: 10px 20px;
-      background-color: #28a745;
-      color: white;
-      text-decoration: none;
-      border-radius: 5px;
-      margin: 20px 0;
-    }
-    .details {
-      background-color: #f8f9fa;
-      padding: 15px;
-      border-radius: 5px;
-      margin: 20px 0;
-    }
-  </style>
-</head>
-<body>
-<div class="header">
-  <h1>Nouvelle réservation</h1>
-</div>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Nouvelle réservation</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .header {
+        text-align: center;
+        padding: 20px 0;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+      }
+      .content {
+        padding: 20px 0;
+      }
+      .footer {
+        text-align: center;
+        padding: 20px 0;
+        font-size: 12px;
+        color: #666;
+      }
+      .button {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #28a745;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+        margin: 20px 0;
+      }
+      .details {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 20px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>Nouvelle réservation</h1>
+    </div>
 
-<div class="content">
-  <p>Bonjour {{name}},</p>
+    <div class="content">
+      <p>Bonjour {{name}},</p>
 
-  <p>Vous avez reçu une nouvelle réservation {{bookId}}. Cliquez sur le lien ci-dessous pour plus de détails.</p>
-  <a href="{{bookUrl}}" class="button">Voir les détails de la réservations</a>
+      <p>
+        Vous avez reçu une nouvelle réservation {{bookId}}. Cliquez sur le lien ci-dessous pour plus
+        de détails.
+      </p>
+      <a href="{{bookUrl}}" class="button">Voir les détails de la réservations</a>
 
-  <div class="details">
-    <h3>Rappel ⚠️</h3>
-    <p>Si votre établissement est vérifié, vous avez la possibilité de demander 50% du montant total de la réservation en cliquant sur ce <strong>lien</strong> ou sur le bouton
-      <strong>"Demander un retrait"</strong> dans votre tableau de bord. Les 50% restants pourront être demandés le jour du check-in en cliquant sur le même.</p><br>
-    Concernant le paiement par mobile money, <strong>nous ne prenons pas en compte les frais de retrait</strong> dans le transfert, merci de les inclure dans votre tarif de base de nuitée. Les cours des virements seront basés sur les taux en vigueur le jour du transfert. Hosteed ne maitrise pas les taux de conversion appliqués par les services financiers.
-  <p>N’hésitez pas à nous écrire à <strong>welcome-pro@hosteed.com</strong>. si vous avez la moindre question.</p>
-  </div>
+      <div class="details">
+        <h3>Rappel ⚠️</h3>
+        <p>
+          Si votre établissement est vérifié, vous avez la possibilité de demander 50% du montant
+          total de la réservation en cliquant sur ce <strong>lien</strong> ou sur le bouton
+          <strong>"Demander un retrait"</strong> dans votre tableau de bord. Les 50% restants
+          pourront être demandés le jour du check-in en cliquant sur le même.
+        </p>
+        <br />
+        Concernant le paiement par mobile money,
+        <strong>nous ne prenons pas en compte les frais de retrait</strong> dans le transfert, merci
+        de les inclure dans votre tarif de base de nuitée. Les cours des virements seront basés sur
+        les taux en vigueur le jour du transfert. Hosteed ne maitrise pas les taux de conversion
+        appliqués par les services financiers.
+        <p>
+          N’hésitez pas à nous écrire à <strong>welcome-pro@hosteed.com</strong>. si vous avez la
+          moindre question.
+        </p>
+      </div>
 
-  <p>L'équipe Hosteed</p>
-</div>
+      <p>L'équipe Hosteed</p>
+    </div>
 
-<div class="footer">
-  <p>Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
-  <p>© 2024 Hosteed. Tous droits réservés.</p>
-</div>
-</body>
+    <div class="footer">
+      <p>Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
+      <p>© 2024 Hosteed. Tous droits réservés.</p>
+    </div>
+  </body>
 </html>

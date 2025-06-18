@@ -1,37 +1,72 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <title>Modification de votre réservation</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #f9f9f9; }
-    .container { background: #fff; padding: 32px; border-radius: 8px; max-width: 600px; margin: 40px auto; box-shadow: 0 2px 8px #eee; }
-    .header { color: #2d3748; font-size: 24px; font-weight: bold; }
-    .content { margin-top: 24px; color: #444; }
-    .details { background: #f1f5f9; padding: 16px; border-radius: 6px; margin: 24px 0; }
-    .footer { margin-top: 32px; color: #888; font-size: 13px; text-align: center; }
-    .button { display: inline-block; background: #4f46e5; color: #fff; padding: 10px 24px; border-radius: 5px; text-decoration: none; margin-top: 16px; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">Votre réservation a été modifiée</div>
-    <div class="content">
-      Bonjour {{ name }},<br><br>
-      Les détails de votre réservation <b>#{{ reservationId }}</b> ont été modifiés. Voici les nouvelles informations&nbsp;:
-      <div class="details">
-        <b>Logement :</b> {{ productName }}<br>
-        <b>Arrivée :</b> {{ startDate }}<br>
-        <b>Départ :</b> {{ endDate }}<br>
-        <b>Nombre de personnes :</b> {{ guests }}<br>
-        <b>Montant total :</b> {{ amount }} €
+  <head>
+    <meta charset="UTF-8" />
+    <title>Modification de votre réservation</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f9f9f9;
+      }
+      .container {
+        background: #fff;
+        padding: 32px;
+        border-radius: 8px;
+        max-width: 600px;
+        margin: 40px auto;
+        box-shadow: 0 2px 8px #eee;
+      }
+      .header {
+        color: #2d3748;
+        font-size: 24px;
+        font-weight: bold;
+      }
+      .content {
+        margin-top: 24px;
+        color: #444;
+      }
+      .details {
+        background: #f1f5f9;
+        padding: 16px;
+        border-radius: 6px;
+        margin: 24px 0;
+      }
+      .footer {
+        margin-top: 32px;
+        color: #888;
+        font-size: 13px;
+        text-align: center;
+      }
+      .button {
+        display: inline-block;
+        background: #4f46e5;
+        color: #fff;
+        padding: 10px 24px;
+        border-radius: 5px;
+        text-decoration: none;
+        margin-top: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">Votre réservation a été modifiée</div>
+      <div class="content">
+        Bonjour {{ name }},<br /><br />
+        Les détails de votre réservation <b>#{{ reservationId }}</b> ont été modifiés. Voici les
+        nouvelles informations&nbsp;:
+        <div class="details">
+          <b>Logement :</b> {{ productName }}<br />
+          <b>Arrivée :</b> {{ startDate }}<br />
+          <b>Départ :</b> {{ endDate }}<br />
+          <b>Nombre de personnes :</b> {{ guests }}<br />
+          <b>Montant total :</b> {{ amount }} €
+        </div>
+        Si vous n'êtes pas à l'origine de cette modification, merci de nous contacter
+        immédiatement.<br />
+        <a href="{{ reservationUrl }}" class="button">Voir ma réservation</a>
       </div>
-      Si vous n'êtes pas à l'origine de cette modification, merci de nous contacter immédiatement.<br>
-      <a href="{{ reservationUrl }}" class="button">Voir ma réservation</a>
+      <div class="footer">Merci de votre confiance.<br />L'équipe Hosteed</div>
     </div>
-    <div class="footer">
-      Merci de votre confiance.<br>L'équipe Hosteed
-    </div>
-  </div>
-</body>
-</html> 
+  </body>
+</html>
