@@ -153,7 +153,7 @@ model Rent {
   product      Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   options      Options[]     @relation("OptionsToRent")
-  status       RentStatus    @default(RESERVED)
+  status       RentStatus    @default(WAITING)
   confirmed    Boolean       @default(false)
   Review       Review[]
   DisableRent  DisableRent[]
@@ -330,6 +330,7 @@ enum PaymentStatus {
 }
 
 enum RentStatus {
+  WAITING
   RESERVED
   CHECKIN
   CHECKOUT
