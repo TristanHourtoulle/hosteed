@@ -95,6 +95,8 @@ model Product {
   favorites        Favorite[]
 
   UnAvailableProduct UnAvailableProduct[]
+
+  hotel hotel[]
 }
 
 model Discount {
@@ -222,6 +224,10 @@ model User {
   favorites        Favorite[]
 
   PayRequest PayRequest[]
+
+  managedHotels hotel[] @relation(name: "managerUserId")
+
+  staffHotels hotel[] @relation(name: "staff")
 }
 
 model Account {
@@ -355,4 +361,14 @@ model Favorite {
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([userId, productId])
+}
+
+model hotel {
+  id     String    @id @default(cuid())
+  userId String
+  user   User      @relation(name: "managerUserId", fields: [userId], references: [id], onDelete: Cascade)
+  staff  User[]    @relation(name: "staff")
+  room   Product[]
+  number String
+  adress String
 }

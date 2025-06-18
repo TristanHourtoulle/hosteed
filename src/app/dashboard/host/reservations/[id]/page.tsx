@@ -194,6 +194,7 @@ export default function RentDetailsPage({ params }: { params: Promise<{ id: stri
 
   const getStatusBadge = (status: RentStatus) => {
     const statusConfig = {
+      WAITING: {label: 'En attente de validation', color: 'bg-yellow-100 text-yellow-800' }, // TODO: Changer la couleur pour qu'elle corresonde a en attente
       RESERVED: { label: 'Réservée', color: 'bg-yellow-100 text-yellow-800' },
       CHECKIN: { label: 'En cours', color: 'bg-green-100 text-green-800' },
       CHECKOUT: { label: 'Terminée', color: 'bg-gray-100 text-gray-800' },
