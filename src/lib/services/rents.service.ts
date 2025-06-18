@@ -343,101 +343,60 @@ export async function createRent(params: {
       return null
     }
 
-    createdRent.product.user.map(async host => {
-      await sendTemplatedMail(host.email, 'Nouvelle réservation !', 'new-book.html', {
-        bookId: createdRent.id,
-        name: host.name || '',
-        bookUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
-      })
-    })
-    await sendTemplatedMail(
-      createdRent.user.email,
-      'Réservation confirmée 🏨',
-      'confirmation-reservation.html',
-      {
-        name: createdRent.user.name || '',
-        listing_title: createdRent.product.name,
-        listing_adress: createdRent.product.address,
-        check_in: createdRent.product.arriving,
-        check_out: createdRent.product.leaving,
-        categories: createdRent.product.type.name,
-        phone_number: createdRent.product.phone,
-        arriving_date: createdRent.arrivingDate.toDateString(),
-        leaving_date: createdRent.leavingDate.toDateString(),
-        reservationUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
-      }
-    )
-    return createdRent
-  } catch (error) {
-    console.error('Erreur détaillée lors de la création de la réservation:', error)
-    return null
-  }
-}
-
-export async function confirmRentByHost(id: string) {
-  try {
-    const rent = await prisma.rent.findFirst({
-      where: { id: id },
-      include: {
-        product: {
-          include: {
-            img: true,
-            type: true,
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-          },
-        },
-        user: true,
-        options: true,
-      },
-    })
-
-    if (!rent || !rent.user) throw new Error('Reservation not found')
-
-    // Update reservation to confirmed and accepted
-    await prisma.rent.update({
-      where: { id: id },
-      data: {
-        accepted: true,
-        confirmed: true,
-      },
-    })
-
-    // Send confirmation email to guest
-    await sendTemplatedMail(
-      rent.user.email,
-      "Réservation confirmée par l'hôte 🎉",
-      'host-confirmation.html',
-      {
-        name: rent.user.name || '',
-        listing_title: rent.product.name,
-        listing_address: rent.product.address,
-        check_in: rent.product.arriving,
-        check_out: rent.product.leaving,
-        categories: rent.product.type.name,
-        phone_number: rent.product.phone,
-        arriving_date: rent.arrivingDate.toDateString(),
-        leaving_date: rent.leavingDate.toDateString(),
-        reservationUrl: process.env.NEXTAUTH_URL + '/reservation/' + rent.id,
-      }
-    )
-
-    return {
-      success: true,
-      message: 'Réservation confirmée avec succès',
+        createdRent.product.user.map(async (host) => {
+            await sendTemplatedMail(
+                host.email,
+                'Nouvelle réservation !',
+                'new-book.html',
+                {
+                    bookId: createdRent.id,
+                    name: host.name || '',
+                    bookUrl: (process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id),
+                }
+            );
+        })
+        if (product.autoAccept) {
+            await sendTemplatedMail(
+                createdRent.user.email,
+                'Réservation en confirmé 🏨',
+                'confirmation-reservation.html',
+                {
+                    name: createdRent.user.name || '',
+                    listing_title: createdRent.product.name,
+                    listing_adress: createdRent.product.address,
+                    check_in: createdRent.product.arriving,
+                    check_out: createdRent.product.leaving,
+                    categories: createdRent.product.type.name,
+                    phone_number: createdRent.product.phone,
+                    arriving_date: createdRent.arrivingDate.toDateString(),
+                    leaving_date: createdRent.leavingDate.toDateString(),
+                    reservationUrl: (process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id),
+                }
+            );
+        } else {
+            await sendTemplatedMail(
+                createdRent.user.email,
+                'Réservation en attente 🏨',
+                'waiting-approve.html',
+                {
+                    name: createdRent.user.name || '',
+                    listing_title: createdRent.product.name,
+                    listing_adress: createdRent.product.address,
+                    check_in: createdRent.product.arriving,
+                    check_out: createdRent.product.leaving,
+                    categories: createdRent.product.type.name,
+                    phone_number: createdRent.product.phone,
+                    arriving_date: createdRent.arrivingDate.toDateString(),
+                    leaving_date: createdRent.leavingDate.toDateString(),
+                    reservationUrl: (process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id),
+                }
+            );
+        }
+        return createdRent;
+    } catch (error) {
+        console.error("Erreur détaillée lors de la création de la réservation:", error);
+        return null;
     }
-  } catch (error) {
-    console.error('Error confirming rent:', error)
-    return {
-      success: false,
-      error: 'Erreur lors de la confirmation de la réservation',
-    }
-  }
 }
 
 export async function approveRent(id: string) {
@@ -469,8 +428,6 @@ export async function approveRent(id: string) {
     data: {
       status: 'RESERVED',
       payment: 'CLIENT_PAID',
-      accepted: true,
-      confirmed: true,
     },
   })
   const admin = await findAllUserByRoles('ADMIN')
