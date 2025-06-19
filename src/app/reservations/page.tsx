@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Card, CardContent } from '@/components/ui/shadcnui/card'
+import {createPromotedProduct, getActualProduct} from "@/lib/services/promotedProduct.service";
 
 interface Rent {
   id: string
@@ -118,7 +119,7 @@ export default function ReservationsPage() {
   useEffect(() => {
     const fetchRents = async () => {
       if (!session?.user?.id) return
-
+      console.log(await getActualProduct())
       try {
         setLoading(true)
         const userRents = await findAllRentByUserId(session.user.id)
@@ -417,7 +418,13 @@ export default function ReservationsPage() {
                           Contacter l&apos;hébergeur
                         </Link>
                       </Button>
-
+                      <Button asChild size='sm' className='flex-1'
+                      onClick={() => createPromotedProduct(true, new Date(), new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), "cmakcrcx200046vpsanzg7sme")}>
+                        <Link href={`/chat/${rent.id}`}>
+                          <Eye className='w-4 h-4 mr-2' />
+                          Contacter l&apos;hébergeur
+                        </Link>
+                      </Button>
                       <div className='flex gap-2'>
                         {canCancel && (
                           <Button

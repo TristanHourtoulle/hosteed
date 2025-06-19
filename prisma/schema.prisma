@@ -96,6 +96,8 @@ model Product {
   UnAvailableProduct UnAvailableProduct[]
 
   hotel hotel[]
+
+  PromotedProduct PromotedProduct[]
 }
 
 model Discount {
@@ -373,4 +375,13 @@ model hotel {
   number String
   adress String
   name   String
+}
+
+model PromotedProduct {
+  id        String   @id @default(cuid())
+  active    Boolean  @default(false)
+  start     DateTime
+  end       DateTime
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
