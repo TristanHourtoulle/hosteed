@@ -418,13 +418,6 @@ export default function ReservationsPage() {
                           Contacter l&apos;hébergeur
                         </Link>
                       </Button>
-                      <Button asChild size='sm' className='flex-1'
-                      onClick={() => createPromotedProduct(true, new Date(), new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), "cmakcrcx200046vpsanzg7sme")}>
-                        <Link href={`/chat/${rent.id}`}>
-                          <Eye className='w-4 h-4 mr-2' />
-                          Contacter l&apos;hébergeur
-                        </Link>
-                      </Button>
                       <div className='flex gap-2'>
                         {canCancel && (
                           <Button
