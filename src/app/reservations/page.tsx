@@ -411,6 +411,12 @@ export default function ReservationsPage() {
                           Voir l&apos;hébergement
                         </Link>
                       </Button>
+                      <Button variant='outline' asChild className='w-full'>
+                        <Link href={`/chat/${rent.id}`}>
+                          <Eye className='w-4 h-4 mr-2' />
+                          Contacter l&apos;hébergeur
+                        </Link>
+                      </Button>
 
                       <div className='flex gap-2'>
                         {canCancel && (

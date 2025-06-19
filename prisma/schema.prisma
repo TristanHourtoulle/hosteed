@@ -91,7 +91,6 @@ model Product {
   servicesList     Services[]        @relation("ProductToServices")
   typeRoom         TypeRoom[]        @relation("ProductToTypeRoom")
   discount         Discount[]
-  Chat             Chat[]
   favorites        Favorite[]
 
   UnAvailableProduct UnAvailableProduct[]
@@ -162,6 +161,7 @@ model Rent {
   DisableRent  DisableRent[]
 
   PayRequest PayRequest[]
+  Chat       Chat[]
 }
 
 model UnAvailableProduct {
@@ -285,8 +285,9 @@ model Chat {
   message    String
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  productId  String
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  rentId     String
+  rent       Rent     @relation(fields: [rentId], references: [id], onDelete: Cascade)
+  host       Boolean
   dateSended DateTime
 }
 
