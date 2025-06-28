@@ -19,10 +19,11 @@ export default function HostInformation({ hostName }: HostInformationProps) {
             <h4 className='font-semibold text-gray-900 text-lg sm:text-xl'>{hostName}</h4>
           </div>
           <div className='flex flex-col sm:flex-row gap-3'>
-            <button className='flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base font-medium'>
+            {/* Hide this part because the user cannot contact the host before booking for safety reasons */}
+            {/* <button className='flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base font-medium'>
               <MessageCircle className='h-4 w-4 sm:h-5 sm:w-5' />
               Contacter l&apos;hôte
-            </button>
+            </button> */}
             <button className='flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base font-medium'>
               <Shield className='h-4 w-4 sm:h-5 sm:w-5' />
               Protection des paiements
