@@ -42,7 +42,7 @@ export const AuthForm = () => {
         if (result?.error) {
           setError('Email ou mot de passe incorrect')
         } else {
-          window.location.href = '/dashboard'
+          window.location.href = '/host'
         }
       } else if (mode === 'register') {
         if (password !== confirmPassword) {
@@ -83,7 +83,7 @@ export const AuthForm = () => {
   }
 
   const handleGoogleSignIn = () => {
-    signIn('google', { redirectTo: '/dashboard' })
+    signIn('google', { redirectTo: '/host' })
   }
 
   const switchMode = (newMode: AuthMode) => {

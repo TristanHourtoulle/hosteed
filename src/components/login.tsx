@@ -24,7 +24,7 @@ export const Login = () => {
       if (result?.error) {
         setError('Email ou mot de passe incorrect')
       } else {
-        window.location.href = '/dashboard'
+        window.location.href = '/host'
       }
     } catch {
       setError('Une erreur est survenue')
@@ -34,7 +34,7 @@ export const Login = () => {
   }
 
   const handleGoogleSignIn = () => {
-    signIn('google', { redirectTo: '/dashboard' })
+    signIn('google', { redirectTo: '/host' })
   }
 
   async function submit() {
@@ -52,7 +52,7 @@ export const Login = () => {
       }
 
       // Redirection après inscription réussie
-      window.location.href = '/dashboard'
+      window.location.href = '/host'
     } catch {
       setError("Une erreur est survenue lors de l'inscription")
     }

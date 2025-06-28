@@ -179,7 +179,7 @@ export default function CreateProduct() {
       })
 
       if (product) {
-        router.push('/dashboard')
+        router.push('/host')
       } else {
         setError('Erreur lors de la création du produit')
       }
