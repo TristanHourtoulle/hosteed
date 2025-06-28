@@ -18,12 +18,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'ID du produit requis' }, { status: 400 })
     }
 
-    const favorite = await addToFavorites(session.user.id, productId)
-    if (!favorite) {
-      return NextResponse.json({ error: "Erreur lors de l'ajout aux favoris" }, { status: 500 })
+    const result = await addToFavorites(session.user.id, productId)
+    if (!result.success) {
+      return NextResponse.json({ error: result.error }, { status: 400 })
     }
 
-    return NextResponse.json({ success: true, favorite })
+    return NextResponse.json(result)
   } catch (error) {
     console.error('Error in POST /api/favorites:', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
@@ -42,15 +42,12 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: 'ID du produit requis' }, { status: 400 })
     }
 
-    const favorite = await removeFromFavorites(session.user.id, productId)
-    if (!favorite) {
-      return NextResponse.json(
-        { error: 'Erreur lors de la suppression des favoris' },
-        { status: 500 }
-      )
+    const result = await removeFromFavorites(session.user.id, productId)
+    if (!result.success) {
+      return NextResponse.json({ error: result.error }, { status: 400 })
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json(result)
   } catch (error) {
     console.error('Error in DELETE /api/favorites:', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })

@@ -60,7 +60,7 @@ export default function HostNavbar() {
                 </svg>
                 Locations
               </Link>
-              <Link
+              {/* <Link
                 href='/dashboard/host/settings'
                 className={`inline-flex items-center px-1 pt-1 border-b-2 ${isActive('/dashboard/host/settings')} text-sm font-medium`}
               >
@@ -79,7 +79,7 @@ export default function HostNavbar() {
                   />
                 </svg>
                 Paramètres
-              </Link>
+              </Link> */}
             </div>
           </div>
         </div>

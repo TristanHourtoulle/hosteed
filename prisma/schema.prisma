@@ -17,6 +17,7 @@ model TypeRent {
 model Equipment {
   id       String    @id @default(cuid())
   name     String
+  icon     String    @default("CheckCircle") // Nom de l'icône Lucide
   products Product[] @relation("EquipmentToProduct")
 }
 
@@ -43,6 +44,19 @@ model Security {
   id       String    @id @default(cuid())
   name     String
   products Product[] @relation("ProductToSecurity")
+}
+
+model Rules {
+  id              String   @id @default(cuid())
+  productId       String
+  smokingAllowed  Boolean  @default(false)
+  petsAllowed     Boolean  @default(false)
+  eventsAllowed   Boolean  @default(false)
+  checkInTime     String   @default("15:00")
+  checkOutTime    String   @default("11:00")
+  selfCheckIn     Boolean  @default(false)
+  selfCheckInType String?
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model Product {
@@ -93,6 +107,11 @@ model Product {
   discount         Discount[]
   Chat             Chat[]
   favorites        Favorite[]
+  rules            Rules[]
+  nearbyPlaces     NearbyPlace[]
+  transportOptions TransportOption[]
+  propertyInfo     PropertyInfo?
+  cancellationPolicy CancellationPolicy?
 
   UnAvailableProduct UnAvailableProduct[]
 }
@@ -355,4 +374,42 @@ model Favorite {
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([userId, productId])
+}
+
+model NearbyPlace {
+  id          String   @id @default(cuid())
+  name        String
+  distance    Int      // en mètres
+  duration    Int      // en minutes
+  transport   String   // à pied, en voiture, etc.
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model TransportOption {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model PropertyInfo {
+  id                    String   @id @default(cuid())
+  hasStairs            Boolean  @default(false)
+  hasElevator          Boolean  @default(false)
+  hasHandicapAccess    Boolean  @default(false)
+  hasPetsOnProperty    Boolean  @default(false)
+  additionalNotes      String?
+  productId            String   @unique
+  product              Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model CancellationPolicy {
+  id                    String   @id @default(cuid())
+  freeCancellationHours Int      // nombre d'heures avant l'arrivée pour une annulation gratuite
+  partialRefundPercent  Int      // pourcentage remboursé après la limite
+  additionalTerms       String?
+  productId            String   @unique
+  product              Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 }

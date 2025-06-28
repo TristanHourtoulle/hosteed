@@ -1,10 +1,3 @@
-/*
-  Warnings:
-
-  - You are about to drop the `Post` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `users` table. If the table is not empty, all the data it contains will be lost.
-
-*/
 -- CreateEnum
 CREATE TYPE "PaymentReqStatus" AS ENUM ('RECEIVED', 'REFUSED', 'DONE');
 
@@ -18,19 +11,10 @@ CREATE TYPE "UserRole" AS ENUM ('ADMIN', 'BLOGWRITTER', 'HOST', 'USER');
 CREATE TYPE "PaymentStatus" AS ENUM ('NOT_PAID', 'CLIENT_PAID', 'MID_TRANSFER_REQ', 'MID_TRANSFER_DONE', 'REST_TRANSFER_REQ', 'REST_TRANSFER_DONE', 'FULL_TRANSFER_REQ', 'FULL_TRANSFER_DONE', 'REFUNDED', 'DISPUTE');
 
 -- CreateEnum
-CREATE TYPE "RentStatus" AS ENUM ('RESERVED', 'CHECKIN', 'CHECKOUT', 'CANCEL');
+CREATE TYPE "RentStatus" AS ENUM ('WAITING', 'RESERVED', 'CHECKIN', 'CHECKOUT', 'CANCEL');
 
 -- CreateEnum
 CREATE TYPE "ProductValidation" AS ENUM ('NotVerified', 'Approve', 'Refused', 'RecheckRequest');
-
--- DropForeignKey
-ALTER TABLE "Post" DROP CONSTRAINT "Post_authorId_fkey";
-
--- DropTable
-DROP TABLE "Post";
-
--- DropTable
-DROP TABLE "users";
 
 -- CreateTable
 CREATE TABLE "TypeRent" (
@@ -45,6 +29,7 @@ CREATE TABLE "TypeRent" (
 CREATE TABLE "Equipment" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
+    "icon" TEXT NOT NULL DEFAULT 'CheckCircle',
 
     CONSTRAINT "Equipment_pkey" PRIMARY KEY ("id")
 );
@@ -80,6 +65,21 @@ CREATE TABLE "Security" (
     "name" TEXT NOT NULL,
 
     CONSTRAINT "Security_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Rules" (
+    "id" TEXT NOT NULL,
+    "productId" TEXT NOT NULL,
+    "smokingAllowed" BOOLEAN NOT NULL DEFAULT false,
+    "petsAllowed" BOOLEAN NOT NULL DEFAULT false,
+    "eventsAllowed" BOOLEAN NOT NULL DEFAULT false,
+    "checkInTime" TEXT NOT NULL DEFAULT '15:00',
+    "checkOutTime" TEXT NOT NULL DEFAULT '11:00',
+    "selfCheckIn" BOOLEAN NOT NULL DEFAULT false,
+    "selfCheckInType" TEXT,
+
+    CONSTRAINT "Rules_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -183,7 +183,7 @@ CREATE TABLE "Rent" (
     "arrivingDate" TIMESTAMP(3) NOT NULL,
     "leavingDate" TIMESTAMP(3) NOT NULL,
     "payment" "PaymentStatus" NOT NULL DEFAULT 'NOT_PAID',
-    "status" "RentStatus" NOT NULL DEFAULT 'RESERVED',
+    "status" "RentStatus" NOT NULL DEFAULT 'WAITING',
     "confirmed" BOOLEAN NOT NULL DEFAULT false,
 
     CONSTRAINT "Rent_pkey" PRIMARY KEY ("id")
@@ -236,6 +236,7 @@ CREATE TABLE "User" (
     "email" TEXT NOT NULL,
     "emailVerified" TIMESTAMP(3),
     "emailToken" TEXT,
+    "resetToken" TEXT,
     "image" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -322,6 +323,62 @@ CREATE TABLE "PayRequest" (
 );
 
 -- CreateTable
+CREATE TABLE "Favorite" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "productId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Favorite_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "NearbyPlace" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "distance" INTEGER NOT NULL,
+    "duration" INTEGER NOT NULL,
+    "transport" TEXT NOT NULL,
+    "productId" TEXT NOT NULL,
+
+    CONSTRAINT "NearbyPlace_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "TransportOption" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "productId" TEXT NOT NULL,
+
+    CONSTRAINT "TransportOption_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PropertyInfo" (
+    "id" TEXT NOT NULL,
+    "hasStairs" BOOLEAN NOT NULL DEFAULT false,
+    "hasElevator" BOOLEAN NOT NULL DEFAULT false,
+    "hasHandicapAccess" BOOLEAN NOT NULL DEFAULT false,
+    "hasPetsOnProperty" BOOLEAN NOT NULL DEFAULT false,
+    "additionalNotes" TEXT,
+    "productId" TEXT NOT NULL,
+
+    CONSTRAINT "PropertyInfo_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "CancellationPolicy" (
+    "id" TEXT NOT NULL,
+    "freeCancellationHours" INTEGER NOT NULL,
+    "partialRefundPercent" INTEGER NOT NULL,
+    "additionalTerms" TEXT,
+    "productId" TEXT NOT NULL,
+
+    CONSTRAINT "CancellationPolicy_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "_EquipmentToProduct" (
     "A" TEXT NOT NULL,
     "B" TEXT NOT NULL,
@@ -401,6 +458,15 @@ CREATE UNIQUE INDEX "Chat_id_key" ON "Chat"("id");
 CREATE UNIQUE INDEX "PayRequest_id_key" ON "PayRequest"("id");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Favorite_userId_productId_key" ON "Favorite"("userId", "productId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "PropertyInfo_productId_key" ON "PropertyInfo"("productId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "CancellationPolicy_productId_key" ON "CancellationPolicy"("productId");
+
+-- CreateIndex
 CREATE INDEX "_EquipmentToProduct_B_index" ON "_EquipmentToProduct"("B");
 
 -- CreateIndex
@@ -423,6 +489,9 @@ CREATE INDEX "_ImagesToProduct_B_index" ON "_ImagesToProduct"("B");
 
 -- CreateIndex
 CREATE INDEX "_OptionsToRent_B_index" ON "_OptionsToRent"("B");
+
+-- AddForeignKey
+ALTER TABLE "Rules" ADD CONSTRAINT "Rules_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Product" ADD CONSTRAINT "Product_typeId_fkey" FOREIGN KEY ("typeId") REFERENCES "TypeRent"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -477,6 +546,24 @@ ALTER TABLE "PayRequest" ADD CONSTRAINT "PayRequest_userId_fkey" FOREIGN KEY ("u
 
 -- AddForeignKey
 ALTER TABLE "PayRequest" ADD CONSTRAINT "PayRequest_rentId_fkey" FOREIGN KEY ("rentId") REFERENCES "Rent"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Favorite" ADD CONSTRAINT "Favorite_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Favorite" ADD CONSTRAINT "Favorite_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "NearbyPlace" ADD CONSTRAINT "NearbyPlace_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TransportOption" ADD CONSTRAINT "TransportOption_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PropertyInfo" ADD CONSTRAINT "PropertyInfo_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CancellationPolicy" ADD CONSTRAINT "CancellationPolicy_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_EquipmentToProduct" ADD CONSTRAINT "_EquipmentToProduct_A_fkey" FOREIGN KEY ("A") REFERENCES "Equipment"("id") ON DELETE CASCADE ON UPDATE CASCADE;

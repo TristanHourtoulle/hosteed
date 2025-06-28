@@ -44,8 +44,8 @@ export function AdminNav() {
 
   return (
     <nav className='sticky top-0 z-40 w-full border-b bg-white/95 backdrop-blur'>
-      <div className='flex h-14 items-center px-4 md:px-6'>
-        <div className='flex items-center space-x-4 md:space-x-6'>
+      <div className='flex h-14 items-center px-4 md:px-6 w-full justify-center'>
+        <div className='flex items-center justify-center w-full space-x-4 md:space-x-6'>
           {navItems.map(({ title, href, icon: Icon }) => {
             const isActive = pathname === href
             return (

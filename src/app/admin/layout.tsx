@@ -16,7 +16,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [session, router])
 
   return (
-    <div className='flex min-h-screen flex-col'>
+    <div className='flex min-h-screen flex-col w-full'>
       <AdminNav />
       <main className='flex-1'>{children}</main>
     </div>

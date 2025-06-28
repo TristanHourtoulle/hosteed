@@ -85,7 +85,7 @@ export default {
         token.id = user.id
         token.email = user.email
         token.name = user.name
-        token.role = (user as UserInterface).roles as UserRole
+        token.roles = (user as UserInterface).roles as UserRole
       }
       return token
     },
@@ -95,7 +95,7 @@ export default {
           id: token.id as string,
           email: token.email as string,
           name: token.name as string,
-          roles: token.role as UserRole,
+          roles: token.roles as UserRole,
           emailVerified: token.emailVerified as Date | null,
         }
       }

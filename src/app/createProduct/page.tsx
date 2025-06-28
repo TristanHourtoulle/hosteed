@@ -70,20 +70,28 @@ export default function CreateProduct() {
     basePrice: '',
     room: 1,
     bathroom: 1,
-    minPeople: 1,
-    maxPeople: 1,
-    typeId: '',
     arriving: 14,
     leaving: 12,
-    autoAccept: false,
     phone: '',
-    categories: 1,
-    validate: false,
-    userManager: 1,
+    typeId: '',
     selectedSecurities: [] as string[],
     selectedMeals: [] as string[],
     selectedEquipments: [] as string[],
     selectedServices: [] as string[],
+    nearbyPlaces: [] as { name: string; distance: number; duration: number; transport: string }[],
+    transportOptions: [] as { name: string; description: string }[],
+    propertyInfo: {
+      hasStairs: false,
+      hasElevator: false,
+      hasHandicapAccess: false,
+      hasPetsOnProperty: false,
+      additionalNotes: '',
+    },
+    cancellationPolicy: {
+      freeCancellationHours: 24,
+      partialRefundPercent: 50,
+      additionalTerms: '',
+    },
   })
 
   useEffect(() => {
@@ -220,7 +228,7 @@ export default function CreateProduct() {
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit} className='space-y-8'>
+          <form onSubmit={handleSubmit} className='space-y-8 max-w-4xl mx-auto py-8 px-4'>
             {/* Informations principales */}
             <Card>
               <CardHeader>
@@ -352,28 +360,32 @@ export default function CreateProduct() {
                   </div>
 
                   <div className='space-y-2'>
-                    <Label htmlFor='minPeople'>Capacité min.</Label>
+                    <Label htmlFor='arriving'>Arrivée</Label>
                     <Input
-                      id='minPeople'
-                      name='minPeople'
+                      id='arriving'
+                      name='arriving'
                       type='number'
-                      value={formData.minPeople}
+                      value={formData.arriving}
                       onChange={handleInputChange}
                       required
-                      min='1'
+                      min='0'
+                      max='23'
+                      placeholder='14'
                     />
                   </div>
 
                   <div className='space-y-2'>
-                    <Label htmlFor='maxPeople'>Capacité max.</Label>
+                    <Label htmlFor='leaving'>Départ</Label>
                     <Input
-                      id='maxPeople'
-                      name='maxPeople'
+                      id='leaving'
+                      name='leaving'
                       type='number'
-                      value={formData.maxPeople}
+                      value={formData.leaving}
                       onChange={handleInputChange}
                       required
-                      min='1'
+                      min='0'
+                      max='23'
+                      placeholder='12'
                     />
                   </div>
                 </div>
@@ -397,38 +409,6 @@ export default function CreateProduct() {
                       <span className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-500'>
                         €
                       </span>
-                    </div>
-                  </div>
-
-                  <div className='grid grid-cols-2 gap-4'>
-                    <div className='space-y-2'>
-                      <Label htmlFor='arriving'>Arrivée</Label>
-                      <Input
-                        id='arriving'
-                        name='arriving'
-                        type='number'
-                        value={formData.arriving}
-                        onChange={handleInputChange}
-                        required
-                        min='0'
-                        max='23'
-                        placeholder='14'
-                      />
-                    </div>
-
-                    <div className='space-y-2'>
-                      <Label htmlFor='leaving'>Départ</Label>
-                      <Input
-                        id='leaving'
-                        name='leaving'
-                        type='number'
-                        value={formData.leaving}
-                        onChange={handleInputChange}
-                        required
-                        min='0'
-                        max='23'
-                        placeholder='12'
-                      />
                     </div>
                   </div>
                 </div>
@@ -610,32 +590,295 @@ export default function CreateProduct() {
               </CardContent>
             </Card>
 
-            {/* Options de réservation */}
+            {/* Nearby Places */}
             <Card>
               <CardHeader>
-                <CardTitle>Options de réservation</CardTitle>
-                <CardDescription>Paramètres de gestion des réservations</CardDescription>
+                <CardTitle>Lieux à proximité</CardTitle>
+                <CardDescription>
+                  Ajoutez les points d&apos;intérêt proches de votre hébergement
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <label className='flex items-center space-x-3 p-4 rounded-lg border border-gray-200 hover:border-blue-500 transition-colors cursor-pointer'>
-                  <input
-                    type='checkbox'
-                    id='autoAccept'
-                    name='autoAccept'
-                    checked={formData.autoAccept}
-                    onChange={handleInputChange}
-                    className='rounded border-gray-300 text-blue-600 focus:ring-blue-500'
-                  />
-                  <div className='space-y-1'>
-                    <span className='text-sm font-medium'>
-                      Acceptation automatique des réservations
-                    </span>
-                    <p className='text-sm text-gray-500'>
-                      Les réservations seront automatiquement acceptées sans validation de votre
-                      part
-                    </p>
+                {formData.nearbyPlaces.map((place, index) => (
+                  <div key={index} className='grid grid-cols-1 md:grid-cols-2 gap-4 mb-4'>
+                    <div>
+                      <Label htmlFor={`place-name-${index}`}>Nom du lieu</Label>
+                      <Input
+                        id={`place-name-${index}`}
+                        value={place.name}
+                        onChange={e => {
+                          const newPlaces = [...formData.nearbyPlaces]
+                          newPlaces[index].name = e.target.value
+                          setFormData(prev => ({ ...prev, nearbyPlaces: newPlaces }))
+                        }}
+                        placeholder='ex: Plage, Restaurant...'
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`place-distance-${index}`}>Distance (en mètres)</Label>
+                      <Input
+                        id={`place-distance-${index}`}
+                        type='number'
+                        value={place.distance}
+                        onChange={e => {
+                          const newPlaces = [...formData.nearbyPlaces]
+                          newPlaces[index].distance = parseInt(e.target.value)
+                          setFormData(prev => ({ ...prev, nearbyPlaces: newPlaces }))
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`place-duration-${index}`}>Durée (en minutes)</Label>
+                      <Input
+                        id={`place-duration-${index}`}
+                        type='number'
+                        value={place.duration}
+                        onChange={e => {
+                          const newPlaces = [...formData.nearbyPlaces]
+                          newPlaces[index].duration = parseInt(e.target.value)
+                          setFormData(prev => ({ ...prev, nearbyPlaces: newPlaces }))
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`place-transport-${index}`}>Moyen de transport</Label>
+                      <Input
+                        id={`place-transport-${index}`}
+                        value={place.transport}
+                        onChange={e => {
+                          const newPlaces = [...formData.nearbyPlaces]
+                          newPlaces[index].transport = e.target.value
+                          setFormData(prev => ({ ...prev, nearbyPlaces: newPlaces }))
+                        }}
+                        placeholder='ex: à pied, en voiture...'
+                      />
+                    </div>
                   </div>
-                </label>
+                ))}
+                <Button
+                  type='button'
+                  variant='outline'
+                  onClick={() => {
+                    setFormData(prev => ({
+                      ...prev,
+                      nearbyPlaces: [
+                        ...prev.nearbyPlaces,
+                        { name: '', distance: 0, duration: 0, transport: '' },
+                      ],
+                    }))
+                  }}
+                >
+                  Ajouter un lieu
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Transport Options */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Options de transport</CardTitle>
+                <CardDescription>Indiquez les moyens de transport disponibles</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {formData.transportOptions.map((option, index) => (
+                  <div key={index} className='grid grid-cols-1 gap-4 mb-4'>
+                    <div>
+                      <Label htmlFor={`transport-name-${index}`}>Type de transport</Label>
+                      <Input
+                        id={`transport-name-${index}`}
+                        value={option.name}
+                        onChange={e => {
+                          const newOptions = [...formData.transportOptions]
+                          newOptions[index].name = e.target.value
+                          setFormData(prev => ({ ...prev, transportOptions: newOptions }))
+                        }}
+                        placeholder='ex: Parking gratuit, Taxi...'
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`transport-description-${index}`}>
+                        Description (optionnel)
+                      </Label>
+                      <Input
+                        id={`transport-description-${index}`}
+                        value={option.description}
+                        onChange={e => {
+                          const newOptions = [...formData.transportOptions]
+                          newOptions[index].description = e.target.value
+                          setFormData(prev => ({ ...prev, transportOptions: newOptions }))
+                        }}
+                        placeholder='Détails supplémentaires...'
+                      />
+                    </div>
+                  </div>
+                ))}
+                <Button
+                  type='button'
+                  variant='outline'
+                  onClick={() => {
+                    setFormData(prev => ({
+                      ...prev,
+                      transportOptions: [...prev.transportOptions, { name: '', description: '' }],
+                    }))
+                  }}
+                >
+                  Ajouter une option de transport
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Property Info */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Informations sur la propriété</CardTitle>
+                <CardDescription>
+                  Détails sur l&apos;accessibilité et les caractéristiques
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className='grid grid-cols-2 gap-4 mb-4'>
+                  <div className='flex items-center gap-2'>
+                    <input
+                      type='checkbox'
+                      id='hasStairs'
+                      checked={formData.propertyInfo.hasStairs}
+                      onChange={e => {
+                        setFormData(prev => ({
+                          ...prev,
+                          propertyInfo: { ...prev.propertyInfo, hasStairs: e.target.checked },
+                        }))
+                      }}
+                    />
+                    <Label htmlFor='hasStairs'>Escaliers</Label>
+                  </div>
+                  <div className='flex items-center gap-2'>
+                    <input
+                      type='checkbox'
+                      id='hasElevator'
+                      checked={formData.propertyInfo.hasElevator}
+                      onChange={e => {
+                        setFormData(prev => ({
+                          ...prev,
+                          propertyInfo: { ...prev.propertyInfo, hasElevator: e.target.checked },
+                        }))
+                      }}
+                    />
+                    <Label htmlFor='hasElevator'>Ascenseur</Label>
+                  </div>
+                  <div className='flex items-center gap-2'>
+                    <input
+                      type='checkbox'
+                      id='hasHandicapAccess'
+                      checked={formData.propertyInfo.hasHandicapAccess}
+                      onChange={e => {
+                        setFormData(prev => ({
+                          ...prev,
+                          propertyInfo: {
+                            ...prev.propertyInfo,
+                            hasHandicapAccess: e.target.checked,
+                          },
+                        }))
+                      }}
+                    />
+                    <Label htmlFor='hasHandicapAccess'>Accès handicapé</Label>
+                  </div>
+                  <div className='flex items-center gap-2'>
+                    <input
+                      type='checkbox'
+                      id='hasPetsOnProperty'
+                      checked={formData.propertyInfo.hasPetsOnProperty}
+                      onChange={e => {
+                        setFormData(prev => ({
+                          ...prev,
+                          propertyInfo: {
+                            ...prev.propertyInfo,
+                            hasPetsOnProperty: e.target.checked,
+                          },
+                        }))
+                      }}
+                    />
+                    <Label htmlFor='hasPetsOnProperty'>Animaux sur la propriété</Label>
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor='additionalNotes'>Notes supplémentaires</Label>
+                  <Input
+                    id='additionalNotes'
+                    value={formData.propertyInfo.additionalNotes}
+                    onChange={e => {
+                      setFormData(prev => ({
+                        ...prev,
+                        propertyInfo: { ...prev.propertyInfo, additionalNotes: e.target.value },
+                      }))
+                    }}
+                    placeholder='Autres informations importantes...'
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Cancellation Policy */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Politique d&apos;annulation</CardTitle>
+                <CardDescription>Définissez les conditions d&apos;annulation</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                  <div>
+                    <Label htmlFor='freeCancellationHours'>
+                      Délai d&apos;annulation gratuite (heures)
+                    </Label>
+                    <Input
+                      id='freeCancellationHours'
+                      type='number'
+                      value={formData.cancellationPolicy.freeCancellationHours}
+                      onChange={e => {
+                        setFormData(prev => ({
+                          ...prev,
+                          cancellationPolicy: {
+                            ...prev.cancellationPolicy,
+                            freeCancellationHours: parseInt(e.target.value),
+                          },
+                        }))
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor='partialRefundPercent'>Pourcentage de remboursement</Label>
+                    <Input
+                      id='partialRefundPercent'
+                      type='number'
+                      value={formData.cancellationPolicy.partialRefundPercent}
+                      onChange={e => {
+                        setFormData(prev => ({
+                          ...prev,
+                          cancellationPolicy: {
+                            ...prev.cancellationPolicy,
+                            partialRefundPercent: parseInt(e.target.value),
+                          },
+                        }))
+                      }}
+                    />
+                  </div>
+                </div>
+                <div className='mt-4'>
+                  <Label htmlFor='additionalTerms'>Conditions supplémentaires</Label>
+                  <Input
+                    id='additionalTerms'
+                    value={formData.cancellationPolicy.additionalTerms}
+                    onChange={e => {
+                      setFormData(prev => ({
+                        ...prev,
+                        cancellationPolicy: {
+                          ...prev.cancellationPolicy,
+                          additionalTerms: e.target.value,
+                        },
+                      }))
+                    }}
+                    placeholder="Autres conditions d'annulation..."
+                  />
+                </div>
               </CardContent>
             </Card>
 
