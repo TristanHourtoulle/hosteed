@@ -51,7 +51,7 @@ export default function RentsPage() {
   }, [session])
 
   const getStatusBadge = (status: RentStatus) => {
-    const statusConfig = {
+    const statusConfig: Record<RentStatus, { label: string; color: string }> = {
       WAITING: { label: 'En attente', color: 'bg-orange-100 text-orange-800' },
       RESERVED: { label: 'Réservée', color: 'bg-yellow-100 text-yellow-800' },
       CHECKIN: { label: 'En cours', color: 'bg-green-100 text-green-800' },
