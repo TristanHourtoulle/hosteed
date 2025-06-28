@@ -21,7 +21,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Card, CardContent } from '@/components/ui/shadcnui/card'
-import {createPromotedProduct, getActualProduct} from "@/lib/services/promotedProduct.service";
+import { getActualProduct} from "@/lib/services/promotedProduct.service";
 
 interface Rent {
   id: string
