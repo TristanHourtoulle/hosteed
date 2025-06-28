@@ -17,10 +17,12 @@ import {
 } from '@/shadcnui'
 import { ChevronsUpDown, LogOut, Heart } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { findUserById } from '@/lib/services/user.service'
 
 export function NavUser({ session }: { session: Session | null }) {
   const [user, setUser] = useState<Pick<User, 'id' | 'name' | 'email' | 'image'> | null>(null)
+  const [imageError, setImageError] = useState(false)
 
   const handleLogout = () => {
     signOut()
@@ -52,14 +54,36 @@ export function NavUser({ session }: { session: Session | null }) {
     return <div>Loading...</div>
   }
 
+  const fallbackImage =
+    'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face'
+
+  const UserAvatar = () => (
+    <div className='relative h-10 w-10 rounded-full overflow-hidden bg-gray-200'>
+      {!imageError && user.image && (
+        <Image
+          src={user.image}
+          alt={user.name ?? 'guest'}
+          width={40}
+          height={40}
+          className='h-full w-full object-cover rounded-full'
+          referrerPolicy='no-referrer'
+          onError={() => setImageError(true)}
+          onLoad={() => console.log('Image loaded successfully for:', user.image)}
+        />
+      )}
+      {(imageError || !user.image) && (
+        <div className='absolute inset-0 flex items-center justify-center text-sm font-medium text-gray-600 bg-gray-100'>
+          {user.name?.charAt(0) ?? 'G'}
+        </div>
+      )}
+    </div>
+  )
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger>
         <div className='flex items-center gap-2'>
-          <Avatar className='h-10 w-10 rounded-lg'>
-            <AvatarImage src={user.image ?? undefined} alt={user.name ?? 'guest'} />
-            <AvatarFallback className='rounded-lg'>{user.name?.charAt(0) ?? 'G'}</AvatarFallback>
-          </Avatar>
+          <UserAvatar />
           <div className='hidden lg:grid flex-1 text-left text-sm leading-tight'>
             <span className='truncate font-medium'>{user.name}</span>
             <span className='truncate text-xs'>{user.email}</span>
@@ -75,10 +99,7 @@ export function NavUser({ session }: { session: Session | null }) {
       >
         <DropdownMenuLabel className='p-0 font-normal'>
           <div className='flex items-center gap-2 px-1 py-1.5 text-left text-sm'>
-            <Avatar className='h-10 w-10 rounded-lg'>
-              <AvatarImage src={user.image ?? undefined} alt={user.name ?? 'guest'} />
-              <AvatarFallback className='rounded-lg'>{user.name?.charAt(0) ?? 'G'}</AvatarFallback>
-            </Avatar>
+            <UserAvatar />
             <div className='grid flex-1 text-left text-sm leading-tight'>
               <span className='truncate font-medium'>{user.name}</span>
               <span className='truncate text-xs'>{user.email}</span>
