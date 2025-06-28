@@ -7,6 +7,27 @@ import { findProductById, validateProduct, rejectProduct } from '@/lib/services/
 import { Discount, ProductValidation, RentStatus } from '@prisma/client'
 import Image from 'next/image'
 import { getCityFromAddress } from '@/lib/utils'
+import { motion } from 'framer-motion'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
+import { Button } from '@/components/ui/shadcnui/button'
+import { Badge } from '@/components/ui/shadcnui/badge'
+import { Separator } from '@/components/ui/shadcnui/separator'
+import { Alert, AlertDescription } from '@/components/ui/shadcnui/alert'
+import {
+  CheckCircle,
+  XCircle,
+  Loader2,
+  Home,
+  MapPin,
+  User,
+  Mail,
+  BedDouble,
+  Bath,
+  Clock,
+  Utensils,
+  Shield,
+  Wrench,
+} from 'lucide-react'
 
 interface Product {
   id: string
@@ -65,7 +86,6 @@ export default function ValidationPreviewPage({ params }: { params: Promise<{ id
   }, [resolvedParams.id])
 
   const handleValidate = async () => {
-    console.log(validationStatus)
     try {
       await validateProduct(resolvedParams.id)
       setValidationStatus(ProductValidation.Approve)
@@ -89,17 +109,10 @@ export default function ValidationPreviewPage({ params }: { params: Promise<{ id
 
   if (loading) {
     return (
-      <div className='min-h-screen bg-gray-100 p-8'>
-        <div className='max-w-4xl mx-auto'>
-          <div className='animate-pulse'>
-            <div className='h-8 bg-gray-200 rounded w-1/4 mb-8'></div>
-            <div className='h-64 bg-gray-200 rounded mb-8'></div>
-            <div className='space-y-4'>
-              <div className='h-4 bg-gray-200 rounded w-3/4'></div>
-              <div className='h-4 bg-gray-200 rounded w-1/2'></div>
-              <div className='h-4 bg-gray-200 rounded w-2/3'></div>
-            </div>
-          </div>
+      <div className='min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8 flex items-center justify-center'>
+        <div className='flex items-center gap-3'>
+          <Loader2 className='h-6 w-6 animate-spin text-blue-600' />
+          <p className='text-gray-600 text-lg'>Chargement des détails...</p>
         </div>
       </div>
     )
@@ -107,79 +120,164 @@ export default function ValidationPreviewPage({ params }: { params: Promise<{ id
 
   if (error || !product) {
     return (
-      <div className='min-h-screen bg-gray-100 p-8'>
+      <div className='min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8'>
         <div className='max-w-4xl mx-auto'>
-          <div className='bg-white rounded-lg shadow-md p-6'>
-            <h1 className='text-2xl font-bold text-red-600 mb-4'>Erreur</h1>
-            <p className='text-gray-600'>{error || 'Annonce non trouvée'}</p>
-          </div>
+          <Alert variant='destructive'>
+            <AlertDescription>{error || 'Annonce non trouvée'}</AlertDescription>
+          </Alert>
         </div>
       </div>
     )
   }
 
   return (
-    <div className='min-h-screen bg-gray-100 p-8'>
-      <div className='max-w-4xl mx-auto'>
-        <div className='bg-white rounded-lg shadow-md overflow-hidden'>
-          <div className='relative h-96'>
+    <div className='min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8'>
+      <motion.div
+        className='max-w-4xl mx-auto space-y-6'
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <Card className='overflow-hidden py-0'>
+          <div className='relative h-96 w-full'>
             {product.img && product.img.length > 0 ? (
-              <Image src={product.img[0].img} alt={product.name} fill className='object-cover' />
+              <Image
+                src={product.img[0].img}
+                alt={product.name}
+                fill
+                className='object-cover'
+                priority
+              />
             ) : (
-              <div className='w-full h-full bg-gray-200 flex items-center justify-center'>
-                <span className='text-gray-400'>Aucune image disponible</span>
+              <div className='h-full bg-gray-100 flex items-center justify-center'>
+                <Home className='h-16 w-16 text-gray-400' />
               </div>
             )}
+            <div className='absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent' />
+            <div className='absolute bottom-0 left-0 right-0 p-6 text-white'>
+              <h1 className='text-3xl font-bold mb-2'>{product.name}</h1>
+              <div className='flex items-center gap-2'>
+                <MapPin className='h-5 w-5' />
+                <span>{getCityFromAddress(product.address)}</span>
+              </div>
+            </div>
           </div>
 
-          <div className='p-6'>
-            <h1 className='text-3xl font-bold text-gray-900 mb-4'>{product.name}</h1>
+          <CardContent className='p-6 space-y-6'>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+              <div>
+                <h2 className='text-xl font-semibold mb-4 flex items-center gap-2'>
+                  <User className='h-5 w-5 text-blue-600' />
+                  Propriétaire
+                </h2>
+                <div className='space-y-2'>
+                  <p className='flex items-center gap-2'>
+                    <span className='text-gray-600'>Nom:</span>
+                    <span className='font-medium'>{product.user[0]?.name || 'Non renseigné'}</span>
+                  </p>
+                  <p className='flex items-center gap-2'>
+                    <Mail className='h-4 w-4 text-gray-400' />
+                    <span>{product.user[0]?.email}</span>
+                  </p>
+                </div>
+              </div>
 
-            <div className='mb-6'>
-              <h2 className='text-xl font-semibold text-gray-800 mb-2'>Description</h2>
+              <div>
+                <h2 className='text-xl font-semibold mb-4'>Informations principales</h2>
+                <div className='grid grid-cols-2 gap-4'>
+                  <div className='flex items-center gap-2'>
+                    <BedDouble className='h-5 w-5 text-blue-600' />
+                    <span>{product.room?.toString()} chambres</span>
+                  </div>
+                  <div className='flex items-center gap-2'>
+                    <Bath className='h-5 w-5 text-blue-600' />
+                    <span>{product.bathroom?.toString()} sdb</span>
+                  </div>
+                  <div className='flex items-center gap-2'>
+                    <Clock className='h-5 w-5 text-blue-600' />
+                    <span>Arrivée: {product.arriving}h</span>
+                  </div>
+                  <div className='flex items-center gap-2'>
+                    <Clock className='h-5 w-5 text-blue-600' />
+                    <span>Départ: {product.leaving}h</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div>
+              <h2 className='text-xl font-semibold mb-4'>Description</h2>
               <p className='text-gray-600'>{product.description}</p>
             </div>
 
-            <div className='grid grid-cols-2 gap-6 mb-6'>
+            <Separator />
+
+            <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
               <div>
-                <h2 className='text-xl font-semibold text-gray-800 mb-2'>Adresse</h2>
-                <p className='text-gray-600'>{getCityFromAddress(product.address)}</p>
+                <h2 className='text-lg font-semibold mb-3 flex items-center gap-2'>
+                  <Wrench className='h-5 w-5 text-blue-600' />
+                  Équipements
+                </h2>
+                <ul className='space-y-2'>
+                  {product.equipments.map(equipment => (
+                    <li key={equipment.id} className='text-gray-600'>
+                      • {equipment.name}
+                    </li>
+                  ))}
+                </ul>
               </div>
+
               <div>
-                <h2 className='text-xl font-semibold text-gray-800 mb-2'>Prix de base</h2>
-                <p className='text-gray-600'>{product.basePrice} €</p>
+                <h2 className='text-lg font-semibold mb-3 flex items-center gap-2'>
+                  <Utensils className='h-5 w-5 text-blue-600' />
+                  Repas
+                </h2>
+                <ul className='space-y-2'>
+                  {product.mealsList.map(meal => (
+                    <li key={meal.id} className='text-gray-600'>
+                      • {meal.name}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div>
+                <h2 className='text-lg font-semibold mb-3 flex items-center gap-2'>
+                  <Shield className='h-5 w-5 text-blue-600' />
+                  Sécurité
+                </h2>
+                <ul className='space-y-2'>
+                  {product.securities.map(security => (
+                    <li key={security.id} className='text-gray-600'>
+                      • {security.name}
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
 
-            <div className='mb-6'>
-              <h2 className='text-xl font-semibold text-gray-800 mb-2'>Propriétaire</h2>
-              {product.user && product.user.length > 0 ? (
-                <div className='text-gray-600'>
-                  <p>Nom: {product.user[0].name}</p>
-                  <p>Email: {product.user[0].email}</p>
-                </div>
-              ) : (
-                <p className='text-gray-600'>Informations du propriétaire non disponibles</p>
-              )}
-            </div>
+            <Separator />
 
-            <div className='flex justify-end space-x-4'>
-              <button
-                onClick={handleReject}
-                className='px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors'
-              >
-                Rejeter
-              </button>
-              <button
+            <div className='flex justify-end gap-4 pt-4'>
+              <Button variant='outline' size='lg' className='gap-2' onClick={handleReject}>
+                <XCircle className='h-5 w-5' />
+                Refuser
+              </Button>
+              <Button
+                variant='default'
+                size='lg'
+                className='bg-green-600 hover:bg-green-700 gap-2'
                 onClick={handleValidate}
-                className='px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors'
               >
+                <CheckCircle className='h-5 w-5' />
                 Valider
-              </button>
+              </Button>
             </div>
-          </div>
-        </div>
-      </div>
+          </CardContent>
+        </Card>
+      </motion.div>
     </div>
   )
 }

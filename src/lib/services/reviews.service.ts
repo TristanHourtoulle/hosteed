@@ -6,7 +6,25 @@ import { sendTemplatedMail } from '@/lib/services/sendTemplatedMail'
 
 export async function findAllReviews() {
   try {
-    return await prisma.review.findMany()
+    return await prisma.review.findMany({
+      include: {
+        rentRelation: {
+          include: {
+            user: {
+              select: {
+                name: true,
+                email: true,
+              },
+            },
+            product: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    })
   } catch (error) {
     console.error('Erreur lors de la recherche des avis:', error)
     return null
@@ -19,12 +37,30 @@ export async function findAllWaitingReview() {
       where: {
         approved: false,
       },
+      include: {
+        rentRelation: {
+          include: {
+            user: {
+              select: {
+                name: true,
+                email: true,
+              },
+            },
+            product: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
     })
   } catch (error) {
     console.error('Erreur lors de la recherche des avis:', error)
     return null
   }
 }
+
 export async function createReview(params: {
   productId: string
   rentId: string
@@ -42,9 +78,10 @@ export async function createReview(params: {
 }) {
   try {
     const rent = await prisma.rent.findUnique({ where: { id: params.rentId } })
-    if (!rent) return error('No rent find')
+    if (!rent) throw new Error('No rent found')
+
     const user = await prisma.user.findUnique({ where: { id: params.userId } })
-    if (!user) return error('No user find')
+    if (!user) throw new Error('No user found')
 
     const review = await prisma.review.create({
       data: {
@@ -62,18 +99,39 @@ export async function createReview(params: {
         publishDate: params.publishDate,
         approved: false,
       },
+      include: {
+        rentRelation: {
+          include: {
+            user: {
+              select: {
+                name: true,
+                email: true,
+              },
+            },
+            product: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
     })
-    if (!review) return error('Error while creation of the review')
-    const admin = await findAllUserByRoles('ADMIN')
-    admin?.map(async user => {
-      await sendTemplatedMail(user.email, 'Nouvel avis posté !', 'validation-avis.html', {
-        reviewUrl: process.env.NEXTAUTH_URL + '/avis/' + review.id,
+
+    const admins = await prisma.user.findMany({
+      where: { roles: 'ADMIN' },
+    })
+
+    for (const admin of admins) {
+      await sendTemplatedMail(admin.email, 'Nouvel avis posté !', 'validation-avis.html', {
+        reviewUrl: process.env.NEXTAUTH_URL + '/admin/reviews',
       })
-    })
+    }
+
     return review
-  } catch (e) {
-    console.error('Error: ', e)
-    return error('Error: ', e)
+  } catch (error) {
+    console.error('Error:', error)
+    return null
   }
 }
 
@@ -81,9 +139,7 @@ export async function approveReview(id: string) {
   try {
     const review = await prisma.review.update({
       where: { id },
-      data: {
-        approved: true,
-      },
+      data: { approved: true },
       include: {
         rentRelation: {
           include: {
@@ -96,30 +152,31 @@ export async function approveReview(id: string) {
         },
       },
     })
-    console.log(review)
-    if (!review || !review.rentRelation || !review.rentRelation.product)
-      throw Error('No review found or impossible to update')
-    const user = review.rentRelation.product.user
-    console.log(user)
-    if (!user) throw Error('No user found')
-    user.map(async userSend => {
-      await sendTemplatedMail(userSend.email, 'Nouvel avis posté !', 'new-review.html', {
+
+    if (!review?.rentRelation?.product?.user) {
+      throw new Error('No review found or impossible to update')
+    }
+
+    for (const user of review.rentRelation.product.user) {
+      await sendTemplatedMail(user.email, 'Nouvel avis posté !', 'new-review.html', {
         reviewUrl: process.env.NEXTAUTH_URL + '/host/' + review.rentRelation.product.id,
       })
-    })
-  } catch (e) {
-    console.error(e)
+    }
+
+    return review
+  } catch (error) {
+    console.error('Error:', error)
     return null
   }
 }
+
 export async function deleteReview(id: string) {
   try {
-    const request = await prisma.review.delete({
+    return await prisma.review.delete({
       where: { id },
     })
-    if (!request) throw Error('Error during delete review')
-  } catch (e) {
-    console.error(e)
+  } catch (error) {
+    console.error('Error:', error)
     return null
   }
 }

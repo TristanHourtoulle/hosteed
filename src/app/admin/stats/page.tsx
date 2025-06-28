@@ -4,12 +4,25 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { getAdminStatsYearly } from '@/lib/services/stats.service'
+import { motion } from 'framer-motion'
+import { Users, Home, Clock, CheckCircle } from 'lucide-react'
+import { StatCard } from './components/StatCard'
 
 interface Stats {
   users: number
   product: number
   productWaiting: number
   rent: number
+}
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
 }
 
 export default function AdminStats() {
@@ -41,55 +54,87 @@ export default function AdminStats() {
 
   if (loading) {
     return (
-      <div className='flex justify-center items-center h-[200px] text-lg text-gray-600'>
-        Chargement...
+      <div className='min-h-screen bg-gray-50 p-8'>
+        <div className='max-w-7xl mx-auto'>
+          <div className='animate-pulse space-y-8'>
+            <div className='h-12 bg-gray-200 rounded w-1/3'></div>
+            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'>
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className='bg-gray-200 rounded-lg h-32'></div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
 
   if (!stats) {
     return (
-      <div className='flex justify-center items-center h-[200px] text-lg text-red-600'>
-        Erreur lors du chargement des statistiques
+      <div className='min-h-screen bg-gray-50 p-8'>
+        <div className='max-w-7xl mx-auto'>
+          <div className='bg-red-50 border border-red-200 rounded-lg p-4 text-red-700'>
+            Erreur lors du chargement des statistiques
+          </div>
+        </div>
       </div>
     )
   }
 
+  const statCards = [
+    {
+      title: 'Utilisateurs',
+      value: stats.users,
+      description: "Nombre total d'utilisateurs",
+      icon: Users,
+      color: 'text-blue-600',
+    },
+    {
+      title: 'Produits Validés',
+      value: stats.product,
+      description: 'Nombre de produits validés',
+      icon: CheckCircle,
+      color: 'text-blue-600',
+    },
+    {
+      title: 'Produits en Attente',
+      value: stats.productWaiting,
+      description: 'Produits en attente de validation',
+      icon: Home,
+      color: 'text-blue-600',
+    },
+    {
+      title: 'Locations',
+      value: stats.rent,
+      description: "Locations de l'année en cours",
+      icon: Clock,
+      color: 'text-blue-600',
+    },
+  ]
+
   return (
-    <div className='min-h-screen bg-gray-100 p-6'>
-      <div className='max-w-7xl mx-auto'>
-        <h1 className='text-3xl font-bold text-gray-900 mb-8'>Statistiques Administratives</h1>
+    <div className='min-h-screen bg-gray-50 p-8'>
+      <motion.div
+        className='max-w-7xl mx-auto space-y-8'
+        variants={containerVariants}
+        initial='hidden'
+        animate='visible'
+      >
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h1 className='text-4xl font-bold text-gray-900'>Statistiques Administratives</h1>
+          <p className='text-gray-600 mt-2'>Vue d'ensemble des performances de la plateforme</p>
+        </motion.div>
 
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'>
-          {/* Carte des utilisateurs */}
-          <div className='bg-white rounded-lg shadow-md p-6'>
-            <h2 className='text-xl font-semibold text-gray-800 mb-2'>Utilisateurs</h2>
-            <p className='text-3xl font-bold text-primary'>{stats.users}</p>
-            <p className='text-gray-600 mt-2'>Nombre total d&apos;utilisateurs</p>
-          </div>
-
-          {/* Carte des produits validés */}
-          <div className='bg-white rounded-lg shadow-md p-6'>
-            <h2 className='text-xl font-semibold text-gray-800 mb-2'>Produits Validés</h2>
-            <p className='text-3xl font-bold text-green-600'>{stats.product}</p>
-            <p className='text-gray-600 mt-2'>Nombre de produits validés</p>
-          </div>
-
-          {/* Carte des produits en attente */}
-          <div className='bg-white rounded-lg shadow-md p-6'>
-            <h2 className='text-xl font-semibold text-gray-800 mb-2'>Produits en Attente</h2>
-            <p className='text-3xl font-bold text-yellow-600'>{stats.productWaiting}</p>
-            <p className='text-gray-600 mt-2'>Produits en attente de validation</p>
-          </div>
-
-          {/* Carte des locations */}
-          <div className='bg-white rounded-lg shadow-md p-6'>
-            <h2 className='text-xl font-semibold text-gray-800 mb-2'>Locations</h2>
-            <p className='text-3xl font-bold text-blue-600'>{stats.rent}</p>
-            <p className='text-gray-600 mt-2'>Locations de l&apos;année en cours</p>
-          </div>
+          {statCards.map(card => (
+            <StatCard key={card.title} {...card} />
+          ))}
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
