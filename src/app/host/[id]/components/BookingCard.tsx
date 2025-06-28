@@ -120,7 +120,7 @@ export default function BookingCard({
   const hasValidDates = dateRange?.from && dateRange?.to
 
   return (
-    <div className='sticky top-6'>
+    <div className='sticky top-20'>
       <div className='bg-white border border-gray-200 rounded-2xl shadow-xl p-6'>
         <div className='flex items-center justify-between mb-6'>
           <div className='flex items-baseline gap-2'>
