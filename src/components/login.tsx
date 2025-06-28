@@ -22,7 +22,14 @@ export const Login = () => {
       })
 
       if (result?.error) {
-        setError('Email ou mot de passe incorrect')
+        console.log(result.error)
+        if (result.error === 'EMAIL_NOT_VERIFIED') {
+          setError(
+            'Veuillez vérifier votre adresse email avant de vous connecter. Vérifiez votre boîte mail pour le lien de vérification.'
+          )
+        } else {
+          setError('Email ou mot de passe incorrect')
+        }
       } else {
         window.location.href = '/host'
       }

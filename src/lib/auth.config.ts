@@ -26,6 +26,12 @@ export default {
           console.log('Email ou mot de passe manquant')
           return null
         }
+        // Check if email is verified
+        const user = await findUserByEmail(credentials?.email as string)
+        if (user && !user.emailVerified) {
+          throw new Error('Email not verified')
+        }
+
         try {
           const { email, password } = await signInSchema.parseAsync(credentials)
           console.log('Tentative de connexion pour:', email)
