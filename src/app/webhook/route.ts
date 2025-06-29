@@ -261,9 +261,9 @@ export async function POST(req: Request): Promise<Response> {
           where: { id: rent.id },
           data: {
             status: 'WAITING' as RentStatus,
-            payment: 'NOT_PAID'
-          }
-        });
+            payment: 'NOT_PAID',
+          },
+        })
       } catch (error) {
         console.error('Erreur lors de la création de la réservation:', error)
         return NextResponse.json(

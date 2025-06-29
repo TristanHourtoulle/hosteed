@@ -1,6 +1,8 @@
 import Stripe from 'stripe'
 
 // Initialize Stripe only if the secret key is available
+console.log('STRIPE_SECRET_KEY length:', process.env.STRIPE_SECRET_KEY?.length)
+console.log('STRIPE_SECRET_KEY first 10 chars:', process.env.STRIPE_SECRET_KEY?.substring(0, 10))
 const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY, {
       apiVersion: '2025-05-28.basil',
