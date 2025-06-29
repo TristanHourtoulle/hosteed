@@ -1,6 +1,8 @@
 // Centralized export for all shadcn/ui components
-export { Button, buttonVariants } from './button'
-export { Input } from './input'
+export * from './dialog'
+export * from './button'
+export * from './input'
+export * from './label'
 export { Avatar, AvatarImage, AvatarFallback } from './avatar'
 export {
   DropdownMenu,

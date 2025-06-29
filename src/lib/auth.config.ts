@@ -5,7 +5,7 @@ import { signInSchema } from '@/lib/zod/auth.schema'
 import { findUserByEmail, verifyPassword } from '@/lib/services/user.service'
 import { UserRole } from '@prisma/client'
 import { UserInterface } from '@/lib/interface/userInterface'
-import { prisma } from '@/lib/prisma'
+import prisma from '@/lib/prisma'
 import { stripe } from './stripe'
 
 export default {
