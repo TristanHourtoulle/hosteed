@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { getReservationDetails } from './actions'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Card, CardContent } from '@/components/ui/shadcnui/card'
+import { getProfileImageUrl } from '@/lib/utils'
 import {
   MapPin,
   Calendar,
@@ -35,11 +36,13 @@ import {
 } from './utils'
 
 function HostAvatar({ host }: { host: any }) {
+  const profileImage = getProfileImageUrl(host.image)
+
   return (
     <div className='relative h-20 w-20 rounded-full overflow-hidden bg-gray-200'>
-      {host.image && (
+      {profileImage && (
         <Image
-          src={host.image}
+          src={profileImage}
           alt={host.name ?? 'host'}
           width={80}
           height={80}
@@ -47,7 +50,7 @@ function HostAvatar({ host }: { host: any }) {
           referrerPolicy='no-referrer'
         />
       )}
-      {!host.image && (
+      {!profileImage && (
         <div className='absolute inset-0 flex items-center justify-center text-lg font-medium text-gray-600 bg-gray-100'>
           {host.name?.charAt(0) ?? 'H'}
         </div>

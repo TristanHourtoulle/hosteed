@@ -41,9 +41,9 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
               </div>
               <EditPhotoDialog
                 user={user}
-                onSave={async file => {
+                onSave={async base64Image => {
                   const formData = new FormData()
-                  formData.append('file', file)
+                  formData.append('file', base64Image)
                   await updateUserPhoto(formData)
                 }}
               />

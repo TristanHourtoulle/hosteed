@@ -64,19 +64,15 @@ export async function updateUserPhoto(formData: FormData) {
     throw new Error('Not authenticated')
   }
 
-  const file = formData.get('file') as File
-  if (!file) {
-    throw new Error('No file provided')
+  const base64Image = formData.get('file') as string
+  if (!base64Image) {
+    throw new Error('No image provided')
   }
-
-  // TODO: Upload file to storage service (e.g. S3, Cloudinary)
-  // For now, we'll just update the image URL in the database
-  const imageUrl = URL.createObjectURL(file)
 
   await prisma.user.update({
     where: { email: session.user.email },
     data: {
-      image: imageUrl,
+      image: base64Image,
     },
   })
 
