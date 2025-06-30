@@ -49,12 +49,14 @@ const Navbar = () => {
     return pathname === path
   }
 
+  const isHostOrAdmin = session?.user?.roles === 'ADMIN' || session?.user?.roles === 'HOST'
+
   const MobileNavLinks = () => (
     <div className='flex flex-col space-y-4 p-4'>
       {/* Main Links */}
       <Link
         href='/host'
-        className='block py-3 px-4 text-lg font-medium text-gray-900 hover:bg-gray-50 rounded-lg transition-colors'
+        className='block py-3 px-4 text-lg font-medium text-gray-900 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer'
         onClick={() => setIsMobileMenuOpen(false)}
       >
         Tous les hébergements
@@ -62,7 +64,7 @@ const Navbar = () => {
 
       <Link
         href='/search'
-        className='block py-3 px-4 text-lg font-medium text-gray-900 hover:bg-gray-50 rounded-lg transition-colors'
+        className='block py-3 px-4 text-lg font-medium text-gray-900 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer'
         onClick={() => setIsMobileMenuOpen(false)}
       >
         Recherche
@@ -73,28 +75,28 @@ const Navbar = () => {
         <h3 className='text-sm font-semibold text-gray-500 mb-3 px-4'>Accès rapide</h3>
         <Link
           href='/host?featured=true'
-          className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors'
+          className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer'
           onClick={() => setIsMobileMenuOpen(false)}
         >
           ⭐ Hébergements vedettes
         </Link>
         <Link
           href='/host?popular=true'
-          className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors'
+          className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer'
           onClick={() => setIsMobileMenuOpen(false)}
         >
           🔥 Plus populaires
         </Link>
         <Link
           href='/host?recent=true'
-          className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors'
+          className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer'
           onClick={() => setIsMobileMenuOpen(false)}
         >
           🆕 Récemment ajoutés
         </Link>
         <Link
           href='/host?promo=true'
-          className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors'
+          className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer'
           onClick={() => setIsMobileMenuOpen(false)}
         >
           💰 Offres spéciales
@@ -108,7 +110,7 @@ const Navbar = () => {
           <Link
             key={type.id}
             href={`/host?type=${type.id}`}
-            className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors'
+            className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer'
             onClick={() => setIsMobileMenuOpen(false)}
           >
             {type.name}
@@ -122,32 +124,36 @@ const Navbar = () => {
           <h3 className='text-sm font-semibold text-gray-500 mb-3 px-4'>Mon compte</h3>
           <Link
             href='/reservations'
-            className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors'
+            className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer'
             onClick={() => setIsMobileMenuOpen(false)}
           >
             Réservations actuelles
           </Link>
 
-          <Link
-            href='/dashboard/host'
-            className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors'
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            Gestion Host
-          </Link>
+          {isHostOrAdmin && (
+            <Link
+              href='/dashboard/host'
+              className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer'
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Gestion Host
+            </Link>
+          )}
+
           {(session.user.roles === 'BLOGWRITTER' || session.user.roles === 'ADMIN') && (
             <Link
               href='/host_manager'
-              className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors'
+              className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer'
               onClick={() => setIsMobileMenuOpen(false)}
             >
               Gestion BLOG
             </Link>
           )}
+
           {session.user.roles === 'ADMIN' && (
             <Link
               href='/admin'
-              className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors'
+              className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer'
               onClick={() => setIsMobileMenuOpen(false)}
             >
               Gestion Administrateur
@@ -159,12 +165,12 @@ const Navbar = () => {
       {/* Auth Buttons for non-logged users */}
       {!session && (
         <div className='border-t pt-4 space-y-3 px-4'>
-          <Button asChild className='w-full'>
+          <Button asChild className='w-full cursor-pointer'>
             <Link href='/auth?mode=login' onClick={() => setIsMobileMenuOpen(false)}>
               Se connecter
             </Link>
           </Button>
-          <Button variant='secondary' asChild className='w-full'>
+          <Button variant='secondary' asChild className='w-full cursor-pointer'>
             <Link href='/auth?mode=register' onClick={() => setIsMobileMenuOpen(false)}>
               S&apos;inscrire
             </Link>
@@ -180,7 +186,7 @@ const Navbar = () => {
         <div className='flex justify-between items-center h-16'>
           {/* Logo */}
           <div className='flex items-center'>
-            <Link href='/' className='flex items-center'>
+            <Link href='/' className='flex items-center cursor-pointer'>
               <Image
                 src='/logo-hosteed.png'
                 alt='Hosteed'
@@ -196,13 +202,15 @@ const Navbar = () => {
             <NavigationMenu>
               <NavigationMenuList>
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger>Hébergement</NavigationMenuTrigger>
+                  <NavigationMenuTrigger className='cursor-pointer'>
+                    Hébergement
+                  </NavigationMenuTrigger>
                   <NavigationMenuContent>
                     <ul className='grid w-[400px] gap-2 md:w-[500px] md:grid-cols-2 lg:w-[600px]'>
                       <li className='row-span-4'>
                         <NavigationMenuLink asChild>
                           <Link
-                            className='relative flex h-full w-full flex-col justify-end rounded-md p-6 no-underline outline-none select-none focus:shadow-md overflow-hidden bg-gradient-to-b from-blue-500/20 to-blue-900/40'
+                            className='relative flex h-full w-full flex-col justify-end rounded-md p-6 no-underline outline-none select-none focus:shadow-md overflow-hidden bg-gradient-to-b from-blue-500/20 to-blue-900/40 cursor-pointer'
                             href='/host'
                             style={{
                               backgroundImage:
@@ -227,7 +235,7 @@ const Navbar = () => {
                         <NavigationMenuLink asChild>
                           <Link
                             href='/host?featured=true'
-                            className='block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground'
+                            className='block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground cursor-pointer'
                           >
                             <div className='text-sm font-medium leading-none'>
                               ⭐ Hébergements vedettes
@@ -243,7 +251,7 @@ const Navbar = () => {
                         <NavigationMenuLink asChild>
                           <Link
                             href='/host?popular=true'
-                            className='block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground'
+                            className='block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground cursor-pointer'
                           >
                             <div className='text-sm font-medium leading-none'>
                               🔥 Plus populaires
@@ -259,7 +267,7 @@ const Navbar = () => {
                         <NavigationMenuLink asChild>
                           <Link
                             href='/host?recent=true'
-                            className='block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground'
+                            className='block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground cursor-pointer'
                           >
                             <div className='text-sm font-medium leading-none'>
                               🆕 Récemment ajoutés
@@ -275,7 +283,7 @@ const Navbar = () => {
                         <NavigationMenuLink asChild>
                           <Link
                             href='/host?promo=true'
-                            className='block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground'
+                            className='block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground cursor-pointer'
                           >
                             <div className='text-sm font-medium leading-none'>
                               💰 Offres spéciales
@@ -301,7 +309,7 @@ const Navbar = () => {
                           <NavigationMenuLink asChild>
                             <Link
                               href={`/host?type=${type.id}`}
-                              className='block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground'
+                              className='block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground cursor-pointer'
                             >
                               <div className='text-sm font-medium leading-none'>{type.name}</div>
                               <p className='text-muted-foreground line-clamp-2 text-sm leading-snug'>
@@ -319,7 +327,7 @@ const Navbar = () => {
                   <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
                     <Link
                       href='/search'
-                      className={isActive('/search') ? 'text-indigo-600 font-medium' : ''}
+                      className={`cursor-pointer ${isActive('/search') ? 'text-indigo-600 font-medium' : ''}`}
                     >
                       Recherche
                     </Link>
@@ -331,7 +339,7 @@ const Navbar = () => {
                     <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
                       <Link
                         href='/reservations'
-                        className={isActive('/reservations') ? 'text-indigo-600 font-medium' : ''}
+                        className={`cursor-pointer ${isActive('/reservations') ? 'text-indigo-600 font-medium' : ''}`}
                       >
                         Réservations actuelles
                       </Link>
@@ -339,12 +347,12 @@ const Navbar = () => {
                   </NavigationMenuItem>
                 )}
 
-                {session && (
+                {session && isHostOrAdmin && (
                   <NavigationMenuItem>
                     <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
                       <Link
                         href='/dashboard/host'
-                        className={isActive('/dashboard/host') ? 'text-indigo-600 font-medium' : ''}
+                        className={`cursor-pointer ${isActive('/dashboard/host') ? 'text-indigo-600 font-medium' : ''}`}
                       >
                         Gestion Host
                       </Link>
@@ -410,7 +418,7 @@ const Navbar = () => {
 
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant='ghost' size='sm' className='p-2'>
+                <Button variant='ghost' size='sm' className='p-2 cursor-pointer'>
                   <Menu className='h-6 w-6' />
                 </Button>
               </SheetTrigger>
