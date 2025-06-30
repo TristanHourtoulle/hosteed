@@ -23,8 +23,8 @@ interface FavoritesListProps {
 export function FavoritesList({ favorites }: FavoritesListProps) {
   if (favorites.length === 0) {
     return (
-      <Card className='bg-white/50 backdrop-blur-sm border-dashed'>
-        <CardContent className='py-12 text-center text-gray-500'>
+      <Card className='bg-white/50 backdrop-blur-sm border-dashed py-0'>
+        <CardContent className='py-0 text-center text-gray-500'>
           <div className='flex flex-col items-center gap-3'>
             <div className='w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center'>
               ❤️
@@ -44,7 +44,10 @@ export function FavoritesList({ favorites }: FavoritesListProps) {
   return (
     <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
       {favorites.map(favorite => (
-        <Card key={favorite.id} className='group overflow-hidden hover:shadow-lg transition-all'>
+        <Card
+          key={favorite.id}
+          className='group overflow-hidden hover:shadow-lg transition-all py-0'
+        >
           <div className='aspect-[4/3] relative overflow-hidden'>
             <Image
               src={favorite.product.img?.[0]?.img || '/placeholder.png'}
@@ -53,7 +56,7 @@ export function FavoritesList({ favorites }: FavoritesListProps) {
               className='object-cover group-hover:scale-110 transition-transform duration-300'
             />
           </div>
-          <CardContent className='p-6'>
+          <CardContent className='pb-6'>
             <h3 className='font-semibold text-lg mb-2'>{favorite.product.name}</h3>
             <p className='text-gray-600 flex items-center gap-2 mb-4'>
               <MapPin className='w-4 h-4' />
