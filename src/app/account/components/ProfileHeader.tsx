@@ -17,7 +17,7 @@ interface ProfileHeaderProps {
 
 export function ProfileHeader({ user }: ProfileHeaderProps) {
   return (
-    <div className='relative mb-8'>
+    <div className='relative max-w-6xl mx-auto mb-8'>
       <div className='absolute inset-0 h-48 bg-gradient-to-r from-blue-600 to-blue-400 rounded-b-[40px]' />
       <div className='relative pt-10 pb-8 px-4'>
         <div className='max-w-4xl mx-auto'>

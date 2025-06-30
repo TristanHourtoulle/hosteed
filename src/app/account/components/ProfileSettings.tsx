@@ -67,7 +67,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
               </div>
             </div>
             <Link href='/api/auth/signout'>
-              <Button variant='destructive' className='gap-2'>
+              <Button variant='destructive' className='gap-2 rounded-full px-6 py-2'>
                 <LogOut className='w-4 h-4' />
                 Déconnexion
               </Button>
