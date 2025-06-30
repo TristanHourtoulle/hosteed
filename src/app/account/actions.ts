@@ -12,7 +12,13 @@ export async function getUserData() {
 
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
-    include: {
+    select: {
+      id: true,
+      name: true,
+      lastname: true,
+      email: true,
+      image: true,
+      password: true,
       Rent: {
         include: {
           product: {
@@ -77,4 +83,32 @@ export async function updateUserPhoto(formData: FormData) {
   })
 
   revalidatePath('/account')
+}
+
+export async function updateUserPersonalInfo(data: {
+  name: string
+  lastname: string
+  email: string
+}) {
+  const session = await auth()
+  if (!session?.user?.email) {
+    throw new Error('Not authenticated')
+  }
+
+  try {
+    const updatedUser = await prisma.user.update({
+      where: { email: session.user.email },
+      data: {
+        name: data.name,
+        lastname: data.lastname,
+        email: data.email,
+      },
+    })
+
+    revalidatePath('/account')
+    return { success: true, user: updatedUser }
+  } catch (error) {
+    console.error('Error updating user:', error)
+    throw new Error('Failed to update user information')
+  }
 }
