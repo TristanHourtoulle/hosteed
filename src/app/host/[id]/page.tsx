@@ -22,6 +22,7 @@ import CancellationPolicy from './components/CancellationPolicy'
 import PropertyReviews from './components/PropertyReviews'
 import HostInformation from './components/HostInformation'
 import BookingCard from './components/BookingCard'
+import { ShareButton } from './components/ShareButton'
 
 interface Reviews {
   id: string

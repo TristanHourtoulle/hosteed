@@ -1,7 +1,7 @@
 // TODO: refactor this file because it's larger than 200 lines
 'use server'
-import { prisma } from '@/lib/prisma'
 import { RentStatus } from '@prisma/client'
+import prisma from '@/lib/prisma'
 
 export interface FormattedRent {
   id: string

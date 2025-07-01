@@ -1,7 +1,7 @@
 // TODO: refactor this file because it's larger than 200 lines
 'use server'
-import bcrypt from 'bcryptjs'
-import { prisma } from '@/lib/prisma'
+import { hash, compare } from 'bcryptjs'
+import prisma from '@/lib/prisma'
 import { UserRole } from '@prisma/client'
 import jwt from 'jsonwebtoken'
 import { sendTemplatedMail } from '@/lib/services/sendTemplatedMail'
@@ -80,7 +80,7 @@ export async function findAllUserByRoles(roles: UserRole) {
 
 export async function verifyPassword(password: string, hashedPassword: string) {
   try {
-    return await bcrypt.compare(password, hashedPassword)
+    return await compare(password, hashedPassword)
   } catch (error) {
     console.error('Erreur lors de la vérification du mot de passe:', error)
     return false
@@ -94,7 +94,7 @@ export async function createUser(data: {
   lastname?: string
 }) {
   try {
-    const hashedPassword = await bcrypt.hash(data.password, 10)
+    const hashedPassword = await hash(data.password, 10)
     const user = await prisma.user.create({
       data: {
         ...data,
@@ -128,7 +128,7 @@ export async function updateUser(
   try {
     const updateData = { ...data }
     if (data.password) {
-      updateData.password = await bcrypt.hash(data.password, 10)
+      updateData.password = await hash(data.password, 10)
     }
 
     return await prisma.user.update({
@@ -211,80 +211,78 @@ export async function validateEmail(token: string) {
   }
 }
 
-export async function sendResetEmail(userEmail:string) {
-    try {
-        const user = await prisma.user.findUnique({
-            where: {
-                email: userEmail,
-            },
-        })
-        if (!user) throw new Error('User not found');
-        const token = jwt.sign(
-            { id: user.id },
-            process.env.RESET_PASSWORD_SECRET || '',
-            { expiresIn: '24h' }
-        )
-        await prisma.user.update({
-            where: {id: user.id},
-            data: {
-                resetToken: token,
-            }
-        });
-        await sendTemplatedMail(
-            user.email,
-            'Reinitialisation du mot de passe !',
-            'resetPassword.html',
-            {
-                resetUrl: (process.env.NEXTAUTH_URL + '/forgetPassword/' + token),
-            }
-        );
-    } catch (e) {
-        console.error(e);
-        return
-    }
+export async function sendResetEmail(userEmail: string) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: {
+        email: userEmail,
+      },
+    })
+    if (!user) throw new Error('User not found')
+    const token = jwt.sign({ id: user.id }, process.env.RESET_PASSWORD_SECRET || '', {
+      expiresIn: '24h',
+    })
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetToken: token,
+      },
+    })
+    await sendTemplatedMail(
+      user.email,
+      'Reinitialisation du mot de passe !',
+      'resetPassword.html',
+      {
+        resetUrl: process.env.NEXTAUTH_URL + '/forgetPassword/' + token,
+      }
+    )
+  } catch (e) {
+    console.error(e)
+    return
+  }
 }
 
 export async function resetPassword(token: string, newPassword: string) {
-    try {
-        // Vérification du token
-        const decoded = jwt.verify(token, process.env.EMAIL_VERIF_TOKEN || '') as { id: string };
-        if (!decoded || !decoded.id) {
-            throw new Error('Token invalide');
-        }
-
-        // Vérification de l'expiration du token
-        const user = await prisma.user.findFirst({
-            where: {
-                id: decoded.id,
-                resetToken: token
-            }
-        });
-
-        if (!user) {
-            throw new Error('Token invalide ou utilisateur non trouvé');
-        }
-
-        // Hashage du nouveau mot de passe
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-        // Mise à jour du mot de passe
-        await prisma.user.update({
-            where: { id: user.id },
-            data: {
-                password: hashedPassword,
-                resetToken: null
-            }
-        });
-
-        return true;
-    } catch (error) {
-        console.error("Erreur lors de la réinitialisation du mot de passe:", error);
-        if (error instanceof jwt.TokenExpiredError) {
-            throw new Error('Le lien de réinitialisation a expiré');
-        }
-        if (error instanceof jwt.JsonWebTokenError) {
-            throw new Error('Token invalide');
-        }
-        throw error;
+  try {
+    // Vérification du token
+    const decoded = jwt.verify(token, process.env.EMAIL_VERIF_TOKEN || '') as { id: string }
+    if (!decoded || !decoded.id) {
+      throw new Error('Token invalide')
     }
+
+    // Vérification de l'expiration du token
+    const user = await prisma.user.findFirst({
+      where: {
+        id: decoded.id,
+        resetToken: token,
+      },
+    })
+
+    if (!user) {
+      throw new Error('Token invalide ou utilisateur non trouvé')
+    }
+
+    // Hashage du nouveau mot de passe
+    const hashedPassword = await hash(newPassword, 10)
+
+    // Mise à jour du mot de passe
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetToken: null,
+      },
+    })
+
+    return true
+  } catch (error) {
+    console.error('Erreur lors de la réinitialisation du mot de passe:', error)
+    if (error instanceof jwt.TokenExpiredError) {
+      throw new Error('Le lien de réinitialisation a expiré')
+    }
+    if (error instanceof jwt.JsonWebTokenError) {
+      throw new Error('Token invalide')
+    }
+    throw error
+  }
 }

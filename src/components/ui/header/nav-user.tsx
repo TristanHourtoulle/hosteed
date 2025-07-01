@@ -11,14 +11,12 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Avatar,
-  AvatarImage,
-  AvatarFallback,
 } from '@/shadcnui'
-import { ChevronsUpDown, LogOut, Heart } from 'lucide-react'
+import { ChevronsUpDown, LogOut, Heart, Plus, User as UserIcon } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { findUserById } from '@/lib/services/user.service'
+import { getProfileImageUrl } from '@/lib/utils'
 
 export function NavUser({ session }: { session: Session | null }) {
   const [user, setUser] = useState<Pick<User, 'id' | 'name' | 'email' | 'image'> | null>(null)
@@ -54,24 +52,22 @@ export function NavUser({ session }: { session: Session | null }) {
     return <div>Loading...</div>
   }
 
-  const fallbackImage =
-    'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face'
+  const profileImage = getProfileImageUrl(user.image)
 
   const UserAvatar = () => (
     <div className='relative h-10 w-10 rounded-full overflow-hidden bg-gray-200'>
-      {!imageError && user.image && (
+      {!imageError && profileImage && (
         <Image
-          src={user.image}
+          src={profileImage}
           alt={user.name ?? 'guest'}
           width={40}
           height={40}
           className='h-full w-full object-cover rounded-full'
           referrerPolicy='no-referrer'
           onError={() => setImageError(true)}
-          onLoad={() => console.log('Image loaded successfully for:', user.image)}
         />
       )}
-      {(imageError || !user.image) && (
+      {(imageError || !profileImage) && (
         <div className='absolute inset-0 flex items-center justify-center text-sm font-medium text-gray-600 bg-gray-100'>
           {user.name?.charAt(0) ?? 'G'}
         </div>
@@ -114,8 +110,24 @@ export function NavUser({ session }: { session: Session | null }) {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
+        {/* Add a button to add a new hosting product */}
+        <DropdownMenuItem asChild>
+          <Link href='/hosting/new' className='flex items-center'>
+            <Plus className='w-4 h-4 mr-2' />
+            Créer une annonce
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {/* Acceder à son compte */}
+        <DropdownMenuItem asChild>
+          <Link href='/account' className='flex items-center'>
+            <UserIcon className='w-4 h-4 mr-2' />
+            Mon compte
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>
-          <LogOut />
+          <LogOut className='w-4 h-4 mr-2' />
           Déconnexion
         </DropdownMenuItem>
       </DropdownMenuContent>

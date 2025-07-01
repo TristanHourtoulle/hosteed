@@ -1,9 +1,12 @@
 // TODO: refactor this file because it's larger than 200 lines
 import { NextResponse } from 'next/server'
+import { headers } from 'next/headers'
+import { stripe } from '@/lib/stripe'
+import { buffer } from 'micro'
+import prisma from '@/lib/prisma'
 import { approveRent, createRent } from '@/lib/services/rents.service'
 import Stripe from 'stripe'
 import { SendMail } from '@/lib/services/email.service'
-import { prisma } from '@/lib/prisma'
 import { RentStatus } from '@prisma/client'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -261,9 +264,9 @@ export async function POST(req: Request): Promise<Response> {
           where: { id: rent.id },
           data: {
             status: 'WAITING' as RentStatus,
-            payment: 'NOT_PAID'
-          }
-        });
+            payment: 'NOT_PAID',
+          },
+        })
       } catch (error) {
         console.error('Erreur lors de la création de la réservation:', error)
         return NextResponse.json(

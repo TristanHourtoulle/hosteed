@@ -1,5 +1,5 @@
 'use server'
-import { prisma } from '@/lib/prisma'
+import prisma from '@/lib/prisma'
 import { TypeRent } from '@prisma/client'
 
 export async function findTypeById(id: string): Promise<TypeRent | null> {
