@@ -49,7 +49,10 @@ const Navbar = () => {
     return pathname === path
   }
 
-  const isHostOrAdmin = session?.user?.roles === 'ADMIN' || session?.user?.roles === 'HOST'
+  const isHostOrAdmin =
+    session?.user?.roles === 'ADMIN' ||
+    session?.user?.roles === 'HOST' ||
+    session?.user?.roles === 'HOST_VERIFIED'
 
   const MobileNavLinks = () => (
     <div className='flex flex-col space-y-4 p-4'>
@@ -62,13 +65,13 @@ const Navbar = () => {
         Tous les hébergements
       </Link>
 
-      <Link
+      {/* <Link
         href='/search'
         className='block py-3 px-4 text-lg font-medium text-gray-900 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer'
         onClick={() => setIsMobileMenuOpen(false)}
       >
         Recherche
-      </Link>
+      </Link> */}
 
       {/* Quick Access */}
       <div className='border-t pt-4'>
@@ -323,7 +326,7 @@ const Navbar = () => {
                   </NavigationMenuContent>
                 </NavigationMenuItem>
 
-                <NavigationMenuItem>
+                {/* <NavigationMenuItem>
                   <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
                     <Link
                       href='/search'
@@ -332,7 +335,7 @@ const Navbar = () => {
                       Recherche
                     </Link>
                   </NavigationMenuLink>
-                </NavigationMenuItem>
+                </NavigationMenuItem> */}
 
                 {session && (
                   <NavigationMenuItem>

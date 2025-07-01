@@ -112,7 +112,7 @@ export function NavUser({ session }: { session: Session | null }) {
         <DropdownMenuSeparator />
         {/* Add a button to add a new hosting product */}
         <DropdownMenuItem asChild>
-          <Link href='/hosting/new' className='flex items-center'>
+          <Link href='/createProduct' className='flex items-center'>
             <Plus className='w-4 h-4 mr-2' />
             Créer une annonce
           </Link>
