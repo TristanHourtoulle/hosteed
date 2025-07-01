@@ -56,6 +56,7 @@ async function main() {
       longitude: 48.2833,
       latitude: -13.3167,
       basePrice: '200',
+      priceMGA: '800000',
       room: BigInt(3),
       bathroom: BigInt(2),
       arriving: 14,

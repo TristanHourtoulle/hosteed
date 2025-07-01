@@ -106,7 +106,6 @@ model Product {
   servicesList       Services[]          @relation("ProductToServices")
   typeRoom           TypeRoom[]          @relation("ProductToTypeRoom")
   discount           Discount[]
-  Chat               Chat[]
   favorites          Favorite[]
   rules              Rules[]
   nearbyPlaces       NearbyPlace[]
@@ -115,6 +114,10 @@ model Product {
   cancellationPolicy CancellationPolicy?
 
   UnAvailableProduct UnAvailableProduct[]
+
+  hotel hotel[]
+
+  PromotedProduct PromotedProduct[]
 }
 
 model Discount {
@@ -180,6 +183,7 @@ model Rent {
   DisableRent  DisableRent[]
 
   PayRequest PayRequest[]
+  Chat       Chat[]
 }
 
 model UnAvailableProduct {
@@ -242,6 +246,10 @@ model User {
   favorites        Favorite[]
 
   PayRequest PayRequest[]
+
+  managedHotels hotel[] @relation(name: "managerUserId")
+
+  staffHotels hotel[] @relation(name: "staff")
 }
 
 model Account {
@@ -299,8 +307,9 @@ model Chat {
   message    String
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  productId  String
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  rentId     String
+  rent       Rent     @relation(fields: [rentId], references: [id], onDelete: Cascade)
+  host       Boolean
   dateSended DateTime
 }
 
@@ -376,6 +385,26 @@ model Favorite {
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([userId, productId])
+}
+
+model hotel {
+  id     String    @id @default(cuid())
+  userId String
+  user   User      @relation(name: "managerUserId", fields: [userId], references: [id], onDelete: Cascade)
+  staff  User[]    @relation(name: "staff")
+  room   Product[]
+  number String
+  adress String
+  name   String
+}
+
+model PromotedProduct {
+  id        String   @id @default(cuid())
+  active    Boolean  @default(false)
+  start     DateTime
+  end       DateTime
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model NearbyPlace {

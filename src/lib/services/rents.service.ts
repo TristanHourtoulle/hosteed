@@ -274,6 +274,14 @@ export async function createRent(params: {
       return null
     }
 
+    // Check if the product has autoAccept enabled
+    const productSettings = await prisma.product.findUnique({
+      where: { id: params.productId },
+      select: { autoAccept: true },
+    })
+
+    const shouldAutoAccept = productSettings?.autoAccept || false
+
     const createdRent = await prisma.rent.create({
       data: {
         productId: params.productId,
@@ -282,7 +290,8 @@ export async function createRent(params: {
         leavingDate: params.leavingDate,
         numberPeople: BigInt(params.peopleNumber),
         notes: BigInt(0),
-        accepted: false,
+        accepted: shouldAutoAccept,
+        confirmed: shouldAutoAccept,
         prices: BigInt(params.prices),
         stripeId: params.stripeId || null,
         options: {
@@ -480,8 +489,8 @@ export async function approveRent(id: string) {
     data: {
       status: 'RESERVED',
       payment: 'CLIENT_PAID',
-      accepted: true,
-      confirmed: true,
+        accepted: true,
+        confirmed: true,
     },
   })
   const admin = await findAllUserByRoles('ADMIN')

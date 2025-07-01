@@ -416,10 +416,10 @@ export default function CreateProduct() {
                     <Label htmlFor='basePrice'>Prix par nuit en MGA</Label>
                     <div className='relative'>
                       <Input
-                          id='basePrice'
-                          name='basePrice'
+                          id='priceMGA'
+                          name='priceMGA'
                           type='text'
-                          value={formData.basePrice}
+                          value={formData.priceMGA}
                           onChange={handleInputChange}
                           required
                           placeholder='100'
