@@ -1,6 +1,5 @@
 // TODO: refactor this file because it's larger than 200 lines
 'use server'
-import { Prisma } from '@prisma/client'
 import prisma from '@/lib/prisma'
 import { sendTemplatedMail } from '@/lib/services/sendTemplatedMail'
 import { findAllUserByRoles } from '@/lib/services/user.service'

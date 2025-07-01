@@ -1,8 +1,5 @@
 // TODO: refactor this file because it's larger than 200 lines
 import { NextResponse } from 'next/server'
-import { headers } from 'next/headers'
-import { stripe } from '@/lib/stripe'
-import { buffer } from 'micro'
 import prisma from '@/lib/prisma'
 import { approveRent, createRent } from '@/lib/services/rents.service'
 import Stripe from 'stripe'
