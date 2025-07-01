@@ -43,12 +43,18 @@ export function useFavorites(productId: string) {
         body: JSON.stringify({ productId }),
       })
 
+      const data = await response.json()
+
       if (response.ok) {
-        setIsFavorite(!isFavorite)
-        toast.success(isFavorite ? 'Retiré des favoris' : 'Ajouté aux favoris')
+        if (data.success) {
+          setIsFavorite(!isFavorite)
+          toast.success(isFavorite ? 'Retiré des favoris' : 'Ajouté aux favoris')
+        } else if (data.message) {
+          // Cas où le favori existe déjà
+          toast.info(data.message)
+        }
       } else {
-        const error = await response.json()
-        toast.error(error.error || 'Erreur lors de la mise à jour des favoris')
+        toast.error(data.error || 'Erreur lors de la mise à jour des favoris')
       }
     } catch (error) {
       console.error('Error toggling favorite:', error)

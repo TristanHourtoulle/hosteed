@@ -11,16 +11,16 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Avatar,
-  AvatarImage,
-  AvatarFallback,
 } from '@/shadcnui'
-import { ChevronsUpDown, LogOut, Heart } from 'lucide-react'
+import { ChevronsUpDown, LogOut, Heart, Plus, User as UserIcon } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { findUserById } from '@/lib/services/user.service'
+import { getProfileImageUrl } from '@/lib/utils'
 
 export function NavUser({ session }: { session: Session | null }) {
   const [user, setUser] = useState<Pick<User, 'id' | 'name' | 'email' | 'image'> | null>(null)
+  const [imageError, setImageError] = useState(false)
 
   const handleLogout = () => {
     signOut()
@@ -52,14 +52,34 @@ export function NavUser({ session }: { session: Session | null }) {
     return <div>Loading...</div>
   }
 
+  const profileImage = getProfileImageUrl(user.image)
+
+  const UserAvatar = () => (
+    <div className='relative h-10 w-10 rounded-full overflow-hidden bg-gray-200'>
+      {!imageError && profileImage && (
+        <Image
+          src={profileImage}
+          alt={user.name ?? 'guest'}
+          width={40}
+          height={40}
+          className='h-full w-full object-cover rounded-full'
+          referrerPolicy='no-referrer'
+          onError={() => setImageError(true)}
+        />
+      )}
+      {(imageError || !profileImage) && (
+        <div className='absolute inset-0 flex items-center justify-center text-sm font-medium text-gray-600 bg-gray-100'>
+          {user.name?.charAt(0) ?? 'G'}
+        </div>
+      )}
+    </div>
+  )
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger>
         <div className='flex items-center gap-2'>
-          <Avatar className='h-10 w-10 rounded-lg'>
-            <AvatarImage src={user.image ?? undefined} alt={user.name ?? 'guest'} />
-            <AvatarFallback className='rounded-lg'>{user.name?.charAt(0) ?? 'G'}</AvatarFallback>
-          </Avatar>
+          <UserAvatar />
           <div className='hidden lg:grid flex-1 text-left text-sm leading-tight'>
             <span className='truncate font-medium'>{user.name}</span>
             <span className='truncate text-xs'>{user.email}</span>
@@ -75,10 +95,7 @@ export function NavUser({ session }: { session: Session | null }) {
       >
         <DropdownMenuLabel className='p-0 font-normal'>
           <div className='flex items-center gap-2 px-1 py-1.5 text-left text-sm'>
-            <Avatar className='h-10 w-10 rounded-lg'>
-              <AvatarImage src={user.image ?? undefined} alt={user.name ?? 'guest'} />
-              <AvatarFallback className='rounded-lg'>{user.name?.charAt(0) ?? 'G'}</AvatarFallback>
-            </Avatar>
+            <UserAvatar />
             <div className='grid flex-1 text-left text-sm leading-tight'>
               <span className='truncate font-medium'>{user.name}</span>
               <span className='truncate text-xs'>{user.email}</span>
@@ -93,8 +110,24 @@ export function NavUser({ session }: { session: Session | null }) {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
+        {/* Add a button to add a new hosting product */}
+        <DropdownMenuItem asChild>
+          <Link href='/hosting/new' className='flex items-center'>
+            <Plus className='w-4 h-4 mr-2' />
+            Créer une annonce
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {/* Acceder à son compte */}
+        <DropdownMenuItem asChild>
+          <Link href='/account' className='flex items-center'>
+            <UserIcon className='w-4 h-4 mr-2' />
+            Mon compte
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>
-          <LogOut />
+          <LogOut className='w-4 h-4 mr-2' />
           Déconnexion
         </DropdownMenuItem>
       </DropdownMenuContent>

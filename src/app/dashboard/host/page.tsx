@@ -1,4 +1,3 @@
-// TODO: refactor this file because it's larger than 200 lines
 'use client'
 
 import { useSession } from 'next-auth/react'
@@ -8,6 +7,11 @@ import { ProductValidation } from '@prisma/client'
 import Image from 'next/image'
 import Link from 'next/link'
 import { getCityFromAddress } from '@/lib/utils'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
+import { Button } from '@/components/ui/shadcnui/button'
+import { motion } from 'framer-motion'
+import { Home, Calendar, Edit, Eye, Plus } from 'lucide-react'
+import HostNavbar from './components/HostNavbar'
 
 interface Product {
   id: string
@@ -17,6 +21,21 @@ interface Product {
   basePrice: string
   validate: ProductValidation
   img?: { img: string }[]
+}
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 },
 }
 
 export default function HostDashboard() {
@@ -50,15 +69,15 @@ export default function HostDashboard() {
   const getStatusBadgeColor = (status: ProductValidation) => {
     switch (status) {
       case ProductValidation.Approve:
-        return 'bg-green-100 text-green-800'
+        return 'bg-emerald-100 text-emerald-800 border border-emerald-200'
       case ProductValidation.Refused:
-        return 'bg-red-100 text-red-800'
+        return 'bg-red-100 text-red-800 border border-red-200'
       case ProductValidation.NotVerified:
-        return 'bg-yellow-100 text-yellow-800'
+        return 'bg-amber-100 text-amber-800 border border-amber-200'
       case ProductValidation.RecheckRequest:
-        return 'bg-blue-100 text-blue-800'
+        return 'bg-blue-100 text-blue-800 border border-blue-200'
       default:
-        return 'bg-gray-100 text-gray-800'
+        return 'bg-gray-100 text-gray-800 border border-gray-200'
     }
   }
 
@@ -79,17 +98,21 @@ export default function HostDashboard() {
 
   if (loading) {
     return (
-      <div className='min-h-screen bg-gray-100 p-6'>
-        <div className='max-w-7xl mx-auto'>
-          <div className='animate-pulse'>
-            <div className='h-8 bg-gray-200 rounded w-1/4 mb-8'></div>
+      <div className='min-h-screen bg-gradient-to-br from-gray-50 to-blue-50'>
+        <HostNavbar />
+        <div className='max-w-7xl mx-auto p-6'>
+          <div className='animate-pulse space-y-8'>
+            <div className='h-8 bg-gray-200 rounded w-1/4'></div>
             <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
               {[1, 2, 3].map(i => (
-                <div key={i} className='bg-white rounded-lg shadow-md p-6'>
-                  <div className='h-48 bg-gray-200 rounded mb-4'></div>
-                  <div className='h-4 bg-gray-200 rounded w-3/4 mb-2'></div>
-                  <div className='h-4 bg-gray-200 rounded w-1/2'></div>
-                </div>
+                <Card key={i} className='overflow-hidden pt-0'>
+                  <div className='h-48 bg-gray-200'></div>
+                  <CardContent className='p-6 space-y-4'>
+                    <div className='h-4 bg-gray-200 rounded w-3/4'></div>
+                    <div className='h-4 bg-gray-200 rounded w-1/2'></div>
+                    <div className='h-4 bg-gray-200 rounded w-1/4'></div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           </div>
@@ -100,184 +123,139 @@ export default function HostDashboard() {
 
   if (error) {
     return (
-      <div className='min-h-screen bg-gray-100 p-6'>
-        <div className='max-w-7xl mx-auto'>
-          <p className='text-red-600'>{error}</p>
+      <div className='min-h-screen bg-gradient-to-br from-gray-50 to-blue-50'>
+        <HostNavbar />
+        <div className='max-w-7xl mx-auto p-6'>
+          <Card className='border-red-200 bg-red-50'>
+            <CardContent className='p-6'>
+              <p className='text-red-600'>{error}</p>
+            </CardContent>
+          </Card>
         </div>
       </div>
     )
   }
 
   return (
-    <div className='min-h-screen bg-gray-100'>
-      <div className='max-w-7xl mx-auto'>
-        {/* Navigation */}
-        <div className='bg-white shadow-sm mb-6'>
-          <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-            <div className='flex justify-between h-16'>
-              <div className='flex'>
-                <div className='flex space-x-8'>
-                  <Link
-                    href='/dashboard/host'
-                    className='inline-flex items-center px-1 pt-1 border-b-2 border-blue-500 text-sm font-medium text-gray-900'
-                  >
-                    <svg
-                      className='h-5 w-5 mr-2'
-                      viewBox='0 0 24 24'
-                      fill='none'
-                      stroke='currentColor'
-                    >
-                      <path
-                        strokeLinecap='round'
-                        strokeLinejoin='round'
-                        strokeWidth='2'
-                        d='M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6'
-                      />
-                    </svg>
-                    Mes annonces
-                  </Link>
-                  <Link
-                    href='/dashboard/host/calendar'
-                    className='inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  >
-                    <svg
-                      className='h-5 w-5 mr-2'
-                      viewBox='0 0 24 24'
-                      fill='none'
-                      stroke='currentColor'
-                    >
-                      <path
-                        strokeLinecap='round'
-                        strokeLinejoin='round'
-                        strokeWidth='2'
-                        d='M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'
-                      />
-                    </svg>
-                    Calendrier
-                  </Link>
-                  <Link
-                    href='/dashboard/host/reservations'
-                    className='inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  >
-                    <svg
-                      className='h-5 w-5 mr-2'
-                      viewBox='0 0 24 24'
-                      fill='none'
-                      stroke='currentColor'
-                    >
-                      <path
-                        strokeLinecap='round'
-                        strokeLinejoin='round'
-                        strokeWidth='2'
-                        d='M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'
-                      />
-                    </svg>
-                    Locations
-                  </Link>
-                  <Link
-                    href='/dashboard/host/settings'
-                    className='inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  >
-                    <svg
-                      className='h-5 w-5 mr-2'
-                      viewBox='0 0 24 24'
-                      fill='none'
-                      stroke='currentColor'
-                    >
-                      <path
-                        strokeLinecap='round'
-                        strokeLinejoin='round'
-                        strokeWidth='2'
-                        d='M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z'
-                      />
-                      <path
-                        strokeLinecap='round'
-                        strokeLinejoin='round'
-                        strokeWidth='2'
-                        d='M15 12a3 3 0 11-6 0 3 3 0 016 0z'
-                      />
-                    </svg>
-                    Paramètres
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
+    <div className='min-h-screen bg-gradient-to-br from-gray-50 to-blue-50'>
+      <HostNavbar />
+      <motion.div
+        className='max-w-7xl mx-auto p-6'
+        initial='hidden'
+        animate='visible'
+        variants={containerVariants}
+      >
+        <div className='flex justify-between items-center mb-8'>
+          <motion.h1
+            className='text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent'
+            variants={itemVariants}
+          >
+            Mes annonces
+          </motion.h1>
+          <motion.div variants={itemVariants}>
+            <Button
+              asChild
+              className='bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200'
+            >
+              <Link href='/createProduct'>
+                <Plus className='w-5 h-5 mr-2' />
+                Créer une nouvelle annonce
+              </Link>
+            </Button>
+          </motion.div>
         </div>
 
-        {/* Main Content */}
-        <div className='p-6'>
-          <div className='flex justify-between items-center mb-8'>
-            <h1 className='text-3xl font-bold text-gray-900'>Mes annonces</h1>
-            <Link
-              href='/createProduct'
-              className='px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors'
-            >
-              Créer une nouvelle annonce
-            </Link>
-          </div>
-
-          {products.length === 0 ? (
-            <div className='bg-white rounded-lg shadow-md p-6 text-center'>
-              <p className='text-gray-600 mb-4'>Vous n&apos;avez pas encore d&apos;annonces</p>
-              <Link href='/createProduct' className='text-blue-600 hover:text-blue-800'>
-                Créer votre première annonce
-              </Link>
-            </div>
-          ) : (
-            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-              {products.map(product => (
-                <div key={product.id} className='bg-white rounded-lg shadow-md overflow-hidden'>
+        {products.length === 0 ? (
+          <motion.div variants={itemVariants}>
+            <Card className='border-dashed border-2 border-gray-300 bg-white/50 backdrop-blur-sm'>
+              <CardContent className='p-12 text-center'>
+                <Home className='w-12 h-12 mx-auto mb-4 text-gray-400' />
+                <p className='text-gray-600 mb-4 text-lg'>
+                  Vous n&apos;avez pas encore d&apos;annonces
+                </p>
+                <Button asChild variant='outline' className='hover:bg-blue-50'>
+                  <Link href='/createProduct'>
+                    <Plus className='w-5 h-5 mr-2' />
+                    Créer votre première annonce
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ) : (
+          <motion.div
+            className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
+            variants={containerVariants}
+          >
+            {products.map(product => (
+              <motion.div key={product.id} variants={itemVariants}>
+                <Card className='pt-0 pb-0 overflow-hidden group hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm'>
                   {product.img && product.img[0] && (
-                    <div className='relative h-48 w-full'>
+                    <div className='relative h-48 w-full overflow-hidden'>
                       <Image
                         src={product.img[0].img}
                         alt={product.name}
                         fill
-                        className='object-cover'
+                        className='object-cover group-hover:scale-110 transition-transform duration-300'
                       />
                     </div>
                   )}
-                  <div className='p-4'>
-                    <div className='flex justify-between items-start mb-2'>
-                      <h2 className='text-xl font-semibold text-gray-800'>{product.name}</h2>
+                  <CardContent className='p-6 space-y-4'>
+                    <div className='flex justify-between items-start'>
+                      <h2 className='text-xl font-semibold text-gray-800 line-clamp-1'>
+                        {product.name}
+                      </h2>
                       <span
-                        className={`px-2 py-1 rounded-full text-sm ${getStatusBadgeColor(product.validate)}`}
+                        className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeColor(product.validate)}`}
                       >
                         {getStatusText(product.validate)}
                       </span>
                     </div>
-                    <p className='text-gray-600 mb-2'>{getCityFromAddress(product.address)}</p>
-                    <p className='text-gray-600 mb-4'>{product.basePrice}€</p>
-                    <div className='flex justify-between items-center'>
-                      <Link
-                        href={`/host/${product.id}`}
-                        className='text-blue-600 hover:text-blue-800'
+                    <div className='space-y-2'>
+                      <p className='text-gray-600'>{getCityFromAddress(product.address)}</p>
+                      <p className='text-2xl font-bold text-blue-600'>{product.basePrice}€</p>
+                    </div>
+                    <div className='flex justify-between items-center pt-4 border-t border-gray-100'>
+                      <Button
+                        asChild
+                        variant='ghost'
+                        className='hover:bg-blue-50 hover:text-blue-600 rounded-full px-4 py-2'
                       >
-                        Voir l&apos;annonce
-                      </Link>
-                      <div className='flex space-x-4'>
-                        <Link
-                          href={`/dashboard/host/calendar?property=${product.id}`}
-                          className='text-gray-600 hover:text-gray-800'
-                        >
-                          Calendrier
+                        <Link href={`/host/${product.id}`}>
+                          <Eye className='w-4 h-4 mr-2' />
+                          Voir
                         </Link>
-                        <Link
-                          href={`/dashboard/host/edit/${product.id}`}
-                          className='text-gray-600 hover:text-gray-800'
+                      </Button>
+                      <div className='flex gap-2'>
+                        <Button
+                          asChild
+                          variant='ghost'
+                          className='hover:bg-blue-50 hover:text-blue-600 rounded-full px-4 py-2'
                         >
-                          Modifier
-                        </Link>
+                          <Link href={`/dashboard/host/calendar?property=${product.id}`}>
+                            <Calendar className='w-4 h-4 mr-2' />
+                            Calendrier
+                          </Link>
+                        </Button>
+                        <Button
+                          asChild
+                          variant='ghost'
+                          className='hover:bg-blue-50 hover:text-blue-600 rounded-full px-4 py-2'
+                        >
+                          <Link href={`/dashboard/host/edit/${product.id}`}>
+                            <Edit className='w-4 h-4 mr-2' />
+                            Modifier
+                          </Link>
+                        </Button>
                       </div>
                     </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+      </motion.div>
     </div>
   )
 }

@@ -5,7 +5,7 @@ import { signInSchema } from '@/lib/zod/auth.schema'
 import { findUserByEmail, verifyPassword } from '@/lib/services/user.service'
 import { UserRole } from '@prisma/client'
 import { UserInterface } from '@/lib/interface/userInterface'
-import { prisma } from '@/lib/prisma'
+import prisma from '@/lib/prisma'
 import { stripe } from './stripe'
 
 export default {
@@ -26,6 +26,12 @@ export default {
           console.log('Email ou mot de passe manquant')
           return null
         }
+        // Check if email is verified
+        const user = await findUserByEmail(credentials?.email as string)
+        if (user && !user.emailVerified) {
+          throw new Error('Email not verified')
+        }
+
         try {
           const { email, password } = await signInSchema.parseAsync(credentials)
           console.log('Tentative de connexion pour:', email)
@@ -79,7 +85,7 @@ export default {
         token.id = user.id
         token.email = user.email
         token.name = user.name
-        token.role = (user as UserInterface).roles as UserRole
+        token.roles = (user as UserInterface).roles as UserRole
       }
       return token
     },
@@ -89,7 +95,7 @@ export default {
           id: token.id as string,
           email: token.email as string,
           name: token.name as string,
-          roles: token.role as UserRole,
+          roles: token.roles as UserRole,
           emailVerified: token.emailVerified as Date | null,
         }
       }

@@ -120,18 +120,23 @@ export default function BookingCard({
   const hasValidDates = dateRange?.from && dateRange?.to
 
   return (
-    <div className='sticky top-6'>
+    <div className='sticky top-20'>
       <div className='bg-white border border-gray-200 rounded-2xl shadow-xl p-6'>
         <div className='flex items-center justify-between mb-6'>
           <div className='flex items-baseline gap-2'>
             <span className='text-2xl font-semibold text-gray-900'>{product.basePrice}€</span>
             <span className='text-gray-600'>par nuit</span>
           </div>
-          {product.reviews && product.reviews.length > 0 && (
+          {product.reviews && product.reviews.length > 0 ? (
             <div className='flex items-center gap-1'>
               <Star className='h-4 w-4 fill-yellow-400 text-yellow-400' />
               <span className='text-sm font-medium'>{globalGrade.toFixed(1)}</span>
               <span className='text-sm text-gray-500'>({product.reviews.length})</span>
+            </div>
+          ) : (
+            <div className='flex items-center gap-1'>
+              <Star className='h-4 w-4 text-gray-300' />
+              <span className='text-sm text-gray-500'>(aucune note)</span>
             </div>
           )}
         </div>

@@ -20,7 +20,7 @@ export default function CheckEmailPage({ params }: { params: Promise<{ id: strin
             'Votre email a été validé avec succès ! Vous allez être redirigé vers la page de connexion.'
           )
           setTimeout(() => {
-            router.push('/login')
+            router.push('/auth?mode=login')
           }, 3000)
         } else {
           setStatus('error')

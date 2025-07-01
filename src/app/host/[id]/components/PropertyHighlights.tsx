@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, Shield, Award } from 'lucide-react'
+import { CheckCircle2, Clock } from 'lucide-react'
 
 interface Product {
   certified?: boolean
@@ -10,6 +10,8 @@ interface PropertyHighlightsProps {
 }
 
 export default function PropertyHighlights({ product }: PropertyHighlightsProps) {
+  if (!product.certified && !product.autoAccept) return null
+
   return (
     <div className='border-b border-gray-200 pb-8'>
       <h3 className='text-lg font-semibold text-gray-900 mb-4'>Ce qui rend ce logement unique</h3>
@@ -36,24 +38,6 @@ export default function PropertyHighlights({ product }: PropertyHighlightsProps)
             </div>
           </div>
         )}
-        <div className='flex items-center gap-3'>
-          <div className='w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center'>
-            <Shield className='h-4 w-4 text-purple-600' />
-          </div>
-          <div>
-            <p className='font-medium text-gray-900'>Annulation flexible</p>
-            <p className='text-sm text-gray-600'>Politique d&apos;annulation souple</p>
-          </div>
-        </div>
-        <div className='flex items-center gap-3'>
-          <div className='w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center'>
-            <Award className='h-4 w-4 text-orange-600' />
-          </div>
-          <div>
-            <p className='font-medium text-gray-900'>Hôte expérimenté</p>
-            <p className='text-sm text-gray-600'>Plus de 100 séjours</p>
-          </div>
-        </div>
       </div>
     </div>
   )

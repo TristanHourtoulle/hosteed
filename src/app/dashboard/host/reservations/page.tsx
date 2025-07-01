@@ -51,8 +51,8 @@ export default function RentsPage() {
   }, [session])
 
   const getStatusBadge = (status: RentStatus) => {
-    const statusConfig = {
-      WAITING: {label: 'En attente de validation', color: 'bg-yellow-100 text-yellow-800' }, // TODO: Changer la couleur pour qu'elle corresonde a en attente
+    const statusConfig: Record<RentStatus, { label: string; color: string }> = {
+      WAITING: { label: 'En attente', color: 'bg-orange-100 text-orange-800' },
       RESERVED: { label: 'Réservée', color: 'bg-yellow-100 text-yellow-800' },
       CHECKIN: { label: 'En cours', color: 'bg-green-100 text-green-800' },
       CHECKOUT: { label: 'Terminée', color: 'bg-gray-100 text-gray-800' },
@@ -143,7 +143,7 @@ export default function RentsPage() {
                       </td>
                       <td className='px-6 py-4 whitespace-nowrap'>{getStatusBadge(rent.status)}</td>
                       <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900'>
-                        {rent.status === RentStatus.RESERVED &&
+                        {rent.status === RentStatus.WAITING &&
                           rent.payment == PaymentStatus.NOT_PAID && (
                             <button
                               onClick={() => handleApproveReservation(rent.id, rent.stripeId)}

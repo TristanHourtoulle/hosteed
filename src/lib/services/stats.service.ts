@@ -1,6 +1,6 @@
 'use server'
 
-import { prisma } from '@/lib/prisma'
+import prisma from '@/lib/prisma'
 import { ProductValidation } from '@prisma/client'
 
 export async function getAdminStatsYearly() {

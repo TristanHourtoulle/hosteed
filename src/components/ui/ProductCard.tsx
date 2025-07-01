@@ -2,8 +2,18 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Heart, Star, ChevronLeft, ChevronRight, ImageIcon } from 'lucide-react'
 import { useState } from 'react'
-import { getCityFromAddress } from '@/lib/utils'
+import { getCityFromAddress, calculateAverageRating } from '@/lib/utils'
 import { useFavorites } from '@/hooks/useFavorites'
+import { motion } from 'framer-motion'
+
+interface Review {
+  grade: number
+  welcomeGrade: number
+  staff: number
+  comfort: number
+  equipment: number
+  cleaning: number
+}
 
 interface Product {
   id: string
@@ -13,16 +23,16 @@ interface Product {
   img?: { img: string }[] | null
   basePrice: string
   certified?: boolean
+  reviews?: Review[]
 }
 
-export default function ProductCard({ product }: { product: Product }) {
+export default function ProductCard({ product, index = 0 }: { product: Product; index?: number }) {
   const { isFavorite, isLoading, toggleFavorite } = useFavorites(product.id)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [imageError, setImageError] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
 
-  // Generate a random rating for demo purposes (in real app, this would come from the product data)
-  const rating = (4.0 + Math.random() * 1.0).toFixed(2)
+  const rating = product.reviews ? calculateAverageRating(product.reviews) : null
 
   const images =
     product.img && product.img.length > 0
@@ -35,133 +45,208 @@ export default function ProductCard({ product }: { product: Product }) {
     e.preventDefault()
     e.stopPropagation()
     setCurrentImageIndex(prev => (prev === 0 ? images.length - 1 : prev - 1))
-    setImageError(false) // Reset error state when switching images
+    setImageError(false)
   }
 
   const goToNext = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
     setCurrentImageIndex(prev => (prev === images.length - 1 ? 0 : prev + 1))
-    setImageError(false) // Reset error state when switching images
+    setImageError(false)
   }
 
   const goToImage = (index: number, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
     setCurrentImageIndex(index)
-    setImageError(false) // Reset error state when switching images
+    setImageError(false)
   }
 
   return (
-    <Link href={`/host/${product.id}`} className='block'>
-      <div
-        className='bg-white rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 group'
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      >
-        <div className='relative aspect-[4/3] w-full'>
-          {hasValidImages && !imageError ? (
-            <>
-              <Image
-                src={images[currentImageIndex].img}
-                alt={product.name}
-                fill
-                className='object-cover transition-opacity duration-300'
-                onError={() => setImageError(true)}
-                sizes='(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw'
-              />
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: index * 0.1 }}
+      whileHover={{ y: -5 }}
+    >
+      <Link href={`/host/${product.id}`} className='block'>
+        <motion.div
+          className='bg-white rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 group'
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          layoutId={`card-${product.id}`}
+        >
+          <div className='relative aspect-[4/3] w-full'>
+            {hasValidImages && !imageError ? (
+              <>
+                <motion.div
+                  key={currentImageIndex}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                  className='w-full h-full'
+                >
+                  <Image
+                    src={images[currentImageIndex].img}
+                    alt={product.name}
+                    fill
+                    className='object-cover'
+                    onError={() => setImageError(true)}
+                    sizes='(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw'
+                  />
+                </motion.div>
 
-              {/* Navigation Arrows - Only show on hover and with multiple images */}
-              {hasMultipleImages && isHovered && (
-                <>
-                  <button
-                    onClick={goToPrevious}
-                    className='absolute left-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-white/80 hover:bg-white hover:scale-110 transition-all duration-200 shadow-lg opacity-0 group-hover:opacity-100'
-                  >
-                    <ChevronLeft className='w-4 h-4 text-gray-700' />
-                  </button>
+                {/* Navigation Arrows - Only show on hover and with multiple images */}
+                {hasMultipleImages && isHovered && (
+                  <>
+                    <motion.button
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      onClick={goToPrevious}
+                      className='absolute left-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-white/80 hover:bg-white hover:scale-110 transition-all duration-200 shadow-lg'
+                    >
+                      <ChevronLeft className='w-4 h-4 text-gray-700' />
+                    </motion.button>
 
-                  <button
-                    onClick={goToNext}
-                    className='absolute right-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-white/80 hover:bg-white hover:scale-110 transition-all duration-200 shadow-lg opacity-0 group-hover:opacity-100'
-                  >
-                    <ChevronRight className='w-4 h-4 text-gray-700' />
-                  </button>
-                </>
-              )}
-            </>
-          ) : (
-            <div className='bg-gradient-to-br from-gray-100 to-gray-200 h-full w-full flex flex-col items-center justify-center'>
-              <ImageIcon className='w-12 h-12 text-gray-400 mb-3' />
-              <span className='text-gray-500 text-sm font-medium'>Image non disponible</span>
-              <span className='text-gray-400 text-xs mt-1'>Propriété sans photo</span>
-            </div>
-          )}
+                    <motion.button
+                      initial={{ opacity: 0, x: 10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      onClick={goToNext}
+                      className='absolute right-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-white/80 hover:bg-white hover:scale-110 transition-all duration-200 shadow-lg'
+                    >
+                      <ChevronRight className='w-4 h-4 text-gray-700' />
+                    </motion.button>
+                  </>
+                )}
+              </>
+            ) : (
+              <div className='bg-gradient-to-br from-gray-100 to-gray-200 h-full w-full flex flex-col items-center justify-center'>
+                <ImageIcon className='w-12 h-12 text-gray-400 mb-3' />
+                <span className='text-gray-500 text-sm font-medium'>Image non disponible</span>
+                <span className='text-gray-400 text-xs mt-1'>Propriété sans photo</span>
+              </div>
+            )}
 
-          {/* Heart Icon */}
-          <button
-            onClick={e => {
-              e.preventDefault()
-              e.stopPropagation()
-              toggleFavorite()
-            }}
-            disabled={isLoading}
-            className='absolute top-3 right-3 z-10 p-2 rounded-full bg-white/80 hover:bg-white hover:scale-110 active:scale-95 transition-all duration-200 shadow-sm hover:shadow-md group/heart disabled:opacity-50 disabled:cursor-not-allowed'
-          >
-            <Heart
-              className={`w-4 h-4 transition-all duration-300 group-hover/heart:scale-110 ${
+            {/* Heart Icon */}
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              initial={false}
+              animate={
                 isFavorite
-                  ? 'fill-red-500 text-red-500 drop-shadow-sm'
-                  : 'text-gray-700 hover:text-red-400 group-hover/heart:text-red-500'
-              }`}
-            />
-          </button>
-
-          {/* Rating */}
-          <div className='absolute top-3 left-3 z-10 bg-black/75 backdrop-blur-sm rounded-lg px-2.5 py-1.5 flex items-center gap-1'>
-            <Star className='w-3.5 h-3.5 fill-white text-white' />
-            <span className='text-sm font-medium text-white'>{rating}</span>
-          </div>
-
-          {/* Image Dots - Only show when there are multiple images */}
-          {hasMultipleImages && hasValidImages && (
-            <div className='absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-1.5'>
-              {images.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={e => goToImage(index, e)}
-                  className={`w-2 h-2 rounded-full transition-all duration-200 ${
-                    index === currentImageIndex
-                      ? 'bg-white shadow-lg'
-                      : 'bg-white/50 hover:bg-white/75'
+                  ? {
+                      scale: [1, 1.2, 0.95, 1],
+                      transition: {
+                        duration: 0.4,
+                        times: [0, 0.1, 0.3, 0.4],
+                      },
+                    }
+                  : {}
+              }
+              onClick={e => {
+                e.preventDefault()
+                e.stopPropagation()
+                toggleFavorite()
+              }}
+              disabled={isLoading}
+              className='absolute top-3 right-3 z-10 p-2 rounded-full bg-white/80 hover:bg-white transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed'
+            >
+              <motion.div
+                initial={false}
+                animate={
+                  isFavorite
+                    ? {
+                        scale: [1, 0.8, 1.3, 1],
+                        transition: { duration: 0.4 },
+                      }
+                    : {}
+                }
+              >
+                <Heart
+                  className={`w-4 h-4 transition-all duration-300 ${
+                    isFavorite
+                      ? 'fill-red-500 text-red-500 drop-shadow-sm'
+                      : 'text-gray-700 hover:text-red-400'
                   }`}
                 />
-              ))}
-            </div>
-          )}
-        </div>
+              </motion.div>
+            </motion.button>
 
-        <div className='p-4 space-y-2'>
-          <div className='space-y-1'>
-            <h3 className='font-semibold text-gray-900 text-base leading-tight line-clamp-1'>
-              {getCityFromAddress(product.address)}
-            </h3>
-            <p className='text-gray-500 text-sm font-light line-clamp-1'>{product.name}</p>
-          </div>
+            {/* Rating */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+              className='absolute top-3 left-3 z-10 bg-black/35 backdrop-blur-md rounded-lg px-2.5 py-1.5 flex items-center gap-1'
+            >
+              <div className='flex items-center gap-2'>
+                <div className='flex items-center gap-1'>
+                  {rating ? (
+                    <>
+                      <Star className='h-4 w-4 fill-white text-white' />
+                      <span className='text-sm font-medium text-white'>{rating}</span>
+                      <span className='text-sm text-white/80'>({product.reviews?.length})</span>
+                    </>
+                  ) : (
+                    <>
+                      <Star className='h-4 w-4 text-white/60' />
+                      <span className='text-sm text-white/80'>(aucune note)</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </motion.div>
 
-          <div className='flex items-center justify-between pt-1'>
-            <div className='flex items-baseline gap-1'>
-              <span className='font-bold text-gray-900 text-lg'>{product.basePrice}€</span>
-              <span className='text-gray-400 text-sm font-light'>/ nuit</span>
-            </div>
-            {product.certified && (
-              <div className='bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-medium'>
-                Certifié
+            {/* Image Dots */}
+            {hasMultipleImages && hasValidImages && (
+              <div className='absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-1.5'>
+                {images.map((_, index) => (
+                  <motion.button
+                    key={index}
+                    whileHover={{ scale: 1.2 }}
+                    onClick={e => goToImage(index, e)}
+                    className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                      index === currentImageIndex
+                        ? 'bg-white shadow-lg'
+                        : 'bg-white/50 hover:bg-white/75'
+                    }`}
+                  />
+                ))}
               </div>
             )}
           </div>
-        </div>
-      </div>
-    </Link>
+
+          <motion.div
+            className='p-4 space-y-2'
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <div className='space-y-1'>
+              <h3 className='font-semibold text-gray-900 text-base leading-tight line-clamp-1'>
+                {getCityFromAddress(product.address)}
+              </h3>
+              <p className='text-gray-500 text-sm font-light line-clamp-1'>{product.name}</p>
+            </div>
+
+            <div className='flex items-center justify-between pt-1'>
+              <div className='flex items-baseline gap-1'>
+                <span className='font-bold text-gray-900 text-lg'>{product.basePrice}€</span>
+                <span className='text-gray-400 text-sm font-light'>/ nuit</span>
+              </div>
+              {product.certified && (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className='bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-medium'
+                >
+                  Certifié
+                </motion.div>
+              )}
+            </div>
+          </motion.div>
+        </motion.div>
+      </Link>
+    </motion.div>
   )
 }

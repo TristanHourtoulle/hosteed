@@ -1,5 +1,5 @@
 'use server'
-import { prisma } from '@/lib/prisma'
+import prisma from '@/lib/prisma'
 import { Product, PaymentStatus, RentStatus, PaymentMethod, PaymentReqStatus } from '@prisma/client'
 interface PayablePrices {
   totalPricesPayable: number

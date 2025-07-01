@@ -1,9 +1,10 @@
 // TODO: refactor this file because it's larger than 200 lines
 'use server'
-import { prisma } from '@/lib/prisma'
+import prisma from '@/lib/prisma'
 import { sendTemplatedMail } from '@/lib/services/sendTemplatedMail'
 import { findAllUserByRoles } from '@/lib/services/user.service'
 import { ProductValidation } from '@prisma/client'
+import { CreateProductInput } from '@/lib/interface/userInterface'
 
 export async function findProductById(id: string) {
   try {
@@ -70,6 +71,19 @@ export async function findAllProducts() {
         servicesList: true,
         mealsList: true,
         options: true,
+        reviews: {
+          where: {
+            approved: true,
+          },
+          select: {
+            grade: true,
+            welcomeGrade: true,
+            staff: true,
+            comfort: true,
+            equipment: true,
+            cleaning: true,
+          },
+        },
       },
     })
 
@@ -117,70 +131,119 @@ export async function findAllProductByHostId(id: string) {
   }
 }
 
-export async function createProduct(params: {
-  name: string
-  description: string
-  address: string
-  longitude: number
-  latitude: number
-  basePrice: string
-  room: number | null
-  bathroom: number | null
-  arriving: number
-  leaving: number
-  typeId: string
-  securities: string[]
-  equipments: string[]
-  services: string[]
-  meals: string[]
-  images: string[]
-  userId: string[]
-}) {
+export async function createProduct(data: CreateProductInput) {
   try {
-    const type = await prisma.typeRent.findFirst({
-      where: {
-        id: params.typeId,
-      },
-    })
-    if (!type) return null
-
+    // Créer d'abord le produit de base
     const createdProduct = await prisma.product.create({
       data: {
-        name: params.name,
-        description: params.description,
-        address: params.address,
-        longitude: params.longitude,
-        latitude: params.latitude,
-        basePrice: params.basePrice,
-        room: params.room ? BigInt(params.room) : null,
-        bathroom: params.bathroom ? BigInt(params.bathroom) : null,
-        arriving: params.arriving,
-        leaving: params.leaving,
+        name: data.name,
+        description: data.description,
+        address: data.address,
+        longitude: Number(data.longitude),
+        latitude: Number(data.latitude),
+        basePrice: data.basePrice,
+        priceMGA: data.priceMGA,
+        room: data.room ? BigInt(data.room) : null,
+        bathroom: data.bathroom ? BigInt(data.bathroom) : null,
+        arriving: Number(data.arriving),
+        leaving: Number(data.leaving),
         autoAccept: false,
-        phone: '',
+        phone: data.phone || '',
         categories: BigInt(0),
-        validate: 'NotVerified',
+        validate: ProductValidation.NotVerified,
         userManager: BigInt(0),
-        type: { connect: { id: params.typeId } },
+        type: { connect: { id: data.typeId } },
         user: {
-          connect: params.userId.map(id => ({ id: id })),
+          connect: data.userId.map(id => ({ id })),
         },
         equipments: {
-          connect: params.equipments.map(equipmentId => ({ id: equipmentId })),
+          connect: data.equipments.map(equipmentId => ({ id: equipmentId })),
         },
         servicesList: {
-          connect: params.services.map(serviceId => ({ id: serviceId })),
+          connect: data.services.map(serviceId => ({ id: serviceId })),
         },
         mealsList: {
-          connect: params.meals.map(mealId => ({ id: mealId })),
+          connect: data.meals.map(mealId => ({ id: mealId })),
         },
         securities: {
-          connect: params.securities.map(securityId => ({ id: securityId })),
+          connect: data.securities.map(securityId => ({ id: securityId })),
         },
         img: {
-          create: params.images.map(img => ({ img })),
+          create: data.images.map(img => ({ img })),
         },
       },
+    })
+
+    // Ensuite, mettre à jour avec les relations supplémentaires
+    if (data.nearbyPlaces && data.nearbyPlaces.length > 0) {
+      for (const place of data.nearbyPlaces) {
+        await prisma.product.update({
+          where: { id: createdProduct.id },
+          data: {
+            nearbyPlaces: {
+              create: {
+                name: place.name,
+                distance: Number(place.distance),
+                duration: Number(place.duration),
+                transport: place.transport,
+              },
+            },
+          },
+        })
+      }
+    }
+
+    if (data.transportOptions && data.transportOptions.length > 0) {
+      for (const option of data.transportOptions) {
+        await prisma.product.update({
+          where: { id: createdProduct.id },
+          data: {
+            transportOptions: {
+              create: {
+                name: option.name,
+                description: option.description || '',
+              },
+            },
+          },
+        })
+      }
+    }
+
+    if (data.propertyInfo) {
+      await prisma.product.update({
+        where: { id: createdProduct.id },
+        data: {
+          propertyInfo: {
+            create: {
+              hasStairs: Boolean(data.propertyInfo.hasStairs),
+              hasElevator: Boolean(data.propertyInfo.hasElevator),
+              hasHandicapAccess: Boolean(data.propertyInfo.hasHandicapAccess),
+              hasPetsOnProperty: Boolean(data.propertyInfo.hasPetsOnProperty),
+              additionalNotes: data.propertyInfo.additionalNotes || '',
+            },
+          },
+        },
+      })
+    }
+
+    if (data.cancellationPolicy) {
+      await prisma.product.update({
+        where: { id: createdProduct.id },
+        data: {
+          cancellationPolicy: {
+            create: {
+              freeCancellationHours: Number(data.cancellationPolicy.freeCancellationHours),
+              partialRefundPercent: Number(data.cancellationPolicy.partialRefundPercent),
+              additionalTerms: data.cancellationPolicy.additionalTerms || '',
+            },
+          },
+        },
+      })
+    }
+
+    // Récupérer le produit avec toutes ses relations
+    const finalProduct = await prisma.product.findUnique({
+      where: { id: createdProduct.id },
       include: {
         img: true,
         type: true,
@@ -188,10 +251,14 @@ export async function createProduct(params: {
         servicesList: true,
         mealsList: true,
         options: true,
+        nearbyPlaces: true,
+        transportOptions: true,
+        propertyInfo: true,
+        cancellationPolicy: true,
       },
     })
 
-    if (!createdProduct) throw Error('Erreur lors de la creation du produit')
+    // Envoyer les emails aux administrateurs
     const admin = await findAllUserByRoles('ADMIN')
     admin?.map(async user => {
       await sendTemplatedMail(
@@ -200,15 +267,16 @@ export async function createProduct(params: {
         'annonce-postee.html',
         {
           name: user.name || 'Administrateur',
-          productName: params.name,
+          productName: data.name,
           annonceUrl: process.env.NEXTAUTH_URL + '/host/' + createdProduct.id,
         }
       )
     })
-    return createdProduct
+
+    return finalProduct
   } catch (error) {
-    console.error('Erreur lors de la création du produit:', error)
-    return null
+    console.error('Error creating product:', error)
+    throw error
   }
 }
 

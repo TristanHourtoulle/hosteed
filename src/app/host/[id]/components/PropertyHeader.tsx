@@ -1,6 +1,9 @@
-import { Star, Heart, Share, MapPin } from 'lucide-react'
+'use client'
+
+import { Star, Heart, MapPin } from 'lucide-react'
 import { getCityFromAddress } from '@/lib/utils'
 import { useFavorites } from '@/hooks/useFavorites'
+import { ShareButton } from './ShareButton'
 
 interface Reviews {
   id: string
@@ -52,10 +55,7 @@ export default function PropertyHeader({
         </div>
       </div>
       <div className='flex items-center gap-3 mt-4 sm:mt-0'>
-        <button className='flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors'>
-          <Share className='h-4 w-4' />
-          Partager
-        </button>
+        <ShareButton />
         <button
           onClick={toggleFavorite}
           disabled={isLoading}

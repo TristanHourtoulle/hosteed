@@ -16,11 +16,13 @@ import PropertyServices from './components/PropertyServices'
 import PropertyMeals from './components/PropertyMeals'
 import PropertyLocation from './components/PropertyLocation'
 import PropertyRules from './components/PropertyRules'
+import PropertyInfo from './components/PropertyInfo'
 import PropertySafety from './components/PropertySafety'
 import CancellationPolicy from './components/CancellationPolicy'
 import PropertyReviews from './components/PropertyReviews'
 import HostInformation from './components/HostInformation'
 import BookingCard from './components/BookingCard'
+import { ShareButton } from './components/ShareButton'
 
 interface Reviews {
   id: string
@@ -35,6 +37,18 @@ interface Reviews {
   visitDate: Date
   publishDate: Date
   approved: boolean
+}
+
+interface Rules {
+  id: string
+  productId: string
+  smokingAllowed: boolean
+  petsAllowed: boolean
+  eventsAllowed: boolean
+  checkInTime: string
+  checkOutTime: string
+  selfCheckIn: boolean
+  selfCheckInType?: string
 }
 
 interface Product {
@@ -58,6 +72,29 @@ interface Product {
   contract?: boolean
   longitude?: number
   latitude?: number
+  rules: Rules[]
+  nearbyPlaces?: {
+    name: string
+    distance: number
+    duration: number
+    transport: string
+  }[]
+  transportOptions?: {
+    name: string
+    description?: string
+  }[]
+  propertyInfo?: {
+    hasStairs: boolean
+    hasElevator: boolean
+    hasHandicapAccess: boolean
+    hasPetsOnProperty: boolean
+    additionalNotes?: string
+  }
+  cancellationPolicy?: {
+    freeCancellationHours: number
+    partialRefundPercent: number
+    additionalTerms?: string
+  }
 }
 
 export default function ProductDetails() {
@@ -186,30 +223,23 @@ export default function ProductDetails() {
     )
   }
 
-  if (error) {
+  if (error || !product) {
     return (
       <div className='min-h-screen bg-white flex items-center justify-center'>
         <div className='text-center'>
-          <p className='text-red-600 text-lg mb-4'>{error}</p>
-          <Link href='/host' className='text-blue-600 hover:underline'>
-            Retour aux hébergements
+          <h2 className='text-2xl font-semibold text-gray-900 mb-2'>Une erreur est survenue</h2>
+          <p className='text-gray-600'>{error || "Le produit n'a pas été trouvé"}</p>
+          <Link href='/' className='text-blue-600 hover:text-blue-800 mt-4 inline-block'>
+            Retour à l'accueil
           </Link>
         </div>
       </div>
     )
   }
 
-  if (!product) {
-    return (
-      <div className='min-h-screen bg-white flex items-center justify-center'>
-        <p className='text-gray-600'>Produit non trouvé</p>
-      </div>
-    )
-  }
-
   return (
-    <div className='min-h-screen bg-white mb-20'>
-      <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6'>
+    <div className='min-h-screen bg-white'>
+      <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'>
         <PropertyHeader
           name={product.name}
           reviews={product.reviews}
@@ -227,39 +257,62 @@ export default function ProductDetails() {
           setShowAllPhotos={setShowAllPhotos}
         />
 
-        <div className='grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-12 mt-6 sm:mt-8'>
-          <div className='lg:col-span-2 space-y-6 sm:space-y-8'>
+        <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
+          <div className='lg:col-span-2 space-y-10'>
             <PropertyOverview product={product} />
-            <PropertyHighlights product={product} />
+
+            <PropertyHighlights
+              product={{ certified: product.certified, autoAccept: product.autoAccept }}
+            />
+
             <PropertyDescription description={product.description} />
+
             <PropertyAmenities equipments={product.equipments} />
-            {product.servicesList && product.servicesList.length > 0 && (
-              <PropertyServices services={product.servicesList} />
-            )}
-            {product.mealsList && product.mealsList.length > 0 && (
-              <PropertyMeals meals={product.mealsList} />
-            )}
-            <PropertyLocation address={product.address} />
-            <PropertyRules maxPeople={product.maxPeople} />
+
+            <PropertyServices services={product.servicesList} />
+
+            <PropertyMeals meals={product.mealsList} />
+
+            <PropertyLocation
+              address={product.address}
+              nearbyPlaces={product.nearbyPlaces}
+              transportOptions={product.transportOptions}
+            />
+
+            <PropertyRules
+              maxPeople={product.maxPeople}
+              rules={
+                product.rules?.[0] || {
+                  smokingAllowed: false,
+                  petsAllowed: false,
+                  eventsAllowed: false,
+                  checkInTime: '15:00',
+                  checkOutTime: '11:00',
+                  selfCheckIn: false,
+                }
+              }
+            />
+
+            <PropertyInfo propertyInfo={product.propertyInfo} />
+
             <PropertySafety />
-            <CancellationPolicy />
-            {product.reviews && product.reviews.length > 0 && (
-              <PropertyReviews reviews={product.reviews} globalGrade={globalGrade} />
-            )}
-            <HostInformation />
+
+            <CancellationPolicy policy={product.cancellationPolicy} />
+
+            <PropertyReviews reviews={product.reviews} globalGrade={globalGrade} />
+
+            <HostInformation hostName='Hosteed' />
           </div>
 
-          <div className='lg:col-span-1 order-first lg:order-last'>
-            <div className='lg:sticky lg:top-6'>
-              <BookingCard
-                product={product}
-                globalGrade={globalGrade}
-                formData={formData}
-                handleDateChange={handleDateChange}
-                isAvailable={isAvailable}
-                today={today}
-              />
-            </div>
+          <div className='lg:col-span-1'>
+            <BookingCard
+              product={product}
+              globalGrade={globalGrade}
+              formData={formData}
+              handleDateChange={handleDateChange}
+              isAvailable={isAvailable}
+              today={today}
+            />
           </div>
         </div>
       </div>

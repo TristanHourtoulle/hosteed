@@ -1,25 +1,25 @@
 // TODO: refactor this file because it's larger than 200 lines
 import { NextResponse } from 'next/server'
+import prisma from '@/lib/prisma'
 import { approveRent, createRent } from '@/lib/services/rents.service'
 import Stripe from 'stripe'
 import { SendMail } from '@/lib/services/email.service'
-import { prisma } from '@/lib/prisma'
 import { RentStatus } from '@prisma/client'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-04-30.basil',
+  apiVersion: '2025-05-28.basil',
 })
 
 type StripeWebhookEvent = {
-  type: string;
+  type: string
   data: {
     object: Stripe.PaymentIntent | Stripe.Dispute | Stripe.Charge | Stripe.Checkout.Session
   }
 }
 
 export async function POST(req: Request): Promise<Response> {
-  const body = await req.text();
-  const signature = req.headers.get('stripe-signature');
+  const body = await req.text()
+  const signature = req.headers.get('stripe-signature')
 
   if (!signature) {
     return NextResponse.json({ error: 'Signature manquante' }, { status: 400 })
@@ -30,19 +30,19 @@ export async function POST(req: Request): Promise<Response> {
       body,
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!
-    ) as StripeWebhookEvent;
+    ) as StripeWebhookEvent
 
     // Gestion des litiges
     if (event.type === 'charge.dispute.created') {
-      const dispute = event.data.object as Stripe.Dispute;
-      const paymentIntent = dispute.payment_intent as string;
+      const dispute = event.data.object as Stripe.Dispute
+      const paymentIntent = dispute.payment_intent as string
 
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 2000))
       const rent = await prisma.rent.findFirstOrThrow({
-        where: { stripeId: paymentIntent }
-      });
+        where: { stripeId: paymentIntent },
+      })
 
-      console.log('Charge DISPUTE CREATED', paymentIntent, rent);
+      console.log('Charge DISPUTE CREATED', paymentIntent, rent)
       if (rent) {
         const updatRequest = await prisma.rent.update({
           where: { id: rent.id },
@@ -88,13 +88,13 @@ export async function POST(req: Request): Promise<Response> {
 
     // Gestion des paiements réussis
     if (event.type === 'payment_intent.succeeded') {
-      const paymentIntent = event.data.object as Stripe.PaymentIntent;
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const paymentIntent = event.data.object as Stripe.PaymentIntent
+      await new Promise(resolve => setTimeout(resolve, 2000))
 
       // Vérifier si le paiement a été capturé
       if (paymentIntent.status !== 'succeeded') {
-        console.log("Paiement non capturé, en attente de capture manuelle");
-        return NextResponse.json({ received: true });
+        console.log('Paiement non capturé, en attente de capture manuelle')
+        return NextResponse.json({ received: true })
       }
 
       const rent = await prisma.rent.findFirst({
@@ -261,9 +261,9 @@ export async function POST(req: Request): Promise<Response> {
           where: { id: rent.id },
           data: {
             status: 'WAITING' as RentStatus,
-            payment: 'NOT_PAID'
-          }
-        });
+            payment: 'NOT_PAID',
+          },
+        })
       } catch (error) {
         console.error('Erreur lors de la création de la réservation:', error)
         return NextResponse.json(

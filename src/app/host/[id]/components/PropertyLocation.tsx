@@ -1,15 +1,35 @@
-import { MapPin } from 'lucide-react'
+import { MapPin, Clock, Car } from 'lucide-react'
 import { getCityFromAddress } from '@/lib/utils'
+
+interface NearbyPlace {
+  name: string
+  distance: number
+  duration: number
+  transport: string
+}
+
+interface TransportOption {
+  name: string
+  description?: string
+}
 
 interface PropertyLocationProps {
   address?: string
+  nearbyPlaces?: NearbyPlace[]
+  transportOptions?: TransportOption[]
 }
 
-export default function PropertyLocation({ address }: PropertyLocationProps) {
+export default function PropertyLocation({
+  address,
+  nearbyPlaces,
+  transportOptions,
+}: PropertyLocationProps) {
+  if (!address) return null
+
   return (
     <div className='border-b border-gray-200 pb-8'>
       <h3 className='text-lg font-semibold text-gray-900 mb-4'>Emplacement</h3>
-      <div className='space-y-4'>
+      <div className='space-y-6'>
         <div className='flex items-start gap-3'>
           <MapPin className='h-5 w-5 text-gray-400 mt-0.5' />
           <div>
@@ -55,25 +75,46 @@ export default function PropertyLocation({ address }: PropertyLocationProps) {
           </div>
         </div>
 
-        <div className='grid grid-cols-1 md:grid-cols-2 gap-4 text-sm'>
+        {nearbyPlaces && nearbyPlaces.length > 0 && (
           <div>
-            <h4 className='font-medium text-gray-900 mb-2'>À proximité</h4>
-            <ul className='space-y-1 text-gray-600'>
-              <li>• Plage - 2 min à pied</li>
-              <li>• Restaurant - 5 min à pied</li>
-              <li>• Supermarché - 10 min en voiture</li>
-              <li>• Aéroport - 45 min en voiture</li>
-            </ul>
+            <h4 className='text-base font-medium text-gray-900 mb-3'>À proximité</h4>
+            <div className='space-y-3'>
+              {nearbyPlaces.map((place, index) => (
+                <div key={index} className='flex items-start gap-3'>
+                  <Clock className='h-5 w-5 text-gray-400 mt-0.5' />
+                  <div>
+                    <p className='text-gray-900'>{place.name}</p>
+                    <p className='text-sm text-gray-600'>
+                      {place.distance < 1000
+                        ? `${place.distance}m`
+                        : `${(place.distance / 1000).toFixed(1)}km`}{' '}
+                      • {place.duration} min {place.transport}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
+        )}
+
+        {transportOptions && transportOptions.length > 0 && (
           <div>
-            <h4 className='font-medium text-gray-900 mb-2'>Transports</h4>
-            <ul className='space-y-1 text-gray-600'>
-              <li>• Parking gratuit sur place</li>
-              <li>• Taxi disponible</li>
-              <li>• Location de voiture possible</li>
-            </ul>
+            <h4 className='text-base font-medium text-gray-900 mb-3'>Transports</h4>
+            <div className='space-y-3'>
+              {transportOptions.map((option, index) => (
+                <div key={index} className='flex items-start gap-3'>
+                  <Car className='h-5 w-5 text-gray-400 mt-0.5' />
+                  <div>
+                    <p className='text-gray-900'>{option.name}</p>
+                    {option.description && (
+                      <p className='text-sm text-gray-600'>{option.description}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )

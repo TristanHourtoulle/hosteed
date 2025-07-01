@@ -27,3 +27,42 @@ export function getCityFromAddress(address: string | null | undefined): string {
   // Fallback to first part
   return parts[0] || 'Ville non spécifiée'
 }
+
+export function calculateAverageRating(
+  reviews: {
+    grade: number
+    welcomeGrade: number
+    staff: number
+    comfort: number
+    equipment: number
+    cleaning: number
+  }[]
+) {
+  if (!reviews || reviews.length === 0) return null
+
+  const totalRating = reviews.reduce((acc, review) => {
+    const reviewAverage =
+      (review.grade +
+        review.welcomeGrade +
+        review.staff +
+        review.comfort +
+        review.equipment +
+        review.cleaning) /
+      6
+    return acc + reviewAverage
+  }, 0)
+
+  return (totalRating / reviews.length).toFixed(2)
+}
+
+export function getProfileImageUrl(imageUrl: string | null): string | null {
+  if (!imageUrl) return null
+
+  // Handle base64 images
+  if (imageUrl.startsWith('data:')) {
+    return imageUrl
+  }
+
+  // Return regular URLs (like Google profile pictures) as is
+  return imageUrl
+}

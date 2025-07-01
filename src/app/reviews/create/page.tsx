@@ -1,10 +1,16 @@
-// TODO: refactor this file because it's larger than 200 lines
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createReview } from '@/lib/services/reviews.service'
 import { getRentById } from '@/lib/services/rents.service'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
+import { Input } from '@/components/ui/shadcnui/input'
+import { Button } from '@/components/ui/shadcnui/button'
+import { Label } from '@/components/ui/shadcnui/label'
+import { Alert, AlertDescription } from '@/components/ui/shadcnui/alert'
+import { Star, ChevronLeft } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 interface ReviewFormData {
   productId: string
@@ -20,6 +26,68 @@ interface ReviewFormData {
   text: string
   visitingDate: string
   publishDate: string
+}
+
+interface FormErrors extends Partial<Record<keyof ReviewFormData, string>> {
+  submit?: string
+}
+
+const containerVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.6,
+      staggerChildren: 0.1,
+    },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 },
+}
+
+function RatingInput({
+  value,
+  onChange,
+  label,
+}: {
+  value: number
+  onChange: (value: number) => void
+  label: string
+}) {
+  return (
+    <motion.div
+      variants={itemVariants}
+      className='relative p-6 rounded-xl bg-white shadow-sm border border-gray-100 hover:border-blue-100 transition-all duration-300'
+    >
+      <Label className='text-base font-medium text-gray-800 mb-3 block'>{label}</Label>
+      <div className='flex items-center gap-2'>
+        {[1, 2, 3, 4, 5].map(rating => (
+          <motion.button
+            key={rating}
+            type='button'
+            onClick={() => onChange(rating)}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            className={`p-2 rounded-full transition-all duration-300 ${
+              rating <= value
+                ? 'text-yellow-400 hover:text-yellow-500 transform hover:-translate-y-1'
+                : 'text-gray-300 hover:text-gray-400'
+            }`}
+          >
+            <Star
+              className={`w-8 h-8 ${rating <= value ? 'fill-current filter drop-shadow-md' : ''}`}
+              strokeWidth={1.5}
+            />
+          </motion.button>
+        ))}
+      </div>
+      <div className='absolute top-4 right-4 text-2xl font-semibold text-blue-600'>{value}/5</div>
+    </motion.div>
+  )
 }
 
 function ReviewForm() {
@@ -43,7 +111,7 @@ function ReviewForm() {
     publishDate: new Date().toISOString().split('T')[0],
   })
 
-  const [errors, setErrors] = useState<Partial<Record<keyof ReviewFormData, string>>>({})
+  const [errors, setErrors] = useState<FormErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -53,7 +121,6 @@ function ReviewForm() {
         setIsLoading(false)
         return
       }
-      console.log(rentId)
       try {
         const rent = await getRentById(rentId)
         if (rent) {
@@ -62,6 +129,7 @@ function ReviewForm() {
             rentId,
             productId: rent.product.id,
             userId: rent.userId,
+            visitingDate: new Date(rent.arrivingDate).toISOString().split('T')[0],
           }))
         } else {
           setErrors(prev => ({
@@ -86,25 +154,10 @@ function ReviewForm() {
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof ReviewFormData, string>> = {}
 
-    if (!formData.productId) newErrors.productId = "L'ID du produit est requis"
-    if (!formData.rentId) newErrors.rentId = "L'ID de la location est requis"
-    if (!formData.userId) newErrors.userId = "L'ID de l'utilisateur est requis"
-    if (formData.grade < 1 || formData.grade > 5) newErrors.grade = 'La note doit être entre 1 et 5'
-    if (formData.welcomeGrade < 1 || formData.welcomeGrade > 5)
-      newErrors.welcomeGrade = "La note d'accueil doit être entre 1 et 5"
-    if (formData.staff < 1 || formData.staff > 5)
-      newErrors.staff = 'La note du personnel doit être entre 1 et 5'
-    if (formData.comfort < 1 || formData.comfort > 5)
-      newErrors.comfort = 'La note du confort doit être entre 1 et 5'
-    if (formData.equipment < 1 || formData.equipment > 5)
-      newErrors.equipment = "La note de l'équipement doit être entre 1 et 5"
-    if (formData.cleaning < 1 || formData.cleaning > 5)
-      newErrors.cleaning = 'La note du nettoyage doit être entre 1 et 5'
     if (!formData.title) newErrors.title = 'Le titre est requis'
     if (!formData.text || formData.text.length < 10)
-      newErrors.text = 'Le texte doit contenir au moins 10 caractères'
+      newErrors.text = 'Le commentaire doit contenir au moins 10 caractères'
     if (!formData.visitingDate) newErrors.visitingDate = 'La date de visite est requise'
-    if (!formData.publishDate) newErrors.publishDate = 'La date de publication est requise'
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -124,14 +177,19 @@ function ReviewForm() {
       })
 
       if (result) {
-        alert('Avis créé avec succès')
         router.push('/reservations')
       } else {
-        alert("Erreur lors de la création de l'avis")
+        setErrors(prev => ({
+          ...prev,
+          submit: "Erreur lors de la création de l'avis",
+        }))
       }
     } catch (error) {
       console.error(error)
-      alert('Une erreur est survenue')
+      setErrors(prev => ({
+        ...prev,
+        submit: 'Une erreur est survenue',
+      }))
     } finally {
       setIsSubmitting(false)
     }
@@ -141,205 +199,207 @@ function ReviewForm() {
     const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'grade' ? Number(value) : value,
+      [name]: value,
     }))
   }
 
   if (isLoading) {
     return (
-      <div className='min-h-screen bg-white flex items-center justify-center'>
-        <p className='text-gray-600'>Chargement...</p>
+      <div className='min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center'>
+        <div className='animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent'></div>
       </div>
     )
   }
 
   return (
-    <div className='container mx-auto py-10 px-4'>
-      <h1 className='text-2xl font-bold mb-6'>Créer un avis</h1>
-      <form onSubmit={handleSubmit} className='max-w-2xl mx-auto space-y-6'>
-        <div className='form-group'>
-          <label htmlFor='grade' className='block mb-2 font-medium'>
-            Note globale (1-5)
-          </label>
-          <input
-            type='number'
-            id='grade'
-            name='grade'
-            min='1'
-            max='5'
-            value={formData.grade}
-            onChange={handleChange}
-            className={`w-full p-2 border rounded ${errors.grade ? 'border-red-500' : 'border-gray-300'}`}
-          />
-          {errors.grade && <p className='text-red-500 text-sm mt-1'>{errors.grade}</p>}
-        </div>
+    <div className='min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-12 px-4'>
+      <motion.div
+        className='container max-w-4xl mx-auto'
+        initial='hidden'
+        animate='visible'
+        variants={containerVariants}
+      >
+        <motion.div className='mb-8 flex items-center' variants={itemVariants}>
+          <Button
+            variant='ghost'
+            onClick={() => router.back()}
+            className='text-gray-600 hover:text-gray-900'
+          >
+            <ChevronLeft className='w-5 h-5 mr-2' />
+            Retour
+          </Button>
+        </motion.div>
 
-        <div className='form-group'>
-          <label htmlFor='welcomeGrade' className='block mb-2 font-medium'>
-            Note d&apos;accueil (1-5)
-          </label>
-          <input
-            type='number'
-            id='welcomeGrade'
-            name='welcomeGrade'
-            min='1'
-            max='5'
-            value={formData.welcomeGrade}
-            onChange={handleChange}
-            className={`w-full p-2 border rounded ${errors.welcomeGrade ? 'border-red-500' : 'border-gray-300'}`}
-          />
-          {errors.welcomeGrade && (
-            <p className='text-red-500 text-sm mt-1'>{errors.welcomeGrade}</p>
-          )}
-        </div>
+        <Card className='backdrop-blur-sm bg-white/90 shadow-xl border-0'>
+          <CardHeader className='text-center border-b border-gray-100 pb-8 pt-10'>
+            <CardTitle className='text-3xl font-bold text-gray-900'>
+              Partagez votre expérience
+            </CardTitle>
+            <p className='text-gray-500 mt-2'>
+              Votre avis aide les autres voyageurs à faire le bon choix
+            </p>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className='space-y-10 pt-8'>
+              {/* Notes Section */}
+              <motion.div className='grid gap-6 md:grid-cols-2' variants={containerVariants}>
+                <RatingInput
+                  value={formData.grade}
+                  onChange={value => setFormData(prev => ({ ...prev, grade: value }))}
+                  label='Note globale'
+                />
+                <RatingInput
+                  value={formData.welcomeGrade}
+                  onChange={value => setFormData(prev => ({ ...prev, welcomeGrade: value }))}
+                  label='Accueil'
+                />
+                <RatingInput
+                  value={formData.staff}
+                  onChange={value => setFormData(prev => ({ ...prev, staff: value }))}
+                  label='Personnel'
+                />
+                <RatingInput
+                  value={formData.comfort}
+                  onChange={value => setFormData(prev => ({ ...prev, comfort: value }))}
+                  label='Confort'
+                />
+                <RatingInput
+                  value={formData.equipment}
+                  onChange={value => setFormData(prev => ({ ...prev, equipment: value }))}
+                  label='Équipement'
+                />
+                <RatingInput
+                  value={formData.cleaning}
+                  onChange={value => setFormData(prev => ({ ...prev, cleaning: value }))}
+                  label='Nettoyage'
+                />
+              </motion.div>
 
-        <div className='form-group'>
-          <label htmlFor='staff' className='block mb-2 font-medium'>
-            Note du personnel (1-5)
-          </label>
-          <input
-            type='number'
-            id='staff'
-            name='staff'
-            min='1'
-            max='5'
-            value={formData.staff}
-            onChange={handleChange}
-            className={`w-full p-2 border rounded ${errors.staff ? 'border-red-500' : 'border-gray-300'}`}
-          />
-          {errors.staff && <p className='text-red-500 text-sm mt-1'>{errors.staff}</p>}
-        </div>
+              {/* Titre et Commentaire Section */}
+              <motion.div className='space-y-6' variants={containerVariants}>
+                <motion.div variants={itemVariants}>
+                  <Label htmlFor='title' className='text-lg font-medium text-gray-900 mb-2 block'>
+                    Donnez un titre à votre avis
+                  </Label>
+                  <Input
+                    id='title'
+                    name='title'
+                    value={formData.title}
+                    onChange={handleChange}
+                    className={`mt-1 text-lg py-3 ${errors.title ? 'border-red-500 focus-visible:ring-red-200' : 'focus-visible:ring-blue-200'}`}
+                    placeholder='Ex: Un séjour inoubliable !'
+                  />
+                  {errors.title && (
+                    <motion.p
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className='text-red-500 text-sm mt-2'
+                    >
+                      {errors.title}
+                    </motion.p>
+                  )}
+                </motion.div>
 
-        <div className='form-group'>
-          <label htmlFor='comfort' className='block mb-2 font-medium'>
-            Note du confort (1-5)
-          </label>
-          <input
-            type='number'
-            id='comfort'
-            name='comfort'
-            min='1'
-            max='5'
-            value={formData.comfort}
-            onChange={handleChange}
-            className={`w-full p-2 border rounded ${errors.comfort ? 'border-red-500' : 'border-gray-300'}`}
-          />
-          {errors.comfort && <p className='text-red-500 text-sm mt-1'>{errors.comfort}</p>}
-        </div>
+                <motion.div variants={itemVariants}>
+                  <Label htmlFor='text' className='text-lg font-medium text-gray-900 mb-2 block'>
+                    Décrivez votre expérience
+                  </Label>
+                  <textarea
+                    id='text'
+                    name='text'
+                    value={formData.text}
+                    onChange={handleChange}
+                    rows={6}
+                    className={`mt-1 w-full rounded-xl border ${
+                      errors.text ? 'border-red-500' : 'border-gray-200'
+                    } bg-white/50 px-4 py-3 text-base shadow-sm outline-none transition-all duration-200 focus:border-blue-500 focus:ring-4 ${
+                      errors.text ? 'focus:ring-red-100' : 'focus:ring-blue-100'
+                    }`}
+                    placeholder='Partagez les détails qui rendront votre avis utile (minimum 10 caractères)'
+                  />
+                  {errors.text && (
+                    <motion.p
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className='text-red-500 text-sm mt-2'
+                    >
+                      {errors.text}
+                    </motion.p>
+                  )}
+                </motion.div>
 
-        <div className='form-group'>
-          <label htmlFor='equipment' className='block mb-2 font-medium'>
-            Note de l&apos;équipement (1-5)
-          </label>
-          <input
-            type='number'
-            id='equipment'
-            name='equipment'
-            min='1'
-            max='5'
-            value={formData.equipment}
-            onChange={handleChange}
-            className={`w-full p-2 border rounded ${errors.equipment ? 'border-red-500' : 'border-gray-300'}`}
-          />
-          {errors.equipment && <p className='text-red-500 text-sm mt-1'>{errors.equipment}</p>}
-        </div>
+                <motion.div variants={itemVariants}>
+                  <Label
+                    htmlFor='visitingDate'
+                    className='text-lg font-medium text-gray-900 mb-2 block'
+                  >
+                    Quand avez-vous séjourné ?
+                  </Label>
+                  <Input
+                    type='date'
+                    id='visitingDate'
+                    name='visitingDate'
+                    value={formData.visitingDate}
+                    onChange={handleChange}
+                    className={`mt-1 py-3 ${errors.visitingDate ? 'border-red-500' : ''}`}
+                  />
+                  {errors.visitingDate && (
+                    <motion.p
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className='text-red-500 text-sm mt-2'
+                    >
+                      {errors.visitingDate}
+                    </motion.p>
+                  )}
+                </motion.div>
+              </motion.div>
 
-        <div className='form-group'>
-          <label htmlFor='cleaning' className='block mb-2 font-medium'>
-            Note du nettoyage (1-5)
-          </label>
-          <input
-            type='number'
-            id='cleaning'
-            name='cleaning'
-            min='1'
-            max='5'
-            value={formData.cleaning}
-            onChange={handleChange}
-            className={`w-full p-2 border rounded ${errors.cleaning ? 'border-red-500' : 'border-gray-300'}`}
-          />
-          {errors.cleaning && <p className='text-red-500 text-sm mt-1'>{errors.cleaning}</p>}
-        </div>
+              {errors.submit && (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+                  <Alert variant='destructive'>
+                    <AlertDescription>{errors.submit}</AlertDescription>
+                  </Alert>
+                </motion.div>
+              )}
 
-        <div className='form-group'>
-          <label htmlFor='title' className='block mb-2 font-medium'>
-            Titre
-          </label>
-          <input
-            type='text'
-            id='title'
-            name='title'
-            value={formData.title}
-            onChange={handleChange}
-            className={`w-full p-2 border rounded ${errors.title ? 'border-red-500' : 'border-gray-300'}`}
-          />
-          {errors.title && <p className='text-red-500 text-sm mt-1'>{errors.title}</p>}
-        </div>
-
-        <div className='form-group'>
-          <label htmlFor='text' className='block mb-2 font-medium'>
-            Commentaire
-          </label>
-          <textarea
-            id='text'
-            name='text'
-            value={formData.text}
-            onChange={handleChange}
-            rows={4}
-            className={`w-full p-2 border rounded ${errors.text ? 'border-red-500' : 'border-gray-300'}`}
-          />
-          {errors.text && <p className='text-red-500 text-sm mt-1'>{errors.text}</p>}
-        </div>
-
-        <div className='form-group'>
-          <label htmlFor='visitingDate' className='block mb-2 font-medium'>
-            Date de visite
-          </label>
-          <input
-            type='date'
-            id='visitingDate'
-            name='visitingDate'
-            value={formData.visitingDate}
-            onChange={handleChange}
-            className={`w-full p-2 border rounded ${errors.visitingDate ? 'border-red-500' : 'border-gray-300'}`}
-          />
-          {errors.visitingDate && (
-            <p className='text-red-500 text-sm mt-1'>{errors.visitingDate}</p>
-          )}
-        </div>
-
-        <div className='form-group'>
-          <label htmlFor='publishDate' className='block mb-2 font-medium'>
-            Date de publication
-          </label>
-          <input
-            type='date'
-            id='publishDate'
-            name='publishDate'
-            value={formData.publishDate}
-            onChange={handleChange}
-            className={`w-full p-2 border rounded ${errors.publishDate ? 'border-red-500' : 'border-gray-300'}`}
-          />
-          {errors.publishDate && <p className='text-red-500 text-sm mt-1'>{errors.publishDate}</p>}
-        </div>
-
-        <button
-          type='submit'
-          disabled={isSubmitting}
-          className={`w-full py-2 px-4 rounded text-white font-medium ${
-            isSubmitting ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'
-          }`}
-        >
-          {isSubmitting ? 'Création en cours...' : "Créer l'avis"}
-        </button>
-      </form>
+              <motion.div className='flex justify-end gap-4 pt-6' variants={itemVariants}>
+                <Button
+                  type='button'
+                  variant='secondary'
+                  onClick={() => router.back()}
+                  className='px-6'
+                >
+                  Annuler
+                </Button>
+                <Button type='submit' disabled={isSubmitting} className='px-8'>
+                  {isSubmitting ? (
+                    <>
+                      <div className='animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2'></div>
+                      Envoi en cours...
+                    </>
+                  ) : (
+                    'Publier mon avis'
+                  )}
+                </Button>
+              </motion.div>
+            </form>
+          </CardContent>
+        </Card>
+      </motion.div>
     </div>
   )
 }
 
 export default function CreateReviewPage() {
   return (
-    <Suspense fallback={<div>Chargement...</div>}>
+    <Suspense
+      fallback={
+        <div className='min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center'>
+          <div className='animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent'></div>
+        </div>
+      }
+    >
       <ReviewForm />
     </Suspense>
   )

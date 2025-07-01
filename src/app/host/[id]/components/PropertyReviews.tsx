@@ -21,6 +21,20 @@ interface PropertyReviewsProps {
 }
 
 export default function PropertyReviews({ reviews, globalGrade }: PropertyReviewsProps) {
+  if (!reviews || reviews.length === 0) {
+    return (
+      <div className='border-b border-gray-200 pb-8'>
+        <div className='flex items-center gap-4 mb-6'>
+          <Star className='h-6 w-6 text-gray-300' />
+          <h3 className='text-lg font-semibold text-gray-600'>Aucun avis pour le moment</h3>
+        </div>
+        <p className='text-gray-500 text-sm'>
+          Soyez le premier à donner votre avis sur cet hébergement !
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className='border-b border-gray-200 pb-8'>
       <div className='flex items-center gap-4 mb-6'>
