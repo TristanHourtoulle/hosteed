@@ -142,6 +142,7 @@ export async function createProduct(data: CreateProductInput) {
         longitude: Number(data.longitude),
         latitude: Number(data.latitude),
         basePrice: data.basePrice,
+        priceMGA: data.priceMGA,
         room: data.room ? BigInt(data.room) : null,
         bathroom: data.bathroom ? BigInt(data.bathroom) : null,
         arriving: Number(data.arriving),

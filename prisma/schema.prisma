@@ -47,70 +47,71 @@ model Security {
 }
 
 model Rules {
-  id              String   @id @default(cuid())
+  id              String  @id @default(cuid())
   productId       String
-  smokingAllowed  Boolean  @default(false)
-  petsAllowed     Boolean  @default(false)
-  eventsAllowed   Boolean  @default(false)
-  checkInTime     String   @default("15:00")
-  checkOutTime    String   @default("11:00")
-  selfCheckIn     Boolean  @default(false)
+  smokingAllowed  Boolean @default(false)
+  petsAllowed     Boolean @default(false)
+  eventsAllowed   Boolean @default(false)
+  checkInTime     String  @default("15:00")
+  checkOutTime    String  @default("11:00")
+  selfCheckIn     Boolean @default(false)
   selfCheckInType String?
-  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product         Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model Product {
-  id               String            @id @default(cuid())
-  name             String
-  description      String
-  address          String
-  basePrice        String
-  room             BigInt?
-  bathroom         BigInt?
-  arriving         Int
-  leaving          Int
-  autoAccept       Boolean
-  equipement       BigInt?
-  meal             BigInt?
-  services         BigInt?
-  security         BigInt?
-  minRent          BigInt?
-  maxRent          BigInt?
-  advanceRent      BigInt?
-  delayTime        BigInt?
-  categories       BigInt
-  minPeople        BigInt?
-  maxPeople        BigInt?
-  commission       Int               @default(0)
-  validate         ProductValidation @default(NotVerified)
-  userManager      BigInt
-  typeId           String
-  phone            String
-  latitude         Float
-  longitude        Float
-  certified        Boolean           @default(false)
-  contract         Boolean           @default(false)
-  sizeRoom         Int?
-  options          Options[]
-  type             TypeRent          @relation(fields: [typeId], references: [id])
-  user             User[]
-  rents            Rent[]
-  reviews          Review[]
-  specificPrices   SpecificPrices[]
-  specificRequests SpecificRequest[]
-  equipments       Equipment[]       @relation("EquipmentToProduct")
-  img              Images[]          @relation("ImagesToProduct")
-  mealsList        Meals[]           @relation("MealsToProduct")
-  securities       Security[]        @relation("ProductToSecurity")
-  servicesList     Services[]        @relation("ProductToServices")
-  typeRoom         TypeRoom[]        @relation("ProductToTypeRoom")
-  discount         Discount[]
-  Chat             Chat[]
-  favorites        Favorite[]
-  rules            Rules[]
-  nearbyPlaces     NearbyPlace[]
-  transportOptions TransportOption[]
-  propertyInfo     PropertyInfo?
+  id                 String              @id @default(cuid())
+  name               String
+  description        String
+  address            String
+  basePrice          String
+  priceMGA           String
+  room               BigInt?
+  bathroom           BigInt?
+  arriving           Int
+  leaving            Int
+  autoAccept         Boolean
+  equipement         BigInt?
+  meal               BigInt?
+  services           BigInt?
+  security           BigInt?
+  minRent            BigInt?
+  maxRent            BigInt?
+  advanceRent        BigInt?
+  delayTime          BigInt?
+  categories         BigInt
+  minPeople          BigInt?
+  maxPeople          BigInt?
+  commission         Int                 @default(0)
+  validate           ProductValidation   @default(NotVerified)
+  userManager        BigInt
+  typeId             String
+  phone              String
+  latitude           Float
+  longitude          Float
+  certified          Boolean             @default(false)
+  contract           Boolean             @default(false)
+  sizeRoom           Int?
+  options            Options[]
+  type               TypeRent            @relation(fields: [typeId], references: [id])
+  user               User[]
+  rents              Rent[]
+  reviews            Review[]
+  specificPrices     SpecificPrices[]
+  specificRequests   SpecificRequest[]
+  equipments         Equipment[]         @relation("EquipmentToProduct")
+  img                Images[]            @relation("ImagesToProduct")
+  mealsList          Meals[]             @relation("MealsToProduct")
+  securities         Security[]          @relation("ProductToSecurity")
+  servicesList       Services[]          @relation("ProductToServices")
+  typeRoom           TypeRoom[]          @relation("ProductToTypeRoom")
+  discount           Discount[]
+  Chat               Chat[]
+  favorites          Favorite[]
+  rules              Rules[]
+  nearbyPlaces       NearbyPlace[]
+  transportOptions   TransportOption[]
+  propertyInfo       PropertyInfo?
   cancellationPolicy CancellationPolicy?
 
   UnAvailableProduct UnAvailableProduct[]
@@ -377,39 +378,46 @@ model Favorite {
 }
 
 model NearbyPlace {
-  id          String   @id @default(cuid())
-  name        String
-  distance    Int      // en mètres
-  duration    Int      // en minutes
-  transport   String   // à pied, en voiture, etc.
-  productId   String
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id        String  @id @default(cuid())
+  name      String
+  distance  Int // en mètres
+  duration  Int // en minutes
+  transport String // à pied, en voiture, etc.
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model TransportOption {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   name        String
   description String?
   productId   String
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product     Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model PropertyInfo {
-  id                    String   @id @default(cuid())
-  hasStairs            Boolean  @default(false)
-  hasElevator          Boolean  @default(false)
-  hasHandicapAccess    Boolean  @default(false)
-  hasPetsOnProperty    Boolean  @default(false)
-  additionalNotes      String?
-  productId            String   @unique
-  product              Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id                String  @id @default(cuid())
+  hasStairs         Boolean @default(false)
+  hasElevator       Boolean @default(false)
+  hasHandicapAccess Boolean @default(false)
+  hasPetsOnProperty Boolean @default(false)
+  additionalNotes   String?
+  productId         String  @unique
+  product           Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model CancellationPolicy {
-  id                    String   @id @default(cuid())
-  freeCancellationHours Int      // nombre d'heures avant l'arrivée pour une annulation gratuite
-  partialRefundPercent  Int      // pourcentage remboursé après la limite
+  id                    String  @id @default(cuid())
+  freeCancellationHours Int // nombre d'heures avant l'arrivée pour une annulation gratuite
+  partialRefundPercent  Int // pourcentage remboursé après la limite
   additionalTerms       String?
-  productId            String   @unique
-  product              Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId             String  @unique
+  product               Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Post {
+  id      String  @id @default(cuid())
+  title   String
+  content String
+  image   String?
 }

@@ -68,6 +68,7 @@ export default function CreateProduct() {
     longitude: 0,
     latitude: 0,
     basePrice: '',
+    priceMGA: '',
     room: 1,
     bathroom: 1,
     arriving: 14,
@@ -408,6 +409,24 @@ export default function CreateProduct() {
                       />
                       <span className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-500'>
                         €
+                      </span>
+                    </div>
+                  </div>
+                  <div className='space-y-2'>
+                    <Label htmlFor='basePrice'>Prix par nuit en MGA</Label>
+                    <div className='relative'>
+                      <Input
+                          id='basePrice'
+                          name='basePrice'
+                          type='text'
+                          value={formData.basePrice}
+                          onChange={handleInputChange}
+                          required
+                          placeholder='100'
+                          className='pl-8'
+                      />
+                      <span className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-500'>
+                        Ar
                       </span>
                     </div>
                   </div>

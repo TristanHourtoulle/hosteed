@@ -45,6 +45,7 @@ export interface CreateProductInput {
   longitude: number | string
   latitude: number | string
   basePrice: string
+  priceMGA: string
   room?: number | string | null
   bathroom?: number | string | null
   arriving: number | string
