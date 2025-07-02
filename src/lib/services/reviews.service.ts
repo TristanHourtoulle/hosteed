@@ -75,8 +75,27 @@ export async function createReview(params: {
   publishDate: Date
 }) {
   try {
-    const rent = await prisma.rent.findUnique({ where: { id: params.rentId } })
-    if (!rent) throw new Error('No rent found')
+    // Verify that the rent exists and belongs to the user
+    const rent = await prisma.rent.findUnique({
+      where: {
+        id: params.rentId,
+        userId: params.userId,
+        status: {
+          in: ['CHECKIN', 'CHECKOUT'],
+        },
+      },
+    })
+    if (!rent) throw new Error('Réservation invalide ou non éligible pour un avis')
+
+    // Check if a review already exists for this rent
+    const existingReview = await prisma.review.findFirst({
+      where: {
+        rentRelation: {
+          id: params.rentId,
+        },
+      },
+    })
+    if (existingReview) throw new Error('Un avis a déjà été laissé pour cette réservation')
 
     const user = await prisma.user.findUnique({ where: { id: params.userId } })
     if (!user) throw new Error('No user found')

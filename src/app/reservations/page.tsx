@@ -275,7 +275,7 @@ export default function ReservationsPage() {
               const isOngoing = rent.status === 'CHECKIN'
               const isPending = !rent.accepted || !rent.confirmed
               const canCancel = rent.status === 'RESERVED' && !isPending
-              const canReview = rent.status === 'CHECKOUT'
+              const canReview = rent.status === 'CHECKIN' || rent.status === 'CHECKOUT'
 
               return (
                 <Card
@@ -441,7 +441,7 @@ export default function ReservationsPage() {
                           <Button asChild size='sm' className='flex-1'>
                             <Link href={`/reviews/create?rentId=${rent.id}`}>
                               <Star className='w-4 h-4 mr-1' />
-                              Laisser un avis
+                              {rent.status === 'CHECKIN' ? 'Donner mon avis' : 'Laisser un avis'}
                             </Link>
                           </Button>
                         )}
