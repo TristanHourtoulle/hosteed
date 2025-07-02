@@ -311,6 +311,7 @@ model Chat {
   rent       Rent     @relation(fields: [rentId], references: [id], onDelete: Cascade)
   host       Boolean
   dateSended DateTime
+  read       Boolean  @default(false)
 }
 
 model PayRequest {

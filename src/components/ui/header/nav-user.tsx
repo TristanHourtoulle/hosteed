@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shadcnui'
-import { ChevronsUpDown, LogOut, Heart, Plus, User as UserIcon } from 'lucide-react'
+import { ChevronsUpDown, LogOut, Heart, Plus, User as UserIcon, MessageSquare } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { findUserById } from '@/lib/services/user.service'
@@ -103,6 +103,12 @@ export function NavUser({ session }: { session: Session | null }) {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href='/chat' className='flex items-center'>
+            <MessageSquare className='w-4 h-4 mr-2' />
+            Messages
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href='/favorites' className='flex items-center'>
             <Heart className='w-4 h-4 mr-2' />

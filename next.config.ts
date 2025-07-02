@@ -22,6 +22,11 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '10mb',
     },
+    turbo: {
+      rules: {
+        '*.prisma': ['prisma generate'],
+      },
+    },
   },
 }
 

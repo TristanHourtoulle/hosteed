@@ -489,8 +489,8 @@ export async function approveRent(id: string) {
     data: {
       status: 'RESERVED',
       payment: 'CLIENT_PAID',
-        accepted: true,
-        confirmed: true,
+      accepted: true,
+      confirmed: true,
     },
   })
   const admin = await findAllUserByRoles('ADMIN')
@@ -557,6 +557,7 @@ export async function findAllRentByUserId(id: string): Promise<RentWithRelations
 
 export async function findRentByHostUserId(id: string) {
   try {
+    console.log('user id in findRentByHostUserId', id)
     const rents = await prisma.rent.findMany({
       where: {
         product: {

@@ -18,10 +18,11 @@ import {
   CheckCircle,
   Loader,
   HourglassIcon,
+  MessageCircle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Card, CardContent } from '@/components/ui/shadcnui/card'
-import {createPromotedProduct, getActualProduct} from "@/lib/services/promotedProduct.service";
+import { createPromotedProduct, getActualProduct } from '@/lib/services/promotedProduct.service'
 
 interface Rent {
   id: string
@@ -414,7 +415,7 @@ export default function ReservationsPage() {
                       </Button>
                       <Button variant='outline' asChild className='w-full'>
                         <Link href={`/chat/${rent.id}`}>
-                          <Eye className='w-4 h-4 mr-2' />
+                          <MessageCircle className='w-4 h-4 mr-2' />
                           Contacter l&apos;hébergeur
                         </Link>
                       </Button>

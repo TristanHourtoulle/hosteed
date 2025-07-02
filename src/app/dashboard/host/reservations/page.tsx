@@ -5,6 +5,13 @@ import { useSession } from 'next-auth/react'
 import { findRentByHostUserId, approveRent } from '@/lib/services/rents.service'
 import { PaymentStatus, RentStatus } from '@prisma/client'
 import HostNavbar from '../components/HostNavbar'
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/shadcnui/select'
 
 interface Rent {
   id: string
@@ -27,7 +34,9 @@ interface Rent {
 export default function RentsPage() {
   const { data: session } = useSession()
   const [rents, setRents] = useState<Rent[]>([])
+  const [filteredRents, setFilteredRents] = useState<Rent[]>([])
   const [loading, setLoading] = useState(true)
+  const [filterStatus, setFilterStatus] = useState<string>('ALL')
 
   useEffect(() => {
     const fetchRents = async () => {
@@ -36,6 +45,7 @@ export default function RentsPage() {
           const data = await findRentByHostUserId(session.user.id)
           if (data) {
             setRents(data)
+            setFilteredRents(data)
           }
         }
       } catch (error) {
@@ -49,6 +59,23 @@ export default function RentsPage() {
       fetchRents()
     }
   }, [session])
+
+  useEffect(() => {
+    if (filterStatus === 'ALL') {
+      setFilteredRents(rents)
+    } else if (filterStatus === 'UPCOMING') {
+      const upcoming = rents.filter(
+        rent => rent.status === RentStatus.RESERVED && new Date(rent.arrivingDate) > new Date()
+      )
+      setFilteredRents(upcoming)
+    } else if (filterStatus === 'REQUESTS') {
+      const requests = rents.filter(rent => rent.status === RentStatus.WAITING)
+      setFilteredRents(requests)
+    } else if (filterStatus === 'REFUSED') {
+      const refused = rents.filter(rent => rent.status === RentStatus.CANCEL)
+      setFilteredRents(refused)
+    }
+  }, [filterStatus, rents])
 
   const getStatusBadge = (status: RentStatus) => {
     const statusConfig: Record<RentStatus, { label: string; color: string }> = {
@@ -99,7 +126,20 @@ export default function RentsPage() {
       <div className='container mx-auto py-6'>
         <div className='bg-white rounded-lg shadow-md'>
           <div className='p-6 border-b border-gray-200'>
-            <h1 className='text-2xl font-bold text-gray-900'>Mes Locations</h1>
+            <div className='flex justify-between items-center'>
+              <h1 className='text-2xl font-bold text-gray-900'>Mes Locations</h1>
+              <Select value={filterStatus} onValueChange={value => setFilterStatus(value)}>
+                <SelectTrigger className='w-[200px]'>
+                  <SelectValue placeholder='Filtrer par statut' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='ALL'>Toutes les réservations</SelectItem>
+                  <SelectItem value='UPCOMING'>Réservations à venir</SelectItem>
+                  <SelectItem value='REQUESTS'>Demandes de réservation</SelectItem>
+                  <SelectItem value='REFUSED'>Réservations refusées</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className='p-6'>
             <div className='overflow-x-auto'>
@@ -127,7 +167,7 @@ export default function RentsPage() {
                   </tr>
                 </thead>
                 <tbody className='bg-white divide-y divide-gray-200'>
-                  {rents.map(rent => (
+                  {filteredRents.map(rent => (
                     <tr key={rent.id} className='hover:bg-gray-50'>
                       <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900'>
                         {rent.product.name}
@@ -143,19 +183,33 @@ export default function RentsPage() {
                       </td>
                       <td className='px-6 py-4 whitespace-nowrap'>{getStatusBadge(rent.status)}</td>
                       <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900'>
-                        {rent.status === RentStatus.WAITING &&
-                          rent.payment == PaymentStatus.NOT_PAID && (
-                            <button
-                              onClick={() => handleApproveReservation(rent.id, rent.stripeId)}
-                              className='px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors'
-                            >
-                              Approuver
-                            </button>
-                          )}
+                        <div className='flex gap-2'>
+                          <a
+                            href={`/dashboard/host/reservations/${rent.id}`}
+                            className='px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors'
+                          >
+                            Détails
+                          </a>
+                          <a
+                            href={`/chat/${rent.id}`}
+                            className='px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors'
+                          >
+                            Discuter
+                          </a>
+                          {rent.status === RentStatus.WAITING &&
+                            rent.payment == PaymentStatus.NOT_PAID && (
+                              <button
+                                onClick={() => handleApproveReservation(rent.id, rent.stripeId)}
+                                className='px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors'
+                              >
+                                Approuver
+                              </button>
+                            )}
+                        </div>
                       </td>
                     </tr>
                   ))}
-                  {rents.length === 0 && (
+                  {filteredRents.length === 0 && (
                     <tr>
                       <td colSpan={6} className='px-6 py-4 text-center text-sm text-gray-500'>
                         Aucune location trouvée
