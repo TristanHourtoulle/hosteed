@@ -2,6 +2,8 @@
 
 import Image from 'next/image'
 import { Mail, Calendar } from 'lucide-react'
+import { format } from 'date-fns'
+import { fr } from 'date-fns/locale'
 import { EditPhotoDialog } from './EditPhotoDialog'
 import { updateUserPhoto } from '../actions'
 
@@ -59,7 +61,7 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
                 </div>
                 <div className='flex items-center gap-2'>
                   <Calendar className='w-4 h-4' />
-                  Membre depuis {new Date(user.createdAt).toLocaleDateString()}
+                  Membre depuis {format(new Date(user.createdAt), 'MMMM yyyy', { locale: fr })}
                 </div>
               </div>
             </div>

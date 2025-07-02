@@ -19,6 +19,7 @@ export async function getUserData() {
       email: true,
       image: true,
       password: true,
+      createdAt: true,
       Rent: {
         include: {
           product: {
