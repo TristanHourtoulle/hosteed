@@ -65,6 +65,14 @@ const Navbar = () => {
         Tous les hébergements
       </Link>
 
+      <Link
+        href='/posts'
+        className='block py-3 px-4 text-lg font-medium text-gray-900 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer'
+        onClick={() => setIsMobileMenuOpen(false)}
+      >
+        Blog
+      </Link>
+
       {/* <Link
         href='/search'
         className='block py-3 px-4 text-lg font-medium text-gray-900 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer'
@@ -324,6 +332,14 @@ const Navbar = () => {
                       ))}
                     </ul>
                   </NavigationMenuContent>
+                </NavigationMenuItem>
+
+                <NavigationMenuItem>
+                  <NavigationMenuLink asChild>
+                    <Link href='/posts' className={navigationMenuTriggerStyle()}>
+                      Blog
+                    </Link>
+                  </NavigationMenuLink>
                 </NavigationMenuItem>
 
                 {/* <NavigationMenuItem>
