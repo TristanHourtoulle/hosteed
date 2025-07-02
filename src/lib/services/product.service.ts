@@ -23,6 +23,7 @@ export async function findProductById(id: string) {
           select: {
             name: true,
             email: true,
+            image: true,
           },
         },
         securities: true,

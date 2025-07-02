@@ -1,6 +1,7 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { Star, Users, Minus, Plus, Calendar as CalendarIcon } from 'lucide-react'
-import { Equipment, Meals, Services } from '@prisma/client'
+import { Equipment, Meals, Services, User } from '@prisma/client'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/shadcnui/popover'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
@@ -10,6 +11,7 @@ import { useState } from 'react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import type { DateRange } from 'react-day-picker'
+import { getProfileImageUrl } from '@/lib/utils'
 
 interface Reviews {
   id: string
@@ -47,6 +49,7 @@ interface Product {
   contract?: boolean
   longitude?: number
   latitude?: number
+  user: User[]
 }
 
 interface FormData {
@@ -122,23 +125,57 @@ export default function BookingCard({
   return (
     <div className='sticky top-20'>
       <div className='bg-white border border-gray-200 rounded-2xl shadow-xl p-6'>
-        <div className='flex items-center justify-between mb-6'>
-          <div className='flex items-baseline gap-2'>
-            <span className='text-2xl font-semibold text-gray-900'>{product.basePrice}€</span>
-            <span className='text-gray-600'>par nuit</span>
+        <div className='flex flex-col gap-4 mb-6'>
+          <div className='flex items-center justify-between'>
+            <div className='flex items-baseline gap-2'>
+              <span className='text-2xl font-semibold text-gray-900'>{product.basePrice}€</span>
+              <span className='text-gray-600'>par nuit</span>
+            </div>
+            {product.reviews && product.reviews.length > 0 ? (
+              <div className='flex items-center gap-1'>
+                <Star className='h-4 w-4 fill-yellow-400 text-yellow-400' />
+                <span className='text-sm font-medium'>{globalGrade.toFixed(1)}</span>
+                <span className='text-sm text-gray-500'>({product.reviews.length})</span>
+              </div>
+            ) : (
+              <div className='flex items-center gap-1'>
+                <Star className='h-4 w-4 text-gray-300' />
+                <span className='text-sm text-gray-500'>(aucune note)</span>
+              </div>
+            )}
           </div>
-          {product.reviews && product.reviews.length > 0 ? (
-            <div className='flex items-center gap-1'>
-              <Star className='h-4 w-4 fill-yellow-400 text-yellow-400' />
-              <span className='text-sm font-medium'>{globalGrade.toFixed(1)}</span>
-              <span className='text-sm text-gray-500'>({product.reviews.length})</span>
+          <div className='flex items-center gap-2'>
+            <div className='relative h-10 w-10 rounded-full overflow-hidden'>
+              {(() => {
+                const imageUrl = product.user[0]?.image
+                  ? getProfileImageUrl(product.user[0].image)
+                  : null
+                return imageUrl ? (
+                  <Image
+                    src={imageUrl}
+                    alt={`Photo de profil de ${product.user[0]?.name}`}
+                    fill
+                    className='object-cover'
+                  />
+                ) : (
+                  <div
+                    className='h-full w-full flex items-center justify-center text-white text-sm font-medium'
+                    style={{
+                      background: `linear-gradient(45deg, #FF512F, #DD2476)`,
+                    }}
+                  >
+                    {product.user[0]?.name?.charAt(0).toUpperCase() || 'H'}
+                  </div>
+                )
+              })()}
             </div>
-          ) : (
-            <div className='flex items-center gap-1'>
-              <Star className='h-4 w-4 text-gray-300' />
-              <span className='text-sm text-gray-500'>(aucune note)</span>
+            <div className='flex flex-col'>
+              <span className='text-sm font-medium text-gray-900'>
+                {product.user[0]?.name || 'Hosteed'}
+              </span>
+              <span className='text-xs text-gray-500'>Hôte</span>
             </div>
-          )}
+          </div>
         </div>
 
         <div className='border border-gray-300 rounded-xl overflow-hidden mb-6'>

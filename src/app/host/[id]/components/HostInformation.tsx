@@ -1,18 +1,39 @@
 import { MessageCircle, Shield } from 'lucide-react'
+import Image from 'next/image'
+import { useState } from 'react'
+import { getProfileImageUrl } from '@/lib/utils'
 
 interface HostInformationProps {
   hostName: string
+  hostImage?: string | null
 }
 
-export default function HostInformation({ hostName }: HostInformationProps) {
+export default function HostInformation({ hostName, hostImage }: HostInformationProps) {
+  const [imageError, setImageError] = useState(false)
+  const profileImage = getProfileImageUrl(hostImage)
+
   return (
     <div>
       <h3 className='text-lg sm:text-xl font-semibold text-gray-900 mb-4'>
         À propos de l&apos;hôte
       </h3>
       <div className='flex flex-col sm:flex-row gap-4 sm:gap-6'>
-        <div className='w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-xl sm:text-2xl flex-shrink-0'>
-          {hostName[0].toUpperCase()}
+        <div className='w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden flex-shrink-0'>
+          {!imageError && profileImage ? (
+            <Image
+              src={profileImage}
+              alt={hostName}
+              width={80}
+              height={80}
+              className='h-full w-full object-cover rounded-full'
+              referrerPolicy='no-referrer'
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <div className='w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-xl sm:text-2xl'>
+              {hostName[0].toUpperCase()}
+            </div>
+          )}
         </div>
         <div className='flex-1 min-w-0'>
           <div className='flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-2'>

@@ -1,4 +1,7 @@
 import { Users, Bed, Bath, Home } from 'lucide-react'
+import Image from 'next/image'
+import { getProfileImageUrl } from '@/lib/utils'
+import { User } from '@prisma/client'
 
 interface Product {
   id: string
@@ -7,6 +10,7 @@ interface Product {
   bathroom?: number
   maxPeople?: number
   sizeRoom?: number
+  user: User[]
 }
 
 interface PropertyOverviewProps {
@@ -19,10 +23,33 @@ export default function PropertyOverview({ product }: PropertyOverviewProps) {
       <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4'>
         <div className='flex-1'>
           <h2 className='text-xl sm:text-2xl font-semibold text-gray-900 mb-1'>{product.name}</h2>
-          <p className='text-gray-600 text-sm sm:text-base'>Hébergé par Hosteed</p>
+          <p className='text-gray-600 text-sm sm:text-base'>
+            Hébergé par {product.user[0]?.name || 'Hosteed'}
+          </p>
         </div>
-        <div className='w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-lg sm:text-xl flex-shrink-0'>
-          H
+        <div className='relative w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden flex-shrink-0'>
+          {(() => {
+            const imageUrl = product.user[0]?.image
+              ? getProfileImageUrl(product.user[0].image)
+              : null
+            return imageUrl ? (
+              <Image
+                src={imageUrl}
+                alt={`Photo de profil de ${product.user[0]?.name}`}
+                fill
+                className='object-cover'
+              />
+            ) : (
+              <div
+                className='h-full w-full flex items-center justify-center text-white font-semibold text-lg sm:text-xl'
+                style={{
+                  background: `linear-gradient(45deg, #6366f1, #8b5cf6)`,
+                }}
+              >
+                {product.user[0]?.name?.charAt(0).toUpperCase() || 'H'}
+              </div>
+            )
+          })()}
         </div>
       </div>
 

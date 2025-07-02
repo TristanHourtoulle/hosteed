@@ -73,6 +73,11 @@ interface Product {
   longitude?: number
   latitude?: number
   rules: Rules[]
+  user: {
+    name: string
+    email: string
+    image: string | null
+  }[]
   nearbyPlaces?: {
     name: string
     distance: number
@@ -301,7 +306,12 @@ export default function ProductDetails() {
 
             <PropertyReviews reviews={product.reviews} globalGrade={globalGrade} />
 
-            <HostInformation hostName='Hosteed' />
+            <div className='mt-12'>
+              <HostInformation
+                hostName={product.user[0]?.name || 'Hôte inconnu'}
+                hostImage={product.user[0]?.image}
+              />
+            </div>
           </div>
 
           <div className='lg:col-span-1'>
