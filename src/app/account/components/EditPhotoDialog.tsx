@@ -42,6 +42,7 @@ export function EditPhotoDialog({ user, onSave }: EditPhotoDialogProps) {
         return
       }
       setSelectedFile(file)
+      console.log(selectedFile)
       const reader = new FileReader()
       reader.onloadend = () => {
         const base64String = reader.result as string
@@ -63,6 +64,7 @@ export function EditPhotoDialog({ user, onSave }: EditPhotoDialogProps) {
       setPreview(null)
     } catch (error) {
       toast.error('Erreur lors de la mise à jour de la photo')
+      console.log(error)
     } finally {
       setIsLoading(false)
     }

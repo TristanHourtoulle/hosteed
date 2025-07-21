@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import { ChevronLeft, ChevronRight, Grid3X3 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Grid3X3, Expand } from 'lucide-react'
 
 interface ImageGalleryProps {
   images: { img: string }[]
@@ -8,6 +8,7 @@ interface ImageGalleryProps {
   nextImage: () => void
   prevImage: () => void
   setShowAllPhotos: (show: boolean) => void
+  setShowFullscreen: (show: boolean) => void
 }
 
 export default function ImageGallery({
@@ -17,6 +18,7 @@ export default function ImageGallery({
   nextImage,
   prevImage,
   setShowAllPhotos,
+  setShowFullscreen,
 }: ImageGalleryProps) {
   if (!images || images.length === 0) {
     return (
@@ -41,18 +43,24 @@ export default function ImageGallery({
             <>
               <button
                 onClick={prevImage}
-                className='absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shadow-lg'
+                className='cursor-pointer absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shadow-lg'
               >
                 <ChevronLeft className='h-4 w-4' />
               </button>
               <button
                 onClick={nextImage}
-                className='absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shadow-lg'
+                className='cursor-pointer absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shadow-lg'
               >
                 <ChevronRight className='h-4 w-4' />
               </button>
             </>
           )}
+          <button
+            onClick={() => setShowFullscreen(true)}
+            className='cursor-pointer absolute right-4 top-4 bg-white/80 hover:bg-white rounded-full p-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shadow-lg'
+          >
+            <Expand className='h-4 w-4' />
+          </button>
         </div>
 
         {/* Side Images */}

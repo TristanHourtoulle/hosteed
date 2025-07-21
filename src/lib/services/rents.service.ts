@@ -1,6 +1,6 @@
 // TODO: refactor this file because it's larger than 200 lines
 'use server'
-import { RentStatus } from '@prisma/client'
+import { RentStatus, Prisma } from '@prisma/client'
 import prisma from '@/lib/prisma'
 import { StripeService } from '@/lib/services/stripe'
 import { sendTemplatedMail } from '@/lib/services/sendTemplatedMail'
@@ -44,6 +44,7 @@ type RentWithRelations = Prisma.RentGetPayload<{
         }
       }
     }
+    user: true
     options: true
   }
 }>

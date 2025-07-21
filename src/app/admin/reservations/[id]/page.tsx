@@ -1,4 +1,5 @@
 // TODO: refactor this file because it's larger than 200 lines
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import { useEffect, useState } from 'react'
@@ -6,33 +7,8 @@ import { getRentById, cancelRent } from '@/lib/services/rents.service'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 
-interface User {
-  name: string | null
-  lastname: string | null
-  email: string
-  roles: string
-}
-
-interface Product {
-  name: string
-  basePrice: string
-  validate: string
-}
-
-interface Rent {
-  id: string
-  status: string
-  arrivingDate: string | Date
-  leavingDate: string | Date
-  prices: bigint
-  createdAt?: string | Date
-  product?: Product
-  user?: User
-  payment?: string
-}
-
 export default function ReservationDetailsPage() {
-  const [rent, setRent] = useState<Rent | null>(null)
+  const [rent, setRent] = useState<Record<string, any> | null>(null)
   const [loading, setLoading] = useState(true)
   const [cancelling, setCancelling] = useState(false)
   const params = useParams()
@@ -157,7 +133,7 @@ export default function ReservationDetailsPage() {
             </div>
             <div>
               <p className='text-sm text-gray-500'>Date de création</p>
-              <p className='text-lg'>{formatDate(rent.createdAt)}</p>
+              <p className='text-lg'>{rent.createdAt ? formatDate(rent.createdAt) : 'N/A'}</p>
             </div>
           </div>
         </div>

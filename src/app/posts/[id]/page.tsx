@@ -18,26 +18,54 @@ import rehypeRaw from 'rehype-raw'
 import rehypeSlug from 'rehype-slug'
 import rehypeAutolinkHeadings from 'rehype-autolink-headings'
 import { cn } from '@/lib/utils'
+import { Components } from 'react-markdown'
+import { Post } from '@prisma/client'
 
 const ReactMarkdown = dynamic(() => import('react-markdown'), { ssr: false })
 
 const MarkdownComponents = {
-  h1: ({ className, ...props }: any) => (
-    <h1 className={cn('mt-8 mb-4 text-4xl font-bold', className)} {...props} />
-  ),
-  h2: ({ className, ...props }: any) => (
-    <h2 className={cn('mt-8 mb-4 text-3xl font-bold', className)} {...props} />
-  ),
-  h3: ({ className, ...props }: any) => (
-    <h3 className={cn('mt-6 mb-4 text-2xl font-bold', className)} {...props} />
-  ),
-  h4: ({ className, ...props }: any) => (
-    <h4 className={cn('mt-6 mb-4 text-xl font-bold', className)} {...props} />
-  ),
-  p: ({ className, ...props }: any) => (
-    <p className={cn('mb-4 leading-7 text-gray-700', className)} {...props} />
-  ),
-  a: ({ className, ...props }: any) => (
+  h1: ({
+    className,
+    ...props
+  }: {
+    className?: string
+    props?: React.HTMLAttributes<HTMLHeadingElement>
+  }) => <h1 className={cn('mt-8 mb-4 text-4xl font-bold', className)} {...props} />,
+  h2: ({
+    className,
+    ...props
+  }: {
+    className?: string
+    props?: React.HTMLAttributes<HTMLHeadingElement>
+  }) => <h2 className={cn('mt-8 mb-4 text-3xl font-bold', className)} {...props} />,
+  h3: ({
+    className,
+    ...props
+  }: {
+    className?: string
+    props?: React.HTMLAttributes<HTMLHeadingElement>
+  }) => <h3 className={cn('mt-6 mb-4 text-2xl font-bold', className)} {...props} />,
+  h4: ({
+    className,
+    ...props
+  }: {
+    className?: string
+    props?: React.HTMLAttributes<HTMLHeadingElement>
+  }) => <h4 className={cn('mt-6 mb-4 text-xl font-bold', className)} {...props} />,
+  p: ({
+    className,
+    ...props
+  }: {
+    className?: string
+    props?: React.HTMLAttributes<HTMLParagraphElement>
+  }) => <p className={cn('mb-4 leading-7 text-gray-700', className)} {...props} />,
+  a: ({
+    className,
+    ...props
+  }: {
+    className?: string
+    props?: React.HTMLAttributes<HTMLAnchorElement>
+  }) => (
     <a
       className={cn('text-blue-600 hover:text-blue-800 underline', className)}
       target='_blank'
@@ -45,20 +73,48 @@ const MarkdownComponents = {
       {...props}
     />
   ),
-  ul: ({ className, ...props }: any) => (
-    <ul className={cn('mb-4 ml-6 list-disc', className)} {...props} />
-  ),
-  ol: ({ className, ...props }: any) => (
-    <ol className={cn('mb-4 ml-6 list-decimal', className)} {...props} />
-  ),
-  li: ({ className, ...props }: any) => <li className={cn('mb-2', className)} {...props} />,
-  blockquote: ({ className, ...props }: any) => (
+  ul: ({
+    className,
+    ...props
+  }: {
+    className?: string
+    props?: React.HTMLAttributes<HTMLUListElement>
+  }) => <ul className={cn('mb-4 ml-6 list-disc', className)} {...props} />,
+  ol: ({
+    className,
+    ...props
+  }: {
+    className?: string
+    props?: React.HTMLAttributes<HTMLOListElement>
+  }) => <ol className={cn('mb-4 ml-6 list-decimal', className)} {...props} />,
+  li: ({
+    className,
+    ...props
+  }: {
+    className?: string
+    props?: React.HTMLAttributes<HTMLLIElement>
+  }) => <li className={cn('mb-2', className)} {...props} />,
+  blockquote: ({
+    className,
+    ...props
+  }: {
+    className?: string
+    props?: React.HTMLAttributes<HTMLQuoteElement>
+  }) => (
     <blockquote
       className={cn('border-l-4 border-gray-200 pl-4 mb-4 italic', className)}
       {...props}
     />
   ),
-  code: ({ inline, className, ...props }: any) =>
+  code: ({
+    inline,
+    className,
+    ...props
+  }: {
+    inline?: boolean
+    className?: string
+    props?: React.HTMLAttributes<HTMLElement>
+  }) =>
     inline ? (
       <code
         className={cn('bg-gray-100 rounded px-1 py-0.5 text-sm font-mono', className)}
@@ -69,12 +125,24 @@ const MarkdownComponents = {
         <code className='text-sm' {...props} />
       </pre>
     ),
-  table: ({ className, ...props }: any) => (
+  table: ({
+    className,
+    ...props
+  }: {
+    className?: string
+    props?: React.HTMLAttributes<HTMLTableElement>
+  }) => (
     <div className='mb-4 overflow-x-auto'>
       <table className={cn('min-w-full divide-y divide-gray-200', className)} {...props} />
     </div>
   ),
-  th: ({ className, ...props }: any) => (
+  th: ({
+    className,
+    ...props
+  }: {
+    className?: string
+    props?: React.HTMLAttributes<HTMLTableCellElement>
+  }) => (
     <th
       className={cn(
         'px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
@@ -83,10 +151,26 @@ const MarkdownComponents = {
       {...props}
     />
   ),
-  td: ({ className, ...props }: any) => (
+  td: ({
+    className,
+    ...props
+  }: {
+    className?: string
+    props?: React.HTMLAttributes<HTMLTableCellElement>
+  }) => (
     <td className={cn('px-6 py-4 whitespace-nowrap text-sm text-gray-500', className)} {...props} />
   ),
-  img: ({ src, alt, className, ...props }: any) => {
+  img: ({
+    src,
+    alt,
+    className,
+    ...props
+  }: {
+    src?: string
+    alt?: string
+    className?: string
+    props?: React.ImgHTMLAttributes<HTMLImageElement>
+  }) => {
     if (!src) return null
     // Si l'image est une URL externe
     if (src.startsWith('http')) {
@@ -114,17 +198,21 @@ const MarkdownComponents = {
       </span>
     )
   },
-  hr: ({ className, ...props }: any) => (
-    <hr className={cn('my-8 border-t border-gray-200', className)} {...props} />
-  ),
+  hr: ({
+    className,
+    ...props
+  }: {
+    className?: string
+    props?: React.HTMLAttributes<HTMLHRElement>
+  }) => <hr className={cn('my-8 border-t border-gray-200', className)} {...props} />,
 }
 
 export default function PostPage() {
   const params = useParams()
   const router = useRouter()
   const { data: session } = useSession()
-  const [post, setPost] = React.useState<any>(null)
-  const [suggestedPosts, setSuggestedPosts] = React.useState<any[]>([])
+  const [post, setPost] = React.useState<Post | null>(null)
+  const [suggestedPosts, setSuggestedPosts] = React.useState<Post[]>([])
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
 
@@ -146,6 +234,7 @@ export default function PostPage() {
         }
       } catch (err) {
         setError("Une erreur est survenue lors du chargement de l'article")
+        console.error(err)
       } finally {
         setLoading(false)
       }
@@ -172,7 +261,7 @@ export default function PostPage() {
               {error || 'Article non trouvé'}
             </h1>
             <p className='text-gray-600 mb-8'>
-              L'article que vous recherchez n'existe pas ou a été supprimé.
+              L&apos;article que vous recherchez n&apos;existe pas ou a été supprimé.
             </p>
             <Link href='/posts'>
               <Button variant='outline' className='flex items-center gap-2'>
@@ -245,7 +334,7 @@ export default function PostPage() {
           {/* Article Content */}
           <article className='prose prose-lg prose-blue max-w-none'>
             <ReactMarkdown
-              components={MarkdownComponents}
+              components={MarkdownComponents as Components}
               remarkPlugins={[remarkGfm, remarkEmoji]}
               rehypePlugins={[rehypeRaw, rehypeSlug, rehypeAutolinkHeadings]}
             >
@@ -254,7 +343,7 @@ export default function PostPage() {
           </article>
 
           {/* Suggested Posts */}
-          <SuggestedPosts posts={suggestedPosts} />
+          <SuggestedPosts posts={suggestedPosts.map(p => ({ ...p, image: p.image ?? '' }))} />
 
           {/* Article Footer */}
           <div className='mt-12 pt-8 border-t border-gray-200'>

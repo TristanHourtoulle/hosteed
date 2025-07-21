@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader } from '@/components/ui/shadcnui/card'
+import { Card, CardContent } from '@/components/ui/shadcnui/card'
 import { Skeleton } from '@/components/ui/shadcnui/skeleton'
 
 export default function AccountLoading() {

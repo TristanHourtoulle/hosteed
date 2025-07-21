@@ -31,9 +31,7 @@ const formSchema = z
     path: ['confirmPassword'],
   })
 
-export type RegisterFormProps = {}
-
-export const RegisterForm = ({}: RegisterFormProps) => {
+export const RegisterForm = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')

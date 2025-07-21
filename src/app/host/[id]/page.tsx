@@ -4,7 +4,8 @@ import { useParams } from 'next/navigation'
 import { findProductById } from '@/lib/services/product.service'
 import { CheckRentIsAvailable } from '@/lib/services/rents.service'
 import Link from 'next/link'
-import { Equipment, Meals, Services } from '@prisma/client'
+import { Equipment, Meals, Services, User } from '@prisma/client'
+import { X, ChevronLeft, ChevronRight } from 'lucide-react'
 
 import PropertyHeader from './components/PropertyHeader'
 import ImageGallery from './components/ImageGallery'
@@ -22,7 +23,6 @@ import CancellationPolicy from './components/CancellationPolicy'
 import PropertyReviews from './components/PropertyReviews'
 import HostInformation from './components/HostInformation'
 import BookingCard from './components/BookingCard'
-import { ShareButton } from './components/ShareButton'
 
 interface Reviews {
   id: string
@@ -73,11 +73,7 @@ interface Product {
   longitude?: number
   latitude?: number
   rules: Rules[]
-  user: {
-    name: string
-    email: string
-    image: string | null
-  }[]
+  user: User[]
   nearbyPlaces?: {
     name: string
     distance: number
@@ -115,6 +111,7 @@ export default function ProductDetails() {
     arrivingDate: '',
     leavingDate: '',
   })
+  const [showFullscreen, setShowFullscreen] = useState(false)
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -235,7 +232,7 @@ export default function ProductDetails() {
           <h2 className='text-2xl font-semibold text-gray-900 mb-2'>Une erreur est survenue</h2>
           <p className='text-gray-600'>{error || "Le produit n'a pas été trouvé"}</p>
           <Link href='/' className='text-blue-600 hover:text-blue-800 mt-4 inline-block'>
-            Retour à l'accueil
+            Retour à l&apos;accueil
           </Link>
         </div>
       </div>
@@ -260,7 +257,60 @@ export default function ProductDetails() {
           nextImage={nextImage}
           prevImage={prevImage}
           setShowAllPhotos={setShowAllPhotos}
+          setShowFullscreen={setShowFullscreen}
         />
+
+        {showFullscreen && (
+          <div
+            className='fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-lg transition-all animate-fadein'
+            tabIndex={-1}
+            onKeyDown={e => {
+              if (e.key === 'Escape') setShowFullscreen(false)
+              if (e.key === 'ArrowLeft') prevImage()
+              if (e.key === 'ArrowRight') nextImage()
+            }}
+          >
+            <div className='relative bg-white p-0 rounded-2xl shadow-2xl flex items-center justify-center max-w-4xl w-full max-h-[80vh] animate-popin'>
+              {/* Close button */}
+              <button
+                onClick={() => setShowFullscreen(false)}
+                className='absolute top-4 right-4 bg-white hover:bg-gray-100 rounded-full p-2 shadow-lg z-10'
+                aria-label='Fermer'
+              >
+                <X className='h-6 w-6 text-gray-700' />
+              </button>
+              {/* Prev button */}
+              <button
+                onClick={e => {
+                  e.stopPropagation()
+                  prevImage()
+                }}
+                className='absolute left-2 top-1/2 -translate-y-1/2 bg-white hover:bg-gray-100 rounded-full p-2 shadow-lg z-10'
+                aria-label='Précédent'
+              >
+                <ChevronLeft className='h-6 w-6 text-gray-700' />
+              </button>
+              {/* Next button */}
+              <button
+                onClick={e => {
+                  e.stopPropagation()
+                  nextImage()
+                }}
+                className='absolute right-2 top-1/2 -translate-y-1/2 bg-white hover:bg-gray-100 rounded-full p-2 shadow-lg z-10'
+                aria-label='Suivant'
+              >
+                <ChevronRight className='h-6 w-6 text-gray-700' />
+              </button>
+              {/* Image */}
+              <img
+                src={product.img[currentImageIndex]?.img || product.img[0].img}
+                alt={product.name}
+                className='max-h-[80vh] max-w-full object-contain rounded-2xl transition-all'
+                draggable={false}
+              />
+            </div>
+          </div>
+        )}
 
         <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
           <div className='lg:col-span-2 space-y-10'>

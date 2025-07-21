@@ -1,6 +1,5 @@
 'use client'
 import React, { useEffect, useState } from 'react'
-import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
@@ -17,8 +16,7 @@ import {
 import { PlusCircle, Calendar, Clock, ChevronRight, Search } from 'lucide-react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
-
-const ReactMarkdown = dynamic(() => import('react-markdown'), { ssr: false })
+import { Post } from '@prisma/client'
 
 function truncateText(text: string, maxLength: number) {
   // Supprimer les balises Markdown
@@ -30,8 +28,8 @@ function truncateText(text: string, maxLength: number) {
 type SortOption = 'recent' | 'old' | 'az' | 'za'
 
 export default function PostsPage() {
-  const [posts, setPosts] = useState<any[]>([])
-  const [filteredPosts, setFilteredPosts] = useState<any[]>([])
+  const [posts, setPosts] = useState<Post[]>([])
+  const [filteredPosts, setFilteredPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState<SortOption>('recent')
@@ -134,7 +132,7 @@ export default function PostsPage() {
                   </p>
                   <Link href={`/posts/${featuredPost.id}`}>
                     <Button size='lg' className='group'>
-                      Lire l'article
+                      Lire l&apos;article
                       <ChevronRight className='ml-2 h-4 w-4 transition-transform group-hover:translate-x-1' />
                     </Button>
                   </Link>
@@ -224,7 +222,7 @@ export default function PostsPage() {
                     </div>
                   </div>
                   <Link href={`/posts/${post.id}`} className='absolute inset-0'>
-                    <span className='sr-only'>Lire l'article</span>
+                    <span className='sr-only'>Lire l&apos;article</span>
                   </Link>
                 </article>
               ))}

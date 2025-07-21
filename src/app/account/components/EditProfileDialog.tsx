@@ -29,7 +29,7 @@ interface EditProfileDialogProps {
   }
   isDialogOpen: boolean
   setIsDialogOpen: (isOpen: boolean) => void
-  onUpdate: (updatedUser: any) => void
+  onUpdate: (updatedUser: unknown) => void
 }
 
 export function EditProfileDialog({
@@ -117,7 +117,9 @@ export function EditProfileDialog({
                         <AlertCircle className='h-4 w-4 text-yellow-500' />
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>L'email ne peut pas être modifié car vous êtes connecté(e) via Google</p>
+                        <p>
+                          L&apos;email ne peut pas être modifié car vous êtes connecté(e) via Google
+                        </p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>

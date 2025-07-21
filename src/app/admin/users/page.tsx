@@ -7,7 +7,7 @@ import { findAllUser } from '@/lib/services/user.service'
 import { User } from '@prisma/client'
 import Link from 'next/link'
 import { motion, Variants } from 'framer-motion'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
+import { Card, CardContent } from '@/components/ui/shadcnui/card'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Badge } from '@/components/ui/shadcnui/badge'
 import { Input } from '@/components/ui/shadcnui/input'
@@ -20,7 +20,6 @@ import {
   Mail,
   Shield,
   Eye,
-  ArrowLeft,
 } from 'lucide-react'
 
 const containerVariants: Variants = {

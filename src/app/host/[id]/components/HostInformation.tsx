@@ -1,4 +1,4 @@
-import { MessageCircle, Shield } from 'lucide-react'
+import { Shield } from 'lucide-react'
 import Image from 'next/image'
 import { useState } from 'react'
 import { getProfileImageUrl } from '@/lib/utils'
@@ -10,7 +10,7 @@ interface HostInformationProps {
 
 export default function HostInformation({ hostName, hostImage }: HostInformationProps) {
   const [imageError, setImageError] = useState(false)
-  const profileImage = getProfileImageUrl(hostImage)
+  const profileImage = getProfileImageUrl(hostImage || null)
 
   return (
     <div>

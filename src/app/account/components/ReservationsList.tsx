@@ -34,7 +34,7 @@ export function ReservationsList({ reservations }: ReservationsListProps) {
   const [filteredReservations, setFilteredReservations] = useState<Rent[]>(reservations)
   const [dateFilter, setDateFilter] = useState<string>('')
   const [statusFilter, setStatusFilter] = useState<string>('')
-  const [language, setLanguage] = useState<string>('fr')
+  const language = 'fr'
 
   const handleFilter = (status: string) => {
     if (status === 'INCOMING') {
@@ -106,7 +106,7 @@ export function ReservationsList({ reservations }: ReservationsListProps) {
         <CardContent className='py-12 text-center text-gray-500'>
           <div className='flex flex-col items-center gap-3'>
             <Calendar className='w-12 h-12 text-gray-400' />
-            <p className='text-lg'>Vous n'avez pas encore de réservations</p>
+            <p className='text-lg'>Vous n&apos;avez pas encore de réservations</p>
             <Link href='/'>
               <Button variant='outline' className='mt-2'>
                 Explorer les hébergements

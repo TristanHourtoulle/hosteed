@@ -81,7 +81,7 @@ export default function CreatePostPage() {
           <form onSubmit={handleSubmit} className='space-y-6'>
             <div className='space-y-2'>
               <Label htmlFor='title' className='text-base'>
-                Titre de l'article
+                Titre de l&apos;article
               </Label>
               <Input
                 id='title'
@@ -136,7 +136,7 @@ export default function CreatePostPage() {
             </div>
 
             <div className='space-y-2'>
-              <Label className='text-base'>Contenu de l'article</Label>
+              <Label className='text-base'>Contenu de l&apos;article</Label>
               <Tabs defaultValue='edit' className='w-full'>
                 <TabsList className='w-full'>
                   <TabsTrigger value='edit' className='w-1/2'>

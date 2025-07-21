@@ -241,7 +241,7 @@ export default function CreateProduct() {
               <CardContent className='space-y-6'>
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
                   <div className='space-y-2'>
-                    <Label htmlFor='name'>Nom de l'hébergement</Label>
+                    <Label htmlFor='name'>Nom de l&apos;hébergement</Label>
                     <Input
                       id='name'
                       name='name'
@@ -253,7 +253,7 @@ export default function CreateProduct() {
                   </div>
 
                   <div className='space-y-2'>
-                    <Label htmlFor='typeId'>Type d'hébergement</Label>
+                    <Label htmlFor='typeId'>Type d&apos;hébergement</Label>
                     <select
                       id='typeId'
                       name='typeId'
@@ -416,14 +416,14 @@ export default function CreateProduct() {
                     <Label htmlFor='basePrice'>Prix par nuit en MGA</Label>
                     <div className='relative'>
                       <Input
-                          id='priceMGA'
-                          name='priceMGA'
-                          type='text'
-                          value={formData.priceMGA}
-                          onChange={handleInputChange}
-                          required
-                          placeholder='100'
-                          className='pl-8'
+                        id='priceMGA'
+                        name='priceMGA'
+                        type='text'
+                        value={formData.priceMGA}
+                        onChange={handleInputChange}
+                        required
+                        placeholder='100'
+                        className='pl-8'
                       />
                       <span className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-500'>
                         Ar
@@ -538,7 +538,7 @@ export default function CreateProduct() {
             {/* Images */}
             <Card>
               <CardHeader>
-                <CardTitle>Photos de l'hébergement</CardTitle>
+                <CardTitle>Photos de l&apos;hébergement</CardTitle>
                 <CardDescription>
                   Ajoutez des photos attrayantes de votre hébergement
                 </CardDescription>

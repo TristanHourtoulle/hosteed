@@ -23,7 +23,7 @@ interface Review {
   approved: boolean
   rentRelation: {
     user: {
-      name: string
+      name: string | null
       email: string
     }
     product: {
@@ -42,7 +42,7 @@ export default function ReviewsPage() {
       try {
         const data = await findAllReviews()
         if (data) {
-          setReviews(data)
+          setReviews(data as Review[])
         }
       } catch (error) {
         console.error('Erreur lors du chargement des avis:', error)
@@ -74,14 +74,13 @@ export default function ReviewsPage() {
 
   const filteredReviews = reviews.filter(
     review =>
-      review.rentRelation.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      review.rentRelation.user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       review.rentRelation.product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       review.text.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   const pendingReviews = filteredReviews.filter(r => !r.approved)
   const approvedReviews = filteredReviews.filter(r => r.approved)
-  const rejectedReviews = [] // Les avis rejetés sont supprimés
 
   if (loading) {
     return (
@@ -140,8 +139,8 @@ export default function ReviewsPage() {
                     comment: review.text,
                     createdAt: review.publishDate,
                     status: 'pending',
-                    user: review.rentRelation.user,
-                    product: review.rentRelation.product,
+                    user: review.rentRelation.user as { name: string; email: string },
+                    product: review.rentRelation.product as { name: string },
                   }}
                   onApprove={handleApprove}
                   onReject={handleReject}
@@ -163,8 +162,8 @@ export default function ReviewsPage() {
                     comment: review.text,
                     createdAt: review.publishDate,
                     status: 'approved',
-                    user: review.rentRelation.user,
-                    product: review.rentRelation.product,
+                    user: review.rentRelation.user as { name: string; email: string },
+                    product: review.rentRelation.product as { name: string },
                   }}
                   onApprove={handleApprove}
                   onReject={handleReject}

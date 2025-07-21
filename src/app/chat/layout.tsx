@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { usePathname } from 'next/navigation'
-import { Card } from '@/components/ui/shadcnui/card'
 import { ScrollArea } from '@/components/ui/shadcnui/scroll-area'
 import { Badge } from '@/components/ui/shadcnui/badge'
 import { getAllUserChats } from '@/lib/services/chat.service'

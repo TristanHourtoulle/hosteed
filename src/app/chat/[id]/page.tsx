@@ -7,17 +7,6 @@ import { Button } from '@/components/ui/shadcnui/button'
 import { Card, CardContent } from '@/components/ui/shadcnui/card'
 import { createMessage, getChatRent, markMessagesAsRead } from '@/lib/services/chat.service'
 import { getRentById } from '@/lib/services/rents.service'
-import { Chat } from '@prisma/client'
-
-interface RentWithUser {
-  product: {
-    user: {
-      id: string
-      name: string | null
-      email: string
-    }[]
-  }
-}
 
 interface ChatMessage {
   id: string

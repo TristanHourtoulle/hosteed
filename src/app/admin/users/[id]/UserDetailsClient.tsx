@@ -20,7 +20,7 @@ export function UserDetailsClient({ initialData }: UserDetailsClientProps) {
   const { data: session } = useSession()
   const router = useRouter()
   const [user] = useState<ExtendedUser>(initialData)
-  const [loading, setLoading] = useState(false)
+  const [loading] = useState(false)
 
   useEffect(() => {
     if (!session?.user?.roles || session.user.roles !== 'ADMIN') {
@@ -43,7 +43,7 @@ export function UserDetailsClient({ initialData }: UserDetailsClientProps) {
       >
         <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4'>
           <h1 className='text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600'>
-            Informations de l'utilisateur
+            Informations de l&apos;utilisateur
           </h1>
           <Button variant='outline' asChild className='hover:bg-gray-100'>
             <Link href='/admin/users' className='flex items-center gap-2'>

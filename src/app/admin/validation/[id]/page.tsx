@@ -8,9 +8,8 @@ import { Discount, ProductValidation, RentStatus } from '@prisma/client'
 import Image from 'next/image'
 import { getCityFromAddress } from '@/lib/utils'
 import { motion } from 'framer-motion'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
+import { Card, CardContent } from '@/components/ui/shadcnui/card'
 import { Button } from '@/components/ui/shadcnui/button'
-import { Badge } from '@/components/ui/shadcnui/badge'
 import { Separator } from '@/components/ui/shadcnui/separator'
 import { Alert, AlertDescription } from '@/components/ui/shadcnui/alert'
 import {
@@ -60,6 +59,8 @@ export default function ValidationPreviewPage({ params }: { params: Promise<{ id
   const [error, setError] = useState<string | null>(null)
   const [validationStatus, setValidationStatus] = useState<ProductValidation | null>(null)
   const resolvedParams = use(params)
+
+  console.log(validationStatus)
 
   useEffect(() => {
     if (!session?.user?.roles || session.user.roles !== 'ADMIN') {

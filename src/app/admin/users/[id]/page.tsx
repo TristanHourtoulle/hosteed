@@ -1,13 +1,8 @@
 import { UserDetailsClient as UserDetails } from './UserDetailsClient'
 import { getUserData } from './utils/getData'
 
-interface PageProps {
-  params: {
-    id: string
-  }
-}
-
-export default async function Page({ params }: PageProps) {
-  const data = await getUserData(params.id)
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params
+  const data = await getUserData(resolvedParams.id)
   return <UserDetails initialData={data} />
 }

@@ -35,7 +35,7 @@ import {
   getRentStatusColor,
 } from './utils'
 
-function HostAvatar({ host }: { host: any }) {
+function HostAvatar({ host }: { host: { name: string; email: string; image: string } }) {
   const profileImage = getProfileImageUrl(host.image)
 
   return (
@@ -59,9 +59,14 @@ function HostAvatar({ host }: { host: any }) {
   )
 }
 
-export default async function ReservationDetailsPage({ params }: { params: { id: string } }) {
+export default async function ReservationDetailsPage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
+  const resolvedParams = await params
   const { reservation, host } = (await getReservationDetails(
-    params.id
+    resolvedParams.id
   )) as unknown as ReservationDetails
 
   return (
@@ -131,10 +136,12 @@ export default async function ReservationDetailsPage({ params }: { params: { id:
           {/* Host Information */}
           <Card>
             <CardContent className='p-6'>
-              <h3 className='text-xl font-semibold mb-4'>Informations sur l'hôte</h3>
+              <h3 className='text-xl font-semibold mb-4'>Informations sur l&apos;hôte</h3>
               <div className='flex flex-col sm:flex-row items-start gap-6'>
                 <div className='flex items-center gap-4'>
-                  <HostAvatar host={host} />
+                  <HostAvatar
+                    host={host as unknown as { name: string; email: string; image: string }}
+                  />
                   <div>
                     <p className='font-medium text-lg'>{host.name}</p>
                     <div className='flex flex-col gap-2 text-sm text-gray-600 mt-2'>
@@ -154,8 +161,8 @@ export default async function ReservationDetailsPage({ params }: { params: { id:
                 </div>
                 <div className='flex-1 bg-gray-50 rounded-lg p-4 mt-4 sm:mt-0'>
                   <p className='text-sm text-gray-600'>
-                    Pour toute question concernant votre séjour, n'hésitez pas à contacter votre
-                    hôte directement par email.
+                    Pour toute question concernant votre séjour, n&apos;hésitez pas à contacter
+                    votre hôte directement par email.
                   </p>
                 </div>
               </div>
@@ -273,14 +280,14 @@ export default async function ReservationDetailsPage({ params }: { params: { id:
                 {/* Add data for the host confirmation for this reservation (reservation.confirmed) */}
                 {reservation.confirmed ? (
                   <div>
-                    <p className='font-medium mb-2'>Confirmation de l'hôte</p>
+                    <p className='font-medium mb-2'>Confirmation de l&apos;hôte</p>
                     <span className='inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800'>
                       Confirmé
                     </span>
                   </div>
                 ) : (
                   <div>
-                    <p className='font-medium mb-2'>Confirmation de l'hôte</p>
+                    <p className='font-medium mb-2'>Confirmation de l&apos;hôte</p>
                     <span className='inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800'>
                       En attente
                     </span>

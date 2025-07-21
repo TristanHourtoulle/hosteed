@@ -74,9 +74,9 @@ export function ProfileSettings({ user: initialUser }: ProfileSettingsProps) {
           <Alert className='mb-4 bg-yellow-50 text-yellow-800 border-yellow-200'>
             <AlertTriangle className='h-4 w-4 text-yellow-800' />
             <AlertDescription>
-              Vous êtes connecté(e) via Google. La modification de l'email et du mot de passe n'est
-              pas disponible. Pour modifier ces informations, veuillez les mettre à jour dans votre
-              compte Google.
+              Vous êtes connecté(e) via Google. La modification de l&apos;email et du mot de passe
+              n&apos;est pas disponible. Pour modifier ces informations, veuillez les mettre à jour
+              dans votre compte Google.
             </AlertDescription>
           </Alert>
         )}
@@ -133,7 +133,7 @@ export function ProfileSettings({ user: initialUser }: ProfileSettingsProps) {
         user={user}
         isDialogOpen={isEditDialogOpen}
         setIsDialogOpen={setIsEditDialogOpen}
-        onUpdate={handleUserUpdate}
+        onUpdate={handleUserUpdate as (updatedUser: unknown) => void}
       />
     </div>
   )

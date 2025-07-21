@@ -7,11 +7,23 @@ import { FavoritesList } from './components/FavoritesList'
 import { ProfileSettings } from './components/ProfileSettings'
 import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { Favorite, Product, Rent } from '@prisma/client'
+import AccountLoading from './loading'
 
 type Tab = 'reservations' | 'favoris' | 'profil'
 
 export default function AccountPage() {
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<{
+    id: string
+    name: string | null
+    email: string
+    image: string | null
+    createdAt: Date
+    lastname: string | null
+    password: string | null
+    Rent: (Rent & { product: Product & { img: { img: string }[] } })[]
+    favorites: (Favorite & { product: Product & { img: { img: string }[] } })[]
+  } | null>(null)
   const searchParams = useSearchParams()
   const router = useRouter()
   const tab = (searchParams.get('tab') as Tab) || 'reservations'
@@ -35,7 +47,7 @@ export default function AccountPage() {
   }
 
   if (!user) {
-    return <div>Loading...</div>
+    return <AccountLoading />
   }
 
   return (

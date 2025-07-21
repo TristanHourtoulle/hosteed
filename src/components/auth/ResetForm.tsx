@@ -20,9 +20,7 @@ const formSchema = z.object({
   email: z.string().email('Email invalide'),
 })
 
-export type ResetFormProps = {}
-
-export const ResetForm = ({}: ResetFormProps) => {
+export const ResetForm = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -43,6 +41,8 @@ export const ResetForm = ({}: ResetFormProps) => {
       // TODO: Implement password reset logic here
       // For now, just show a success message
       setSuccess('Un email de réinitialisation a été envoyé à votre adresse.')
+      form.reset()
+      console.log(data)
     } catch (error) {
       setError('Une erreur est survenue')
       console.error(error)

@@ -126,7 +126,9 @@ export default function AdminStats() {
           transition={{ duration: 0.5 }}
         >
           <h1 className='text-4xl font-bold text-gray-900'>Statistiques Administratives</h1>
-          <p className='text-gray-600 mt-2'>Vue d'ensemble des performances de la plateforme</p>
+          <p className='text-gray-600 mt-2'>
+            Vue d&apos;ensemble des performances de la plateforme
+          </p>
         </motion.div>
 
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'>

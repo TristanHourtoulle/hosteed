@@ -19,6 +19,7 @@ export function ShareButton({ className }: ShareButtonProps) {
       toast.error('Impossible de copier le lien', {
         description: "Veuillez réessayer ou copier l'URL manuellement.",
       })
+      console.error(err)
     }
   }
 

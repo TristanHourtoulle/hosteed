@@ -12,14 +12,8 @@ import { ProductValidation, UserRole } from '@prisma/client'
 import Image from 'next/image'
 import Link from 'next/link'
 import { getCityFromAddress } from '@/lib/utils'
-import { motion, Variants, AnimatePresence } from 'framer-motion'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/shadcnui/card'
+import { motion, Variants } from 'framer-motion'
+import { Card, CardContent } from '@/components/ui/shadcnui/card'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Alert, AlertDescription } from '@/components/ui/shadcnui/alert'
 import { Loader2, CheckCircle, XCircle, ArrowLeft, Eye, MapPin, Home } from 'lucide-react'

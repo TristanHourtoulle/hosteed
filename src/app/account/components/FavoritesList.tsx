@@ -29,7 +29,7 @@ export function FavoritesList({ favorites }: FavoritesListProps) {
             <div className='w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center'>
               ❤️
             </div>
-            <p className='text-lg'>Vous n'avez pas encore de favoris</p>
+            <p className='text-lg'>Vous n&apos;avez pas encore de favoris</p>
             <Link href='/'>
               <Button variant='outline' className='mt-2'>
                 Explorer les hébergements
@@ -63,7 +63,7 @@ export function FavoritesList({ favorites }: FavoritesListProps) {
               {favorite.product.address}
             </p>
             <Link href={`/host/${favorite.product.id}`}>
-              <Button className='w-full'>Voir l'annonce</Button>
+              <Button className='w-full'>Voir l&apos;annonce</Button>
             </Link>
           </CardContent>
         </Card>

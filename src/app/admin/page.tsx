@@ -5,14 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { motion, Variants } from 'framer-motion'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/shadcnui/card'
-import { Button } from '@/components/ui/shadcnui/button'
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/shadcnui/card'
 import { ClipboardCheck, Users, BarChart2, MessageSquare, Home, ArrowRight } from 'lucide-react'
 
 const containerVariants: Variants = {
@@ -99,7 +92,7 @@ export default function AdminDashboard() {
             Dashboard Administrateur
           </h1>
           <p className='text-gray-600 max-w-2xl mx-auto'>
-            Gérez votre plateforme efficacement avec nos outils d'administration intuitifs
+            Gérez votre plateforme efficacement avec nos outils d&apos;administration intuitifs
           </p>
         </motion.div>
 
@@ -107,7 +100,7 @@ export default function AdminDashboard() {
           className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
           variants={containerVariants}
         >
-          {cards.map((card, index) => (
+          {cards.map(card => (
             <motion.div
               key={card.title}
               variants={itemVariants}

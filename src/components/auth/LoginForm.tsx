@@ -24,10 +24,7 @@ const formSchema = z.object({
   password: z.string(),
 })
 
-// Props
-export type LoginFormProps = {}
-
-export const LoginForm = ({}: LoginFormProps) => {
+export const LoginForm = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
