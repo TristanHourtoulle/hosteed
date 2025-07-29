@@ -392,17 +392,6 @@ CREATE TABLE "PropertyInfo" (
 );
 
 -- CreateTable
-CREATE TABLE "CancellationPolicy" (
-    "id" TEXT NOT NULL,
-    "freeCancellationHours" INTEGER NOT NULL,
-    "partialRefundPercent" INTEGER NOT NULL,
-    "additionalTerms" TEXT,
-    "productId" TEXT NOT NULL,
-
-    CONSTRAINT "CancellationPolicy_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "Post" (
     "id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
@@ -514,9 +503,6 @@ CREATE UNIQUE INDEX "Favorite_userId_productId_key" ON "Favorite"("userId", "pro
 CREATE UNIQUE INDEX "PropertyInfo_productId_key" ON "PropertyInfo"("productId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "CancellationPolicy_productId_key" ON "CancellationPolicy"("productId");
-
--- CreateIndex
 CREATE INDEX "_EquipmentToProduct_B_index" ON "_EquipmentToProduct"("B");
 
 -- CreateIndex
@@ -623,9 +609,6 @@ ALTER TABLE "TransportOption" ADD CONSTRAINT "TransportOption_productId_fkey" FO
 
 -- AddForeignKey
 ALTER TABLE "PropertyInfo" ADD CONSTRAINT "PropertyInfo_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "CancellationPolicy" ADD CONSTRAINT "CancellationPolicy_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_EquipmentToProduct" ADD CONSTRAINT "_EquipmentToProduct_A_fkey" FOREIGN KEY ("A") REFERENCES "Equipment"("id") ON DELETE CASCADE ON UPDATE CASCADE;

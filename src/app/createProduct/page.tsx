@@ -88,11 +88,6 @@ export default function CreateProduct() {
       hasPetsOnProperty: false,
       additionalNotes: '',
     },
-    cancellationPolicy: {
-      freeCancellationHours: 24,
-      partialRefundPercent: 50,
-      additionalTerms: '',
-    },
   })
 
   useEffect(() => {
@@ -831,71 +826,6 @@ export default function CreateProduct() {
                       }))
                     }}
                     placeholder='Autres informations importantes...'
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Cancellation Policy */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Politique d&apos;annulation</CardTitle>
-                <CardDescription>Définissez les conditions d&apos;annulation</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                  <div>
-                    <Label htmlFor='freeCancellationHours'>
-                      Délai d&apos;annulation gratuite (heures)
-                    </Label>
-                    <Input
-                      id='freeCancellationHours'
-                      type='number'
-                      value={formData.cancellationPolicy.freeCancellationHours}
-                      onChange={e => {
-                        setFormData(prev => ({
-                          ...prev,
-                          cancellationPolicy: {
-                            ...prev.cancellationPolicy,
-                            freeCancellationHours: parseInt(e.target.value),
-                          },
-                        }))
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor='partialRefundPercent'>Pourcentage de remboursement</Label>
-                    <Input
-                      id='partialRefundPercent'
-                      type='number'
-                      value={formData.cancellationPolicy.partialRefundPercent}
-                      onChange={e => {
-                        setFormData(prev => ({
-                          ...prev,
-                          cancellationPolicy: {
-                            ...prev.cancellationPolicy,
-                            partialRefundPercent: parseInt(e.target.value),
-                          },
-                        }))
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className='mt-4'>
-                  <Label htmlFor='additionalTerms'>Conditions supplémentaires</Label>
-                  <Input
-                    id='additionalTerms'
-                    value={formData.cancellationPolicy.additionalTerms}
-                    onChange={e => {
-                      setFormData(prev => ({
-                        ...prev,
-                        cancellationPolicy: {
-                          ...prev.cancellationPolicy,
-                          additionalTerms: e.target.value,
-                        },
-                      }))
-                    }}
-                    placeholder="Autres conditions d'annulation..."
                   />
                 </div>
               </CardContent>

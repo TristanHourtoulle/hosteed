@@ -642,13 +642,6 @@ Meilleurs spots :
           additionalNotes: 'La villa est située sur un terrain privé de 1000m²',
         },
       },
-      cancellationPolicy: {
-        create: {
-          freeCancellationHours: 48,
-          partialRefundPercent: 50,
-          additionalTerms: 'En cas de force majeure, contactez-nous pour plus de flexibilité',
-        },
-      },
     },
   })
 

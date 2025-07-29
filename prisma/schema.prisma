@@ -111,7 +111,6 @@ model Product {
   nearbyPlaces       NearbyPlace[]
   transportOptions   TransportOption[]
   propertyInfo       PropertyInfo?
-  cancellationPolicy CancellationPolicy?
 
   UnAvailableProduct UnAvailableProduct[]
 
@@ -435,15 +434,6 @@ model PropertyInfo {
   additionalNotes   String?
   productId         String  @unique
   product           Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-}
-
-model CancellationPolicy {
-  id                    String  @id @default(cuid())
-  freeCancellationHours Int // nombre d'heures avant l'arrivée pour une annulation gratuite
-  partialRefundPercent  Int // pourcentage remboursé après la limite
-  additionalTerms       String?
-  productId             String  @unique
-  product               Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model Post {

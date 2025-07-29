@@ -4,6 +4,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { CheckRentIsAvailable } from '@/lib/services/rents.service'
 import { findProductById } from '@/lib/services/product.service'
+import { findUserById } from '@/lib/services/user.service'
 import {
   Calendar as CalendarIcon,
   Users,
@@ -73,7 +74,7 @@ export default function ReservationPage() {
   const [error, setError] = useState<string | null>(null)
   const [selectedOptions, setSelectedOptions] = useState<string[]>([])
   const [isAvailable, setIsAvailable] = useState<boolean>(true)
-  const [step, setStep] = useState(1) // 1: dates & guests, 2: personal info, 3: payment
+  const [step, setStep] = useState(2) // 2: personal info, 3: payment (étape dates supprimée)
 
   // Get URL parameters
   const checkInParam = searchParams.get('checkIn')
@@ -118,8 +119,35 @@ export default function ReservationPage() {
   }, [id])
 
   useEffect(() => {
-    if (session?.user?.email) {
-      setFormData(prev => ({ ...prev, email: session.user.email || '' }))
+    if (session?.user?.id) {
+      const fetchUserData = async () => {
+        try {
+          const userData = await findUserById(session.user.id)
+          if (userData) {
+            setFormData(prev => ({ 
+              ...prev, 
+              email: userData.email || '',
+              firstName: userData.name || '',
+              lastName: userData.lastname || ''
+            }))
+          }
+        } catch (error) {
+          console.error('Erreur lors de la récupération des données utilisateur:', error)
+          // Fallback sur les données de session
+          const nameParts = session.user.name?.split(' ') || []
+          const firstName = nameParts[0] || ''
+          const lastName = nameParts.slice(1).join(' ') || ''
+          
+          setFormData(prev => ({ 
+            ...prev, 
+            email: session.user.email || '',
+            firstName: firstName,
+            lastName: lastName
+          }))
+        }
+      }
+      
+      fetchUserData()
     }
   }, [session])
 
@@ -199,13 +227,7 @@ export default function ReservationPage() {
   }
 
   const handleNextStep = () => {
-    if (step === 1) {
-      if (!dateRange?.from || !dateRange?.to || !isAvailable) {
-        toast.error('Veuillez sélectionner des dates valides')
-        return
-      }
-      setStep(2)
-    } else if (step === 2) {
+    if (step === 2) {
       if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone) {
         toast.error('Veuillez remplir tous les champs obligatoires')
         return
@@ -307,32 +329,32 @@ export default function ReservationPage() {
         <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
           <div className='flex items-center justify-between h-16 sm:h-20'>
             <button
-              onClick={() => (step > 1 ? setStep(step - 1) : router.back())}
+              onClick={() => (step > 2 ? setStep(step - 1) : router.back())}
               className='flex items-center text-gray-600 hover:text-gray-900 transition-colors'
             >
               <ArrowLeft className='w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2' />
-              <span className='hidden sm:inline'>{step > 1 ? 'Étape précédente' : 'Retour'}</span>
-              <span className='sm:hidden'>{step > 1 ? 'Précédent' : 'Retour'}</span>
+              <span className='hidden sm:inline'>{step > 2 ? 'Étape précédente' : 'Retour'}</span>
+              <span className='sm:hidden'>{step > 2 ? 'Précédent' : 'Retour'}</span>
             </button>
 
             {/* Progress Steps */}
             <div className='flex items-center space-x-2 sm:space-x-4'>
-              {[1, 2, 3].map(stepNum => (
+              {[1, 2].map(stepNum => (
                 <div key={stepNum} className='flex items-center'>
                   <div
                     className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium ${
-                      stepNum < step
+                      stepNum < step - 1
                         ? 'bg-green-500 text-white'
-                        : stepNum === step
+                        : stepNum === step - 1
                           ? 'bg-blue-600 text-white'
                           : 'bg-gray-200 text-gray-600'
                     }`}
                   >
-                    {stepNum < step ? <Check className='w-3 h-3 sm:w-4 sm:h-4' /> : stepNum}
+                    {stepNum < step - 1 ? <Check className='w-3 h-3 sm:w-4 sm:h-4' /> : stepNum}
                   </div>
-                  {stepNum < 3 && (
+                  {stepNum < 2 && (
                     <div
-                      className={`w-6 sm:w-12 h-1 mx-1 sm:mx-2 ${stepNum < step ? 'bg-green-500' : 'bg-gray-200'}`}
+                      className={`w-6 sm:w-12 h-1 mx-1 sm:mx-2 ${stepNum < step - 1 ? 'bg-green-500' : 'bg-gray-200'}`}
                     />
                   )}
                 </div>
@@ -340,8 +362,8 @@ export default function ReservationPage() {
             </div>
 
             <div className='text-xs sm:text-sm text-gray-600'>
-              <span className='hidden sm:inline'>Étape {step} sur 3</span>
-              <span className='sm:hidden'>{step}/3</span>
+              <span className='hidden sm:inline'>Étape {step - 1} sur 2</span>
+              <span className='sm:hidden'>{step - 1}/2</span>
             </div>
           </div>
         </div>
@@ -391,194 +413,6 @@ export default function ReservationPage() {
             </Card>
 
             {/* Step Content */}
-            {step === 1 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className='flex items-center text-lg sm:text-xl'>
-                    <CalendarIcon className='w-5 h-5 mr-2' />
-                    Dates et voyageurs
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className='space-y-6'>
-                  {/* Date Selection */}
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 mb-3'>
-                      Sélectionnez vos dates
-                    </label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <button className='w-full p-3 sm:p-4 border border-gray-300 rounded-xl hover:border-blue-500 transition-colors text-left'>
-                          <div className='flex items-center space-x-3'>
-                            <CalendarIcon className='h-5 w-5 text-gray-400 flex-shrink-0' />
-                            <div className='min-w-0 flex-1'>
-                              <div className='text-sm font-medium text-gray-900'>
-                                {dateRange?.from ? (
-                                  dateRange.to ? (
-                                    <>
-                                      {format(dateRange.from, 'dd MMM', { locale: fr })} -{' '}
-                                      {format(dateRange.to, 'dd MMM', { locale: fr })}
-                                    </>
-                                  ) : (
-                                    format(dateRange.from, 'dd MMM', { locale: fr })
-                                  )
-                                ) : (
-                                  'Sélectionner les dates'
-                                )}
-                              </div>
-                              {nights > 0 && (
-                                <div className='text-xs text-gray-500'>
-                                  {nights} nuit{nights > 1 ? 's' : ''}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </button>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        className='w-auto p-0 max-w-[95vw]'
-                        align='start'
-                        side='bottom'
-                        sideOffset={4}
-                      >
-                        <div className='block sm:hidden'>
-                          <Calendar
-                            initialFocus
-                            mode='range'
-                            defaultMonth={dateRange?.from}
-                            selected={dateRange}
-                            onSelect={handleDateRangeChange}
-                            numberOfMonths={1}
-                            disabled={date => date < new Date(today)}
-                            className='rounded-lg border'
-                          />
-                        </div>
-                        <div className='hidden sm:block'>
-                          <Calendar
-                            initialFocus
-                            mode='range'
-                            defaultMonth={dateRange?.from}
-                            selected={dateRange}
-                            onSelect={handleDateRangeChange}
-                            numberOfMonths={2}
-                            disabled={date => date < new Date(today)}
-                            className='rounded-lg border'
-                          />
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-
-                  {/* Guest Selection */}
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 mb-3'>
-                      Nombre de voyageurs
-                    </label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <button className='w-full p-3 sm:p-4 border border-gray-300 rounded-xl hover:border-blue-500 transition-colors text-left'>
-                          <div className='flex items-center justify-between'>
-                            <div className='flex items-center space-x-3 min-w-0 flex-1'>
-                              <Users className='h-5 w-5 text-gray-400 flex-shrink-0' />
-                              <span className='font-medium truncate'>
-                                {formData.peopleNumber}{' '}
-                                {formData.peopleNumber === 1 ? 'voyageur' : 'voyageurs'}
-                              </span>
-                            </div>
-                            <span className='text-sm text-gray-500 flex-shrink-0 ml-2'>
-                              Max {Number(product.maxPeople) || 8}
-                            </span>
-                          </div>
-                        </button>
-                      </PopoverTrigger>
-                      <PopoverContent className='w-72 sm:w-80 p-0' align='start'>
-                        <Card>
-                          <CardHeader className='pb-4'>
-                            <CardTitle className='text-lg'>Voyageurs</CardTitle>
-                          </CardHeader>
-                          <CardContent className='flex items-center justify-center space-x-4 pb-6'>
-                            <Button
-                              variant='outline'
-                              size='icon'
-                              className='rounded-full h-10 w-10'
-                              onClick={() => {
-                                if (formData.peopleNumber > 1) {
-                                  setFormData(prev => ({
-                                    ...prev,
-                                    peopleNumber: prev.peopleNumber - 1,
-                                  }))
-                                }
-                              }}
-                            >
-                              -
-                            </Button>
-                            <span className='text-xl font-medium w-16 text-center'>
-                              {formData.peopleNumber}
-                            </span>
-                            <Button
-                              variant='outline'
-                              size='icon'
-                              className='rounded-full h-10 w-10'
-                              onClick={() => {
-                                if (formData.peopleNumber < (product.maxPeople || 8)) {
-                                  setFormData(prev => ({
-                                    ...prev,
-                                    peopleNumber: prev.peopleNumber + 1,
-                                  }))
-                                }
-                              }}
-                            >
-                              +
-                            </Button>
-                          </CardContent>
-                        </Card>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-
-                  {/* Options */}
-                  {product.options && product.options.length > 0 && (
-                    <div>
-                      <label className='block text-sm font-medium text-gray-700 mb-3'>
-                        Options supplémentaires
-                      </label>
-                      <div className='space-y-3'>
-                        {product.options.map(option => (
-                          <div
-                            key={option.id}
-                            className='flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:border-blue-300 transition-colors'
-                          >
-                            <div className='flex items-center space-x-3'>
-                              <input
-                                type='checkbox'
-                                id={`option-${option.id}`}
-                                checked={selectedOptions.includes(option.id)}
-                                onChange={() => handleOptionChange(option.id)}
-                                className='w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500'
-                              />
-                              <label htmlFor={`option-${option.id}`} className='font-medium'>
-                                {option.name}
-                              </label>
-                            </div>
-                            <span className='text-lg font-semibold text-gray-900'>
-                              +{Number(option.price)}€
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {!isAvailable && dateRange?.from && dateRange?.to && (
-                    <div className='bg-red-50 border border-red-200 rounded-lg p-4'>
-                      <p className='text-red-700 font-medium'>
-                        Ces dates ne sont pas disponibles. Veuillez en choisir d&apos;autres.
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
             {step === 2 && (
               <Card>
                 <CardHeader>
@@ -778,7 +612,6 @@ export default function ReservationPage() {
                     <Button
                       onClick={handleNextStep}
                       disabled={
-                        (step === 1 && (!dateRange?.from || !dateRange?.to || !isAvailable)) ||
                         (step === 2 &&
                           (!formData.firstName ||
                             !formData.lastName ||
@@ -787,7 +620,7 @@ export default function ReservationPage() {
                       }
                       className='w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-3 sm:py-4 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base'
                     >
-                      {step === 1 ? 'Continuer' : 'Finaliser'}
+                      Finaliser
                     </Button>
                   ) : (
                     <Button
