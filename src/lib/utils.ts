@@ -66,3 +66,34 @@ export function getProfileImageUrl(imageUrl: string | null): string | null {
   // Return regular URLs (like Google profile pictures) as is
   return imageUrl
 }
+
+// Check if a product is currently sponsored
+export function isProductSponsored(
+  promotedProducts?: Array<{
+    id: string
+    active: boolean
+    start: Date
+    end: Date
+  }>
+): boolean {
+  if (!promotedProducts || promotedProducts.length === 0) return false
+
+  const now = new Date()
+  return promotedProducts.some(
+    promo => promo.active && new Date(promo.start) <= now && new Date(promo.end) >= now
+  )
+}
+
+// Sort products with sponsored ones first
+export function sortProductsWithSponsoredFirst<
+  T extends { PromotedProduct?: Array<{ id: string; active: boolean; start: Date; end: Date }> },
+>(products: T[]): T[] {
+  return products.sort((a, b) => {
+    const aSponsored = isProductSponsored(a.PromotedProduct)
+    const bSponsored = isProductSponsored(b.PromotedProduct)
+
+    if (aSponsored && !bSponsored) return -1
+    if (!aSponsored && bSponsored) return 1
+    return 0
+  })
+}

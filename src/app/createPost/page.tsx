@@ -1,6 +1,7 @@
 'use client' // Page de création de post : permet d'ajouter un titre, des images et un contenu formaté en Markdown avec prévisualisation.
 import React, { useState } from 'react'
 import MDEditor from '@uiw/react-md-editor'
+import Image from 'next/image'
 import { createPost } from '@/lib/services/post.service'
 import {
   Card,
@@ -118,10 +119,11 @@ export default function CreatePostPage() {
               </div>
               {images.length > 0 && (
                 <div className='relative w-full aspect-video rounded-lg overflow-hidden border'>
-                  <img
+                  <Image
                     src={URL.createObjectURL(images[0])}
                     alt='Image principale'
-                    className='w-full h-full object-cover'
+                    fill
+                    className='object-cover'
                   />
                   <Button
                     variant='ghost'

@@ -1,6 +1,7 @@
 'use client'
 
 import { useSearchParams, useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { Button } from '@/components/ui/shadcnui/button'
 import { LoginForm } from './LoginForm'
 import { RegisterForm } from './RegisterForm'
@@ -59,7 +60,7 @@ export const AuthForm = () => {
             <p className='text-xl'>Découvrez des hébergements exceptionnels</p>
           </div>
           <div className='absolute bottom-10'>
-            <img src='/window.svg' alt='Window' className='w-16 h-16' />
+            <Image src='/window.svg' alt='Window' width={64} height={64} />
           </div>
         </div>
       </div>

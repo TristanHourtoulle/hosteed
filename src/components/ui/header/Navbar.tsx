@@ -66,6 +66,14 @@ const Navbar = () => {
       </Link>
 
       <Link
+        href='/sponsored'
+        className='block py-3 px-4 text-lg font-medium text-gray-900 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer'
+        onClick={() => setIsMobileMenuOpen(false)}
+      >
+        <span className='flex items-center'>⭐ Hébergements Sponsorisés</span>
+      </Link>
+
+      <Link
         href='/posts'
         className='block py-3 px-4 text-lg font-medium text-gray-900 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer'
         onClick={() => setIsMobileMenuOpen(false)}
@@ -301,6 +309,22 @@ const Navbar = () => {
                             </div>
                             <p className='text-muted-foreground line-clamp-2 text-sm leading-snug'>
                               Hébergements avec promotions
+                            </p>
+                          </Link>
+                        </NavigationMenuLink>
+                      </li>
+
+                      <li>
+                        <NavigationMenuLink asChild>
+                          <Link
+                            href='/sponsored'
+                            className='block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground cursor-pointer'
+                          >
+                            <div className='text-sm font-medium leading-none'>
+                              ⭐ Hébergements Sponsorisés
+                            </div>
+                            <p className='text-muted-foreground line-clamp-2 text-sm leading-snug'>
+                              Sélection mise en avant par nos partenaires
                             </p>
                           </Link>
                         </NavigationMenuLink>

@@ -6,8 +6,6 @@ import { CheckRentIsAvailable } from '@/lib/services/rents.service'
 import { findProductById } from '@/lib/services/product.service'
 import { findUserById } from '@/lib/services/user.service'
 import {
-  Calendar as CalendarIcon,
-  Users,
   MapPin,
   Star,
   CreditCard,
@@ -15,13 +13,10 @@ import {
   ArrowLeft,
   Check,
 } from 'lucide-react'
-import { Calendar } from '@/components/ui/shadcnui/calendar'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/shadcnui/popover'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import type { DateRange } from 'react-day-picker'
 import { toast } from 'sonner'
 import Image from 'next/image'
 
@@ -72,8 +67,6 @@ export default function ReservationPage() {
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedOptions, setSelectedOptions] = useState<string[]>([])
-  const [isAvailable, setIsAvailable] = useState<boolean>(true)
   const [step, setStep] = useState(2) // 2: personal info, 3: payment (étape dates supprimée)
 
   // Get URL parameters
@@ -91,13 +84,6 @@ export default function ReservationPage() {
     phone: '',
     specialRequests: '',
   })
-
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: checkInParam ? new Date(checkInParam) : undefined,
-    to: checkOutParam ? new Date(checkOutParam) : undefined,
-  })
-
-  const today = new Date().toISOString().split('T')[0]
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -160,39 +146,12 @@ export default function ReservationPage() {
         arrivingDate.setHours(Number(product?.arriving) || 14, 0, 0, 0)
         leavingDate.setHours(Number(product?.leaving) || 11, 0, 0, 0)
 
-        const available = await CheckRentIsAvailable(id as string, arrivingDate, leavingDate)
-        setIsAvailable(available.available)
-      } else {
-        setIsAvailable(true)
+        await CheckRentIsAvailable(id as string, arrivingDate, leavingDate)
       }
     }
 
     checkAvailability()
   }, [formData.arrivingDate, formData.leavingDate, id, product?.arriving, product?.leaving])
-
-  const handleDateRangeChange = (range: DateRange | undefined) => {
-    setDateRange(range)
-
-    if (range?.from) {
-      setFormData(prev => ({
-        ...prev,
-        arrivingDate: format(range.from!, 'yyyy-MM-dd'),
-      }))
-    }
-
-    if (range?.to) {
-      setFormData(prev => ({
-        ...prev,
-        leavingDate: format(range.to!, 'yyyy-MM-dd'),
-      }))
-    }
-  }
-
-  const handleOptionChange = (optionId: string) => {
-    setSelectedOptions(prev =>
-      prev.includes(optionId) ? prev.filter(id => id !== optionId) : [...prev, optionId]
-    )
-  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -200,19 +159,21 @@ export default function ReservationPage() {
   }
 
   const calculateNights = () => {
-    if (!dateRange?.from || !dateRange?.to) return 0
-    return Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24))
+    if (!formData.arrivingDate || !formData.leavingDate) return 0
+    const from = new Date(formData.arrivingDate)
+    const to = new Date(formData.leavingDate)
+    return Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24))
   }
 
   const calculateTotalPrice = () => {
-    if (!product || !dateRange?.from || !dateRange?.to) return 0
+    if (!product || !formData.arrivingDate || !formData.leavingDate) return 0
 
     const nights = calculateNights()
     if (nights <= 0) return 0
 
     const basePrice = parseFloat(product.basePrice) * nights
     const optionsPrice = product.options
-      .filter(option => selectedOptions.includes(option.id))
+      .filter(() => false) // Pas d'options sélectionnées dans cette version simplifiée
       .reduce((sum, option) => sum + Number(option.price), 0)
     const subtotal = basePrice + optionsPrice
     const commission = (subtotal * product.commission) / 100
@@ -270,7 +231,7 @@ export default function ReservationPage() {
             lastName: formData.lastName,
             phone: formData.phone,
             specialRequests: formData.specialRequests,
-            options: selectedOptions,
+            options: [], // Pas d'options dans cette version simplifiée
             prices: total,
           },
         }),
@@ -315,7 +276,7 @@ export default function ReservationPage() {
   const nights = calculateNights()
   const subtotal = parseFloat(product.basePrice) * nights
   const optionsTotal = product.options
-    .filter(option => selectedOptions.includes(option.id))
+    .filter(() => false) // Pas d'options sélectionnées
     .reduce((sum, option) => sum + Number(option.price), 0)
   const cleaningFee = 25
   const serviceFee = 0
@@ -518,10 +479,10 @@ export default function ReservationPage() {
                     <div className='flex justify-between py-2'>
                       <span className='text-gray-600'>Dates:</span>
                       <span className='font-medium'>
-                        {dateRange?.from && dateRange?.to && (
+                        {formData.arrivingDate && formData.leavingDate && (
                           <>
-                            {format(dateRange.from, 'dd MMM', { locale: fr })} -{' '}
-                            {format(dateRange.to, 'dd MMM', { locale: fr })}
+                            {format(new Date(formData.arrivingDate), 'dd MMM', { locale: fr })} -{' '}
+                            {format(new Date(formData.leavingDate), 'dd MMM', { locale: fr })}
                           </>
                         )}
                       </span>

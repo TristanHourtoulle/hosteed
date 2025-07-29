@@ -8,6 +8,7 @@ import { findAllSecurity } from '@/lib/services/security.services'
 import { findAllMeals } from '@/lib/services/meals.service'
 import { findAllEquipments } from '@/lib/services/equipments.service'
 import { findAllServices } from '@/lib/services/services.service'
+import { sortProductsWithSponsoredFirst } from '@/lib/utils'
 
 interface Product {
   id: string
@@ -34,6 +35,12 @@ interface Product {
   sizeRoom?: number | null
   autoAccept?: boolean
   contract?: boolean
+  PromotedProduct?: Array<{
+    id: string
+    active: boolean
+    start: Date
+    end: Date
+  }>
 }
 
 interface Suggestion {
@@ -275,6 +282,9 @@ export function useProductSearch() {
         return price < 100
       })
     }
+
+    // Always sort with sponsored products first
+    result = sortProductsWithSponsoredFirst(result)
 
     return result
   }

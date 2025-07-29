@@ -4,7 +4,15 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { motion } from 'framer-motion'
-import { BarChart2, ClipboardCheck, Home, MessageSquare, Users, CreditCard } from 'lucide-react'
+import {
+  BarChart2,
+  ClipboardCheck,
+  Home,
+  MessageSquare,
+  Users,
+  CreditCard,
+  Star,
+} from 'lucide-react'
 
 const navItems = [
   {
@@ -26,6 +34,11 @@ const navItems = [
     title: 'Hébergements',
     href: '/admin/products',
     icon: Home,
+  },
+  {
+    title: 'Sponsorisés',
+    href: '/admin/promoted',
+    icon: Star,
   },
   {
     title: 'Avis',

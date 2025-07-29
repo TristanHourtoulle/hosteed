@@ -176,9 +176,11 @@ const MarkdownComponents = {
     if (src.startsWith('http')) {
       return (
         <span className='block my-8'>
-          <img
+          <Image
             src={src}
             alt={alt || 'Image'}
+            width={600}
+            height={400}
             className={cn('rounded-lg max-w-full h-auto mx-auto', className)}
             {...props}
           />

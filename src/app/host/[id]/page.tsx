@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation'
 import { findProductById } from '@/lib/services/product.service'
 import { CheckRentIsAvailable } from '@/lib/services/rents.service'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Equipment, Meals, Services, User } from '@prisma/client'
 import { X, ChevronLeft, ChevronRight } from 'lucide-react'
 
@@ -23,6 +24,7 @@ import CancellationPolicy from './components/CancellationPolicy'
 import PropertyReviews from './components/PropertyReviews'
 import HostInformation from './components/HostInformation'
 import BookingCard from './components/BookingCard'
+import AdminPromoteButton from './components/AdminPromoteButton'
 
 interface Reviews {
   id: string
@@ -302,12 +304,16 @@ export default function ProductDetails() {
                 <ChevronRight className='h-6 w-6 text-gray-700' />
               </button>
               {/* Image */}
-              <img
-                src={product.img[currentImageIndex]?.img || product.img[0].img}
-                alt={product.name}
-                className='max-h-[80vh] max-w-full object-contain rounded-2xl transition-all'
-                draggable={false}
-              />
+              <div className='relative max-h-[80vh] w-auto aspect-auto'>
+                <Image
+                  src={product.img[currentImageIndex]?.img || product.img[0].img}
+                  alt={product.name}
+                  width={800}
+                  height={600}
+                  className='max-h-[80vh] w-auto object-contain rounded-2xl transition-all'
+                  draggable={false}
+                />
+              </div>
             </div>
           </div>
         )}
@@ -376,6 +382,9 @@ export default function ProductDetails() {
           </div>
         </div>
       </div>
+
+      {/* Admin Promote Button */}
+      <AdminPromoteButton productId={product.id} productName={product.name} />
     </div>
   )
 }

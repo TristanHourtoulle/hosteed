@@ -85,6 +85,17 @@ export async function findAllProducts() {
             cleaning: true,
           },
         },
+        PromotedProduct: {
+          where: {
+            active: true,
+            start: {
+              lte: new Date(),
+            },
+            end: {
+              gte: new Date(),
+            },
+          },
+        },
       },
     })
 

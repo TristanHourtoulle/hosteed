@@ -2,7 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Heart, Star, ChevronLeft, ChevronRight, ImageIcon } from 'lucide-react'
 import { useState } from 'react'
-import { getCityFromAddress, calculateAverageRating } from '@/lib/utils'
+import { getCityFromAddress, calculateAverageRating, isProductSponsored } from '@/lib/utils'
 import { useFavorites } from '@/hooks/useFavorites'
 import { motion } from 'framer-motion'
 
@@ -24,6 +24,12 @@ interface Product {
   basePrice: string
   certified?: boolean
   reviews?: Review[]
+  PromotedProduct?: Array<{
+    id: string
+    active: boolean
+    start: Date
+    end: Date
+  }>
 }
 
 export default function ProductCard({ product, index = 0 }: { product: Product; index?: number }) {
@@ -31,6 +37,9 @@ export default function ProductCard({ product, index = 0 }: { product: Product; 
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [imageError, setImageError] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
+
+  // Check if product is sponsored
+  const isSponsored = isProductSponsored(product.PromotedProduct)
 
   const rating = product.reviews ? calculateAverageRating(product.reviews) : null
 
@@ -125,6 +134,20 @@ export default function ProductCard({ product, index = 0 }: { product: Product; 
                 <span className='text-gray-500 text-sm font-medium'>Image non disponible</span>
                 <span className='text-gray-400 text-xs mt-1'>Propriété sans photo</span>
               </div>
+            )}
+
+            {/* Sponsored Badge */}
+            {isSponsored && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className='absolute top-3 left-3 z-10 bg-gradient-to-r from-amber-400 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg border border-white/20'
+              >
+                <div className='flex items-center gap-1'>
+                  <Star className='w-3 h-3 fill-current' />
+                  Sponsorisé
+                </div>
+              </motion.div>
             )}
 
             {/* Heart Icon */}
