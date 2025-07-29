@@ -14,12 +14,12 @@ export async function findSecurityById(id: string) {
   try {
     const req = await prisma.security.findFirst({
       where: {
-        id
-      }
+        id,
+      },
     })
-    if (req) return req;
+    if (req) return req
   } catch (error) {
-    console.error('Erreur lors de la recherche d\'une option de sécurité', error)
+    console.error("Erreur lors de la recherche d'une option de sécurité", error)
     return null
   }
 }
@@ -28,11 +28,11 @@ export async function createSecurity(name: string) {
   try {
     return await prisma.security.create({
       data: {
-        name
-      }
+        name,
+      },
     })
   } catch (error) {
-    console.error('Erreur lors de la création d\'une option de sécurité', error)
+    console.error("Erreur lors de la création d'une option de sécurité", error)
     return null
   }
 }
@@ -41,14 +41,14 @@ export async function updateSecurity(id: string, name: string) {
   try {
     return await prisma.security.update({
       where: {
-        id
+        id,
       },
       data: {
-        name
-      }
+        name,
+      },
     })
   } catch (error) {
-    console.error('Erreur lors de la mise à jour d\'une option de sécurité', error)
+    console.error("Erreur lors de la mise à jour d'une option de sécurité", error)
     return null
   }
 }
@@ -57,12 +57,12 @@ export async function deleteSecurity(id: string) {
   try {
     const req = await prisma.security.delete({
       where: {
-        id
-      }
+        id,
+      },
     })
-    if (req) return true;
+    if (req) return true
   } catch (error) {
-    console.error('Erreur lors de la suppresion d\'une option de sécurité', error)
+    console.error("Erreur lors de la suppresion d'une option de sécurité", error)
     return null
   }
 }

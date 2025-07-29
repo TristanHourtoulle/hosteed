@@ -31,7 +31,12 @@ import {
   Edit3,
   Trash2,
 } from 'lucide-react'
-import {findAllSecurity, createSecurity, updateSecurity, deleteSecurity} from "@/lib/services/security.services"
+import {
+  findAllSecurity,
+  createSecurity,
+  updateSecurity,
+  deleteSecurity,
+} from '@/lib/services/security.services'
 import { SecurityInterface } from '@/lib/interface/securityInterface'
 
 const containerVariants: Variants = {
@@ -67,12 +72,12 @@ export default function SecurityPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [newOptionName, setNewOptionName] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  
+
   // États pour l'édition
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [editingOption, setEditingOption] = useState<SecurityInterface | null>(null)
   const [editOptionName, setEditOptionName] = useState('')
-  
+
   // États pour la suppression
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [deletingOption, setDeletingOption] = useState<SecurityInterface | null>(null)
@@ -110,7 +115,7 @@ export default function SecurityPage() {
     setIsSubmitting(true)
     try {
       const newOption = await createSecurity(newOptionName)
-      
+
       if (newOption) {
         setSecurity([...security, newOption])
         setNewOptionName('')
@@ -138,11 +143,9 @@ export default function SecurityPage() {
     setIsSubmitting(true)
     try {
       const updatedOption = await updateSecurity(editingOption.id, editOptionName)
-      
+
       if (updatedOption) {
-        setSecurity(security.map(opt => 
-          opt.id === editingOption.id ? updatedOption : opt
-        ))
+        setSecurity(security.map(opt => (opt.id === editingOption.id ? updatedOption : opt)))
         setEditOptionName('')
         setEditingOption(null)
         setIsEditDialogOpen(false)
@@ -168,7 +171,7 @@ export default function SecurityPage() {
     setIsSubmitting(true)
     try {
       const success = await deleteSecurity(deletingOption.id)
-      
+
       if (success) {
         setSecurity(security.filter(opt => opt.id !== deletingOption.id))
         setDeletingOption(null)
@@ -369,8 +372,8 @@ export default function SecurityPage() {
                       Supprimer l&apos;option de sécurité
                     </DialogTitle>
                     <DialogDescription>
-                      Êtes-vous sûr de vouloir supprimer l&apos;option &quot;{deletingOption?.name}&quot; ?
-                      Cette action est irréversible.
+                      Êtes-vous sûr de vouloir supprimer l&apos;option &quot;{deletingOption?.name}
+                      &quot; ? Cette action est irréversible.
                     </DialogDescription>
                   </DialogHeader>
                   <DialogFooter>
@@ -431,7 +434,7 @@ export default function SecurityPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
+            <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3 items-stretch'>
               {filteredUsers.map((option, index) => (
                 <motion.div
                   key={option.id}
@@ -439,7 +442,7 @@ export default function SecurityPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm hover:shadow-xl transition-all duration-300 group'>
+                  <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm hover:shadow-xl transition-all duration-300 group h-full'>
                     <CardHeader className='pb-3'>
                       <div className='flex items-start justify-between'>
                         <div className='flex items-center gap-3'>

@@ -227,6 +227,12 @@ export default function AdminDashboard() {
           icon: BrushCleaning,
           href: '/admin/equipments',
         },
+        {
+          title: 'Gestion des types de logements',
+          description: 'Voir et gérer tous les types de logements',
+          icon: Home,
+          href: '/admin/typeRent',
+        },
       ],
     },
   ]

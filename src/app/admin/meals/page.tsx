@@ -33,7 +33,7 @@ import {
 } from 'lucide-react'
 import { SecurityInterface } from '@/lib/interface/securityInterface'
 import { MealsInterface } from '@/lib/interface/mealsInterface'
-import {findAllMeals, createMeal, updateMeal, deleteMeal} from "@/lib/services/meals.service"
+import { findAllMeals, createMeal, updateMeal, deleteMeal } from '@/lib/services/meals.service'
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -68,12 +68,12 @@ export default function MealsPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [newOptionName, setNewOptionName] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  
+
   // États pour l'édition
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [editingOption, setEditingOption] = useState<MealsInterface | null>(null)
   const [editOptionName, setEditOptionName] = useState('')
-  
+
   // États pour la suppression
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [deletingOption, setDeletingOption] = useState<MealsInterface | null>(null)
@@ -111,7 +111,7 @@ export default function MealsPage() {
     setIsSubmitting(true)
     try {
       const newOption = await createMeal(newOptionName)
-      
+
       if (newOption) {
         setMeals([...meals, newOption])
         setNewOptionName('')
@@ -139,11 +139,9 @@ export default function MealsPage() {
     setIsSubmitting(true)
     try {
       const updatedOption = await updateMeal(editingOption.id, editOptionName)
-      
+
       if (updatedOption) {
-        setMeals(meals.map(opt => 
-          opt.id === editingOption.id ? updatedOption : opt
-        ))
+        setMeals(meals.map(opt => (opt.id === editingOption.id ? updatedOption : opt)))
         setEditOptionName('')
         setEditingOption(null)
         setIsEditDialogOpen(false)
@@ -169,7 +167,7 @@ export default function MealsPage() {
     setIsSubmitting(true)
     try {
       const success = await deleteMeal(deletingOption.id)
-      
+
       if (success) {
         setMeals(meals.filter(opt => opt.id !== deletingOption.id))
         setDeletingOption(null)
@@ -317,9 +315,7 @@ export default function MealsPage() {
                       <Edit3 className='h-5 w-5 text-orange-600' />
                       Modifier l&apos;option de repas
                     </DialogTitle>
-                    <DialogDescription>
-                      Modifiez le nom de cette option de repas.
-                    </DialogDescription>
+                    <DialogDescription>Modifiez le nom de cette option de repas.</DialogDescription>
                   </DialogHeader>
                   <div className='space-y-4 py-4'>
                     <div className='space-y-2'>
@@ -371,8 +367,8 @@ export default function MealsPage() {
                       Supprimer l&apos;option de repas
                     </DialogTitle>
                     <DialogDescription>
-                      Êtes-vous sûr de vouloir supprimer l&apos;option &quot;{deletingOption?.name}&quot; ?
-                      Cette action est irréversible.
+                      Êtes-vous sûr de vouloir supprimer l&apos;option &quot;{deletingOption?.name}
+                      &quot; ? Cette action est irréversible.
                     </DialogDescription>
                   </DialogHeader>
                   <DialogFooter>
@@ -433,7 +429,7 @@ export default function MealsPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
+            <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3 items-stretch'>
               {filteredMeals.map((option, index) => (
                 <motion.div
                   key={option.id}
@@ -441,7 +437,7 @@ export default function MealsPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm hover:shadow-xl transition-all duration-300 group'>
+                  <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm hover:shadow-xl transition-all duration-300 group h-full'>
                     <CardHeader className='pb-3'>
                       <div className='flex items-start justify-between'>
                         <div className='flex items-center gap-3'>

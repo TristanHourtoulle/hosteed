@@ -511,12 +511,60 @@ Meilleurs spots :
   }
 
   // Create TypeRent
-  const typeRent = await prisma.typeRent.create({
-    data: {
-      name: 'Villa',
-      description: 'Location de villa entière',
-    },
-  })
+  const typeRents = await Promise.all([
+    prisma.typeRent.create({
+      data: {
+        name: 'Villa',
+        description:
+          'Maison individuelle avec jardin et piscine, idéale pour les vacances en famille',
+      },
+    }),
+    prisma.typeRent.create({
+      data: {
+        name: 'Appartement',
+        description: 'Logement dans un immeuble, parfait pour les séjours urbains',
+      },
+    }),
+    prisma.typeRent.create({
+      data: {
+        name: 'Maison',
+        description: 'Habitation traditionnelle avec tout le confort moderne',
+      },
+    }),
+    prisma.typeRent.create({
+      data: {
+        name: 'Hôtel',
+        description: 'Chambre ou suite dans un établissement hôtelier',
+      },
+    }),
+    prisma.typeRent.create({
+      data: {
+        name: 'Bungalow',
+        description: 'Petite maison de vacances, souvent près de la plage',
+      },
+    }),
+    prisma.typeRent.create({
+      data: {
+        name: 'Studio',
+        description: 'Petit logement compact avec toutes les commodités',
+      },
+    }),
+    prisma.typeRent.create({
+      data: {
+        name: 'Loft',
+        description: "Grand espace ouvert à l'architecture industrielle",
+      },
+    }),
+    prisma.typeRent.create({
+      data: {
+        name: 'Chalet',
+        description: 'Maison de montagne en bois, idéale pour les séjours nature',
+      },
+    }),
+  ])
+
+  // Utiliser le premier type pour la compatibilité avec le reste
+  const typeRent = typeRents[0]
 
   // Create Equipment
   const equipments = await Promise.all([

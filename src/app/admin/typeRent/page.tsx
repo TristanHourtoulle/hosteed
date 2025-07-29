@@ -24,21 +24,20 @@ import {
   Loader2,
   Search,
   Eye,
-  BrushCleaning,
+  Home,
   Plus,
   ArrowLeft,
   CheckCircle,
   Edit3,
   Trash2,
 } from 'lucide-react'
-
 import {
-  findAllEquipments,
-  createEquipment,
-  updateEquipment,
-  deleteEquipement,
-} from '@/lib/services/equipments.service'
-import { EquipmentInterface } from '@/lib/interface/equipmentInterface'
+  findAllTypeRent,
+  createTypeRent,
+  updateTypeRent,
+  deleteTypeRent,
+} from '@/lib/services/typeRent.service'
+import { TypeRentInterface } from '@/lib/interface/typeRentInterface'
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -63,25 +62,27 @@ const itemVariants: Variants = {
   },
 }
 
-export default function EquipmentsPage() {
+export default function TypeRentPage() {
   const { data: session } = useSession()
   const router = useRouter()
-  const [equipments, setEquipments] = useState<EquipmentInterface[]>([])
+  const [typeRents, setTypeRents] = useState<TypeRentInterface[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
-  const [newOptionName, setNewOptionName] = useState('')
+  const [newTypeName, setNewTypeName] = useState('')
+  const [newTypeDescription, setNewTypeDescription] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // États pour l'édition
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [editingOption, setEditingOption] = useState<EquipmentInterface | null>(null)
-  const [editOptionName, setEditOptionName] = useState('')
+  const [editingType, setEditingType] = useState<TypeRentInterface | null>(null)
+  const [editTypeName, setEditTypeName] = useState('')
+  const [editTypeDescription, setEditTypeDescription] = useState('')
 
   // États pour la suppression
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [deletingOption, setDeletingOption] = useState<EquipmentInterface | null>(null)
+  const [deletingType, setDeletingType] = useState<TypeRentInterface | null>(null)
 
   useEffect(() => {
     if (!session?.user?.roles || session.user.roles !== 'ADMIN') {
@@ -90,105 +91,104 @@ export default function EquipmentsPage() {
   }, [session, router])
 
   useEffect(() => {
-    const fetchEquipments = async () => {
+    const fetchTypeRents = async () => {
       try {
-        const equipmentsData = await findAllEquipments()
-        if (equipmentsData) {
-          setEquipments(equipmentsData)
+        const typeRentData = await findAllTypeRent()
+        if (typeRentData) {
+          setTypeRents(typeRentData)
         }
       } catch (err) {
-        setError("Erreur lors du chargement des options d'équipements")
+        setError('Erreur lors du chargement des types de logements')
         console.error(err)
       } finally {
         setLoading(false)
       }
     }
-    fetchEquipments()
+    fetchTypeRents()
   }, [])
 
-  const filteredEquipments = equipments.filter((option: EquipmentInterface) =>
-    option.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredTypes = typeRents.filter(
+    type =>
+      type.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      type.description?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const handleAddOption = async () => {
-    if (!newOptionName.trim()) return
+  const handleAddType = async () => {
+    if (!newTypeName.trim() || !newTypeDescription.trim()) return
 
     setIsSubmitting(true)
     try {
-      // Le service createEquipment prend (name, icon) en paramètres
-      const newOption = await createEquipment(newOptionName, 'default-icon')
+      const newType = await createTypeRent(newTypeName, newTypeDescription)
 
-      if (newOption) {
-        setEquipments([...equipments, newOption])
-        setNewOptionName('')
+      if (newType) {
+        setTypeRents([...typeRents, newType])
+        setNewTypeName('')
+        setNewTypeDescription('')
         setIsAddDialogOpen(false)
       } else {
-        setError("Erreur lors de la création de l'option")
+        setError('Erreur lors de la création du type de logement')
       }
     } catch (err) {
       console.error('Erreur lors de la création:', err)
-      setError("Erreur lors de la création de l'option")
+      setError('Erreur lors de la création du type de logement')
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const handleEditOption = (option: EquipmentInterface) => {
-    setEditingOption(option)
-    setEditOptionName(option.name || '')
+  const handleEditType = (type: TypeRentInterface) => {
+    setEditingType(type)
+    setEditTypeName(type.name || '')
+    setEditTypeDescription(type.description || '')
     setIsEditDialogOpen(true)
   }
 
-  const handleUpdateOption = async () => {
-    if (!editingOption || !editOptionName.trim()) return
+  const handleUpdateType = async () => {
+    if (!editingType || !editTypeName.trim() || !editTypeDescription.trim()) return
 
     setIsSubmitting(true)
     try {
-      // updateEquipment prend (id, name, icon)
-      const updatedOption = await updateEquipment(
-        editingOption.id,
-        editOptionName,
-        editingOption.icon || 'default-icon'
-      )
+      const updatedType = await updateTypeRent(editingType.id, editTypeName, editTypeDescription)
 
-      if (updatedOption) {
-        setEquipments(equipments.map(opt => (opt.id === editingOption.id ? updatedOption : opt)))
-        setEditOptionName('')
-        setEditingOption(null)
+      if (updatedType) {
+        setTypeRents(typeRents.map(type => (type.id === editingType.id ? updatedType : type)))
+        setEditTypeName('')
+        setEditTypeDescription('')
+        setEditingType(null)
         setIsEditDialogOpen(false)
       } else {
-        setError("Erreur lors de la modification de l'option")
+        setError('Erreur lors de la modification du type de logement')
       }
     } catch (err) {
       console.error('Erreur lors de la modification:', err)
-      setError("Erreur lors de la modification de l'option")
+      setError('Erreur lors de la modification du type de logement')
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const handleDeleteOption = (option: EquipmentInterface) => {
-    setDeletingOption(option)
+  const handleDeleteType = (type: TypeRentInterface) => {
+    setDeletingType(type)
     setIsDeleteDialogOpen(true)
   }
 
   const handleConfirmDelete = async () => {
-    if (!deletingOption) return
+    if (!deletingType) return
 
     setIsSubmitting(true)
     try {
-      const success = await deleteEquipement(deletingOption.id)
+      const success = await deleteTypeRent(deletingType.id)
 
       if (success) {
-        setEquipments(equipments.filter(opt => opt.id !== deletingOption.id))
-        setDeletingOption(null)
+        setTypeRents(typeRents.filter(type => type.id !== deletingType.id))
+        setDeletingType(null)
         setIsDeleteDialogOpen(false)
       } else {
-        setError("Erreur lors de la suppression de l'option")
+        setError('Erreur lors de la suppression du type de logement')
       }
     } catch (err) {
       console.error('Erreur lors de la suppression:', err)
-      setError("Erreur lors de la suppression de l'option")
+      setError('Erreur lors de la suppression du type de logement')
     } finally {
       setIsSubmitting(false)
     }
@@ -198,8 +198,8 @@ export default function EquipmentsPage() {
     return (
       <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-8 flex items-center justify-center'>
         <div className='flex items-center gap-3'>
-          <Loader2 className='h-6 w-6 animate-spin text-green-600' />
-          <p className='text-slate-600 text-lg'>Chargement des équipements...</p>
+          <Loader2 className='h-6 w-6 animate-spin text-purple-600' />
+          <p className='text-slate-600 text-lg'>Chargement des types de logements...</p>
         </div>
       </div>
     )
@@ -226,66 +226,79 @@ export default function EquipmentsPage() {
         animate='visible'
       >
         {/* Header with breadcrumb */}
-        <motion.div variants={itemVariants} className='space-y-4'>
+        <motion.div className='flex items-center gap-4' variants={itemVariants}>
           <Button variant='ghost' size='sm' asChild className='text-slate-600 hover:text-slate-800'>
             <Link href='/admin' className='flex items-center gap-2'>
               <ArrowLeft className='h-4 w-4' />
-              Retour au dashboard
+              Retour au panel admin
             </Link>
           </Button>
+        </motion.div>
 
-          <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4'>
-            <div>
-              <div className='flex items-center gap-2 mb-2'>
-                <BrushCleaning className='h-8 w-8 text-green-600' />
-                <h1 className='text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 via-green-700 to-emerald-700'>
-                  Gestion des options d&apos;équipements
-                </h1>
-              </div>
-              <p className='text-slate-600 text-lg'>
-                {equipments.length} option{equipments.length > 1 ? 's' : ''} enregistrée
-                {equipments.length > 1 ? 's' : ''}
-              </p>
+        {/* Page Header */}
+        <motion.div className='text-center space-y-4' variants={itemVariants}>
+          <div className='inline-flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-full text-sm font-medium'>
+            <Home className='h-4 w-4' />
+            Types de Logements
+          </div>
+          <h1 className='text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 via-purple-700 to-indigo-700'>
+            Gestion des types de logements
+          </h1>
+          <p className='text-slate-600 max-w-2xl mx-auto text-lg'>
+            {typeRents.length} type{typeRents.length > 1 ? 's' : ''} de logement
+            {typeRents.length > 1 ? 's' : ''} enregistré{typeRents.length > 1 ? 's' : ''}
+          </p>
+        </motion.div>
+
+        {/* Search and Add */}
+        <motion.div variants={itemVariants}>
+          <div className='flex flex-col sm:flex-row gap-4 items-center justify-between bg-white/70 backdrop-blur-sm rounded-2xl p-6 border-0 shadow-lg'>
+            <div className='relative flex-1 max-w-md'>
+              <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4' />
+              <Input
+                placeholder='Rechercher un type de logement...'
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className='pl-10 border-slate-200 focus:border-purple-300 focus:ring-purple-200'
+              />
             </div>
-
-            <div className='flex items-center gap-3'>
-              <div className='relative'>
-                <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4' />
-                <Input
-                  type='text'
-                  placeholder='Rechercher un équipement...'
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  className='pl-10 w-full sm:w-64'
-                />
-              </div>
-
+            <div className='flex gap-3'>
               <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button className='bg-green-600 hover:bg-green-700 text-white shadow-lg'>
+                  <Button className='bg-purple-600 hover:bg-purple-700 text-white shadow-lg'>
                     <Plus className='h-4 w-4 mr-2' />
-                    Ajouter un équipement
+                    Ajouter un type
                   </Button>
                 </DialogTrigger>
-                <DialogContent className='sm:max-w-md'>
+                <DialogContent className='sm:max-w-[425px]'>
                   <DialogHeader>
                     <DialogTitle className='flex items-center gap-2'>
-                      <BrushCleaning className='h-5 w-5 text-green-600' />
-                      Nouvel équipement
+                      <Home className='h-5 w-5 text-purple-600' />
+                      Ajouter un type de logement
                     </DialogTitle>
                     <DialogDescription>
-                      Ajoutez un nouvel équipement à la liste disponible.
+                      Créez un nouveau type de logement pour votre plateforme.
                     </DialogDescription>
                   </DialogHeader>
                   <div className='space-y-4 py-4'>
                     <div className='space-y-2'>
-                      <Label htmlFor='optionName'>Nom de l&apos;équipement</Label>
+                      <Label htmlFor='typeName'>Nom du type</Label>
                       <Input
-                        id='optionName'
-                        placeholder='Ex: Lave-linge, Lave-vaisselle, Micro-ondes...'
-                        value={newOptionName}
-                        onChange={e => setNewOptionName(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && !isSubmitting && handleAddOption()}
+                        id='typeName'
+                        placeholder='Ex: Villa, Appartement, Maison...'
+                        value={newTypeName}
+                        onChange={e => setNewTypeName(e.target.value)}
+                      />
+                    </div>
+                    <div className='space-y-2'>
+                      <Label htmlFor='typeDescription'>Description</Label>
+                      <Input
+                        id='typeDescription'
+                        placeholder='Description du type de logement...'
+                        value={newTypeDescription}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          setNewTypeDescription(e.target.value)
+                        }
                       />
                     </div>
                   </div>
@@ -298,9 +311,9 @@ export default function EquipmentsPage() {
                       Annuler
                     </Button>
                     <Button
-                      onClick={handleAddOption}
-                      disabled={!newOptionName.trim() || isSubmitting}
-                      className='bg-green-600 hover:bg-green-700'
+                      onClick={handleAddType}
+                      disabled={!newTypeName.trim() || !newTypeDescription.trim() || isSubmitting}
+                      className='bg-purple-600 hover:bg-purple-700'
                     >
                       {isSubmitting ? (
                         <>
@@ -323,20 +336,32 @@ export default function EquipmentsPage() {
                 <DialogContent className='sm:max-w-[425px]'>
                   <DialogHeader>
                     <DialogTitle className='flex items-center gap-2'>
-                      <Edit3 className='h-5 w-5 text-green-600' />
-                      Modifier l&apos;équipement
+                      <Edit3 className='h-5 w-5 text-orange-600' />
+                      Modifier le type de logement
                     </DialogTitle>
-                    <DialogDescription>Modifiez le nom de cet équipement.</DialogDescription>
+                    <DialogDescription>
+                      Modifiez les informations de ce type de logement.
+                    </DialogDescription>
                   </DialogHeader>
                   <div className='space-y-4 py-4'>
                     <div className='space-y-2'>
-                      <Label htmlFor='editOptionName'>Nom de l&apos;équipement</Label>
+                      <Label htmlFor='editTypeName'>Nom du type</Label>
                       <Input
-                        id='editOptionName'
-                        placeholder='Ex: Aspirateur, Fer à repasser...'
-                        value={editOptionName}
-                        onChange={e => setEditOptionName(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && !isSubmitting && handleUpdateOption()}
+                        id='editTypeName'
+                        placeholder='Ex: Villa, Appartement, Maison...'
+                        value={editTypeName}
+                        onChange={e => setEditTypeName(e.target.value)}
+                      />
+                    </div>
+                    <div className='space-y-2'>
+                      <Label htmlFor='editTypeDescription'>Description</Label>
+                      <Input
+                        id='editTypeDescription'
+                        placeholder='Description du type de logement...'
+                        value={editTypeDescription}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          setEditTypeDescription(e.target.value)
+                        }
                       />
                     </div>
                   </div>
@@ -349,9 +374,9 @@ export default function EquipmentsPage() {
                       Annuler
                     </Button>
                     <Button
-                      onClick={handleUpdateOption}
-                      disabled={!editOptionName.trim() || isSubmitting}
-                      className='bg-green-600 hover:bg-green-700'
+                      onClick={handleUpdateType}
+                      disabled={!editTypeName.trim() || !editTypeDescription.trim() || isSubmitting}
+                      className='bg-orange-600 hover:bg-orange-700'
                     >
                       {isSubmitting ? (
                         <>
@@ -375,11 +400,11 @@ export default function EquipmentsPage() {
                   <DialogHeader>
                     <DialogTitle className='flex items-center gap-2'>
                       <Trash2 className='h-5 w-5 text-red-600' />
-                      Supprimer l&apos;équipement
+                      Supprimer le type de logement
                     </DialogTitle>
                     <DialogDescription>
-                      Êtes-vous sûr de vouloir supprimer l&apos;équipement &quot;
-                      {deletingOption?.name}&quot; ? Cette action est irréversible.
+                      Êtes-vous sûr de vouloir supprimer le type &quot;{deletingType?.name}&quot; ?
+                      Cette action est irréversible et peut affecter les produits existants.
                     </DialogDescription>
                   </DialogHeader>
                   <DialogFooter>
@@ -416,34 +441,34 @@ export default function EquipmentsPage() {
 
         {/* Content */}
         <motion.div variants={itemVariants}>
-          {filteredEquipments.length === 0 ? (
+          {filteredTypes.length === 0 ? (
             <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm'>
               <CardContent className='text-center py-12'>
-                <BrushCleaning className='h-16 w-16 text-slate-300 mx-auto mb-4' />
+                <Home className='h-16 w-16 text-slate-300 mx-auto mb-4' />
                 <h3 className='text-xl font-semibold text-slate-600 mb-2'>
-                  {searchTerm ? 'Aucun résultat' : 'Aucun équipement'}
+                  {searchTerm ? 'Aucun résultat' : 'Aucun type de logement'}
                 </h3>
                 <p className='text-slate-500 mb-6'>
                   {searchTerm
-                    ? 'Aucun équipement ne correspond à votre recherche.'
-                    : 'Commencez par ajouter votre premier équipement.'}
+                    ? 'Aucun type ne correspond à votre recherche.'
+                    : 'Commencez par ajouter votre premier type de logement.'}
                 </p>
                 {!searchTerm && (
                   <Button
                     onClick={() => setIsAddDialogOpen(true)}
-                    className='bg-green-600 hover:bg-green-700'
+                    className='bg-purple-600 hover:bg-purple-700'
                   >
                     <Plus className='h-4 w-4 mr-2' />
-                    Ajouter un équipement
+                    Ajouter un type
                   </Button>
                 )}
               </CardContent>
             </Card>
           ) : (
             <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3 items-stretch'>
-              {filteredEquipments.map((option, index) => (
+              {filteredTypes.map((type, index) => (
                 <motion.div
-                  key={option.id}
+                  key={type.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
@@ -452,12 +477,12 @@ export default function EquipmentsPage() {
                     <CardHeader className='pb-3'>
                       <div className='flex items-start justify-between'>
                         <div className='flex items-center gap-3'>
-                          <div className='p-2 bg-green-50 rounded-lg group-hover:bg-green-100 transition-colors'>
-                            <BrushCleaning className='h-5 w-5 text-green-600' />
+                          <div className='p-2 bg-purple-50 rounded-lg group-hover:bg-purple-100 transition-colors'>
+                            <Home className='h-5 w-5 text-purple-600' />
                           </div>
                           <div>
                             <CardTitle className='text-lg font-semibold text-slate-800'>
-                              {option.name || 'Équipement sans nom'}
+                              {type.name || 'Type sans nom'}
                             </CardTitle>
                           </div>
                         </div>
@@ -470,14 +495,17 @@ export default function EquipmentsPage() {
                       </div>
                     </CardHeader>
                     <CardContent className='pt-0'>
+                      <p className='text-slate-600 text-sm mb-4 line-clamp-2'>
+                        {type.description || 'Aucune description'}
+                      </p>
                       <div className='flex items-center gap-2'>
                         <Button
                           variant='ghost'
                           size='sm'
                           asChild
-                          className='flex-1 hover:bg-green-50 hover:text-green-600'
+                          className='flex-1 hover:bg-purple-50 hover:text-purple-600'
                         >
-                          <Link href={`/admin/equipments/${option.id}`}>
+                          <Link href={`/admin/typeRent/${type.id}`}>
                             <Eye className='h-4 w-4 mr-2' />
                             Voir détails
                           </Link>
@@ -485,8 +513,8 @@ export default function EquipmentsPage() {
                         <Button
                           variant='ghost'
                           size='sm'
-                          className='hover:bg-green-50 hover:text-green-600'
-                          onClick={() => handleEditOption(option)}
+                          className='hover:bg-orange-50 hover:text-orange-600'
+                          onClick={() => handleEditType(type)}
                         >
                           <Edit3 className='h-4 w-4' />
                         </Button>
@@ -494,7 +522,7 @@ export default function EquipmentsPage() {
                           variant='ghost'
                           size='sm'
                           className='hover:bg-red-50 hover:text-red-600'
-                          onClick={() => handleDeleteOption(option)}
+                          onClick={() => handleDeleteType(type)}
                         >
                           <Trash2 className='h-4 w-4' />
                         </Button>
