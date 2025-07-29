@@ -205,25 +205,29 @@ export default function AdminDashboard() {
       ],
     },
     {
-      title: 'Gestion des options de sécurité',
-      description: 'Voir et gérer toutes les options de sécurité',
-      icon: Cctv,
-      href: '/admin/security',
-      gradient: 'from-red-50 to-red-100',
-    },
-    {
-      title: 'Gestion des options de repas',
-      description: 'Voir et gérer toutes les options de repas',
-      icon: Soup,
-      href: '/admin/meals',
-      gradient: 'from-red-50 to-red-100',
-    },
-    {
-      title: "Gestion des options d'équipements",
-      description: "Voir et gérer toutes les options d'équipements",
-      icon: BrushCleaning,
-      href: '/admin/equipments',
-      gradient: 'from-red-50 to-red-100',
+      title: 'Gestion des Options',
+      description: 'Configuration des équipements, repas et sécurité',
+      icon: Shield,
+      cards: [
+        {
+          title: 'Gestion des options de sécurité',
+          description: 'Voir et gérer toutes les options de sécurité',
+          icon: Cctv,
+          href: '/admin/security',
+        },
+        {
+          title: 'Gestion des options de repas',
+          description: 'Voir et gérer toutes les options de repas',
+          icon: Soup,
+          href: '/admin/meals',
+        },
+        {
+          title: "Gestion des options d'équipements",
+          description: "Voir et gérer toutes les options d'équipements",
+          icon: BrushCleaning,
+          href: '/admin/equipments',
+        },
+      ],
     },
   ]
 

@@ -37,6 +37,22 @@ export async function createMeal(name: string) {
   }
 }
 
+export async function updateMeal(id: string, name: string) {
+  try {
+    return await prisma.meals.update({
+      where: {
+        id
+      },
+      data: {
+        name
+      }
+    })
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour d\'un repas', error)
+    return null
+  }
+}
+
 export async function deleteMeal(id: string) {
   try {
     const req = await prisma.meals.delete({

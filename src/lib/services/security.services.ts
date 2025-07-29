@@ -37,6 +37,22 @@ export async function createSecurity(name: string) {
   }
 }
 
+export async function updateSecurity(id: string, name: string) {
+  try {
+    return await prisma.security.update({
+      where: {
+        id
+      },
+      data: {
+        name
+      }
+    })
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour d\'une option de sécurité', error)
+    return null
+  }
+}
+
 export async function deleteSecurity(id: string) {
   try {
     const req = await prisma.security.delete({

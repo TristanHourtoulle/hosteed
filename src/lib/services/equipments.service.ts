@@ -36,6 +36,23 @@ export async function createEquipment(name: string, icon: string) {
   }
 }
 
+export async function updateEquipment(id: string, name: string, icon: string) {
+  try {
+    return await prisma.equipment.update({
+      where: {
+        id
+      },
+      data: {
+        name,
+        icon
+      }
+    })
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour d\'un équipement', error)
+    return null
+  }
+}
+
 export async function deleteEquipement(id: string) {
    try {
      const req = await prisma.equipment.delete({
