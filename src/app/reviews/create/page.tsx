@@ -124,6 +124,27 @@ function ReviewForm() {
       try {
         const rent = await getRentById(rentId)
         if (rent) {
+          // Vérifier si un avis existe déjà pour cette réservation
+          if (rent.Review && rent.Review.length > 0) {
+            setErrors(prev => ({
+              ...prev,
+              rentId: 'Un avis a déjà été laissé pour cette réservation',
+            }))
+            setIsLoading(false)
+            return
+          }
+
+          // Vérifier que la réservation est éligible pour un avis (CHECKIN ou CHECKOUT)
+          if (rent.status !== 'CHECKIN' && rent.status !== 'CHECKOUT') {
+            setErrors(prev => ({
+              ...prev,
+              rentId:
+                "Cette réservation n'est pas éligible pour un avis. Le séjour doit être en cours ou terminé.",
+            }))
+            setIsLoading(false)
+            return
+          }
+
           setFormData(prev => ({
             ...prev,
             rentId,

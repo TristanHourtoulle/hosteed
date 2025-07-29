@@ -124,11 +124,11 @@ export default function ReservationPage() {
         try {
           const userData = await findUserById(session.user.id)
           if (userData) {
-            setFormData(prev => ({ 
-              ...prev, 
+            setFormData(prev => ({
+              ...prev,
               email: userData.email || '',
               firstName: userData.name || '',
-              lastName: userData.lastname || ''
+              lastName: userData.lastname || '',
             }))
           }
         } catch (error) {
@@ -137,16 +137,16 @@ export default function ReservationPage() {
           const nameParts = session.user.name?.split(' ') || []
           const firstName = nameParts[0] || ''
           const lastName = nameParts.slice(1).join(' ') || ''
-          
-          setFormData(prev => ({ 
-            ...prev, 
+
+          setFormData(prev => ({
+            ...prev,
             email: session.user.email || '',
             firstName: firstName,
-            lastName: lastName
+            lastName: lastName,
           }))
         }
       }
-      
+
       fetchUserData()
     }
   }, [session])
@@ -612,11 +612,11 @@ export default function ReservationPage() {
                     <Button
                       onClick={handleNextStep}
                       disabled={
-                        (step === 2 &&
-                          (!formData.firstName ||
-                            !formData.lastName ||
-                            !formData.email ||
-                            !formData.phone))
+                        step === 2 &&
+                        (!formData.firstName ||
+                          !formData.lastName ||
+                          !formData.email ||
+                          !formData.phone)
                       }
                       className='w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-3 sm:py-4 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base'
                     >

@@ -44,6 +44,7 @@ interface Rent {
   }
   status: RentStatus
   payment: PaymentStatus
+  Review?: { id: string }[] // Ajouter les reviews pour vérifier l'existence
 }
 
 const getStatusConfig = (
@@ -275,7 +276,9 @@ export default function ReservationsPage() {
               const isOngoing = rent.status === 'CHECKIN'
               const isPending = !rent.accepted || !rent.confirmed
               const canCancel = rent.status === 'RESERVED' && !isPending
-              const canReview = rent.status === 'CHECKIN' || rent.status === 'CHECKOUT'
+              const hasReview = rent.Review && rent.Review.length > 0
+              const canReview =
+                (rent.status === 'CHECKIN' || rent.status === 'CHECKOUT') && !hasReview
 
               return (
                 <Card
@@ -443,6 +446,13 @@ export default function ReservationsPage() {
                               <Star className='w-4 h-4 mr-1' />
                               {rent.status === 'CHECKIN' ? 'Donner mon avis' : 'Laisser un avis'}
                             </Link>
+                          </Button>
+                        )}
+
+                        {hasReview && (rent.status === 'CHECKIN' || rent.status === 'CHECKOUT') && (
+                          <Button size='sm' variant='outline' className='flex-1' disabled>
+                            <Star className='w-4 h-4 mr-1 fill-yellow-400 text-yellow-400' />
+                            Avis déjà laissé
                           </Button>
                         )}
                       </div>

@@ -49,7 +49,33 @@ type RentWithRelations = Prisma.RentGetPayload<{
   }
 }>
 
+type RentWithReviews = Prisma.RentGetPayload<{
+  include: {
+    product: {
+      include: {
+        img: true
+        type: true
+        user: {
+          select: {
+            id: true
+            name: true
+            email: true
+          }
+        }
+      }
+    }
+    user: true
+    options: true
+    Review: true
+  }
+}>
+
 export type RentWithDates = Omit<RentWithRelations, 'arrivingDate' | 'leavingDate'> & {
+  arrivingDate: Date
+  leavingDate: Date
+}
+
+export type RentWithDatesAndReviews = Omit<RentWithReviews, 'arrivingDate' | 'leavingDate'> & {
   arrivingDate: Date
   leavingDate: Date
 }
@@ -62,7 +88,15 @@ function convertRentToDates(rent: RentWithRelations): RentWithDates {
   }
 }
 
-export async function getRentById(id: string): Promise<RentWithDates | null> {
+function convertRentWithReviewsToDates(rent: RentWithReviews): RentWithDatesAndReviews {
+  return {
+    ...rent,
+    arrivingDate: rent.arrivingDate,
+    leavingDate: rent.leavingDate,
+  }
+}
+
+export async function getRentById(id: string): Promise<RentWithDatesAndReviews | null> {
   try {
     const rent = await prisma.rent.findUnique({
       where: { id },
@@ -76,10 +110,11 @@ export async function getRentById(id: string): Promise<RentWithDates | null> {
         },
         options: true,
         user: true,
+        Review: true, // Inclure les reviews pour vérifier s'il en existe déjà un
       },
     })
     if (rent) {
-      return convertRentToDates(rent)
+      return convertRentWithReviewsToDates(rent)
     }
     return null
   } catch (error) {
@@ -546,6 +581,7 @@ export async function findAllRentByUserId(id: string): Promise<RentWithRelations
         },
         user: true,
         options: true,
+        Review: true, // Inclure les avis pour vérifier s'il en existe déjà un
       },
     })
 
