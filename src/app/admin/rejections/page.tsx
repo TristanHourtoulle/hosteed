@@ -5,19 +5,19 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { getAllRentRejections, resolveRentRejection } from '@/lib/services/rents.service'
 import { motion } from 'framer-motion'
-import { 
-  AlertTriangle, 
-  Calendar, 
-  CheckCircle2, 
-  Clock, 
-  Home, 
-  Mail, 
-  MapPin, 
-  MessageSquare, 
+import {
+  AlertTriangle,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  Home,
+  Mail,
+  MapPin,
+  MessageSquare,
   User,
   XCircle,
   Shield,
-  Filter
+  Filter,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
 import { Button } from '@/components/ui/shadcnui/button'
@@ -82,15 +82,10 @@ export default function RentRejectionsPage() {
   const fetchRejections = async () => {
     try {
       setLoading(true)
-      const result = await getAllRentRejections()
-      if (result && result.rejections) {
-        setRejections(result.rejections)
-      } else {
-        setRejections([])
-      }
+      const data = await getAllRentRejections()
+      setRejections(Array.isArray(data) ? data : data?.rejections || [])
     } catch (error) {
       console.error('Erreur lors du chargement des rejets:', error)
-      setRejections([])
     } finally {
       setLoading(false)
     }
@@ -109,12 +104,13 @@ export default function RentRejectionsPage() {
     // Filter by search
     if (searchValue) {
       const searchLower = searchValue.toLowerCase()
-      filtered = filtered.filter(r =>
-        r.reason.toLowerCase().includes(searchLower) ||
-        r.message.toLowerCase().includes(searchLower) ||
-        r.rent.product.name.toLowerCase().includes(searchLower) ||
-        r.host.email.toLowerCase().includes(searchLower) ||
-        r.guest.email.toLowerCase().includes(searchLower)
+      filtered = filtered.filter(
+        r =>
+          r.reason.toLowerCase().includes(searchLower) ||
+          r.message.toLowerCase().includes(searchLower) ||
+          r.rent.product.name.toLowerCase().includes(searchLower) ||
+          r.host.email.toLowerCase().includes(searchLower) ||
+          r.guest.email.toLowerCase().includes(searchLower)
       )
     }
 
@@ -122,13 +118,13 @@ export default function RentRejectionsPage() {
   }
 
   const handleResolve = async (rejectionId: string) => {
-    if (!session?.user?.id) return
-
     try {
       setResolving(rejectionId)
-      const result = await resolveRentRejection(rejectionId, session.user.id)
-      
-      if (result) {
+      if (!session?.user?.id) {
+        throw new Error('Admin ID is missing')
+      }
+      const success = await resolveRentRejection(rejectionId, session.user.id)
+      if (success) {
         await fetchRejections()
       }
     } catch (error) {
@@ -160,15 +156,15 @@ export default function RentRejectionsPage() {
       count: stats.pending,
       active: activeFilter === 'pending',
       onClick: () => setActiveFilter('pending'),
-      variant: 'destructive' as const
+      variant: 'destructive' as const,
     },
     {
       label: 'Résolus',
-      value: 'resolved', 
+      value: 'resolved',
       count: stats.resolved,
       active: activeFilter === 'resolved',
       onClick: () => setActiveFilter('resolved'),
-      variant: 'secondary' as const
+      variant: 'secondary' as const,
     },
     {
       label: 'Tous',
@@ -176,8 +172,8 @@ export default function RentRejectionsPage() {
       count: stats.total,
       active: activeFilter === 'all',
       onClick: () => setActiveFilter('all'),
-      variant: 'outline' as const
-    }
+      variant: 'outline' as const,
+    },
   ]
 
   const infoCards = [
@@ -186,29 +182,29 @@ export default function RentRejectionsPage() {
       value: stats.total,
       subtitle: 'Tous les rejets enregistrés',
       icon: XCircle,
-      variant: 'default' as const
+      variant: 'default' as const,
     },
     {
       title: 'En attente',
       value: stats.pending,
       subtitle: 'Nécessitent une action',
       icon: Clock,
-      variant: 'warning' as const
+      variant: 'warning' as const,
     },
     {
       title: 'Résolus',
       value: stats.resolved,
       subtitle: 'Problèmes traités',
       icon: CheckCircle2,
-      variant: 'success' as const
+      variant: 'success' as const,
     },
     {
-      title: 'Aujourd\'hui',
+      title: "Aujourd'hui",
       value: stats.todayRejections,
       subtitle: 'Nouveaux rejets du jour',
       icon: Calendar,
-      variant: 'danger' as const
-    }
+      variant: 'danger' as const,
+    },
   ]
 
   if (loading) {
@@ -240,7 +236,7 @@ export default function RentRejectionsPage() {
         transition={{ duration: 0.5 }}
       >
         {/* Header */}
-        <motion.div 
+        <motion.div
           className='text-center space-y-4'
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -264,11 +260,11 @@ export default function RentRejectionsPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <InfoCardGrid 
+          <InfoCardGrid
             cards={infoCards}
             columns={4}
             title="Vue d'ensemble"
-            description="Statistiques des rejets de location"
+            description='Statistiques des rejets de location'
           />
         </motion.div>
 
@@ -309,12 +305,11 @@ export default function RentRejectionsPage() {
                   <div>
                     <h3 className='text-lg font-semibold text-slate-800'>Aucun rejet trouvé</h3>
                     <p className='text-slate-600'>
-                      {activeFilter === 'pending' 
+                      {activeFilter === 'pending'
                         ? 'Aucun rejet en attente de traitement'
                         : activeFilter === 'resolved'
-                        ? 'Aucun rejet résolu pour le moment'
-                        : 'Aucun rejet ne correspond à vos critères de recherche'
-                      }
+                          ? 'Aucun rejet résolu pour le moment'
+                          : 'Aucun rejet ne correspond à vos critères de recherche'}
                     </p>
                   </div>
                 </div>
@@ -337,7 +332,7 @@ export default function RentRejectionsPage() {
                             <CardTitle className='text-lg font-semibold text-slate-800'>
                               Rejet de réservation
                             </CardTitle>
-                            <Badge 
+                            <Badge
                               variant={rejection.resolved ? 'secondary' : 'destructive'}
                               className='text-xs'
                             >
@@ -347,12 +342,17 @@ export default function RentRejectionsPage() {
                           <div className='flex items-center gap-4 text-sm text-slate-600'>
                             <div className='flex items-center gap-1'>
                               <Calendar className='h-4 w-4' />
-                              <span>{new Date(rejection.createdAt).toLocaleDateString('fr-FR')}</span>
+                              <span>
+                                {new Date(rejection.createdAt).toLocaleDateString('fr-FR')}
+                              </span>
                             </div>
                             {rejection.resolvedAt && (
                               <div className='flex items-center gap-1'>
                                 <CheckCircle2 className='h-4 w-4 text-green-600' />
-                                <span>Résolu le {new Date(rejection.resolvedAt).toLocaleDateString('fr-FR')}</span>
+                                <span>
+                                  Résolu le{' '}
+                                  {new Date(rejection.resolvedAt).toLocaleDateString('fr-FR')}
+                                </span>
                               </div>
                             )}
                           </div>
@@ -387,7 +387,9 @@ export default function RentRejectionsPage() {
                           <span className='font-medium text-slate-800'>Propriété concernée</span>
                         </div>
                         <div className='space-y-2'>
-                          <p className='font-semibold text-slate-800'>{rejection.rent.product.name}</p>
+                          <p className='font-semibold text-slate-800'>
+                            {rejection.rent.product.name}
+                          </p>
                           <div className='flex items-center gap-1 text-sm text-slate-600'>
                             <MapPin className='h-4 w-4' />
                             <span>{rejection.rent.product.address}</span>
