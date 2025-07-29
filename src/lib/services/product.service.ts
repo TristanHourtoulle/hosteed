@@ -238,6 +238,8 @@ export async function createProduct(data: CreateProductInput) {
       })
     }
 
+    // TODO: Ajouter le modèle CancellationPolicy au schéma Prisma
+    /*
     if (data.cancellationPolicy) {
       await prisma.product.update({
         where: { id: createdProduct.id },
@@ -252,6 +254,7 @@ export async function createProduct(data: CreateProductInput) {
         },
       })
     }
+    */
 
     // Récupérer le produit avec toutes ses relations
     const finalProduct = await prisma.product.findUnique({
@@ -266,7 +269,7 @@ export async function createProduct(data: CreateProductInput) {
         nearbyPlaces: true,
         transportOptions: true,
         propertyInfo: true,
-        cancellationPolicy: true,
+        // cancellationPolicy: true, // TODO: Ajouter quand le modèle sera créé
       },
     })
 

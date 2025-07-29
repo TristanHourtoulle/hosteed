@@ -5,14 +5,7 @@ import { useSession } from 'next-auth/react'
 import { CheckRentIsAvailable } from '@/lib/services/rents.service'
 import { findProductById } from '@/lib/services/product.service'
 import { findUserById } from '@/lib/services/user.service'
-import {
-  MapPin,
-  Star,
-  CreditCard,
-  Shield,
-  ArrowLeft,
-  Check,
-} from 'lucide-react'
+import { MapPin, Star, CreditCard, Shield, ArrowLeft, Check } from 'lucide-react'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
 import { format } from 'date-fns'

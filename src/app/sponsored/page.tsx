@@ -219,7 +219,9 @@ export default function SponsoredPage() {
       {promotedProducts.length > 0 && (
         <div className='bg-blue-50 border-t'>
           <div className='container mx-auto px-4 py-12 text-center'>
-            <h3 className='text-2xl font-bold text-gray-900 mb-4'>Explorez plus d&apos;hébergements</h3>
+            <h3 className='text-2xl font-bold text-gray-900 mb-4'>
+              Explorez plus d&apos;hébergements
+            </h3>
             <p className='text-gray-600 mb-6'>
               Découvrez notre sélection complète d&apos;hébergements de qualité
             </p>

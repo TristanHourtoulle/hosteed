@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Demande de réservation refusée</title>
+    <style>
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f4f4f4;
+      }
+      .container {
+        background-color: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .logo {
+        font-size: 28px;
+        font-weight: bold;
+        color: #2563eb;
+        margin-bottom: 20px;
+      }
+      .content {
+        color: #333;
+      }
+      .rejection-info {
+        background-color: #fef2f2;
+        border-left: 4px solid #ef4444;
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 5px;
+      }
+      .property-details {
+        background-color: #f8fafc;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 20px 0;
+      }
+      .btn {
+        display: inline-block;
+        padding: 12px 24px;
+        background-color: #2563eb;
+        color: white;
+        text-decoration: none;
+        border-radius: 6px;
+        margin: 20px 0;
+      }
+      .footer {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #e5e7eb;
+        text-align: center;
+        color: #6b7280;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div class="logo">🏠 Hosteed</div>
+        <h1 style="color: #ef4444; margin: 0">Demande de réservation refusée</h1>
+      </div>
+
+      <div class="content">
+        <p>Bonjour {{guestName}},</p>
+
+        <div class="rejection-info">
+          <h3 style="margin-top: 0; color: #ef4444">❌ Votre demande a été refusée</h3>
+          <p>
+            Nous sommes désolés de vous informer que votre demande de réservation pour
+            <strong>{{propertyName}}</strong> a été refusée par l'hébergeur.
+          </p>
+        </div>
+
+        <div class="property-details">
+          <h3 style="margin-top: 0; color: #374151">📍 Détails de la réservation</h3>
+          <ul style="margin: 0; padding-left: 20px">
+            <li><strong>Hébergement :</strong> {{propertyName}}</li>
+            <li><strong>Hébergeur :</strong> {{hostName}}</li>
+            <li><strong>Date d'arrivée :</strong> {{arrivingDate}}</li>
+            <li><strong>Date de départ :</strong> {{leavingDate}}</li>
+          </ul>
+        </div>
+
+        <p>
+          Ne vous découragez pas ! Il existe de nombreux autres hébergements disponibles sur notre
+          plateforme qui pourraient parfaitement correspondre à vos besoins.
+        </p>
+
+        <div style="text-align: center">
+          <a href="https://hosteed.com/host" class="btn">🔍 Découvrir d'autres hébergements</a>
+        </div>
+
+        <p>
+          Si vous avez des questions ou si vous souhaitez obtenir des recommandations
+          personnalisées, n'hésitez pas à contacter notre équipe d'assistance.
+        </p>
+
+        <p>
+          Cordialement,<br />
+          <strong>L'équipe Hosteed</strong>
+        </p>
+      </div>
+
+      <div class="footer">
+        <p>Cet email a été envoyé automatiquement depuis Hosteed.</p>
+        <p>© 2025 Hosteed. Tous droits réservés.</p>
+      </div>
+    </div>
+  </body>
+</html>

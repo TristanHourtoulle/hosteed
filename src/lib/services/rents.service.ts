@@ -773,3 +773,255 @@ export async function findAllRentByProductId(productId: string) {
     return null
   }
 }
+
+/**
+ * Refuse une demande de réservation et créé un enregistrement de refus
+ */
+export async function rejectRentRequest(
+  rentId: string,
+  hostId: string,
+  reason: string,
+  message: string
+) {
+  try {
+    // Vérifier que l'hébergeur peut refuser cette réservation
+    const rent = await prisma.rent.findFirst({
+      where: {
+        id: rentId,
+        product: {
+          userManager: BigInt(hostId),
+        },
+        status: RentStatus.WAITING,
+      },
+      include: {
+        user: true,
+        product: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
+    })
+
+    if (!rent) {
+      return {
+        success: false,
+        error: "Réservation non trouvée ou vous n'avez pas l'autorisation de la refuser",
+      }
+    }
+
+    // Mettre à jour le statut de la réservation
+    const updatedRent = await prisma.rent.update({
+      where: { id: rentId },
+      data: { status: RentStatus.CANCEL },
+    })
+
+    // Créer l'enregistrement de refus
+    const rejection = await prisma.rentRejection.create({
+      data: {
+        rentId,
+        hostId: hostId,
+        reason,
+        message,
+        guestId: rent.userId,
+      },
+    })
+
+    // Envoyer notification à l'invité
+    await sendGuestRejectionNotification(rent)
+
+    // Notifier les administrateurs
+    await notifyAdminOfRejection(rejection, rent)
+
+    return {
+      success: true,
+      rejection,
+      rent: updatedRent,
+    }
+  } catch (error) {
+    console.error('Erreur lors du refus de la réservation:', error)
+    return {
+      success: false,
+      error: 'Erreur lors du refus de la réservation',
+    }
+  }
+}
+
+/**
+ * Envoie une notification à l'invité pour lui informer du refus
+ */
+async function sendGuestRejectionNotification(rent: {
+  user: { email: string; name: string | null }
+  product: { name: string; user?: { name: string | null }[] }
+  arrivingDate: Date
+  leavingDate: Date
+}) {
+  try {
+    await sendTemplatedMail(
+      rent.user.email,
+      'Votre demande de réservation a été refusée',
+      'rent-rejection-guest.html',
+      {
+        guestName: rent.user.name || 'Invité',
+        propertyName: rent.product.name,
+        hostName: rent.product.user?.[0]?.name || 'Hôte',
+        arrivingDate: rent.arrivingDate.toLocaleDateString('fr-FR'),
+        leavingDate: rent.leavingDate.toLocaleDateString('fr-FR'),
+      }
+    )
+  } catch (error) {
+    console.error("Erreur lors de l'envoi de l'email à l'invité:", error)
+  }
+}
+
+/**
+ * Notifie les administrateurs du refus de réservation
+ */
+async function notifyAdminOfRejection(
+  rejection: {
+    id: string
+    reason: string
+    message: string
+  },
+  rent: {
+    user: { name: string | null }
+    product: {
+      name: string
+      user?: { name: string | null }[]
+    }
+    arrivingDate: Date
+    leavingDate: Date
+  }
+) {
+  try {
+    // Récupérer les administrateurs
+    const admins = await findAllUserByRoles('ADMIN')
+
+    if (admins) {
+      for (const admin of admins) {
+        await sendTemplatedMail(
+          admin.email,
+          'Nouvelle demande de refus de réservation',
+          'rent-rejection-admin.html',
+          {
+            adminName: admin.name || 'Administrateur',
+            hostName: rent.product.user?.[0]?.name || 'Hôte',
+            guestName: rent.user.name || 'Invité',
+            propertyName: rent.product.name,
+            reason: rejection.reason,
+            message: rejection.message,
+            arrivingDate: rent.arrivingDate.toLocaleDateString('fr-FR'),
+            leavingDate: rent.leavingDate.toLocaleDateString('fr-FR'),
+            rejectionId: rejection.id,
+          }
+        )
+      }
+    }
+  } catch (error) {
+    console.error('Erreur lors de la notification des administrateurs:', error)
+  }
+}
+
+/**
+ * Récupère tous les refus de réservation pour l'admin
+ */
+export async function getAllRentRejections(page = 1, limit = 20) {
+  try {
+    const offset = (page - 1) * limit
+
+    const rejections = await prisma.rentRejection.findMany({
+      skip: offset,
+      take: limit,
+      include: {
+        rent: {
+          include: {
+            product: {
+              select: {
+                name: true,
+                address: true,
+              },
+            },
+            user: {
+              select: {
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+        host: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+        guest: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    })
+
+    const total = await prisma.rentRejection.count()
+
+    return {
+      rejections,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    }
+  } catch (error) {
+    console.error('Erreur lors de la récupération des refus:', error)
+    return null
+  }
+}
+
+/**
+ * Marque un refus comme résolu par l'admin
+ */
+export async function resolveRentRejection(rejectionId: string, adminId: string) {
+  try {
+    const rejection = await prisma.rentRejection.update({
+      where: { id: rejectionId },
+      data: {
+        resolved: true,
+        resolvedAt: new Date(),
+        resolvedBy: adminId,
+      },
+      include: {
+        rent: {
+          include: {
+            product: true,
+            user: true,
+          },
+        },
+        host: true,
+      },
+    })
+
+    return {
+      success: true,
+      rejection,
+    }
+  } catch (error) {
+    console.error('Erreur lors de la résolution du refus:', error)
+    return {
+      success: false,
+      error: 'Erreur lors de la résolution du refus',
+    }
+  }
+}

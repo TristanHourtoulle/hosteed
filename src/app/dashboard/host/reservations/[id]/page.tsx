@@ -7,11 +7,13 @@ import {
   getRentById,
   changeRentStatus,
   approveRent,
+  rejectRentRequest,
   RentWithDates,
 } from '@/lib/services/rents.service'
 import { getPayablePricesPerRent, createPayRequest } from '@/lib/services/payment.service'
 import { RentStatus, PaymentStatus, PaymentMethod } from '@prisma/client'
 import HostNavbar from '../../components/HostNavbar'
+import RejectReservationModal from './RejectModal'
 interface PayablePrices {
   totalPricesPayable: number
   availablePrice: number
@@ -29,6 +31,11 @@ export default function RentDetailsPage({ params }: { params: Promise<{ id: stri
   const [paymentType, setPaymentType] = useState<PaymentStatus | null>(null)
   const [notes, setNotes] = useState('')
   const [method, setMethod] = useState<PaymentMethod>(PaymentMethod.SEPA_VIREMENT)
+
+  // States pour le refus de réservation
+  const [showRejectModal, setShowRejectModal] = useState(false)
+  const [isRejecting, setIsRejecting] = useState(false)
+
   const resolvedParams = use(params)
 
   useEffect(() => {
@@ -241,12 +248,63 @@ export default function RentDetailsPage({ params }: { params: Promise<{ id: stri
     <div className='min-h-screen bg-gray-100'>
       <HostNavbar />
       {renderModal()}
+      <RejectReservationModal
+        isOpen={showRejectModal}
+        onClose={() => setShowRejectModal(false)}
+        onConfirm={async (reason, message) => {
+          if (!session?.user?.id) return
+
+          setIsRejecting(true)
+          try {
+            const result = await rejectRentRequest(
+              resolvedParams.id,
+              session.user.id,
+              reason,
+              message
+            )
+
+            if (result.success) {
+              const updatedRent = await getRentById(resolvedParams.id)
+              if (updatedRent) {
+                setRent(updatedRent)
+              }
+              setShowRejectModal(false)
+              alert(
+                'La réservation a été refusée avec succès. Les administrateurs ont été notifiés.'
+              )
+            } else {
+              throw new Error(result.error || 'Erreur lors du refus de la réservation')
+            }
+          } finally {
+            setIsRejecting(false)
+          }
+        }}
+        isLoading={isRejecting}
+      />
       <div className='container mx-auto py-6'>
         <div className='bg-white rounded-lg shadow-md'>
           <div className='p-6 border-b border-gray-200'>
             <div className='flex justify-between items-center'>
               <h1 className='text-2xl font-bold text-gray-900'>Détails de la location</h1>
               <div className='flex items-center gap-4'>
+                {rent.status === RentStatus.WAITING && (
+                  <>
+                    <button
+                      onClick={handleApproveReservation}
+                      disabled={updating}
+                      className='px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50'
+                    >
+                      {updating ? 'Approbation...' : 'Accepter la réservation'}
+                    </button>
+                    <button
+                      onClick={() => setShowRejectModal(true)}
+                      disabled={updating}
+                      className='px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50'
+                    >
+                      Refuser la réservation
+                    </button>
+                  </>
+                )}
                 {rent.status === RentStatus.RESERVED && (
                   <>
                     <button

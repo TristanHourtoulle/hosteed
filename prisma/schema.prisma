@@ -60,57 +60,57 @@ model Rules {
 }
 
 model Product {
-  id                 String              @id @default(cuid())
-  name               String
-  description        String
-  address            String
-  basePrice          String
-  priceMGA           String
-  room               BigInt?
-  bathroom           BigInt?
-  arriving           Int
-  leaving            Int
-  autoAccept         Boolean
-  equipement         BigInt?
-  meal               BigInt?
-  services           BigInt?
-  security           BigInt?
-  minRent            BigInt?
-  maxRent            BigInt?
-  advanceRent        BigInt?
-  delayTime          BigInt?
-  categories         BigInt
-  minPeople          BigInt?
-  maxPeople          BigInt?
-  commission         Int                 @default(0)
-  validate           ProductValidation   @default(NotVerified)
-  userManager        BigInt
-  typeId             String
-  phone              String
-  latitude           Float
-  longitude          Float
-  certified          Boolean             @default(false)
-  contract           Boolean             @default(false)
-  sizeRoom           Int?
-  options            Options[]
-  type               TypeRent            @relation(fields: [typeId], references: [id])
-  user               User[]
-  rents              Rent[]
-  reviews            Review[]
-  specificPrices     SpecificPrices[]
-  specificRequests   SpecificRequest[]
-  equipments         Equipment[]         @relation("EquipmentToProduct")
-  img                Images[]            @relation("ImagesToProduct")
-  mealsList          Meals[]             @relation("MealsToProduct")
-  securities         Security[]          @relation("ProductToSecurity")
-  servicesList       Services[]          @relation("ProductToServices")
-  typeRoom           TypeRoom[]          @relation("ProductToTypeRoom")
-  discount           Discount[]
-  favorites          Favorite[]
-  rules              Rules[]
-  nearbyPlaces       NearbyPlace[]
-  transportOptions   TransportOption[]
-  propertyInfo       PropertyInfo?
+  id               String            @id @default(cuid())
+  name             String
+  description      String
+  address          String
+  basePrice        String
+  priceMGA         String
+  room             BigInt?
+  bathroom         BigInt?
+  arriving         Int
+  leaving          Int
+  autoAccept       Boolean
+  equipement       BigInt?
+  meal             BigInt?
+  services         BigInt?
+  security         BigInt?
+  minRent          BigInt?
+  maxRent          BigInt?
+  advanceRent      BigInt?
+  delayTime        BigInt?
+  categories       BigInt
+  minPeople        BigInt?
+  maxPeople        BigInt?
+  commission       Int               @default(0)
+  validate         ProductValidation @default(NotVerified)
+  userManager      BigInt
+  typeId           String
+  phone            String
+  latitude         Float
+  longitude        Float
+  certified        Boolean           @default(false)
+  contract         Boolean           @default(false)
+  sizeRoom         Int?
+  options          Options[]
+  type             TypeRent          @relation(fields: [typeId], references: [id])
+  user             User[]
+  rents            Rent[]
+  reviews          Review[]
+  specificPrices   SpecificPrices[]
+  specificRequests SpecificRequest[]
+  equipments       Equipment[]       @relation("EquipmentToProduct")
+  img              Images[]          @relation("ImagesToProduct")
+  mealsList        Meals[]           @relation("MealsToProduct")
+  securities       Security[]        @relation("ProductToSecurity")
+  servicesList     Services[]        @relation("ProductToServices")
+  typeRoom         TypeRoom[]        @relation("ProductToTypeRoom")
+  discount         Discount[]
+  favorites        Favorite[]
+  rules            Rules[]
+  nearbyPlaces     NearbyPlace[]
+  transportOptions TransportOption[]
+  propertyInfo     PropertyInfo?
 
   UnAvailableProduct UnAvailableProduct[]
 
@@ -181,8 +181,28 @@ model Rent {
   Review       Review[]
   DisableRent  DisableRent[]
 
-  PayRequest PayRequest[]
-  Chat       Chat[]
+  PayRequest    PayRequest[]
+  Chat          Chat[]
+  RentRejection RentRejection?
+}
+
+model RentRejection {
+  id         String    @id @default(cuid())
+  rentId     String    @unique
+  hostId     String // ID de l'hébergeur qui refuse
+  guestId    String // ID de l'invité concerné
+  reason     String // Raison du refus fournie par l'hébergeur
+  message    String // Message détaillé du refus
+  createdAt  DateTime  @default(now())
+  resolved   Boolean   @default(false) // Pour savoir si l'admin a traité le refus
+  resolvedAt DateTime? // Date de résolution par l'admin
+  resolvedBy String? // ID de l'admin qui a résolu
+
+  // Relations
+  rent     Rent  @relation(fields: [rentId], references: [id], onDelete: Cascade)
+  host     User  @relation("HostRejections", fields: [hostId], references: [id])
+  guest    User  @relation("GuestRejections", fields: [guestId], references: [id])
+  resolver User? @relation("AdminResolutions", fields: [resolvedBy], references: [id])
 }
 
 model UnAvailableProduct {
@@ -249,6 +269,11 @@ model User {
   managedHotels hotel[] @relation(name: "managerUserId")
 
   staffHotels hotel[] @relation(name: "staff")
+
+  // Relations pour les refus de réservation
+  hostRejections   RentRejection[] @relation("HostRejections")
+  guestRejections  RentRejection[] @relation("GuestRejections")
+  adminResolutions RentRejection[] @relation("AdminResolutions")
 }
 
 model Account {
