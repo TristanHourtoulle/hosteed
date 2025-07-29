@@ -34,7 +34,7 @@ export async function getPayablePricesPerRent(rentId: string): Promise<PayablePr
     if (product.contract && rent.payment === PaymentStatus.CLIENT_PAID) {
       availablePrice = price
     } else if (
-      rent.status === RentStatus.CHECKIN &&
+      rent.status === (RentStatus.CHECKIN || RentStatus.RESERVED) &&
       (rent.payment === PaymentStatus.CLIENT_PAID ||
         rent.payment === PaymentStatus.MID_TRANSFER_DONE)
     ) {
@@ -103,7 +103,7 @@ export async function createPayRequest(
 
     if (
       type == PaymentStatus.FULL_TRANSFER_REQ &&
-      (rent.status == RentStatus.CHECKOUT || rent.product.contract)
+      (rent.status == (RentStatus.CHECKOUT) || rent.product.contract)
     ) {
       const payrequest = await prisma.payRequest.create({
         data: {

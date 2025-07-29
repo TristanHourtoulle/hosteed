@@ -19,6 +19,9 @@ import {
   Shield,
   CheckCircle2,
   Clock,
+  Cctv,
+  Soup,
+  BrushCleaning,
 } from 'lucide-react'
 import { StatsOverview } from './components/StatsOverview'
 import { ActionCardGroup } from './components/ActionCardGroup'
@@ -123,7 +126,7 @@ export default function AdminDashboard() {
         {
           title: 'Validation des annonces',
           description: 'Valider les nouvelles annonces',
-          icon: <ClipboardCheck className='h-6 w-6' />,
+          icon: ClipboardCheck,
           href: '/admin/validation',
           badge:
             stats?.productWaiting && stats.productWaiting > 0
@@ -134,7 +137,7 @@ export default function AdminDashboard() {
         {
           title: 'Gestion des hébergements',
           description: 'Voir et gérer tous les hébergements',
-          icon: <Home className='h-6 w-6' />,
+          icon: Home,
           href: '/admin/products',
           badge: `${stats?.product || 0} actifs`,
           badgeVariant: 'secondary' as const,
@@ -142,13 +145,13 @@ export default function AdminDashboard() {
         {
           title: 'Avis en attente',
           description: 'Modérer les avis utilisateurs',
-          icon: <MessageSquare className='h-6 w-6' />,
+          icon: MessageSquare,
           href: '/admin/reviews',
         },
         {
           title: 'Refus de location',
           description: 'Gérer les litiges et refus',
-          icon: <XCircle className='h-6 w-6' />,
+          icon: XCircle,
           href: '/admin/rejections',
         },
       ],
@@ -161,7 +164,7 @@ export default function AdminDashboard() {
         {
           title: 'Utilisateurs',
           description: 'Gérer les comptes utilisateurs',
-          icon: <Users className='h-6 w-6' />,
+          icon: Users,
           href: '/admin/users',
           badge: `${stats?.users || 0} inscrits`,
           badgeVariant: 'secondary' as const,
@@ -169,7 +172,7 @@ export default function AdminDashboard() {
         {
           title: 'Réservations',
           description: 'Voir toutes les réservations',
-          icon: <Calendar className='h-6 w-6' />,
+          icon: Calendar,
           href: '/admin/reservations',
           badge: `${stats?.rent || 0} cette année`,
           badgeVariant: 'secondary' as const,
@@ -184,22 +187,43 @@ export default function AdminDashboard() {
         {
           title: 'Statistiques',
           description: 'Analytics et performances',
-          icon: <BarChart2 className='h-6 w-6' />,
+          icon: BarChart2,
           href: '/admin/stats',
         },
         {
           title: 'Paiements',
           description: 'Gestion des transactions',
-          icon: <CreditCard className='h-6 w-6' />,
+          icon: CreditCard,
           href: '/admin/payment',
         },
         {
           title: 'Annonces sponsorisées',
           description: 'Gérer les mises en avant',
-          icon: <Star className='h-6 w-6' />,
+          icon: Star,
           href: '/admin/promoted',
         },
       ],
+    },
+    {
+      title: 'Gestion des options de sécurité',
+      description: 'Voir et gérer toutes les options de sécurité',
+      icon: Cctv,
+      href: '/admin/security',
+      gradient: 'from-red-50 to-red-100',
+    },
+    {
+      title: 'Gestion des options de repas',
+      description: 'Voir et gérer toutes les options de repas',
+      icon: Soup,
+      href: '/admin/meals',
+      gradient: 'from-red-50 to-red-100',
+    },
+    {
+      title: "Gestion des options d'équipements",
+      description: "Voir et gérer toutes les options d'équipements",
+      icon: BrushCleaning,
+      href: '/admin/equipments',
+      gradient: 'from-red-50 to-red-100',
     },
   ]
 
@@ -253,7 +277,7 @@ export default function AdminDashboard() {
                 title={group.title}
                 description={group.description}
                 icon={group.icon}
-                cards={group.cards}
+                cards={group.cards ?? []}
               />
               {groupIndex < cardGroups.length - 1 && <Separator className='my-8 bg-slate-200' />}
             </motion.div>

@@ -323,6 +323,17 @@ export default function RentDetailsPage({ params }: { params: Promise<{ id: stri
                     </button>
                   </>
                 )}
+                {rent.status === RentStatus.RESERVED && (
+                  <>
+                    <button
+                      onClick={() => handleStatusChange(RentStatus.CHECKIN)}
+                      disabled={updating}
+                      className='px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50'
+                    >
+                      {updating ? 'Mise à jour...' : 'Marquer comme arrivé'}
+                    </button>
+                  </>
+                )}
                 {rent.status === RentStatus.CHECKIN && (
                   <button
                     onClick={() => handleStatusChange(RentStatus.CHECKOUT)}
@@ -332,7 +343,7 @@ export default function RentDetailsPage({ params }: { params: Promise<{ id: stri
                     {updating ? 'Mise à jour...' : 'Marquer comme terminé'}
                   </button>
                 )}
-                {rent.status === RentStatus.CHECKIN &&
+                {rent.status === RentStatus.RESERVED &&
                   rent.payment === PaymentStatus.CLIENT_PAID && (
                     <button
                       onClick={() => handlePaymentRequest(PaymentStatus.MID_TRANSFER_REQ)}
@@ -342,8 +353,10 @@ export default function RentDetailsPage({ params }: { params: Promise<{ id: stri
                       {updating ? 'Mise à jour...' : 'Demander le paiement de 50%'}
                     </button>
                   )}
+
                 {rent.status === RentStatus.CHECKOUT &&
-                  rent.payment === PaymentStatus.MID_TRANSFER_DONE && (
+                  (rent.payment === PaymentStatus.MID_TRANSFER_DONE ||
+                    rent.payment === PaymentStatus.MID_TRANSFER_REQ) && (
                     <button
                       onClick={() => handlePaymentRequest(PaymentStatus.REST_TRANSFER_REQ)}
                       disabled={updating}

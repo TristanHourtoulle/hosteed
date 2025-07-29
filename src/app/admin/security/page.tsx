@@ -1,0 +1,179 @@
+'use client'
+
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { motion, Variants } from 'framer-motion'
+import { Card, CardContent } from '@/components/ui/shadcnui/card'
+import { Button } from '@/components/ui/shadcnui/button'
+import { Input } from '@/components/ui/shadcnui/input'
+import { Alert, AlertDescription } from '@/components/ui/shadcnui/alert'
+import {
+  Loader2,
+  Search,
+  Eye, Cctv,
+} from 'lucide-react'
+import {findAllSecurity} from "@/lib/services/security.services";
+import {SecurityInterface} from "@/lib/interface/securityInterface";
+
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+}
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: 'tween' as const,
+      duration: 0.5,
+      ease: 'easeOut',
+    },
+  },
+}
+
+export default function SecurityPage() {
+  const { data: session } = useSession()
+  const router = useRouter()
+  const [security, setSecurity] = useState<SecurityInterface[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+
+  useEffect(() => {
+    if (!session?.user?.roles || session.user.roles !== 'ADMIN') {
+      router.push('/')
+    }
+  }, [session, router])
+
+  useEffect(() => {
+    const fetchSecurity = async () => {
+      try {
+        const securityData = await findAllSecurity()
+        if (securityData) {
+          setSecurity(securityData)
+        }
+      } catch (err) {
+        setError('Erreur lors du chargement des options de sécurité')
+        console.error(err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchSecurity()
+  }, [])
+
+  const filteredUsers = security.filter(
+      option =>
+          option.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+  if (loading) {
+    return (
+      <div className='min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8 flex items-center justify-center'>
+        <div className='flex items-center gap-3'>
+          <Loader2 className='h-6 w-6 animate-spin text-blue-600' />
+          <p className='text-gray-600 text-lg'>Chargement des options de sécurité...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className='min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8'>
+        <div className='max-w-7xl mx-auto'>
+          <Alert variant='destructive'>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className='min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8'>
+      <motion.div
+        className='max-w-7xl mx-auto space-y-6'
+        variants={containerVariants}
+        initial='hidden'
+        animate='visible'
+      >
+        <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4'>
+          <motion.div variants={itemVariants}>
+            <h1 className='text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600'>
+              Gestion des options de sécurité
+            </h1>
+            <p className='text-gray-600 mt-2'>
+              {security.length} option{security.length > 1 ? 's' : ''} enregistré
+              {security.length > 1 ? 's' : ''}
+            </p>
+          </motion.div>
+
+          <motion.div variants={itemVariants} className='w-full sm:w-auto'>
+            <div className='relative'>
+              <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4' />
+              <Input
+                type='text'
+                placeholder='Rechercher une options ...'
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className='pl-10 w-full sm:w-64 py-5 rounded-full'
+              />
+            </div>
+          </motion.div>
+        </div>
+
+        <motion.div variants={itemVariants}>
+          <Card className='overflow-hidden py-0'>
+            <CardContent className='p-0'>
+              <div className='overflow-x-auto'>
+                <table className='w-full'>
+                  <thead>
+                    <tr className='bg-gray-50 border-b'>
+                      <th className='text-left py-4 px-6 text-gray-500 font-medium'>NOM</th>
+                      <th className='text-center py-4 px-6 text-gray-500 font-medium'>ACTIONS</th>
+                    </tr>
+                  </thead>
+                  <tbody className='divide-y'>
+                    {filteredUsers.map(option => (
+                      <tr key={option.id} className='hover:bg-gray-50 transition-colors duration-200'>
+                        <td className='py-4 px-6'>
+                          <div className='flex items-center gap-2'>
+                            <Cctv className='h-4 w-4 text-gray-400' />
+                            <span>{option.name || '-'}</span>
+                          </div>
+                        </td>
+                        <td className='py-4 px-6'>
+                          <div className='flex justify-center'>
+                            <Button
+                              variant='ghost'
+                              size='sm'
+                              asChild
+                              className='hover:bg-blue-50 hover:text-blue-600 rounded-full px-4 py-2'
+                            >
+                              <Link href={`/admin/security/${option.id}`}>
+                                <Eye className='h-4 w-4' />
+                              </Link>
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </motion.div>
+    </div>
+  )
+}
