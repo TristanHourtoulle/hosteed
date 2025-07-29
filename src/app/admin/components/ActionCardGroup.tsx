@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import Link from 'next/link'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/shadcnui/card'
 import { Badge } from '@/components/ui/shadcnui/badge'
@@ -9,10 +10,10 @@ import { ArrowRight, LucideIcon } from 'lucide-react'
 interface ActionCardProps {
   title: string
   description: string
+  icon: LucideIcon
   href: string
-  icon: React.ReactNode
   badge?: string | null
-  badgeVariant?: 'default' | 'destructive' | 'outline' | 'secondary'
+  badgeVariant?: 'destructive' | 'secondary'
   priority?: 'high' | 'medium' | 'low'
 }
 
@@ -45,7 +46,7 @@ export function ActionCard({
             <div className='flex items-start justify-between'>
               <div className='flex items-center gap-3 flex-1'>
                 <div className='p-2 bg-slate-50 rounded-lg group-hover:bg-blue-50 transition-colors shrink-0'>
-                  {icon}
+                  {React.createElement(icon, { className: 'h-6 w-6 text-slate-700' })}
                 </div>
                 <div className='min-w-0 flex-1'>
                   <CardTitle className='text-lg font-semibold text-slate-800 group-hover:text-blue-700 transition-colors line-clamp-2'>
