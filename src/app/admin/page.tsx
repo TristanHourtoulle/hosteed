@@ -6,7 +6,17 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { motion, Variants } from 'framer-motion'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/shadcnui/card'
-import { ClipboardCheck, Users, BarChart2, MessageSquare, Home, ArrowRight } from 'lucide-react'
+import {
+  ClipboardCheck,
+  Users,
+  BarChart2,
+  MessageSquare,
+  Home,
+  ArrowRight,
+  Cctv,
+  Soup,
+  BrushCleaning
+} from 'lucide-react'
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -75,6 +85,27 @@ export default function AdminDashboard() {
       description: 'Voir et gérer tous les hébergements',
       icon: <Home className='h-8 w-8 text-red-500' />,
       href: '/admin/products',
+      gradient: 'from-red-50 to-red-100',
+    },
+    {
+      title: 'Gestion des options de sécurité',
+      description: 'Voir et gérer toutes les options de sécurité',
+      icon: <Cctv className='h-8 w-8 text-red-500' />,
+      href: '/admin/security',
+      gradient: 'from-red-50 to-red-100',
+    },
+    {
+      title: 'Gestion des options de repas',
+      description: 'Voir et gérer toutes les options de repas',
+      icon: <Soup className='h-8 w-8 text-red-500' />,
+      href: '/admin/meals',
+      gradient: 'from-red-50 to-red-100',
+    },
+    {
+      title: 'Gestion des options d\'équipements',
+      description: 'Voir et gérer toutes les options d\'équipements',
+      icon: <BrushCleaning className='h-8 w-8 text-red-500' />,
+      href: '/admin/equipments',
       gradient: 'from-red-50 to-red-100',
     },
   ]
