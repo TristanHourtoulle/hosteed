@@ -1,0 +1,94 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Erreur de paiement - Hosteed</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .header {
+        text-align: center;
+        padding: 20px 0;
+        background-color: #ffc107;
+        color: #333;
+        border-radius: 5px;
+      }
+      .content {
+        padding: 20px 0;
+      }
+      .footer {
+        text-align: center;
+        padding: 20px 0;
+        font-size: 12px;
+        color: #666;
+      }
+      .button {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #007bff;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+        margin: 20px 0;
+      }
+      .details {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 20px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>Erreur de paiement</h1>
+    </div>
+
+    <div class="content">
+      <p>Bonjour {{name}},</p>
+
+      <p>Nous avons rencontré un problème lors du traitement de votre paiement.</p>
+
+      <div class="details">
+        <h3>Détails de la transaction :</h3>
+        <p><strong>Numéro de réservation :</strong> {{reservationId}}</p>
+        <p><strong>Date de la tentative :</strong> {{transactionDate}}</p>
+        <p><strong>Montant :</strong> {{amount}} €</p>
+        <p><strong>Raison de l'échec :</strong> {{errorReason}}</p>
+      </div>
+
+      <p>Pour finaliser votre réservation, nous vous invitons à :</p>
+      <ol>
+        <li>Vérifier les informations de votre carte bancaire</li>
+        <li>Vous assurer que votre plafond de paiement est suffisant</li>
+        <li>Réessayer le paiement en cliquant sur le bouton ci-dessous</li>
+      </ol>
+
+      <div style="text-align: center">
+        <a href="{{paymentUrl}}" class="button">Réessayer le paiement</a>
+      </div>
+
+      <p>Si le problème persiste, vous pouvez :</p>
+      <ul>
+        <li>Utiliser un autre moyen de paiement</li>
+        <li>Contacter votre banque pour vérifier si des restrictions sont en place</li>
+        <li>Nous contacter pour obtenir de l'aide</li>
+      </ul>
+
+      <p>Notre équipe est à votre disposition pour vous accompagner.</p>
+
+      <p>Cordialement,<br />L'équipe Hosteed</p>
+    </div>
+
+    <div class="footer">
+      <p>Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
+      <p>© 2024 Hosteed. Tous droits réservés.</p>
+    </div>
+  </body>
+</html>

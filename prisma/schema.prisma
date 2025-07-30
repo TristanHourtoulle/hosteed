@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,19 +7,338 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id            String          @id @default(cuid())
-  name          String?
-  email         String          @unique
-  emailVerified DateTime?
-  image         String?
-  accounts      Account[]
-  sessions      Session[]
-  // Optional for WebAuthn support
-  Authenticator Authenticator[]
+model TypeRent {
+  id          String    @id @default(cuid())
+  name        String
+  description String
+  products    Product[]
+}
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Equipment {
+  id       String    @id @default(cuid())
+  name     String
+  icon     String    @default("CheckCircle") // Nom de l'icône Lucide
+  products Product[] @relation("EquipmentToProduct")
+}
+
+model Services {
+  id       String    @id @default(cuid())
+  name     String
+  products Product[] @relation("ProductToServices")
+}
+
+model Meals {
+  id       String    @id @default(cuid())
+  name     String
+  products Product[] @relation("MealsToProduct")
+}
+
+model TypeRoom {
+  id          String    @id @default(cuid())
+  name        String
+  description String
+  products    Product[] @relation("ProductToTypeRoom")
+}
+
+model Security {
+  id       String    @id @default(cuid())
+  name     String
+  products Product[] @relation("ProductToSecurity")
+}
+
+model Rules {
+  id              String  @id @default(cuid())
+  productId       String
+  smokingAllowed  Boolean @default(false)
+  petsAllowed     Boolean @default(false)
+  eventsAllowed   Boolean @default(false)
+  checkInTime     String  @default("15:00")
+  checkOutTime    String  @default("11:00")
+  selfCheckIn     Boolean @default(false)
+  selfCheckInType String?
+  product         Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Product {
+  id               String            @id @default(cuid())
+  name             String
+  description      String
+  address          String
+  basePrice        String
+  priceMGA         String
+  room             BigInt?
+  bathroom         BigInt?
+  arriving         Int
+  leaving          Int
+  autoAccept       Boolean
+  equipement       BigInt?
+  meal             BigInt?
+  services         BigInt?
+  security         BigInt?
+  minRent          BigInt?
+  maxRent          BigInt?
+  advanceRent      BigInt?
+  delayTime        BigInt?
+  categories       BigInt
+  minPeople        BigInt?
+  maxPeople        BigInt?
+  commission       Int               @default(0)
+  validate         ProductValidation @default(NotVerified)
+  userManager      BigInt
+  typeId           String
+  phone            String
+  latitude         Float
+  longitude        Float
+  certified        Boolean           @default(false)
+  contract         Boolean           @default(false)
+  sizeRoom         Int?
+  options          Options[]
+  type             TypeRent          @relation(fields: [typeId], references: [id])
+  user             User[]
+  rents            Rent[]
+  reviews          Review[]
+  specificPrices   SpecificPrices[]
+  specificRequests SpecificRequest[]
+  equipments       Equipment[]       @relation("EquipmentToProduct")
+  img              Images[]          @relation("ImagesToProduct")
+  mealsList        Meals[]           @relation("MealsToProduct")
+  securities       Security[]        @relation("ProductToSecurity")
+  servicesList     Services[]        @relation("ProductToServices")
+  typeRoom         TypeRoom[]        @relation("ProductToTypeRoom")
+  discount         Discount[]
+  favorites        Favorite[]
+  rules            Rules[]
+  nearbyPlaces     NearbyPlace[]
+  transportOptions TransportOption[]
+  propertyInfo     PropertyInfo?
+
+  UnAvailableProduct UnAvailableProduct[]
+
+  hotel hotel[]
+
+  PromotedProduct PromotedProduct[]
+
+  // Nouveaux champs pour la validation améliorée
+  validationComments ValidationComment[]
+  validationHistory  ValidationHistory[]
+}
+
+// Nouveau modèle pour les commentaires de validation
+model ValidationComment {
+  id         String                  @id @default(cuid())
+  productId  String
+  adminId    String
+  section    ValidationSection // Section de l'annonce commentée
+  comment    String // Commentaire de l'admin
+  status     ValidationCommentStatus @default(PENDING)
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+  resolvedAt DateTime? // Date de résolution
+  resolvedBy String? // ID de la personne qui a résolu
+
+  product  Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  admin    User    @relation("AdminComments", fields: [adminId], references: [id])
+  resolver User?   @relation("CommentResolver", fields: [resolvedBy], references: [id])
+}
+
+// Nouveau modèle pour l'historique des validations
+model ValidationHistory {
+  id             String            @id @default(cuid())
+  productId      String
+  previousStatus ProductValidation
+  newStatus      ProductValidation
+  adminId        String? // ID de l'admin qui a fait le changement
+  hostId         String? // ID de l'hôte si c'est lui qui a fait une modification
+  reason         String? // Raison du changement
+  changes        Json? // Détails des modifications apportées
+  createdAt      DateTime          @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  admin   User?   @relation("ValidationAdmin", fields: [adminId], references: [id])
+  host    User?   @relation("ValidationHost", fields: [hostId], references: [id])
+}
+
+// Énumérations pour les commentaires de validation
+enum ValidationSection {
+  GENERAL_INFO // Informations générales
+  LOCATION // Localisation
+  CHARACTERISTICS // Caractéristiques
+  PRICING // Tarification
+  EQUIPMENT // Équipements
+  SERVICES // Services
+  MEALS // Repas
+  SECURITY // Sécurité
+  PHOTOS // Photos
+  ADDITIONAL_INFO // Informations complémentaires
+}
+
+enum ValidationCommentStatus {
+  PENDING // En attente de résolution
+  RESOLVED // Résolu
+  ACKNOWLEDGED // Pris en compte mais pas encore résolu
+}
+
+model Discount {
+  id            String   @id @default(cuid())
+  productId     String
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  startDiscount DateTime
+  endDiscount   DateTime
+  price         Int
+}
+
+model Images {
+  id      String    @id @default(cuid())
+  img     String
+  Product Product[] @relation("ImagesToProduct")
+}
+
+model SpecificPrices {
+  id        String  @id @default(cuid())
+  productId String
+  day       BigInt
+  price     BigInt
+  active    BigInt
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model SpecificRequest {
+  id        String  @id @default(cuid())
+  productId String
+  name      String
+  text      String
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model Options {
+  id        String  @id @default(cuid())
+  productId String
+  name      String
+  price     BigInt
+  type      BigInt
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  Rent      Rent[]  @relation("OptionsToRent")
+}
+
+model Rent {
+  id           String        @id @default(cuid())
+  stripeId     String?
+  productId    String
+  userId       String
+  numberPeople BigInt
+  notes        BigInt
+  accepted     Boolean
+  prices       BigInt
+  arrivingDate DateTime
+  leavingDate  DateTime
+  payment      PaymentStatus @default(NOT_PAID)
+  product      Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  options      Options[]     @relation("OptionsToRent")
+  status       RentStatus    @default(WAITING)
+  confirmed    Boolean       @default(false)
+  Review       Review[]
+  DisableRent  DisableRent[]
+
+  PayRequest    PayRequest[]
+  Chat          Chat[]
+  RentRejection RentRejection?
+}
+
+model RentRejection {
+  id         String    @id @default(cuid())
+  rentId     String    @unique
+  hostId     String // ID de l'hébergeur qui refuse
+  guestId    String // ID de l'invité concerné
+  reason     String // Raison du refus fournie par l'hébergeur
+  message    String // Message détaillé du refus
+  createdAt  DateTime  @default(now())
+  resolved   Boolean   @default(false) // Pour savoir si l'admin a traité le refus
+  resolvedAt DateTime? // Date de résolution par l'admin
+  resolvedBy String? // ID de l'admin qui a résolu
+
+  // Relations
+  rent     Rent  @relation(fields: [rentId], references: [id], onDelete: Cascade)
+  host     User  @relation("HostRejections", fields: [hostId], references: [id])
+  guest    User  @relation("GuestRejections", fields: [guestId], references: [id])
+  resolver User? @relation("AdminResolutions", fields: [resolvedBy], references: [id])
+}
+
+model UnAvailableProduct {
+  id        String   @id @default(cuid())
+  startDate DateTime
+  endDate   DateTime
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model DisableRent {
+  id        String   @id @default(cuid())
+  startDate DateTime
+  endDate   DateTime
+  rentId    String
+  rent      Rent     @relation(fields: [rentId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id           String   @id @default(cuid())
+  productId    String
+  title        String
+  text         String
+  grade        Int
+  welcomeGrade Int      @default(0)
+  staff        Int      @default(0)
+  comfort      Int      @default(0)
+  equipment    Int      @default(0)
+  cleaning     Int      @default(0)
+  visitDate    DateTime
+  publishDate  DateTime
+  rentId       String
+  approved     Boolean  @default(false)
+  rentRelation Rent     @relation(fields: [rentId], references: [id], onDelete: Cascade)
+  product      Product  @relation(fields: [productId], references: [id])
+}
+
+model User {
+  id               String          @id @default(cuid())
+  name             String?
+  email            String          @unique
+  emailVerified    DateTime?
+  emailToken       String?
+  resetToken       String?
+  image            String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  info             String?
+  lastname         String?
+  password         String?
+  profilePicture   String?
+  stripeCustomerId String?
+  roles            UserRole        @default(USER)
+  accounts         Account[]
+  Authenticator    Authenticator[]
+  Rent             Rent[]
+  sessions         Session[]
+  Product          Product[]
+  Chat             Chat[]
+  favorites        Favorite[]
+
+  PayRequest PayRequest[]
+
+  managedHotels hotel[] @relation(name: "managerUserId")
+
+  staffHotels hotel[] @relation(name: "staff")
+
+  // Relations pour les refus de réservation
+  hostRejections   RentRejection[] @relation("HostRejections")
+  guestRejections  RentRejection[] @relation("GuestRejections")
+  adminResolutions RentRejection[] @relation("AdminResolutions")
+
+  // Relations pour la validation des annonces
+  adminComments     ValidationComment[] @relation("AdminComments")
+  resolvedComments  ValidationComment[] @relation("CommentResolver")
+  validationAsAdmin ValidationHistory[] @relation("ValidationAdmin")
+  validationAsHost  ValidationHistory[] @relation("ValidationHost")
 }
 
 model Account {
@@ -40,11 +353,9 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([provider, providerAccountId])
 }
@@ -53,10 +364,9 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model VerificationToken {
@@ -67,7 +377,6 @@ model VerificationToken {
   @@id([identifier, token])
 }
 
-// Optional for WebAuthn support
 model Authenticator {
   credentialID         String  @unique
   userId               String
@@ -77,8 +386,151 @@ model Authenticator {
   credentialDeviceType String
   credentialBackedUp   Boolean
   transports           String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                 User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, credentialID])
+}
+
+model Chat {
+  id         String   @unique @default(cuid())
+  message    String
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rentId     String
+  rent       Rent     @relation(fields: [rentId], references: [id], onDelete: Cascade)
+  host       Boolean
+  dateSended DateTime
+  read       Boolean  @default(false)
+}
+
+model PayRequest {
+  id             String           @unique @default(cuid())
+  userId         String
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rentId         String
+  rent           Rent             @relation(fields: [rentId], references: [id], onDelete: Cascade)
+  PaymentRequest PaymentStatus
+  prices         String
+  notes          String
+  method         PaymentMethod
+  status         PaymentReqStatus
+}
+
+enum PaymentReqStatus {
+  RECEIVED
+  REFUSED
+  DONE
+}
+
+enum PaymentMethod {
+  SEPA_VIREMENT
+  TAPTAP
+  PAYPAL
+  INTERNATIONAL
+  OTHER
+}
+
+enum UserRole {
+  ADMIN
+  BLOGWRITTER
+  HOST
+  HOST_VERIFIED
+  USER
+}
+
+enum PaymentStatus {
+  NOT_PAID
+  CLIENT_PAID
+  MID_TRANSFER_REQ
+  MID_TRANSFER_DONE
+  REST_TRANSFER_REQ
+  REST_TRANSFER_DONE
+  FULL_TRANSFER_REQ
+  FULL_TRANSFER_DONE
+  REFUNDED
+  DISPUTE
+}
+
+enum RentStatus {
+  WAITING
+  RESERVED
+  CHECKIN
+  CHECKOUT
+  CANCEL
+}
+
+enum ProductValidation {
+  NotVerified
+  Approve
+  Refused
+  RecheckRequest
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+}
+
+model hotel {
+  id     String    @id @default(cuid())
+  userId String
+  user   User      @relation(name: "managerUserId", fields: [userId], references: [id], onDelete: Cascade)
+  staff  User[]    @relation(name: "staff")
+  room   Product[]
+  number String
+  adress String
+  name   String
+}
+
+model PromotedProduct {
+  id        String   @id @default(cuid())
+  active    Boolean  @default(false)
+  start     DateTime
+  end       DateTime
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model NearbyPlace {
+  id        String  @id @default(cuid())
+  name      String
+  distance  Int // en mètres
+  duration  Int // en minutes
+  transport String // à pied, en voiture, etc.
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model TransportOption {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  productId   String
+  product     Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model PropertyInfo {
+  id                String  @id @default(cuid())
+  hasStairs         Boolean @default(false)
+  hasElevator       Boolean @default(false)
+  hasHandicapAccess Boolean @default(false)
+  hasPetsOnProperty Boolean @default(false)
+  additionalNotes   String?
+  productId         String  @unique
+  product           Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  title     String   @unique
+  content   String   @db.Text
+  image     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
