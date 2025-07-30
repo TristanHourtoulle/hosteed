@@ -4,11 +4,21 @@
 
 import { useEffect, useState } from 'react'
 import { getRentById, cancelRent } from '@/lib/services/rents.service'
+import { getPayablePricesPerRent } from '@/lib/services/payment.service'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 
+interface PayablePrices {
+  totalPricesPayable: number
+  availablePrice: number
+  pendingPrice: number
+  transferredPrice: number
+  commission: number
+}
+
 export default function ReservationDetailsPage() {
   const [rent, setRent] = useState<Record<string, any> | null>(null)
+  const [prices, setPrices] = useState<PayablePrices | null>(null)
   const [loading, setLoading] = useState(true)
   const [cancelling, setCancelling] = useState(false)
   const params = useParams()
@@ -17,9 +27,15 @@ export default function ReservationDetailsPage() {
     const fetchRent = async () => {
       try {
         if (params.id) {
-          const data = await getRentById(params.id as string)
-          if (data) {
-            setRent(data)
+          const [rentData, pricesData] = await Promise.all([
+            getRentById(params.id as string),
+            getPayablePricesPerRent(params.id as string),
+          ])
+          if (rentData) {
+            setRent(rentData)
+          }
+          if (pricesData) {
+            setPrices(pricesData)
           }
         }
       } catch (error) {
@@ -187,6 +203,63 @@ export default function ReservationDetailsPage() {
               <div>
                 <p className='text-sm text-gray-500'>Rôle</p>
                 <p className='text-lg'>{rent.user.roles}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Informations de paiement */}
+      {prices && (
+        <div className='bg-white rounded-lg shadow-md'>
+          <div className='px-6 py-4 border-b border-gray-200'>
+            <h2 className='text-xl font-semibold text-gray-800'>Informations de paiement</h2>
+          </div>
+          <div className='p-6'>
+            <div className='grid grid-cols-2 gap-4'>
+              <div>
+                <p className='text-sm text-gray-500'>Prix total (sans commission)</p>
+                <p className='text-lg font-semibold'>
+                  {prices.totalPricesPayable.toLocaleString('fr-FR', {
+                    style: 'currency',
+                    currency: 'EUR',
+                  })}
+                </p>
+              </div>
+              <div>
+                <p className='text-sm text-gray-500'>Commission</p>
+                <p className='text-lg'>{prices.commission}%</p>
+              </div>
+              <div>
+                <p className='text-sm text-gray-500'>Prix disponible</p>
+                <p className='text-lg text-blue-600'>
+                  {prices.availablePrice.toLocaleString('fr-FR', {
+                    style: 'currency',
+                    currency: 'EUR',
+                  })}
+                </p>
+              </div>
+              <div>
+                <p className='text-sm text-gray-500'>Prix en attente</p>
+                <p className='text-lg text-orange-600'>
+                  {prices.pendingPrice.toLocaleString('fr-FR', {
+                    style: 'currency',
+                    currency: 'EUR',
+                  })}
+                </p>
+              </div>
+              <div>
+                <p className='text-sm text-gray-500'>Prix viré à l&apos;hébergeur</p>
+                <p className='text-lg text-green-600 font-semibold'>
+                  {prices.transferredPrice.toLocaleString('fr-FR', {
+                    style: 'currency',
+                    currency: 'EUR',
+                  })}
+                </p>
+              </div>
+              <div>
+                <p className='text-sm text-gray-500'>Statut de paiement</p>
+                <p className='text-lg'>{rent.payment || 'Non défini'}</p>
               </div>
             </div>
           </div>
