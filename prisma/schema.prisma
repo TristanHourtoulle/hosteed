@@ -17,6 +17,7 @@ model TypeRent {
 model Equipment {
   id       String    @id @default(cuid())
   name     String
+  icon     String    @default("CheckCircle") // Nom de l'icône Lucide
   products Product[] @relation("EquipmentToProduct")
 }
 
@@ -45,12 +46,26 @@ model Security {
   products Product[] @relation("ProductToSecurity")
 }
 
+model Rules {
+  id              String  @id @default(cuid())
+  productId       String
+  smokingAllowed  Boolean @default(false)
+  petsAllowed     Boolean @default(false)
+  eventsAllowed   Boolean @default(false)
+  checkInTime     String  @default("15:00")
+  checkOutTime    String  @default("11:00")
+  selfCheckIn     Boolean @default(false)
+  selfCheckInType String?
+  product         Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
 model Product {
   id               String            @id @default(cuid())
   name             String
   description      String
   address          String
   basePrice        String
+  priceMGA         String
   room             BigInt?
   bathroom         BigInt?
   arriving         Int
@@ -91,9 +106,76 @@ model Product {
   servicesList     Services[]        @relation("ProductToServices")
   typeRoom         TypeRoom[]        @relation("ProductToTypeRoom")
   discount         Discount[]
-  Chat             Chat[]
+  favorites        Favorite[]
+  rules            Rules[]
+  nearbyPlaces     NearbyPlace[]
+  transportOptions TransportOption[]
+  propertyInfo     PropertyInfo?
 
   UnAvailableProduct UnAvailableProduct[]
+
+  hotel hotel[]
+
+  PromotedProduct PromotedProduct[]
+
+  // Nouveaux champs pour la validation améliorée
+  validationComments ValidationComment[]
+  validationHistory  ValidationHistory[]
+}
+
+// Nouveau modèle pour les commentaires de validation
+model ValidationComment {
+  id         String                  @id @default(cuid())
+  productId  String
+  adminId    String
+  section    ValidationSection // Section de l'annonce commentée
+  comment    String // Commentaire de l'admin
+  status     ValidationCommentStatus @default(PENDING)
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+  resolvedAt DateTime? // Date de résolution
+  resolvedBy String? // ID de la personne qui a résolu
+
+  product  Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  admin    User    @relation("AdminComments", fields: [adminId], references: [id])
+  resolver User?   @relation("CommentResolver", fields: [resolvedBy], references: [id])
+}
+
+// Nouveau modèle pour l'historique des validations
+model ValidationHistory {
+  id             String            @id @default(cuid())
+  productId      String
+  previousStatus ProductValidation
+  newStatus      ProductValidation
+  adminId        String? // ID de l'admin qui a fait le changement
+  hostId         String? // ID de l'hôte si c'est lui qui a fait une modification
+  reason         String? // Raison du changement
+  changes        Json? // Détails des modifications apportées
+  createdAt      DateTime          @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  admin   User?   @relation("ValidationAdmin", fields: [adminId], references: [id])
+  host    User?   @relation("ValidationHost", fields: [hostId], references: [id])
+}
+
+// Énumérations pour les commentaires de validation
+enum ValidationSection {
+  GENERAL_INFO // Informations générales
+  LOCATION // Localisation
+  CHARACTERISTICS // Caractéristiques
+  PRICING // Tarification
+  EQUIPMENT // Équipements
+  SERVICES // Services
+  MEALS // Repas
+  SECURITY // Sécurité
+  PHOTOS // Photos
+  ADDITIONAL_INFO // Informations complémentaires
+}
+
+enum ValidationCommentStatus {
+  PENDING // En attente de résolution
+  RESOLVED // Résolu
+  ACKNOWLEDGED // Pris en compte mais pas encore résolu
 }
 
 model Discount {
@@ -158,7 +240,28 @@ model Rent {
   Review       Review[]
   DisableRent  DisableRent[]
 
-  PayRequest PayRequest[]
+  PayRequest    PayRequest[]
+  Chat          Chat[]
+  RentRejection RentRejection?
+}
+
+model RentRejection {
+  id         String    @id @default(cuid())
+  rentId     String    @unique
+  hostId     String // ID de l'hébergeur qui refuse
+  guestId    String // ID de l'invité concerné
+  reason     String // Raison du refus fournie par l'hébergeur
+  message    String // Message détaillé du refus
+  createdAt  DateTime  @default(now())
+  resolved   Boolean   @default(false) // Pour savoir si l'admin a traité le refus
+  resolvedAt DateTime? // Date de résolution par l'admin
+  resolvedBy String? // ID de l'admin qui a résolu
+
+  // Relations
+  rent     Rent  @relation(fields: [rentId], references: [id], onDelete: Cascade)
+  host     User  @relation("HostRejections", fields: [hostId], references: [id])
+  guest    User  @relation("GuestRejections", fields: [guestId], references: [id])
+  resolver User? @relation("AdminResolutions", fields: [resolvedBy], references: [id])
 }
 
 model UnAvailableProduct {
@@ -218,8 +321,24 @@ model User {
   sessions         Session[]
   Product          Product[]
   Chat             Chat[]
+  favorites        Favorite[]
 
   PayRequest PayRequest[]
+
+  managedHotels hotel[] @relation(name: "managerUserId")
+
+  staffHotels hotel[] @relation(name: "staff")
+
+  // Relations pour les refus de réservation
+  hostRejections   RentRejection[] @relation("HostRejections")
+  guestRejections  RentRejection[] @relation("GuestRejections")
+  adminResolutions RentRejection[] @relation("AdminResolutions")
+
+  // Relations pour la validation des annonces
+  adminComments     ValidationComment[] @relation("AdminComments")
+  resolvedComments  ValidationComment[] @relation("CommentResolver")
+  validationAsAdmin ValidationHistory[] @relation("ValidationAdmin")
+  validationAsHost  ValidationHistory[] @relation("ValidationHost")
 }
 
 model Account {
@@ -277,9 +396,11 @@ model Chat {
   message    String
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  productId  String
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  rentId     String
+  rent       Rent     @relation(fields: [rentId], references: [id], onDelete: Cascade)
+  host       Boolean
   dateSended DateTime
+  read       Boolean  @default(false)
 }
 
 model PayRequest {
@@ -313,6 +434,7 @@ enum UserRole {
   ADMIN
   BLOGWRITTER
   HOST
+  HOST_VERIFIED
   USER
 }
 
@@ -342,4 +464,73 @@ enum ProductValidation {
   Approve
   Refused
   RecheckRequest
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+}
+
+model hotel {
+  id     String    @id @default(cuid())
+  userId String
+  user   User      @relation(name: "managerUserId", fields: [userId], references: [id], onDelete: Cascade)
+  staff  User[]    @relation(name: "staff")
+  room   Product[]
+  number String
+  adress String
+  name   String
+}
+
+model PromotedProduct {
+  id        String   @id @default(cuid())
+  active    Boolean  @default(false)
+  start     DateTime
+  end       DateTime
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model NearbyPlace {
+  id        String  @id @default(cuid())
+  name      String
+  distance  Int // en mètres
+  duration  Int // en minutes
+  transport String // à pied, en voiture, etc.
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model TransportOption {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  productId   String
+  product     Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model PropertyInfo {
+  id                String  @id @default(cuid())
+  hasStairs         Boolean @default(false)
+  hasElevator       Boolean @default(false)
+  hasHandicapAccess Boolean @default(false)
+  hasPetsOnProperty Boolean @default(false)
+  additionalNotes   String?
+  productId         String  @unique
+  product           Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  title     String   @unique
+  content   String   @db.Text
+  image     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

@@ -1,30 +1,153 @@
+# Hosteed - Plateforme de Location
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-## Getting Started
+## 🚀 Installation et Configuration
 
-First, run the development server:
+### Prérequis
+
+- [Node.js](https://nodejs.org/) (version 18+)
+- [pnpm](https://pnpm.io/)
+- [Stripe CLI](https://stripe.com/docs/stripe-cli)
+- **Base de données** : Docker OU PostgreSQL local
+
+### 1. Installation des dépendances
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+git clone <repository-url>
+cd hosteed
+pnpm install
+```
+
+### 2. Configuration de la base de données
+
+#### Option A: Avec Docker (Recommandé)
+
+```bash
+# Démarrer Docker Desktop puis :
+docker-compose up -d db
+```
+
+#### Option B: Avec PostgreSQL local (Homebrew - macOS)
+
+```bash
+# Installer PostgreSQL
+brew install postgresql@15
+
+# Démarrer PostgreSQL
+brew services start postgresql@15
+
+# Ajouter PostgreSQL au PATH
+echo 'export PATH="/opt/homebrew/opt/postgresql@15/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+
+# Créer la base de données
+createdb hosteed
+```
+
+### 3. Variables d'environnement
+
+Le fichier `.env` contient déjà les variables nécessaires. Vérifiez la `DATABASE_URL` :
+
+**Pour Docker :**
+
+```env
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/hosteed"
+```
+
+**Pour PostgreSQL local :**
+
+```env
+DATABASE_URL="postgresql://[votre_username]@localhost:5432/hosteed"
+```
+
+### 4. Configuration Prisma
+
+```bash
+# Générer le client Prisma
+pnpm prisma generate
+
+# Synchroniser la base avec le schema
+pnpm prisma db push
+
+# Appliquer les migrations
+pnpm prisma migrate deploy
+
+# Seeder la base avec des données d'exemple
+pnpm run seed
+```
+
+### 5. Démarrage de l'application
+
+#### Terminal 1 - Application Next.js
+
+```bash
 pnpm dev
-# or
-bun dev
 ```
 
-Dans un autre terminal, lancer cette commande 
+#### Terminal 2 - Webhook Stripe
+
 ```bash
-
-stripe listen --forward-to localhost:3000/webhook 
-
+stripe listen --forward-to localhost:3000/webhook
 ```
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 6. Accès à l'application
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Application** : [http://localhost:3000](http://localhost:3000)
+- **Admin** : [http://localhost:3000/admin](http://localhost:3000/admin)
+- **Recherche** : [http://localhost:3000/search](http://localhost:3000/search)
+
+### 7. Données de test
+
+Après le seeding, vous aurez accès à :
+
+**Utilisateurs :**
+
+- `pierre@pierre.pierre` / `password`
+- `marie@test.com` / `password`
+- `jean@test.com` / `password`
+
+**Contenu :**
+
+- 8 propriétés à Madagascar
+- Équipements, services, et options diverses
+
+## 🛠️ Commandes utiles
+
+```bash
+# Build production
+pnpm build
+
+# Tests
+pnpm test
+
+# Linting
+pnpm lint
+
+# Reset de la base de données
+pnpm prisma db push --force-reset
+pnpm run seed
+
+# Voir la base de données
+pnpm prisma studio
+```
+
+## 🐳 Commandes Docker
+
+```bash
+# Démarrer tous les services
+docker-compose up -d
+
+# Voir les logs
+docker-compose logs -f
+
+# Arrêter les services
+docker-compose down
+
+# Reset complet
+docker-compose down -v
+docker-compose up -d
+```
 
 ## Documentation des Services
 
@@ -33,6 +156,7 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 #### Endpoints Disponibles
 
 1. **Recherche de Produits**
+
    - `findProductById(id: string)`: Recherche un produit par son ID
    - `findAllProducts()`: Récupère tous les produits validés
    - `findAllProductByHostId(id: string)`: Récupère tous les produits d'un hôte spécifique
@@ -49,6 +173,7 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 #### Endpoints Disponibles
 
 1. **Recherche de Locations**
+
    - `getRentById(id: string)`: Recherche une location par son ID
    - `findAllRentByProduct(id: string)`: Récupère toutes les locations pour un produit spécifique
    - `findAllRentByUserId(id: string)`: Récupère toutes les locations d'un utilisateur
@@ -83,6 +208,7 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 #### Endpoints Disponibles
 
 1. **Recherche d'Utilisateurs**
+
    - `findUserByEmail(email: string)`: Recherche un utilisateur par son email
    - `findAllUserByRoles(roles: UserRole)`: Récupère tous les utilisateurs ayant un rôle spécifique
 
@@ -112,6 +238,7 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
      - `publishDate`: Date de publication
 
 ### Services de Configuration
+
 - `typeRent.service.ts`: Types de location
 - `options.service.ts`: Options disponibles
 - `services.service.ts`: Services proposés
@@ -124,6 +251,7 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 #### Endpoints Disponibles
 
 1. **Gestion des Paiements**
+
    - `createPaymentIntent(params)`: Crée une intention de paiement avec les paramètres suivants:
      - `amount`: Montant en euros
      - `currency`: Devise (optionnel, par défaut: 'eur')

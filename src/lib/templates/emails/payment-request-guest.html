@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Information - Demande de paiement</title>
+    <style>
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #f5f5f5;
+        padding: 20px;
+      }
+      .container {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        padding: 30px 25px;
+        text-align: center;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 600;
+      }
+      .content {
+        padding: 30px 25px;
+      }
+      .info-badge {
+        background: #3b82f6;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 500;
+        display: inline-block;
+        margin-bottom: 20px;
+      }
+      .info-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+      }
+      .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #e2e8f0;
+      }
+      .info-row:last-child {
+        border-bottom: none;
+      }
+      .info-label {
+        font-weight: 500;
+        color: #64748b;
+      }
+      .info-value {
+        font-weight: 600;
+        color: #1e293b;
+      }
+      .amount {
+        font-size: 20px;
+        color: #059669;
+      }
+      .notice-section {
+        background: #eff6ff;
+        border: 1px solid #3b82f6;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 20px 0;
+      }
+      .notice-section h3 {
+        margin: 0 0 10px 0;
+        color: #1d4ed8;
+        font-size: 16px;
+      }
+      .button {
+        display: inline-block;
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        text-decoration: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 500;
+        margin: 20px 0;
+        text-align: center;
+      }
+      .footer {
+        background: #f8fafc;
+        padding: 20px 25px;
+        text-align: center;
+        color: #64748b;
+        font-size: 14px;
+        border-top: 1px solid #e2e8f0;
+      }
+      .logo {
+        font-size: 18px;
+        font-weight: bold;
+        color: #10b981;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div class="logo">🏠 Hosteed</div>
+        <h1>Demande de paiement en cours</h1>
+      </div>
+
+      <div class="content">
+        <div class="info-badge">ℹ️ Information importante</div>
+
+        <p>Bonjour <strong>{{guestName}}</strong>,</p>
+
+        <p>
+          Nous vous informons que votre hôte <strong>{{hostName}}</strong> vient de faire une
+          demande de paiement concernant votre réservation.
+        </p>
+
+        <div class="info-card">
+          <div class="info-row">
+            <span class="info-label">Type de demande</span>
+            <span class="info-value">{{paymentType}}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Montant concerné</span>
+            <span class="info-value amount">{{amount}}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Méthode de paiement</span>
+            <span class="info-value">{{paymentMethod}}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Réservation</span>
+            <span class="info-value">{{productTitle}}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Période</span>
+            <span class="info-value">{{startDate}} - {{endDate}}</span>
+          </div>
+        </div>
+
+        <div class="notice-section">
+          <h3>🔍 Qu'est-ce que cela signifie ?</h3>
+          <p>
+            Cette demande indique que votre hôte souhaite recevoir le paiement selon les conditions
+            convenues. Nos équipes vont examiner et valider cette demande avant tout versement.
+          </p>
+        </div>
+
+        <h3>Processus de validation :</h3>
+        <ul>
+          <li>📋 Nos équipes examinent la demande</li>
+          <li>✅ Vérification des conditions de location</li>
+          <li>💰 Validation et traitement du paiement</li>
+          <li>📧 Notification de confirmation</li>
+        </ul>
+
+        <p>
+          <strong>Important :</strong> Aucune action n'est requise de votre part. Le paiement a déjà
+          été effectué lors de votre réservation.
+        </p>
+
+        <a href="{{reservationUrl}}" class="button"> 📋 Voir ma réservation </a>
+
+        <p>
+          Si vous avez des questions concernant cette demande ou votre réservation, n'hésitez pas à
+          nous contacter.
+        </p>
+      </div>
+
+      <div class="footer">
+        <p><strong>Hosteed</strong> - Plateforme de location entre particuliers</p>
+        <p>Cet email a été envoyé automatiquement depuis Hosteed.</p>
+      </div>
+    </div>
+  </body>
+</html>

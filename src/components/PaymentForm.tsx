@@ -1,40 +1,35 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
-import {
-  Elements,
-  PaymentElement,
-  useStripe,
-  useElements,
-} from '@stripe/react-stripe-js';
+import { useState, useEffect } from 'react'
+import { loadStripe } from '@stripe/stripe-js'
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
 interface PaymentFormProps {
-  amount: number;
-  onSuccess?: (stripeTransactionId: string) => void;
-  onError?: (error: Error) => void;
+  amount: number
+  onSuccess?: (stripeTransactionId: string) => void
+  onError?: (error: Error) => void
 }
 
 const PaymentFormContent = ({ amount, onSuccess, onError }: PaymentFormProps) => {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const stripe = useStripe()
+  const elements = useElements()
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!stripe || !elements) return;
+    e.preventDefault()
+    if (!stripe || !elements) return
 
-    setIsLoading(true);
-    setError(null);
+    setIsLoading(true)
+    setError(null)
 
     try {
-      const { error: submitError } = await elements.submit();
+      const { error: submitError } = await elements.submit()
       if (submitError) {
-        setError(submitError.message || 'Une erreur est survenue');
-        return;
+        setError(submitError.message || 'Une erreur est survenue')
+        return
       }
 
       const { error: confirmError } = await stripe.confirmPayment({
@@ -42,38 +37,38 @@ const PaymentFormContent = ({ amount, onSuccess, onError }: PaymentFormProps) =>
         confirmParams: {
           return_url: `${window.location.origin}/payment/success`,
         },
-      });
+      })
 
       if (confirmError) {
-        setError(confirmError.message || 'Une erreur est survenue');
+        setError(confirmError.message || 'Une erreur est survenue')
       } else {
-        onSuccess?.('success');
+        onSuccess?.('success')
       }
     } catch (err) {
-      setError('Une erreur inattendue est survenue');
-      onError?.(err as Error);
+      setError('Une erreur inattendue est survenue')
+      onError?.(err as Error)
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className='space-y-4'>
       <PaymentElement />
-      {error && <div className="text-red-500">{error}</div>}
+      {error && <div className='text-red-500'>{error}</div>}
       <button
-        type="submit"
+        type='submit'
         disabled={isLoading || !stripe}
-        className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-gray-400"
+        className='w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-gray-400'
       >
         {isLoading ? 'Paiement en cours...' : `Payer ${amount}€`}
       </button>
     </form>
-  );
-};
+  )
+}
 
 export const PaymentForm = ({ amount, onSuccess, onError }: PaymentFormProps) => {
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [clientSecret, setClientSecret] = useState<string | null>(null)
 
   useEffect(() => {
     const createPaymentIntent = async () => {
@@ -84,29 +79,25 @@ export const PaymentForm = ({ amount, onSuccess, onError }: PaymentFormProps) =>
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ amount }),
-        });
+        })
 
-        const data = await response.json();
-        setClientSecret(data.clientSecret);
+        const data = await response.json()
+        setClientSecret(data.clientSecret)
       } catch (error) {
-        onError?.(error as Error);
+        onError?.(error as Error)
       }
-    };
+    }
 
-    createPaymentIntent();
-  }, [amount, onError]);
+    createPaymentIntent()
+  }, [amount, onError])
 
   if (!clientSecret) {
-    return <div>Chargement...</div>;
+    return <div>Chargement...</div>
   }
 
   return (
     <Elements stripe={stripePromise} options={{ clientSecret }}>
-      <PaymentFormContent
-        amount={amount}
-        onSuccess={onSuccess}
-        onError={onError}
-      />
+      <PaymentFormContent amount={amount} onSuccess={onSuccess} onError={onError} />
     </Elements>
-  );
-}; 
+  )
+}

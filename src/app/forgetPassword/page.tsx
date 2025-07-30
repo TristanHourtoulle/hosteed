@@ -2,79 +2,146 @@
 
 import { useState } from 'react'
 import { sendResetEmail } from '@/lib/services/user.service'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/shadcnui/card'
+import { Input } from '@/components/ui/shadcnui/input'
+import { Button } from '@/components/ui/shadcnui/button'
+import { Label } from '@/components/ui/shadcnui/label'
+import { Alert, AlertDescription } from '@/components/ui/shadcnui/alert'
+import { motion } from 'framer-motion'
+import { Mail } from 'lucide-react'
+
+const containerVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.6,
+      staggerChildren: 0.1,
+    },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 },
+}
 
 export default function ForgetPasswordPage() {
-    const [email, setEmail] = useState('')
-    const [isLoading, setIsLoading] = useState(false)
-    const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  const [email, setEmail] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setIsLoading(true)
-        setMessage(null)
-        try {
-            await sendResetEmail(email)
-            setMessage({
-                type: 'success',
-                text: 'Un email de réinitialisation a été envoyé à votre adresse email'
-            })
-            setEmail('')
-        } catch (error) {
-            console.error(error);
-            setMessage({
-                type: 'error',
-                text: 'Une erreur est survenue lors de l\'envoi de l\'email'
-            })
-        } finally {
-            setIsLoading(false)
-        }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setMessage(null)
+    try {
+      await sendResetEmail(email)
+      setMessage({
+        type: 'success',
+        text: 'Un email de réinitialisation a été envoyé à votre adresse email',
+      })
+      setEmail('')
+    } catch (error) {
+      console.error(error)
+      setMessage({
+        type: 'error',
+        text: "Une erreur est survenue lors de l'envoi de l'email",
+      })
+    } finally {
+      setIsLoading(false)
     }
+  }
 
-    return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-md">
-                <div>
-                    <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                        Réinitialisation du mot de passe
-                    </h2>
-                    <p className="mt-2 text-center text-sm text-gray-600">
-                        Entrez votre adresse email pour recevoir un lien de réinitialisation
-                    </p>
-                </div>
-                <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-                    <div>
-                        <label htmlFor="email" className="sr-only">
-                            Adresse email
-                        </label>
-                        <input
-                            id="email"
-                            name="email"
-                            type="email"
-                            required
-                            className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                            placeholder="Votre email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                        />
-                    </div>
-
-                    {message && (
-                        <div className={`rounded-md p-4 ${message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                            {message.text}
-                        </div>
-                    )}
-
-                    <div>
-                        <button
-                            type="submit"
-                            disabled={isLoading}
-                            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {isLoading ? 'Envoi en cours...' : 'Envoyer le lien'}
-                        </button>
-                    </div>
-                </form>
+  return (
+    <div className='min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8'>
+      <motion.div
+        className='w-full max-w-md'
+        initial='hidden'
+        animate='visible'
+        variants={containerVariants}
+      >
+        <Card className='backdrop-blur-sm bg-white/90 shadow-xl border-0'>
+          <CardHeader className='space-y-4 text-center'>
+            <motion.div
+              className='mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center'
+              variants={itemVariants}
+            >
+              <Mail className='w-8 h-8 text-blue-600' />
+            </motion.div>
+            <div className='space-y-2'>
+              <CardTitle className='text-3xl font-bold text-gray-900'>
+                Réinitialisation du mot de passe
+              </CardTitle>
+              <CardDescription className='text-gray-500'>
+                Entrez votre adresse email pour recevoir un lien de réinitialisation
+              </CardDescription>
             </div>
-        </div>
-    )
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className='space-y-6'>
+              <motion.div className='space-y-2' variants={itemVariants}>
+                <Label htmlFor='email' className='text-sm font-medium text-gray-700'>
+                  Adresse email
+                </Label>
+                <Input
+                  id='email'
+                  name='email'
+                  type='email'
+                  required
+                  placeholder='exemple@email.com'
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  className='w-full transition-all duration-200 focus:ring-2 focus:ring-blue-500'
+                />
+              </motion.div>
+
+              {message && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <Alert
+                    variant={message.type === 'success' ? 'default' : 'destructive'}
+                    className={
+                      message.type === 'success'
+                        ? 'bg-green-50 text-green-700 border-green-200'
+                        : ''
+                    }
+                  >
+                    <AlertDescription>{message.text}</AlertDescription>
+                  </Alert>
+                </motion.div>
+              )}
+
+              <motion.div variants={itemVariants}>
+                <Button
+                  type='submit'
+                  disabled={isLoading}
+                  className='w-full h-11 bg-blue-600 hover:bg-blue-700 transition-colors duration-200'
+                >
+                  {isLoading ? (
+                    <div className='flex items-center justify-center'>
+                      <div className='w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2' />
+                      Envoi en cours...
+                    </div>
+                  ) : (
+                    'Envoyer le lien'
+                  )}
+                </Button>
+              </motion.div>
+            </form>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </div>
+  )
 }
