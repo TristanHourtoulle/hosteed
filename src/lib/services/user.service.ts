@@ -92,7 +92,7 @@ export async function createUser(data: {
   password: string
   name?: string
   lastname?: string
-}) {
+}, disableEmail?: boolean) {
   try {
     const hashedPassword = await hash(data.password, 10)
     const user = await prisma.user.create({
@@ -107,7 +107,9 @@ export async function createUser(data: {
         lastname: true,
       },
     })
-    await sendEmailVerification(user.id)
+    if (!disableEmail) {
+      await sendEmailVerification(user.id)
+    }
     return user
   } catch (error) {
     console.error("Erreur lors de la création de l'utilisateur:", error)

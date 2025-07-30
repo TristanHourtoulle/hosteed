@@ -3,7 +3,7 @@
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { findAllUser } from '@/lib/services/user.service'
+import {createUser, findAllUser} from '@/lib/services/user.service'
 import { User } from '@prisma/client'
 import Link from 'next/link'
 import { motion, Variants } from 'framer-motion'
@@ -19,8 +19,18 @@ import {
   Calendar,
   Mail,
   Shield,
-  Eye,
+  Eye, Plus, Soup, CheckCircle,
 } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  Label
+} from "@/shadcnui";
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -53,6 +63,42 @@ export default function UsersPage() {
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
 
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [newUserName, setNewUserName] = useState('')
+  const [newUserSurname, setnewUserSurname] = useState('')
+  const [newUserEmail, setnewUserEmail] = useState('')
+  const [newUserPassword, setnewUserPassword] = useState('')
+
+  const handleAddOption = async () => {
+    if (!newUserName.trim() && !newUserSurname.trim() && !newUserEmail.trim() && !newUserPassword.trim()) return
+
+    setIsSubmitting(true)
+    try {
+      const newOption = await createUser({
+        email: newUserEmail,
+        password: newUserPassword,
+        name: newUserSurname,
+        lastname: newUserName,
+      }, true)
+
+      if (newOption) {
+        setUsers([...users, newOption as User])
+        setNewUserName('')
+        setnewUserEmail('')
+        setnewUserSurname('')
+        setnewUserPassword('')
+        setIsAddDialogOpen(false)
+      } else {
+        setError("Erreur lors de la création de l'utilisateur")
+      }
+    } catch (err) {
+      console.error('Erreur lors de la création:', err)
+      setError("Erreur lors de la création de l'utilisateurs")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
   useEffect(() => {
     if (!session?.user?.roles || session.user.roles !== 'ADMIN') {
       router.push('/')
@@ -137,7 +183,100 @@ export default function UsersPage() {
             </div>
           </motion.div>
         </div>
-
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className='bg-orange-600 hover:bg-orange-700 text-white shadow-lg'>
+              <Plus className='h-4 w-4 mr-2' />
+              Ajouter un utilisateur
+            </Button>
+          </DialogTrigger>
+          <DialogContent className='sm:max-w-md'>
+            <DialogHeader>
+              <DialogTitle className='flex items-center gap-2'>
+                <Soup className='h-5 w-5 text-orange-600' />
+                Ajouter un utilisateur
+              </DialogTitle>
+              <DialogDescription>
+                Ajoutez un utilisateurs.
+              </DialogDescription>
+            </DialogHeader>
+            <div className='space-y-4 py-4'>
+              <div className='space-y-2'>
+                <Label htmlFor='userName'>Nom de l&apos;utilisateur</Label>
+                <Input
+                    id='userName'
+                    placeholder='John'
+                    value={newUserName}
+                    onChange={e => setNewUserName(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && !isSubmitting && handleAddOption()}
+                />
+              </div>
+            </div>
+            <div className='space-y-4 py-4'>
+              <div className='space-y-2'>
+                <Label htmlFor='userSurname'>Prénom de l&apos;utilisateur</Label>
+                <Input
+                    id='userSurname'
+                    placeholder='Doe'
+                    value={newUserSurname}
+                    onChange={e => setnewUserSurname(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && !isSubmitting && handleAddOption()}
+                />
+              </div>
+            </div>
+            <div className='space-y-4 py-4'>
+              <div className='space-y-2'>
+                <Label htmlFor='userEmail'>Email de l&apos;utilisateur</Label>
+                <Input
+                    id='userEmail'
+                    placeholder='Doe'
+                    value={newUserEmail}
+                    onChange={e => setnewUserEmail(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && !isSubmitting && handleAddOption()}
+                />
+              </div>
+            </div>
+            <div className='space-y-4 py-4'>
+              <div className='space-y-2'>
+                <Label htmlFor='userPassword'>Mot de passe de l&apos;utilisateur</Label>
+                <Input
+                    id='userPassword'
+                    placeholder='Doe'
+                    type="password"
+                    value={newUserPassword}
+                    onChange={e => setnewUserPassword(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && !isSubmitting && handleAddOption()}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                  variant='outline'
+                  onClick={() => setIsAddDialogOpen(false)}
+                  disabled={isSubmitting}
+              >
+                Annuler
+              </Button>
+              <Button
+                  onClick={handleAddOption}
+                  disabled={!newUserName.trim() || isSubmitting}
+                  className='bg-orange-600 hover:bg-orange-700'
+              >
+                {isSubmitting ? (
+                    <>
+                      <Loader2 className='h-4 w-4 mr-2 animate-spin' />
+                      Création...
+                    </>
+                ) : (
+                    <>
+                      <CheckCircle className='h-4 w-4 mr-2' />
+                      Créer
+                    </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         <motion.div variants={itemVariants}>
           <Card className='overflow-hidden py-0'>
             <CardContent className='p-0'>
