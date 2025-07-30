@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/shadcnui/button'
 import { useState } from 'react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/shadcnui/alert'
 import { createUser } from '@/lib/services/user.service'
-import { useRouter } from 'next/navigation'
+//import { useRouter } from 'next/navigation'
 
 const formSchema = z
   .object({
@@ -35,7 +35,7 @@ export const RegisterForm = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const router = useRouter()
+  //const router = useRouter()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -69,9 +69,11 @@ export const RegisterForm = () => {
       setSuccess(
         'Compte créé avec succès ! Avant de vous connecter, veuillez vérifier votre compte en cliquant sur le lien de vérification reçu dans votre boite mail.'
       )
+        /*
       setTimeout(() => {
         router.push('/auth?mode=login')
       }, 2000)
+         */
     } catch (error) {
       setError('Une erreur est survenue')
       console.error(error)

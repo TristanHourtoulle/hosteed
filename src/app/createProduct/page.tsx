@@ -32,6 +32,8 @@ import { findAllMeals } from '@/lib/services/meals.service'
 import { findAllServices } from '@/lib/services/services.service'
 import { findAllSecurity } from '@/lib/services/security.services'
 import { createProduct } from '@/lib/services/product.service'
+import {UserInterface} from "@/lib/interface/userInterface";
+import {findAllUser} from "@/lib/services/user.service";
 
 interface TypeRent {
   id: string
@@ -124,6 +126,8 @@ export default function CreateProductPage() {
     distance: '',
     unit: 'mètres' as 'mètres' | 'kilomètres',
   })
+  const [userSelected, setUserSelected] = useState('')
+  const [assignToOtherUser, setAssignToOtherUser] = useState(false)
 
   // Form data
   const [formData, setFormData] = useState<FormData>({
@@ -157,6 +161,7 @@ export default function CreateProductPage() {
   const [meals, setMeals] = useState<Meal[]>([])
   const [securities, setSecurities] = useState<Security[]>([])
   const [services, setServices] = useState<Service[]>([])
+  const [userList, setUserList] = useState<UserInterface[]>()
 
   // Handle input changes
   const handleInputChange = (
@@ -173,13 +178,14 @@ export default function CreateProductPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [typesData, equipmentsData, mealsData, securitiesData, servicesData] =
+        const [typesData, equipmentsData, mealsData, securitiesData, servicesData, userData] =
           await Promise.all([
             findAllTypeRent(),
             findAllEquipments(),
             findAllMeals(),
             findAllSecurity(),
             findAllServices(),
+              findAllUser(),
           ])
 
         setTypes(typesData || [])
@@ -187,6 +193,16 @@ export default function CreateProductPage() {
         setMeals(mealsData || [])
         setSecurities(securitiesData || [])
         setServices(servicesData || [])
+        setUserList((userData?.map(user => ({
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          lastname: user.lastname || undefined,
+          image: user.image || undefined,
+          info: user.info || undefined,
+          emailVerified: user.emailVerified || undefined,
+          roles: user.roles
+        })) as UserInterface[]) || [])
       } catch (error) {
         console.error('Error loading data:', error)
         setError('Erreur lors du chargement des données')
@@ -195,8 +211,6 @@ export default function CreateProductPage() {
 
     loadData()
   }, [])
-
-  // Redirection si non connecté
   useEffect(() => {
     if (!session) {
       router.push('/auth')
@@ -357,7 +371,7 @@ export default function CreateProductPage() {
         leaving: Number(formData.leaving),
         phone: formData.phone,
         typeId: formData.typeId,
-        userId: [session.user.id],
+        userId: userSelected != ''  ? [userSelected] : [session.user.id],
         equipments: formData.equipmentIds,
         services: formData.serviceIds,
         meals: formData.mealIds,
@@ -1237,6 +1251,60 @@ export default function CreateProductPage() {
                     onChange={handleInputChange}
                     className='border-slate-200 focus:border-cyan-300 focus:ring-cyan-200'
                   />
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm'>
+              <CardHeader className='space-y-2'>
+                <div className='flex items-center gap-2'>
+                  <div className='p-2 bg-cyan-50 rounded-lg'>
+                    <FileText className='h-5 w-5 text-cyan-600' />
+                  </div>
+                  <div>
+                    <CardTitle className='text-xl'>Informations administrateur</CardTitle>
+                    <p className='text-slate-600 text-sm mt-1'>
+                      Assignement de l&apos;hébergement
+                    </p>
+                  </div>
+                </div>
+              </CardHeader>
+                            <CardContent className='space-y-6'>
+                <div className='space-y-4'>
+                  <div className='flex items-center space-x-2'>
+                    <input
+                      id='assignToOtherUser'
+                      type='checkbox'
+                      checked={assignToOtherUser}
+                      onChange={(e) => setAssignToOtherUser(e.target.checked)}
+                      className='w-4 h-4 text-cyan-600 bg-gray-100 border-gray-300 rounded focus:ring-cyan-500'
+                    />
+                    <label htmlFor='assignToOtherUser' className='text-sm font-medium text-slate-700'>
+                      Assigner à un autre utilisateur
+                    </label>
+                  </div>
+
+                  {assignToOtherUser && (
+                    <div className='space-y-2'>
+                      <label htmlFor='userSelected' className='text-sm font-medium text-slate-700'>
+                        Sélectionner l&apos;utilisateur
+                      </label>
+                      <select
+                           id='userSelected'
+                           value={userSelected}
+                           onChange={(e) => setUserSelected(e.target.value)}
+                           className='w-full px-3 py-2 border border-slate-200 rounded-md focus:border-cyan-300 focus:ring-cyan-200 focus:ring-2 focus:ring-opacity-50'
+                        >
+                          <option value=''>Sélectionnez un utilisateur</option>
+                          {userList?.map(user => (
+                             <option key={user.id} value={user.id}>
+                               {user.name} {user.lastname} ({user.email})
+                             </option>
+                          ))}
+                        </select>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
