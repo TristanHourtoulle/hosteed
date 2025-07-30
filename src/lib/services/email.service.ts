@@ -62,11 +62,7 @@ export async function sendEmailFromTemplate(
 ) {
   try {
     // Lire le template
-    const templatePath = path.join(
-      process.cwd(),
-      'src/lib/templates/emails',
-      `${templateName}.html`
-    )
+    const templatePath = path.join(process.cwd(), 'public/templates/emails', `${templateName}.html`)
     let htmlContent = fs.readFileSync(templatePath, 'utf8')
 
     // Remplacer les variables
@@ -121,5 +117,70 @@ export async function sendEmailFromTemplate(
       success: false,
       error: err instanceof Error ? err.message : 'Erreur inconnue',
     }
+  }
+}
+
+export async function sendRoleUpdateNotification(
+  userEmail: string,
+  userName: string,
+  newRole: string
+) {
+  try {
+    // Déterminer les informations du rôle
+    const roleInfo = getRoleInfo(newRole)
+
+    const variables = {
+      userName: userName || 'Utilisateur',
+      newRoleClass: roleInfo.class,
+      newRoleEmoji: roleInfo.emoji,
+      newRoleLabel: roleInfo.label,
+      roleDescription: roleInfo.description,
+      loginUrl: `${process.env.NEXTAUTH_URL || 'https://hosteed.fr'}/auth`,
+    }
+
+    const result = await sendEmailFromTemplate(
+      'role-updated',
+      userEmail,
+      `🔄 Mise à jour de votre rôle sur Hosteed`,
+      variables
+    )
+
+    return result
+  } catch (error) {
+    console.error("Erreur lors de l'envoi de la notification de rôle:", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Erreur inconnue',
+    }
+  }
+}
+
+function getRoleInfo(role: string) {
+  switch (role) {
+    case 'ADMIN':
+      return {
+        class: 'admin',
+        emoji: '👑',
+        label: 'Administrateur',
+        description:
+          "Vous avez maintenant accès à toutes les fonctionnalités d'administration de la plateforme, y compris la gestion des utilisateurs, la modération du contenu et les paramètres système.",
+      }
+    case 'HOST':
+      return {
+        class: 'host',
+        emoji: '🏠',
+        label: 'Hôte',
+        description:
+          'Vous pouvez maintenant publier et gérer vos propres annonces de logement, recevoir des réservations et communiquer avec les voyageurs.',
+      }
+    case 'GUEST':
+    default:
+      return {
+        class: 'guest',
+        emoji: '👤',
+        label: 'Invité',
+        description:
+          'Vous pouvez rechercher et réserver des logements, laisser des avis et communiquer avec les hôtes.',
+      }
   }
 }
