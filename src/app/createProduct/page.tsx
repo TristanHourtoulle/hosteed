@@ -211,8 +211,6 @@ export default function CreateProductPage() {
 
     loadData()
   }, [])
-  console.log(userSelected)
-  // Redirection si non connecté
   useEffect(() => {
     if (!session) {
       router.push('/auth')
@@ -1290,7 +1288,7 @@ export default function CreateProductPage() {
                   {assignToOtherUser && (
                     <div className='space-y-2'>
                       <label htmlFor='userSelected' className='text-sm font-medium text-slate-700'>
-                        Sélectionner l'utilisateur
+                        Sélectionner l&apos;utilisateur
                       </label>
                       <select
                            id='userSelected'
