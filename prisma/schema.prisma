@@ -117,6 +117,65 @@ model Product {
   hotel hotel[]
 
   PromotedProduct PromotedProduct[]
+
+  // Nouveaux champs pour la validation améliorée
+  validationComments ValidationComment[]
+  validationHistory  ValidationHistory[]
+}
+
+// Nouveau modèle pour les commentaires de validation
+model ValidationComment {
+  id         String                  @id @default(cuid())
+  productId  String
+  adminId    String
+  section    ValidationSection // Section de l'annonce commentée
+  comment    String // Commentaire de l'admin
+  status     ValidationCommentStatus @default(PENDING)
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+  resolvedAt DateTime? // Date de résolution
+  resolvedBy String? // ID de la personne qui a résolu
+
+  product  Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  admin    User    @relation("AdminComments", fields: [adminId], references: [id])
+  resolver User?   @relation("CommentResolver", fields: [resolvedBy], references: [id])
+}
+
+// Nouveau modèle pour l'historique des validations
+model ValidationHistory {
+  id             String            @id @default(cuid())
+  productId      String
+  previousStatus ProductValidation
+  newStatus      ProductValidation
+  adminId        String? // ID de l'admin qui a fait le changement
+  hostId         String? // ID de l'hôte si c'est lui qui a fait une modification
+  reason         String? // Raison du changement
+  changes        Json? // Détails des modifications apportées
+  createdAt      DateTime          @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  admin   User?   @relation("ValidationAdmin", fields: [adminId], references: [id])
+  host    User?   @relation("ValidationHost", fields: [hostId], references: [id])
+}
+
+// Énumérations pour les commentaires de validation
+enum ValidationSection {
+  GENERAL_INFO // Informations générales
+  LOCATION // Localisation
+  CHARACTERISTICS // Caractéristiques
+  PRICING // Tarification
+  EQUIPMENT // Équipements
+  SERVICES // Services
+  MEALS // Repas
+  SECURITY // Sécurité
+  PHOTOS // Photos
+  ADDITIONAL_INFO // Informations complémentaires
+}
+
+enum ValidationCommentStatus {
+  PENDING // En attente de résolution
+  RESOLVED // Résolu
+  ACKNOWLEDGED // Pris en compte mais pas encore résolu
 }
 
 model Discount {
@@ -274,6 +333,12 @@ model User {
   hostRejections   RentRejection[] @relation("HostRejections")
   guestRejections  RentRejection[] @relation("GuestRejections")
   adminResolutions RentRejection[] @relation("AdminResolutions")
+
+  // Relations pour la validation des annonces
+  adminComments     ValidationComment[] @relation("AdminComments")
+  resolvedComments  ValidationComment[] @relation("CommentResolver")
+  validationAsAdmin ValidationHistory[] @relation("ValidationAdmin")
+  validationAsHost  ValidationHistory[] @relation("ValidationHost")
 }
 
 model Account {

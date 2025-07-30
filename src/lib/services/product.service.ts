@@ -3,6 +3,7 @@
 import prisma from '@/lib/prisma'
 import { sendTemplatedMail } from '@/lib/services/sendTemplatedMail'
 import { findAllUserByRoles } from '@/lib/services/user.service'
+import { createValidationHistory } from '@/lib/services/validation.service'
 import { ProductValidation } from '@prisma/client'
 import { CreateProductInput } from '@/lib/interface/userInterface'
 
@@ -402,9 +403,27 @@ export async function resubmitProductWithChange(
     services: string[]
     meals: string[]
     images: string[]
-  }
+  },
+  hostId?: string
 ) {
   try {
+    // Récupérer le statut actuel avant la mise à jour
+    const currentProduct = await prisma.product.findUnique({
+      where: { id },
+      select: { validate: true },
+    })
+
+    // Déterminer le nouveau statut
+    let newValidationStatus: ProductValidation
+    if (currentProduct?.validate === ProductValidation.RecheckRequest) {
+      // Si une révision était demandée et que l'hôte fait des modifications,
+      // le statut passe à "En attente" pour signaler à l'admin qu'il y a du nouveau travail
+      newValidationStatus = ProductValidation.NotVerified
+    } else {
+      // Pour les autres cas, garder la logique actuelle
+      newValidationStatus = ProductValidation.RecheckRequest
+    }
+
     const updatedProduct = await prisma.product.update({
       where: { id },
       data: {
@@ -418,7 +437,7 @@ export async function resubmitProductWithChange(
         bathroom: params.bathroom ? BigInt(params.bathroom) : null,
         arriving: params.arriving,
         leaving: params.leaving,
-        validate: ProductValidation.RecheckRequest,
+        validate: newValidationStatus,
         type: { connect: { id: params.typeId } },
         equipments: {
           set: params.equipments.map(equipmentId => ({ id: equipmentId })),
@@ -448,7 +467,30 @@ export async function resubmitProductWithChange(
       },
     })
 
-    if (updatedProduct) {
+    if (updatedProduct && currentProduct) {
+      // Créer un historique de validation
+      if (hostId) {
+        const reason =
+          currentProduct.validate === ProductValidation.RecheckRequest
+            ? "Modifications apportées par l'hôte suite à une demande de révision"
+            : "Produit modifié par l'hôte"
+
+        await createValidationHistory({
+          productId: id,
+          previousStatus: currentProduct.validate,
+          newStatus: newValidationStatus,
+          hostId: hostId,
+          reason: reason,
+          changes: {
+            name: params.name,
+            description: params.description,
+            address: params.address,
+            basePrice: params.basePrice,
+            modifiedAt: new Date().toISOString(),
+          },
+        })
+      }
+
       // Notifier les administrateurs
       const admin = await findAllUserByRoles('ADMIN')
       admin?.forEach(async user => {

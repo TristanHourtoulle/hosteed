@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { getAllRentRejections, resolveRentRejection } from '@/lib/services/rents.service'
@@ -75,10 +75,6 @@ export default function RentRejectionsPage() {
     }
   }, [session])
 
-  useEffect(() => {
-    filterRejections()
-  }, [rejections, searchValue, activeFilter])
-
   const fetchRejections = async () => {
     try {
       setLoading(true)
@@ -91,7 +87,7 @@ export default function RentRejectionsPage() {
     }
   }
 
-  const filterRejections = () => {
+  const filterRejections = useCallback(() => {
     let filtered = rejections
 
     // Filter by status
@@ -109,13 +105,17 @@ export default function RentRejectionsPage() {
           r.reason.toLowerCase().includes(searchLower) ||
           r.message.toLowerCase().includes(searchLower) ||
           r.rent.product.name.toLowerCase().includes(searchLower) ||
-          r.host.email.toLowerCase().includes(searchLower) ||
-          r.guest.email.toLowerCase().includes(searchLower)
+          r.host.name?.toLowerCase().includes(searchLower) ||
+          r.guest.name?.toLowerCase().includes(searchLower)
       )
     }
 
     setFilteredRejections(filtered)
-  }
+  }, [rejections, activeFilter, searchValue])
+
+  useEffect(() => {
+    filterRejections()
+  }, [filterRejections])
 
   const handleResolve = async (rejectionId: string) => {
     try {

@@ -179,24 +179,28 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         })
       )
 
-      const result = await resubmitProductWithChange(resolvedParams.id, {
-        name: formData.name,
-        description: formData.description,
-        address: formData.address,
-        longitude: formData.longitude,
-        latitude: formData.latitude,
-        basePrice: formData.basePrice,
-        room: formData.room,
-        bathroom: formData.bathroom,
-        arriving: formData.arriving,
-        leaving: formData.leaving,
-        typeId: formData.typeId,
-        securities: formData.selectedSecurities,
-        equipments: formData.selectedEquipments,
-        services: formData.selectedServices,
-        meals: formData.selectedMeals,
-        images: [...previewImages, ...imageUrls],
-      })
+      const result = await resubmitProductWithChange(
+        resolvedParams.id,
+        {
+          name: formData.name,
+          description: formData.description,
+          address: formData.address,
+          longitude: formData.longitude,
+          latitude: formData.latitude,
+          basePrice: formData.basePrice,
+          room: formData.room,
+          bathroom: formData.bathroom,
+          arriving: formData.arriving,
+          leaving: formData.leaving,
+          typeId: formData.typeId,
+          securities: formData.selectedSecurities,
+          equipments: formData.selectedEquipments,
+          services: formData.selectedServices,
+          meals: formData.selectedMeals,
+          images: [...previewImages, ...imageUrls],
+        },
+        session?.user?.id
+      )
 
       if (result) {
         router.push('/dashboard/host/validation')
