@@ -1,15 +1,8 @@
-'use client'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
 
 export default function HomePage() {
-  const router = useRouter()
-
-  // Redirect to host page automatically
-  useEffect(() => {
-    router.push('/host')
-  }, [router])
+  // Cette page ne devrait normalement pas être vue car la redirection
+  // se fait côté serveur via next.config.ts
 
   return (
     <div className='min-h-screen bg-gray-100 flex items-center justify-center'>

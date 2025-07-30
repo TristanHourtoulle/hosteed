@@ -159,7 +159,7 @@ const Navbar = () => {
             </Link>
           )}
 
-          {(session.user.roles === 'BLOGWRITTER' || session.user.roles === 'ADMIN') && (
+          {/* {(session.user.roles === 'BLOGWRITTER' || session.user.roles === 'ADMIN') && (
             <Link
               href='/host_manager'
               className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer'
@@ -167,7 +167,7 @@ const Navbar = () => {
             >
               Gestion BLOG
             </Link>
-          )}
+          )} */}
 
           {session.user.roles === 'ADMIN' && (
             <Link
@@ -403,7 +403,7 @@ const Navbar = () => {
                   </NavigationMenuItem>
                 )}
 
-                {session &&
+                {/* {session &&
                   (session.user.roles === 'BLOGWRITTER' || session.user.roles === 'ADMIN') && (
                     <NavigationMenuItem>
                       <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
@@ -415,7 +415,7 @@ const Navbar = () => {
                         </Link>
                       </NavigationMenuLink>
                     </NavigationMenuItem>
-                  )}
+                  )} */}
 
                 {session && session.user.roles === 'ADMIN' && (
                   <NavigationMenuItem>

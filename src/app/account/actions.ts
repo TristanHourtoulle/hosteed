@@ -18,8 +18,12 @@ export async function getUserData() {
       lastname: true,
       email: true,
       image: true,
+      profilePicture: true,
       password: true,
       createdAt: true,
+      averageRating: true,
+      totalRatings: true,
+      totalTrips: true,
       Rent: {
         include: {
           product: {
@@ -45,7 +49,52 @@ export async function getUserData() {
     throw new Error('User not found')
   }
 
-  return user
+  // Calculer les statistiques réelles si elles ne sont pas à jour
+  const completedRents = await prisma.rent.count({
+    where: {
+      userId: user.id,
+      status: 'CHECKOUT', // Séjours terminés
+    },
+  })
+
+  // Calculer la note moyenne reçue
+  const userRatings = await prisma.userRating.findMany({
+    where: {
+      ratedId: user.id,
+      approved: true,
+    },
+    select: {
+      rating: true,
+    },
+  })
+
+  const averageRating =
+    userRatings.length > 0
+      ? userRatings.reduce((sum, rating) => sum + rating.rating, 0) / userRatings.length
+      : null
+
+  // Mettre à jour les statistiques si nécessaire
+  if (
+    user.totalTrips !== completedRents ||
+    user.averageRating !== averageRating ||
+    user.totalRatings !== userRatings.length
+  ) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        totalTrips: completedRents,
+        averageRating: averageRating,
+        totalRatings: userRatings.length,
+      },
+    })
+  }
+
+  return {
+    ...user,
+    totalTrips: completedRents,
+    averageRating: averageRating,
+    totalRatings: userRatings.length,
+  }
 }
 
 export async function updateUserProfile(data: { name: string; lastname: string }) {
@@ -79,7 +128,7 @@ export async function updateUserPhoto(formData: FormData) {
   await prisma.user.update({
     where: { email: session.user.email },
     data: {
-      image: base64Image,
+      profilePicture: base64Image,
     },
   })
 

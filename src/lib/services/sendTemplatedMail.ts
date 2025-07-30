@@ -15,7 +15,7 @@ export async function sendTemplatedMail(
   templateName: string,
   variables: Record<string, string | number>
 ) {
-  const templatePath = path.join(process.cwd(), 'src/lib/templates/emails', templateName)
+  const templatePath = path.join(process.cwd(), 'public/templates/emails', templateName)
   let html = await fs.readFile(templatePath, 'utf-8')
   for (const [key, value] of Object.entries(variables)) {
     const regex = new RegExp(`{{\s*${key}\s*}}`, 'g')

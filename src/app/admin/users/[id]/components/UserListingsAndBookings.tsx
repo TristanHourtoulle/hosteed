@@ -1,118 +1,242 @@
 'use client'
 
+import { MapPin, Calendar, Euro, Home } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
 import { Badge } from '@/components/ui/shadcnui/badge'
-import { Home, Clock, CheckCircle, XCircle, MapPin, Euro, Calendar } from 'lucide-react'
-import type { ExtendedUser } from '../types'
+import { Button } from '@/components/ui/shadcnui/button'
+import Link from 'next/link'
 
 interface UserListingsAndBookingsProps {
-  user: ExtendedUser
+  userId: string
+  user: {
+    id: string
+    name: string | null
+    email: string
+    role: string
+  }
+  posts: Array<{
+    id: string
+    title: string
+    description: string
+    price: number
+    location: string
+    images: string[]
+    status: string
+    createdAt: Date
+    isPromoted?: boolean
+  }>
+  bookings: Array<{
+    id: string
+    product: {
+      id: string
+      title: string
+      price: number
+      location: string
+      images: string[]
+    }
+    totalPrice: number
+    startDate: Date
+    endDate: Date
+    status: string
+    createdAt: Date
+  }>
 }
 
-export function UserListingsAndBookings({ user }: UserListingsAndBookingsProps) {
+export function UserListingsAndBookings({ posts, bookings }: UserListingsAndBookingsProps) {
+  // Calculer les statistiques
+  const totalEarnings = bookings
+    .filter(booking => booking.status === 'CONFIRMED')
+    .reduce((sum, booking) => sum + booking.totalPrice, 0)
+
+  const activePosts = posts.filter(post => post.status === 'APPROVED').length
+  const totalBookings = bookings.length
+
   return (
-    <>
-      <Card className='lg:col-span-2 hover:shadow-lg transition-shadow duration-200'>
-        <CardHeader>
-          <CardTitle className='flex items-center gap-2 text-xl'>
+    <div className='space-y-8'>
+      {/* Statistiques */}
+      <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
+        <Card className='border-0 shadow-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl'>
+          <CardContent className='p-6'>
+            <div className='flex items-center justify-between'>
+              <div>
+                <p className='text-blue-100 text-sm font-medium'>Revenus totaux</p>
+                <p className='text-2xl font-bold mt-1'>{totalEarnings}€</p>
+              </div>
+              <div className='bg-white/20 p-3 rounded-full'>
+                <Euro className='h-6 w-6 text-white' />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className='border-0 shadow-lg bg-gradient-to-r from-green-500 to-green-600 text-white rounded-2xl'>
+          <CardContent className='p-6'>
+            <div className='flex items-center justify-between'>
+              <div>
+                <p className='text-green-100 text-sm font-medium'>Annonces actives</p>
+                <p className='text-2xl font-bold mt-1'>{activePosts}</p>
+              </div>
+              <div className='bg-white/20 p-3 rounded-full'>
+                <Home className='h-6 w-6 text-white' />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className='border-0 shadow-lg bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-2xl'>
+          <CardContent className='p-6'>
+            <div className='flex items-center justify-between'>
+              <div>
+                <p className='text-purple-100 text-sm font-medium'>Réservations</p>
+                <p className='text-2xl font-bold mt-1'>{totalBookings}</p>
+              </div>
+              <div className='bg-white/20 p-3 rounded-full'>
+                <Calendar className='h-6 w-6 text-white' />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Annonces de l'utilisateur */}
+      <Card className='border-0 shadow-lg rounded-2xl'>
+        <CardHeader className='pb-4'>
+          <CardTitle className='text-xl font-bold text-gray-900 flex items-center gap-2'>
             <Home className='h-5 w-5 text-blue-600' />
-            Hébergements ({user.Product.length})
+            Annonces ({posts.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className='space-y-4'>
-            {user.Product.length > 0 ? (
-              user.Product.map(product => (
-                <Card
-                  key={product.id}
-                  className='overflow-hidden hover:shadow-md transition-shadow duration-200'
+          {posts.length === 0 ? (
+            <div className='text-center py-12'>
+              <Home className='h-12 w-12 text-gray-300 mx-auto mb-4' />
+              <p className='text-gray-500'>Aucune annonce trouvée</p>
+            </div>
+          ) : (
+            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+              {posts.map(post => (
+                <div
+                  key={post.id}
+                  className='border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow'
                 >
-                  <CardContent className='p-4'>
-                    <div className='flex justify-between items-start'>
-                      <div className='space-y-2'>
-                        <h3 className='font-medium text-lg'>{product.name}</h3>
-                        <div className='flex items-center gap-4 text-gray-600'>
-                          <div className='flex items-center gap-1'>
-                            <MapPin className='h-4 w-4' />
-                            <span className='text-sm'>{product.address}</span>
-                          </div>
-                          <div className='flex items-center gap-1'>
-                            <Euro className='h-4 w-4' />
-                            <span className='text-sm'>{product.basePrice}€ / nuit</span>
-                          </div>
-                        </div>
-                      </div>
+                  {post.images && post.images.length > 0 && (
+                    <div className='aspect-video bg-gray-100 relative'>
+                      <img
+                        src={post.images[0]}
+                        alt={post.title}
+                        className='w-full h-full object-cover'
+                      />
+                      {post.isPromoted && (
+                        <Badge className='absolute top-2 right-2 bg-yellow-500 text-white border-0'>
+                          Sponsorisé
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                  <div className='p-4'>
+                    <h3 className='font-medium text-gray-900 mb-2 line-clamp-2'>{post.title}</h3>
+                    <div className='flex items-center gap-1 text-gray-500 text-sm mb-2'>
+                      <MapPin className='h-4 w-4' />
+                      <span>{post.location}</span>
+                    </div>
+                    <div className='flex items-center justify-between'>
+                      <span className='font-bold text-blue-600'>{post.price}€/nuit</span>
                       <Badge
-                        variant={product.validate === 'Approve' ? 'default' : 'secondary'}
-                        className='ml-4'
+                        variant={
+                          post.status === 'APPROVED'
+                            ? 'default'
+                            : post.status === 'PENDING'
+                              ? 'secondary'
+                              : 'destructive'
+                        }
                       >
-                        {product.validate}
+                        {post.status === 'APPROVED'
+                          ? 'Approuvé'
+                          : post.status === 'PENDING'
+                            ? 'En attente'
+                            : 'Rejeté'}
                       </Badge>
                     </div>
-                  </CardContent>
-                </Card>
-              ))
-            ) : (
-              <p className='text-gray-600 text-sm italic'>Aucun hébergement</p>
-            )}
-          </div>
+                    <div className='mt-3'>
+                      <Button variant='outline' size='sm' asChild className='w-full'>
+                        <Link href={`/posts/${post.id}`}>Voir l&apos;annonce</Link>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      <Card className='lg:col-span-3 hover:shadow-lg transition-shadow duration-200'>
-        <CardHeader>
-          <CardTitle className='flex items-center gap-2 text-xl'>
-            <Clock className='h-5 w-5 text-blue-600' />
-            Réservations ({user.Rent.length})
+      {/* Réservations de l'utilisateur */}
+      <Card className='border-0 shadow-lg rounded-2xl'>
+        <CardHeader className='pb-4'>
+          <CardTitle className='text-xl font-bold text-gray-900 flex items-center gap-2'>
+            <Calendar className='h-5 w-5 text-purple-600' />
+            Réservations ({bookings.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className='space-y-4'>
-            {user.Rent.length > 0 ? (
-              user.Rent.map(rent => (
-                <Card
-                  key={rent.id}
-                  className='overflow-hidden hover:shadow-md transition-shadow duration-200'
+          {bookings.length === 0 ? (
+            <div className='text-center py-12'>
+              <Calendar className='h-12 w-12 text-gray-300 mx-auto mb-4' />
+              <p className='text-gray-500'>Aucune réservation trouvée</p>
+            </div>
+          ) : (
+            <div className='space-y-4'>
+              {bookings.map(booking => (
+                <div
+                  key={booking.id}
+                  className='border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow'
                 >
-                  <CardContent className='p-4'>
-                    <div className='flex justify-between items-start'>
-                      <div className='space-y-2'>
-                        <h3 className='font-medium text-lg'>Réservation #{rent.id.slice(-8)}</h3>
-                        <div className='flex items-center gap-2 text-gray-600'>
-                          <Calendar className='h-4 w-4' />
-                          <span className='text-sm'>
-                            {new Date(rent.arrivingDate).toLocaleDateString('fr-FR')} -{' '}
-                            {new Date(rent.leavingDate).toLocaleDateString('fr-FR')}
-                          </span>
-                        </div>
+                  <div className='flex items-start gap-4'>
+                    {booking.product.images && booking.product.images.length > 0 && (
+                      <div className='w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0'>
+                        <img
+                          src={booking.product.images[0]}
+                          alt={booking.product.title}
+                          className='w-full h-full object-cover'
+                        />
                       </div>
-                      <Badge
-                        variant={
-                          rent.status === 'CHECKIN'
-                            ? 'default'
-                            : rent.status === 'CANCEL'
-                              ? 'destructive'
-                              : 'secondary'
-                        }
-                        className='flex items-center gap-1 ml-4'
-                      >
-                        {rent.status === 'CHECKIN' ? (
-                          <CheckCircle className='h-3 w-3' />
-                        ) : rent.status === 'CANCEL' ? (
-                          <XCircle className='h-3 w-3' />
-                        ) : null}
-                        {rent.status}
-                      </Badge>
+                    )}
+                    <div className='flex-1 min-w-0'>
+                      <h3 className='font-medium text-gray-900 mb-1'>{booking.product.title}</h3>
+                      <div className='flex items-center gap-1 text-gray-500 text-sm mb-2'>
+                        <MapPin className='h-4 w-4' />
+                        <span>{booking.product.location}</span>
+                      </div>
+                      <div className='text-sm text-gray-600 mb-2'>
+                        {new Date(booking.startDate).toLocaleDateString('fr-FR')} -{' '}
+                        {new Date(booking.endDate).toLocaleDateString('fr-FR')}
+                      </div>
+                      <div className='flex items-center justify-between'>
+                        <span className='font-bold text-green-600'>{booking.totalPrice}€</span>
+                        <Badge
+                          variant={
+                            booking.status === 'CONFIRMED'
+                              ? 'default'
+                              : booking.status === 'PENDING'
+                                ? 'secondary'
+                                : 'destructive'
+                          }
+                        >
+                          {booking.status === 'CONFIRMED'
+                            ? 'Confirmé'
+                            : booking.status === 'PENDING'
+                              ? 'En attente'
+                              : 'Annulé'}
+                        </Badge>
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))
-            ) : (
-              <p className='text-gray-600 text-sm italic'>Aucune réservation</p>
-            )}
-          </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
-    </>
+    </div>
   )
 }

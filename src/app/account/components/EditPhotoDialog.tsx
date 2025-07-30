@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import Image from 'next/image'
 import {
   Dialog,
@@ -9,124 +9,199 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/shadcnui'
+} from '@/components/ui/shadcnui/dialog'
 import { Button } from '@/components/ui/shadcnui/button'
-import { Camera } from 'lucide-react'
+import { Camera, Upload, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { getProfileImageUrl } from '@/lib/utils'
 
 interface EditPhotoDialogProps {
-  user: {
-    name: string | null
-    image: string | null
-  }
-  onSave: (base64Image: string) => Promise<void>
+  currentPhoto?: string
+  onPhotoUpdate: (base64Image: string) => void
 }
 
-export function EditPhotoDialog({ user, onSave }: EditPhotoDialogProps) {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+export function EditPhotoDialog({ currentPhoto, onPhotoUpdate }: EditPhotoDialogProps) {
+  const [isOpen, setIsOpen] = useState(false)
   const [preview, setPreview] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const profileImage = getProfileImageUrl(user.image)
+  const [isUploading, setIsUploading] = useState(false)
+  const [dragActive, setDragActive] = useState(false)
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('La taille du fichier ne doit pas dépasser 5MB')
-        return
-      }
-      if (!file.type.startsWith('image/')) {
-        toast.error('Veuillez sélectionner une image')
-        return
-      }
-      setSelectedFile(file)
-      console.log(selectedFile)
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        const base64String = reader.result as string
-        setPreview(base64String)
-      }
-      reader.readAsDataURL(file)
+  const handleFileSelect = (file: File) => {
+    // Vérifier la taille (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('La taille du fichier ne doit pas dépasser 5MB')
+      return
+    }
+
+    // Vérifier le type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Veuillez sélectionner une image valide')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = e => {
+      const result = e.target?.result as string
+      setPreview(result)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragActive(false)
+
+    const files = e.dataTransfer.files
+    if (files.length > 0) {
+      handleFileSelect(files[0])
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (files && files.length > 0) {
+      handleFileSelect(files[0])
+    }
+  }
+
+  const handleUpload = async () => {
     if (!preview) return
 
-    setIsLoading(true)
+    setIsUploading(true)
+
     try {
-      await onSave(preview)
-      toast.success('Photo de profil mise à jour avec succès')
-      setSelectedFile(null)
+      const response = await fetch('/api/profile/photo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          photo: preview,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la mise à jour de la photo')
+      }
+
+      await response.json()
+      onPhotoUpdate(preview)
+      setIsOpen(false)
       setPreview(null)
+      toast.success('Photo de profil mise à jour avec succès')
     } catch (error) {
+      console.error('Erreur:', error)
       toast.error('Erreur lors de la mise à jour de la photo')
-      console.log(error)
     } finally {
-      setIsLoading(false)
+      setIsUploading(false)
     }
+  }
+
+  const resetPreview = () => {
+    setPreview(null)
   }
 
   return (
-    <Dialog>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button
           variant='outline'
-          size='icon'
-          className='absolute bottom-0 right-0 rounded-full bg-white shadow-lg'
+          size='sm'
+          className='h-8 px-3 text-xs hover:bg-gray-50 transition-colors'
         >
-          <Camera className='w-4 h-4' />
+          <Camera className='h-3 w-3 mr-1.5' />
+          Modifier
         </Button>
       </DialogTrigger>
-      <DialogContent className='sm:max-w-[425px]'>
+      <DialogContent className='sm:max-w-md'>
         <DialogHeader>
           <DialogTitle>Modifier la photo de profil</DialogTitle>
-          <DialogDescription>
-            Choisissez une nouvelle photo de profil. Taille maximale : 5MB.
-          </DialogDescription>
+          <DialogDescription>Ajoutez ou modifiez votre photo de profil</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className='space-y-4 mt-4'>
-          <div className='flex flex-col items-center gap-4'>
-            <div className='relative w-32 h-32 rounded-full overflow-hidden bg-gray-200'>
-              {(preview || profileImage) && (
-                <Image
-                  src={preview || profileImage || ''}
-                  alt={user.name || 'Profile'}
-                  fill
-                  className='object-cover'
-                />
-              )}
-              {!preview && !profileImage && (
-                <div className='absolute inset-0 flex items-center justify-center text-2xl font-medium text-gray-600'>
-                  {user.name?.charAt(0) || '?'}
+
+        <div className='space-y-4'>
+          {/* Zone de drag & drop */}
+          <div
+            className={`
+              border-2 border-dashed rounded-lg p-6 text-center transition-colors
+              ${dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}
+            `}
+            onDrop={handleDrop}
+            onDragOver={e => {
+              e.preventDefault()
+              setDragActive(true)
+            }}
+            onDragLeave={() => setDragActive(false)}
+          >
+            {preview ? (
+              <div className='space-y-4'>
+                <div className='relative w-32 h-32 mx-auto'>
+                  <Image src={preview} alt='Aperçu' fill className='rounded-full object-cover' />
+                  <button
+                    onClick={resetPreview}
+                    className='absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors'
+                  >
+                    <X className='h-4 w-4' />
+                  </button>
                 </div>
-              )}
-            </div>
+                <p className='text-sm text-gray-600'>Aperçu de votre nouvelle photo</p>
+              </div>
+            ) : (
+              <div className='space-y-4'>
+                {currentPhoto ? (
+                  <div className='w-24 h-24 mx-auto relative'>
+                    <Image
+                      src={currentPhoto}
+                      alt='Photo actuelle'
+                      fill
+                      className='rounded-full object-cover'
+                    />
+                  </div>
+                ) : (
+                  <div className='w-24 h-24 mx-auto bg-gray-200 rounded-full flex items-center justify-center'>
+                    <Camera className='h-8 w-8 text-gray-400' />
+                  </div>
+                )}
+
+                <div>
+                  <Upload className='h-8 w-8 mx-auto text-gray-400 mb-2' />
+                  <p className='text-sm text-gray-600'>
+                    Glissez une image ici ou cliquez pour sélectionner
+                  </p>
+                  <p className='text-xs text-gray-500 mt-1'>PNG, JPG jusqu&apos;à 5MB</p>
+                </div>
+              </div>
+            )}
+
             <input
-              ref={fileInputRef}
               type='file'
               accept='image/*'
-              onChange={handleFileSelect}
+              onChange={handleInputChange}
               className='hidden'
+              id='photo-upload'
             />
-            <Button type='button' variant='outline' onClick={() => fileInputRef.current?.click()}>
-              Choisir une photo
-            </Button>
+
+            {!preview && (
+              <label
+                htmlFor='photo-upload'
+                className='mt-4 inline-block cursor-pointer bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors'
+              >
+                Sélectionner une image
+              </label>
+            )}
           </div>
-          <div className='flex justify-end gap-3'>
-            <DialogTrigger asChild>
-              <Button variant='outline' type='button'>
+
+          {/* Boutons d'action */}
+          {preview && (
+            <div className='flex gap-2'>
+              <Button onClick={resetPreview} variant='outline' className='flex-1'>
                 Annuler
               </Button>
-            </DialogTrigger>
-            <Button type='submit' disabled={!preview || isLoading}>
-              {isLoading ? 'Enregistrement...' : 'Enregistrer'}
-            </Button>
-          </div>
-        </form>
+              <Button onClick={handleUpload} disabled={isUploading} className='flex-1'>
+                {isUploading ? 'Envoi...' : 'Confirmer'}
+              </Button>
+            </div>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   )

@@ -243,6 +243,7 @@ model Rent {
   PayRequest    PayRequest[]
   Chat          Chat[]
   RentRejection RentRejection?
+  UserRating    UserRating[] // Nouvelle relation pour les notes bidirectionnelles
 }
 
 model RentRejection {
@@ -281,47 +282,90 @@ model DisableRent {
 }
 
 model Review {
-  id           String   @id @default(cuid())
-  productId    String
-  title        String
-  text         String
-  grade        Int
-  welcomeGrade Int      @default(0)
-  staff        Int      @default(0)
-  comfort      Int      @default(0)
-  equipment    Int      @default(0)
-  cleaning     Int      @default(0)
-  visitDate    DateTime
-  publishDate  DateTime
-  rentId       String
-  approved     Boolean  @default(false)
-  rentRelation Rent     @relation(fields: [rentId], references: [id], onDelete: Cascade)
-  product      Product  @relation(fields: [productId], references: [id])
+  id             String   @id @default(cuid())
+  productId      String
+  title          String
+  text           String
+  grade          Int
+  welcomeGrade   Int      @default(0)
+  staff          Int      @default(0)
+  comfort        Int      @default(0)
+  equipment      Int      @default(0)
+  cleaning       Int      @default(0)
+  visitDate      DateTime
+  publishDate    DateTime
+  rentId         String
+  approved       Boolean  @default(false)
+  rentRelation   Rent     @relation(fields: [rentId], references: [id], onDelete: Cascade)
+  product        Product  @relation(fields: [productId], references: [id])
+  // Nouveaux champs pour identifier le type de review
+  isAdminCreated Boolean  @default(false) // Si c'est un faux avis créé par un admin
+  adminId        String? // ID de l'admin qui a créé le faux avis
+  adminUser      User?    @relation("AdminReviews", fields: [adminId], references: [id])
+}
+
+// Nouveau modèle pour les notes bidirectionnelles (hôte <-> locataire)
+model UserRating {
+  id         String         @id @default(cuid())
+  rentId     String
+  raterId    String // Celui qui note
+  ratedId    String // Celui qui est noté
+  rating     Int // Note de 1 à 5
+  comment    String? // Commentaire optionnel
+  type       UserRatingType // HOST_TO_GUEST ou GUEST_TO_HOST
+  approved   Boolean        @default(false) // Validation par admin
+  adminId    String? // Admin qui a validé
+  createdAt  DateTime       @default(now())
+  approvedAt DateTime?
+
+  // Relations
+  rent  Rent  @relation(fields: [rentId], references: [id], onDelete: Cascade)
+  rater User  @relation("GivenRatings", fields: [raterId], references: [id])
+  rated User  @relation("ReceivedRatings", fields: [ratedId], references: [id])
+  admin User? @relation("ApprovedRatings", fields: [adminId], references: [id])
+
+  @@unique([rentId, raterId, ratedId, type]) // Un seul rating par type par réservation
+}
+
+enum UserRatingType {
+  HOST_TO_GUEST
+  GUEST_TO_HOST
 }
 
 model User {
-  id               String          @id @default(cuid())
-  name             String?
-  email            String          @unique
-  emailVerified    DateTime?
-  emailToken       String?
-  resetToken       String?
-  image            String?
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-  info             String?
-  lastname         String?
-  password         String?
-  profilePicture   String?
-  stripeCustomerId String?
-  roles            UserRole        @default(USER)
-  accounts         Account[]
-  Authenticator    Authenticator[]
-  Rent             Rent[]
-  sessions         Session[]
-  Product          Product[]
-  Chat             Chat[]
-  favorites        Favorite[]
+  id                   String    @id @default(cuid())
+  name                 String?
+  email                String    @unique
+  emailVerified        DateTime?
+  emailToken           String?
+  resetToken           String? // Pour la réinitialisation du mot de passe
+  image                String? // Gardé pour compatibilité NextAuth
+  profilePictureBase64 String? // Image de profil en base64
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  info                 String?
+  lastname             String?
+  password             String?
+  profilePicture       String?
+  stripeCustomerId     String?
+  roles                UserRole  @default(USER)
+
+  // Champs de vérification
+  isVerifiedTraveler Boolean @default(false) // Voyageur vérifié
+  isAccountConfirmed Boolean @default(false) // Compte confirmé
+
+  // Nouveaux champs pour les statistiques
+  averageRating Float? // Note moyenne reçue en tant que locataire/hôte
+  totalRatings  Int    @default(0) // Nombre total de notes reçues
+  totalTrips    Int    @default(0) // Nombre total de voyages effectués
+
+  accounts      Account[]
+  Authenticator Authenticator[]
+  Rent          Rent[]
+  sessions      Session[]
+  Product       Product[]
+  Chat          Chat[]
+  favorites     Favorite[]
 
   PayRequest PayRequest[]
 
@@ -339,6 +383,12 @@ model User {
   resolvedComments  ValidationComment[] @relation("CommentResolver")
   validationAsAdmin ValidationHistory[] @relation("ValidationAdmin")
   validationAsHost  ValidationHistory[] @relation("ValidationHost")
+
+  // Nouvelles relations pour les reviews et ratings
+  adminReviews    Review[]     @relation("AdminReviews") // Reviews créées par cet admin
+  givenRatings    UserRating[] @relation("GivenRatings") // Notes données par cet utilisateur
+  receivedRatings UserRating[] @relation("ReceivedRatings") // Notes reçues par cet utilisateur
+  approvedRatings UserRating[] @relation("ApprovedRatings") // Notes validées par cet admin
 }
 
 model Account {
@@ -435,6 +485,7 @@ enum UserRole {
   BLOGWRITTER
   HOST
   HOST_VERIFIED
+  HOST_MANAGER
   USER
 }
 

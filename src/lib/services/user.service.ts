@@ -87,12 +87,15 @@ export async function verifyPassword(password: string, hashedPassword: string) {
   }
 }
 
-export async function createUser(data: {
-  email: string
-  password: string
-  name?: string
-  lastname?: string
-}, disableEmail?: boolean) {
+export async function createUser(
+  data: {
+    email: string
+    password: string
+    name?: string
+    lastname?: string
+  },
+  disableEmail?: boolean
+) {
   try {
     const hashedPassword = await hash(data.password, 10)
     const user = await prisma.user.create({
@@ -286,5 +289,25 @@ export async function resetPassword(token: string, newPassword: string) {
       throw new Error('Token invalide')
     }
     throw error
+  }
+}
+
+export async function updateUserRole(id: string, role: UserRole) {
+  try {
+    return await prisma.user.update({
+      where: { id },
+      data: { roles: role },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        lastname: true,
+        roles: true,
+        createdAt: true,
+      },
+    })
+  } catch (error) {
+    console.error("Erreur lors de la mise à jour du rôle de l'utilisateur:", error)
+    return null
   }
 }
