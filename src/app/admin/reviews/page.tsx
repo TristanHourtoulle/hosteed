@@ -4,7 +4,10 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/shadcnui/tabs'
 import { Input } from '@/components/ui/shadcnui/input'
-import { Search } from 'lucide-react'
+import { Button } from '@/components/ui/shadcnui/button'
+import { Search, Plus } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { ReviewCard } from './components/ReviewCard'
 import { findAllReviews, approveReview, deleteReview } from '@/lib/services/reviews.service'
 
@@ -33,8 +36,11 @@ interface Review {
 }
 
 export default function ReviewsPage() {
+  const router = useRouter()
+  const { data: session } = useSession()
   const [searchTerm, setSearchTerm] = useState('')
   const [reviews, setReviews] = useState<Review[]>([])
+  const [adminReviews, setAdminReviews] = useState<Review[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -44,6 +50,17 @@ export default function ReviewsPage() {
         if (data) {
           setReviews(data as Review[])
         }
+
+        // Charger aussi les avis administratifs
+        if (session?.user?.roles && ['ADMIN', 'HOST_MANAGER'].includes(session.user.roles)) {
+          const adminResponse = await fetch('/api/admin/reviews')
+          if (adminResponse.ok) {
+            const adminData = await adminResponse.json()
+            if (adminData.success) {
+              setAdminReviews(adminData.reviews)
+            }
+          }
+        }
       } catch (error) {
         console.error('Erreur lors du chargement des avis:', error)
       } finally {
@@ -52,7 +69,7 @@ export default function ReviewsPage() {
     }
 
     fetchReviews()
-  }, [])
+  }, [session])
 
   const handleApprove = async (id: string) => {
     try {
@@ -104,9 +121,21 @@ export default function ReviewsPage() {
         transition={{ duration: 0.5 }}
       >
         <div className='flex flex-col gap-4 mb-8'>
-          <div>
-            <h1 className='text-2xl font-bold'>Gestion des Avis</h1>
-            <p className='text-gray-500'>Gérez les avis des utilisateurs</p>
+          <div className='flex justify-between items-center'>
+            <div>
+              <h1 className='text-2xl font-bold'>Gestion des Avis</h1>
+              <p className='text-gray-500'>Gérez les avis des utilisateurs</p>
+            </div>
+            <Button
+              onClick={() => router.push('/admin/reviews/create')}
+              className='flex items-center gap-2'
+              disabled={
+                !session?.user?.roles || !['ADMIN', 'HOST_MANAGER'].includes(session.user.roles)
+              }
+            >
+              <Plus className='w-4 h-4' />
+              Créer un avis administratif
+            </Button>
           </div>
 
           <div className='relative'>
@@ -124,6 +153,9 @@ export default function ReviewsPage() {
           <TabsList>
             <TabsTrigger value='pending'>En attente ({pendingReviews.length})</TabsTrigger>
             <TabsTrigger value='approved'>Approuvés ({approvedReviews.length})</TabsTrigger>
+            {session?.user?.roles && ['ADMIN', 'HOST_MANAGER'].includes(session.user.roles) && (
+              <TabsTrigger value='admin'>Avis administratifs ({adminReviews.length})</TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value='pending' className='space-y-6'>
@@ -171,6 +203,40 @@ export default function ReviewsPage() {
               ))
             )}
           </TabsContent>
+
+          {session?.user?.roles && ['ADMIN', 'HOST_MANAGER'].includes(session.user.roles) && (
+            <TabsContent value='admin' className='space-y-6'>
+              {adminReviews.length === 0 ? (
+                <div className='text-center py-8'>
+                  <p className='text-gray-500 mb-4'>Aucun avis administratif créé</p>
+                  <Button
+                    onClick={() => router.push('/admin/reviews/create')}
+                    className='flex items-center gap-2 mx-auto'
+                  >
+                    <Plus className='w-4 h-4' />
+                    Créer le premier avis administratif
+                  </Button>
+                </div>
+              ) : (
+                adminReviews.map(review => (
+                  <ReviewCard
+                    key={review.id}
+                    review={{
+                      id: review.id,
+                      rating: review.grade,
+                      comment: review.text,
+                      createdAt: review.publishDate,
+                      status: 'approved',
+                      user: review.rentRelation.user as { name: string; email: string },
+                      product: review.rentRelation.product as { name: string },
+                    }}
+                    onApprove={handleApprove}
+                    onReject={handleReject}
+                  />
+                ))
+              )}
+            </TabsContent>
+          )}
         </Tabs>
       </motion.div>
     </div>

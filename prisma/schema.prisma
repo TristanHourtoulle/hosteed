@@ -435,6 +435,7 @@ enum UserRole {
   BLOGWRITTER
   HOST
   HOST_VERIFIED
+  HOST_MANAGER
   USER
 }
 
