@@ -146,6 +146,27 @@ export async function findAllProductByHostId(id: string) {
 
 export async function createProduct(data: CreateProductInput) {
   try {
+    // Log des données reçues pour debug
+    console.log('=== CreateProduct Debug ===')
+    console.log('Data received:', JSON.stringify(data, null, 2))
+
+    // Validation des données essentielles
+    if (!data.name || !data.description || !data.address || !data.typeId) {
+      throw new Error('Champs obligatoires manquants: name, description, address, ou typeId')
+    }
+
+    if (!data.basePrice || !data.priceMGA) {
+      throw new Error('Prix obligatoires manquants: basePrice ou priceMGA')
+    }
+
+    if (isNaN(Number(data.arriving)) || isNaN(Number(data.leaving))) {
+      throw new Error("Heures d'arrivée et de départ invalides")
+    }
+
+    if (!data.userId || data.userId.length === 0) {
+      throw new Error('Aucun utilisateur assigné au produit')
+    }
+
     // Créer d'abord le produit de base
     const createdProduct = await prisma.product.create({
       data: {
@@ -274,20 +295,38 @@ export async function createProduct(data: CreateProductInput) {
       },
     })
 
-    // Envoyer les emails aux administrateurs
-    const admin = await findAllUserByRoles('ADMIN')
-    admin?.map(async user => {
-      await sendTemplatedMail(
-        user.email,
-        'Une nouvelle annonce est en attente de validation',
-        'annonce-postee.html',
-        {
-          name: user.name || 'Administrateur',
-          productName: data.name,
-          annonceUrl: process.env.NEXTAUTH_URL + '/host/' + createdProduct.id,
-        }
-      )
-    })
+    // Envoyer les emails aux administrateurs (non bloquant)
+    try {
+      const admin = await findAllUserByRoles('ADMIN')
+      if (admin && admin.length > 0) {
+        // Utiliser Promise.all pour gérer correctement les promesses
+        const emailPromises = admin.map(async user => {
+          try {
+            await sendTemplatedMail(
+              user.email,
+              'Une nouvelle annonce est en attente de validation',
+              'annonce-postee.html',
+              {
+                name: user.name || 'Administrateur',
+                productName: data.name,
+                annonceUrl: process.env.NEXTAUTH_URL + '/host/' + createdProduct.id,
+              }
+            )
+          } catch (emailError) {
+            console.error('Erreur envoi email admin:', emailError)
+            // Ne pas faire échouer la création du produit pour un problème d'email
+          }
+        })
+
+        // Envoi asynchrone sans attendre la fin pour ne pas bloquer
+        Promise.allSettled(emailPromises).catch(error => {
+          console.error("Erreur lors de l'envoi des emails:", error)
+        })
+      }
+    } catch (adminError) {
+      console.error('Erreur lors de la récupération des admins:', adminError)
+      // Ne pas faire échouer la création du produit
+    }
 
     return finalProduct
   } catch (error) {
@@ -493,18 +532,29 @@ export async function resubmitProductWithChange(
 
       // Notifier les administrateurs
       const admin = await findAllUserByRoles('ADMIN')
-      admin?.forEach(async user => {
-        await sendTemplatedMail(
-          user.email,
-          'Une annonce a été modifiée et nécessite une nouvelle validation',
-          'annonce-modifiee.html',
-          {
-            name: user.name || 'Administrateur',
-            productName: params.name,
-            annonceUrl: process.env.NEXTAUTH_URL + '/admin/validation/' + updatedProduct.id,
+      if (admin && admin.length > 0) {
+        const emailPromises = admin.map(async user => {
+          try {
+            await sendTemplatedMail(
+              user.email,
+              'Une annonce a été modifiée et nécessite une nouvelle validation',
+              'annonce-modifiee.html',
+              {
+                name: user.name || 'Administrateur',
+                productName: params.name,
+                annonceUrl: process.env.NEXTAUTH_URL + '/admin/validation/' + updatedProduct.id,
+              }
+            )
+          } catch (emailError) {
+            console.error('Erreur envoi email admin modification:', emailError)
           }
-        )
-      })
+        })
+
+        // Envoi asynchrone sans attendre
+        Promise.allSettled(emailPromises).catch(error => {
+          console.error("Erreur lors de l'envoi des emails de modification:", error)
+        })
+      }
     }
 
     return updatedProduct

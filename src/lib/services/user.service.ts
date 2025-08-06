@@ -155,26 +155,54 @@ export async function updateUser(
 
 export async function sendEmailVerification(userId: string) {
   try {
+    console.log('=== DEBUG EMAIL VERIFICATION START ===')
+    console.log('userId:', userId)
+
     const user = await prisma.user.findUnique({
       where: {
         id: userId,
       },
     })
+    console.log('user found:', user ? 'YES' : 'NO')
     if (!user) throw new Error('User not found')
+
+    console.log('Creating JWT token...')
     const token = jwt.sign({ email: user.email }, process.env.EMAIL_VERIF_TOKEN || '', {
       expiresIn: '4h',
     })
+    console.log('Token created:', token ? 'YES' : 'NO')
+
+    console.log('Updating user with emailToken...')
     await prisma.user.update({
       where: { id: userId },
       data: {
         emailToken: token,
       },
     })
-    await sendTemplatedMail(user.email, 'Verifier votre email !', 'checkEmail.html', {
-      verificationUrl: process.env.NEXTAUTH_URL + '/checkEmail/' + token,
-    })
+    console.log('User updated with token')
+
+    // Fix potential double slash in URL
+    const baseUrl = process.env.NEXTAUTH_URL?.replace(/\/$/, '') || 'http://localhost:3000'
+    const verificationUrl = baseUrl + '/checkEmail/' + token
+    console.log('Verification URL:', verificationUrl)
+    console.log('About to send templated mail...')
+
+    await sendTemplatedMail(
+      user.email,
+      'Confirmez votre inscription sur Hosteed',
+      'checkEmail.html',
+      {
+        verificationUrl: verificationUrl,
+      }
+    )
+
+    console.log('=== EMAIL VERIFICATION SENT SUCCESSFULLY ===')
   } catch (e) {
-    console.error(e)
+    console.error('=== ERROR IN EMAIL VERIFICATION ===')
+    console.error('Error:', e)
+    console.error('Error message:', e instanceof Error ? e.message : 'Unknown error')
+    console.error('Error stack:', e instanceof Error ? e.stack : 'No stack')
+    console.error('=== END ERROR ===')
     return
   }
 }
