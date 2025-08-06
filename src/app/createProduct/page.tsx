@@ -34,6 +34,7 @@ import { findAllSecurity } from '@/lib/services/security.services'
 import { createProduct } from '@/lib/services/product.service'
 import { UserInterface } from '@/lib/interface/userInterface'
 import { findAllUser } from '@/lib/services/user.service'
+import { User } from '@prisma/client'
 
 interface TypeRent {
   id: string
@@ -161,6 +162,7 @@ export default function CreateProductPage() {
   const [meals, setMeals] = useState<Meal[]>([])
   const [securities, setSecurities] = useState<Security[]>([])
   const [services, setServices] = useState<Service[]>([])
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [users, setUsers] = useState<any[]>([])
 
   // Handle input changes
