@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Image from 'next/image'
@@ -32,8 +32,8 @@ import { findAllMeals } from '@/lib/services/meals.service'
 import { findAllServices } from '@/lib/services/services.service'
 import { findAllSecurity } from '@/lib/services/security.services'
 import { createProduct } from '@/lib/services/product.service'
-import {UserInterface} from "@/lib/interface/userInterface";
-import {findAllUser} from "@/lib/services/user.service";
+import { UserInterface } from '@/lib/interface/userInterface'
+import { findAllUser } from '@/lib/services/user.service'
 
 interface TypeRent {
   id: string
@@ -161,7 +161,7 @@ export default function CreateProductPage() {
   const [meals, setMeals] = useState<Meal[]>([])
   const [securities, setSecurities] = useState<Security[]>([])
   const [services, setServices] = useState<Service[]>([])
-  const [userList, setUserList] = useState<UserInterface[]>()
+  const [users, setUsers] = useState<any[]>([])
 
   // Handle input changes
   const handleInputChange = (
@@ -178,14 +178,14 @@ export default function CreateProductPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [typesData, equipmentsData, mealsData, securitiesData, servicesData, userData] =
+        const [typesData, equipmentsData, mealsData, securitiesData, servicesData, usersData] =
           await Promise.all([
             findAllTypeRent(),
             findAllEquipments(),
             findAllMeals(),
             findAllSecurity(),
             findAllServices(),
-              findAllUser(),
+            findAllUser(),
           ])
 
         setTypes(typesData || [])
@@ -193,16 +193,7 @@ export default function CreateProductPage() {
         setMeals(mealsData || [])
         setSecurities(securitiesData || [])
         setServices(servicesData || [])
-        setUserList((userData?.map(user => ({
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          lastname: user.lastname || undefined,
-          image: user.image || undefined,
-          info: user.info || undefined,
-          emailVerified: user.emailVerified || undefined,
-          roles: user.roles
-        })) as UserInterface[]) || [])
+        setUsers(usersData || [])
       } catch (error) {
         console.error('Error loading data:', error)
         setError('Erreur lors du chargement des données')
@@ -211,6 +202,8 @@ export default function CreateProductPage() {
 
     loadData()
   }, [])
+
+  // Redirection si non connecté
   useEffect(() => {
     if (!session) {
       router.push('/auth')
@@ -281,11 +274,9 @@ export default function CreateProductPage() {
   }
 
   const removeFile = (index: number) => {
-    const fileToRemove = selectedFiles[index]
-    if (fileToRemove) {
-      // Libérer la mémoire de l'URL d'objet
-      const url = URL.createObjectURL(fileToRemove)
-      URL.revokeObjectURL(url)
+    // Libérer la mémoire de l'URL d'objet correspondante
+    if (imageUrls[index]) {
+      URL.revokeObjectURL(imageUrls[index])
     }
     setSelectedFiles(prev => prev.filter((_, i) => i !== index))
   }
@@ -303,6 +294,18 @@ export default function CreateProductPage() {
       })
     )
   }
+
+  // Mémoriser les URLs des images pour éviter les re-créations
+  const imageUrls = useMemo(() => {
+    return selectedFiles.map(file => URL.createObjectURL(file))
+  }, [selectedFiles])
+
+  // Nettoyer les URLs quand les fichiers changent
+  useEffect(() => {
+    return () => {
+      imageUrls.forEach(url => URL.revokeObjectURL(url))
+    }
+  }, [imageUrls])
 
   // Cleanup object URLs when component unmounts
   useEffect(() => {
@@ -332,7 +335,7 @@ export default function CreateProductPage() {
     }))
   }
 
-  // Form submission
+  // Form submission avec validation basique
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
@@ -340,6 +343,25 @@ export default function CreateProductPage() {
 
     if (!session?.user?.id) {
       setError('Vous devez être connecté pour créer une annonce')
+      setIsLoading(false)
+      return
+    }
+
+    // Validation basique
+    if (!formData.name.trim()) {
+      setError("Le nom de l'hébergement est requis")
+      setIsLoading(false)
+      return
+    }
+
+    if (!formData.description.trim()) {
+      setError('La description est requise')
+      setIsLoading(false)
+      return
+    }
+
+    if (!formData.typeId) {
+      setError("Veuillez sélectionner un type d'hébergement")
       setIsLoading(false)
       return
     }
@@ -356,6 +378,9 @@ export default function CreateProductPage() {
       const base64Images = await convertFilesToBase64(selectedFiles)
       setIsUploadingImages(false)
 
+      // Déterminer l'utilisateur final (admin peut assigner à un autre utilisateur)
+      const finalUserId = assignToOtherUser && userSelected ? userSelected : session.user.id
+
       // Préparer les données pour le service
       const productData = {
         name: formData.name,
@@ -371,7 +396,7 @@ export default function CreateProductPage() {
         leaving: Number(formData.leaving),
         phone: formData.phone,
         typeId: formData.typeId,
-        userId: userSelected != ''  ? [userSelected] : [session.user.id],
+        userId: [finalUserId],
         equipments: formData.equipmentIds,
         services: formData.serviceIds,
         meals: formData.mealIds,
@@ -484,10 +509,9 @@ export default function CreateProductPage() {
                           id='name'
                           name='name'
                           type='text'
-                          placeholder='Ex: Villa avec vue sur mer'
                           value={formData.name}
                           onChange={handleInputChange}
-                          required
+                          placeholder='Ex: Villa avec vue sur mer'
                           className='border-slate-200 focus:border-blue-300 focus:ring-blue-200'
                         />
                       </div>
@@ -1062,7 +1086,7 @@ export default function CreateProductPage() {
                     {selectedFiles.map((file, index) => (
                       <div key={index} className='relative group'>
                         <Image
-                          src={URL.createObjectURL(file)}
+                          src={imageUrls[index]}
                           alt={`Aperçu ${index + 1}`}
                           width={200}
                           height={96}
@@ -1255,60 +1279,63 @@ export default function CreateProductPage() {
               </CardContent>
             </Card>
           </motion.div>
-          <motion.div variants={itemVariants}>
-            <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm'>
-              <CardHeader className='space-y-2'>
-                <div className='flex items-center gap-2'>
-                  <div className='p-2 bg-cyan-50 rounded-lg'>
-                    <FileText className='h-5 w-5 text-cyan-600' />
-                  </div>
-                  <div>
-                    <CardTitle className='text-xl'>Informations administrateur</CardTitle>
-                    <p className='text-slate-600 text-sm mt-1'>
-                      Assignement de l&apos;hébergement
-                    </p>
-                  </div>
-                </div>
-              </CardHeader>
-                            <CardContent className='space-y-6'>
-                <div className='space-y-4'>
+
+          {/* Section Admin - Assigner à un autre utilisateur */}
+          {session?.user?.roles === 'ADMIN' && (
+            <motion.div variants={itemVariants}>
+              <Card className='border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50'>
+                <CardHeader>
+                  <CardTitle className='flex items-center gap-3 text-orange-800'>
+                    <Users className='h-5 w-5 text-orange-600' />
+                    Administration - Assigner l'annonce
+                  </CardTitle>
+                  <p className='text-sm text-orange-600'>
+                    En tant qu'administrateur, vous pouvez créer cette annonce pour un autre
+                    utilisateur
+                  </p>
+                </CardHeader>
+                <CardContent className='space-y-4'>
                   <div className='flex items-center space-x-2'>
                     <input
-                      id='assignToOtherUser'
                       type='checkbox'
+                      id='assignToOtherUser'
                       checked={assignToOtherUser}
-                      onChange={(e) => setAssignToOtherUser(e.target.checked)}
-                      className='w-4 h-4 text-cyan-600 bg-gray-100 border-gray-300 rounded focus:ring-cyan-500'
+                      onChange={e => setAssignToOtherUser(e.target.checked)}
+                      className='rounded border-orange-300 focus:ring-orange-200'
                     />
-                    <label htmlFor='assignToOtherUser' className='text-sm font-medium text-slate-700'>
-                      Assigner à un autre utilisateur
+                    <label
+                      htmlFor='assignToOtherUser'
+                      className='text-sm font-medium text-orange-700'
+                    >
+                      Assigner cette annonce à un autre utilisateur
                     </label>
                   </div>
 
                   {assignToOtherUser && (
                     <div className='space-y-2'>
-                      <label htmlFor='userSelected' className='text-sm font-medium text-slate-700'>
-                        Sélectionner l&apos;utilisateur
+                      <label htmlFor='userSelect' className='text-sm font-medium text-orange-700'>
+                        Sélectionner l'utilisateur
                       </label>
                       <select
-                           id='userSelected'
-                           value={userSelected}
-                           onChange={(e) => setUserSelected(e.target.value)}
-                           className='w-full px-3 py-2 border border-slate-200 rounded-md focus:border-cyan-300 focus:ring-cyan-200 focus:ring-2 focus:ring-opacity-50'
-                        >
-                          <option value=''>Sélectionnez un utilisateur</option>
-                          {userList?.map(user => (
-                             <option key={user.id} value={user.id}>
-                               {user.name} {user.lastname} ({user.email})
-                             </option>
-                          ))}
-                        </select>
+                        id='userSelect'
+                        value={userSelected}
+                        onChange={e => setUserSelected(e.target.value)}
+                        className='w-full p-2 border border-orange-200 rounded-md focus:ring-orange-200 focus:border-orange-300'
+                        required={assignToOtherUser}
+                      >
+                        <option value=''>Choisir un utilisateur...</option>
+                        {users.map(user => (
+                          <option key={user.id} value={user.id}>
+                            {user.firstname} {user.lastname} ({user.email})
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   )}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
 
           {/* Bouton de soumission */}
           <motion.div className='flex justify-center pt-8' variants={itemVariants}>

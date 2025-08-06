@@ -53,6 +53,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/shadcnui/dropdown-menu'
 import { RoleBadge, RoleIcon } from '@/components/ui/RoleBadge'
+import { EmailVerificationPanel } from './components/EmailVerificationPanel'
 import { toast } from 'sonner'
 
 const containerVariants: Variants = {
@@ -206,20 +207,22 @@ export default function UsersPage() {
     }
   }, [session, router])
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const usersData = await findAllUser()
-        if (usersData) {
-          setUsers(usersData as unknown as User[])
-        }
-      } catch (err) {
-        setError('Erreur lors du chargement des utilisateurs')
-        console.error(err)
-      } finally {
-        setLoading(false)
+  const fetchUsers = async () => {
+    try {
+      setLoading(true)
+      const usersData = await findAllUser()
+      if (usersData) {
+        setUsers(usersData as unknown as User[])
       }
+    } catch (err) {
+      setError('Erreur lors du chargement des utilisateurs')
+      console.error(err)
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
     fetchUsers()
   }, [])
 
@@ -354,6 +357,7 @@ export default function UsersPage() {
               <Filter className='h-4 w-4 mr-2' />
               Filtrer
             </Button>
+            <EmailVerificationPanel users={users} refreshUsers={fetchUsers} />
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
                 <Button className='bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl shadow-lg'>
