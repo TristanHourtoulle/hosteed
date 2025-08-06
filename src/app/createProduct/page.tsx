@@ -33,6 +33,7 @@ import { findAllServices } from '@/lib/services/services.service'
 import { findAllSecurity } from '@/lib/services/security.services'
 import { createProduct } from '@/lib/services/product.service'
 import { findAllUser } from '@/lib/services/user.service'
+import { User } from '@prisma/client'
 
 interface TypeRent {
   id: string
