@@ -48,10 +48,14 @@ export async function GET(request: NextRequest) {
       result: data.result
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erreur API Places Details:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
     return NextResponse.json(
-      { error: 'Erreur lors de la récupération des détails du lieu' },
+      { 
+        error: 'Erreur lors de la récupération des détails du lieu',
+        details: errorMessage
+      },
       { status: 500 }
     );
   }

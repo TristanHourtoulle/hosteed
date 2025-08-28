@@ -34,7 +34,7 @@ export function CityAutocomplete({
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const sessionTokenRef = useRef<string>('');
-  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Générer un token de session au montage du composant
   useEffect(() => {

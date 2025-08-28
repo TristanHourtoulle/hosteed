@@ -58,12 +58,13 @@ export async function GET(request: NextRequest) {
       predictions: data.predictions || []
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erreur API Places:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
     return NextResponse.json(
       { 
         error: 'Erreur lors de la récupération des suggestions',
-        details: error.message 
+        details: errorMessage
       },
       { status: 500 }
     );
