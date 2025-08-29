@@ -1,4 +1,4 @@
-import { queryClient, prefetchQuery, CACHE_TAGS } from './query-client'
+import { prefetchQuery, CACHE_TAGS } from './query-client'
 import { findAllProducts } from '@/lib/services/product.service'
 import { findAllEquipments } from '@/lib/services/equipments.service'
 import { findAllMeals } from '@/lib/services/meals.service'

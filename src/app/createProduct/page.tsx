@@ -1339,10 +1339,10 @@ export default function CreateProductPage() {
                 <CardHeader>
                   <CardTitle className='flex items-center gap-3 text-orange-800'>
                     <Users className='h-5 w-5 text-orange-600' />
-                    Administration - Assigner l'annonce
+                    Administration - Assigner l&apos;annonce
                   </CardTitle>
                   <p className='text-sm text-orange-600'>
-                    En tant qu'administrateur, vous pouvez créer cette annonce pour un autre
+                    En tant qu&apos;administrateur, vous pouvez créer cette annonce pour un autre
                     utilisateur
                   </p>
                 </CardHeader>
@@ -1366,7 +1366,7 @@ export default function CreateProductPage() {
                   {assignToOtherUser && (
                     <div className='space-y-2'>
                       <label htmlFor='userSelect' className='text-sm font-medium text-orange-700'>
-                        Sélectionner l'utilisateur
+                        Sélectionner l&apos;utilisateur
                       </label>
                       <select
                         id='userSelect'

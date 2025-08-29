@@ -1,6 +1,5 @@
 'use client'
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { TypeRent } from '@prisma/client'
 import { useSearchParams } from 'next/navigation'
 import { useQuery, useQueries } from '@tanstack/react-query'
 import { CACHE_TAGS } from '@/lib/cache/query-client'

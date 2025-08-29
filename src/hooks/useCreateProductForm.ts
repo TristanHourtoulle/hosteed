@@ -6,7 +6,6 @@ import { useSession } from 'next-auth/react'
 import {
   createProductSchema,
   type CreateProductFormData,
-  validateImages,
 } from '@/lib/schemas/product.schema'
 import { createProduct } from '@/lib/services/product.service'
 import { compressImages, formatFileSize } from '@/lib/utils/imageCompression'

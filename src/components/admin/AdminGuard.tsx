@@ -1,7 +1,7 @@
 'use client'
 
 import { useAdminAuth } from '@/hooks/useAdminAuth'
-import { Loader2, Shield, AlertTriangle } from 'lucide-react'
+import { Loader2, AlertTriangle } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 
 interface AdminGuardProps {
@@ -41,7 +41,7 @@ export function AdminGuard({ children, fallback }: AdminGuardProps) {
               <AlertTriangle className='w-8 h-8 text-red-600' />
             </div>
             <h2 className='text-xl font-semibold text-gray-900 mb-2'>Accès non autorisé</h2>
-            <p className='text-gray-600'>Vous n'avez pas les permissions nécessaires pour accéder à cette page.</p>
+            <p className='text-gray-600'>Vous n&apos;avez pas les permissions nécessaires pour accéder à cette page.</p>
           </CardContent>
         </Card>
       </div>

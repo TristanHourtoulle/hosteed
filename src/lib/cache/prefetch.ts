@@ -1,5 +1,4 @@
-import { headers } from 'next/headers'
-import { dehydrate, HydrationBoundary } from '@tanstack/react-query'
+import { dehydrate } from '@tanstack/react-query'
 import { queryClient } from './query-client'
 
 // Prefetch data on the server for better initial load

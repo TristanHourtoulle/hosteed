@@ -172,7 +172,7 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
   const [productId, setProductId] = useState<string | null>(null)
   const [validationHistory, setValidationHistory] = useState<ValidationHistoryEntry[]>([])
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
-  const [showAllPhotos, setShowAllPhotos] = useState(false)
+  const [, setShowAllPhotos] = useState(false)
   const [showFullscreen, setShowFullscreen] = useState(false)
 
   useEffect(() => {

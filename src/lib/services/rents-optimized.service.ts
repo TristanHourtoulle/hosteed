@@ -1,5 +1,4 @@
 import prisma from '@/lib/prisma'
-import { PaymentStatus, RentStatus } from '@prisma/client'
 
 export async function findAllRentsByUserIdWithProducts(userId: string) {
   try {

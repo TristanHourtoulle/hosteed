@@ -102,6 +102,9 @@ export const getUserDataOptimized = unstable_cache(
 
     // Remove internal fields from response
     const { receivedRatings, _count, ...userData } = user
+    // Variables intentionally unused
+    void receivedRatings
+    void _count
 
     return {
       ...userData,

@@ -2,8 +2,6 @@
 import { NextResponse } from 'next/server'
 import nodemailer from 'nodemailer'
 import Mail from 'nodemailer/lib/mailer'
-import fs from 'fs'
-import path from 'path'
 
 // Alternative avec Brevo pour une meilleure délivrabilité internationale
 export async function SendMailWithBrevo(
