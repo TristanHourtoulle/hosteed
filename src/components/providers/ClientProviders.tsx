@@ -2,6 +2,7 @@
 
 import { SessionProvider } from 'next-auth/react'
 import { ReactNode } from 'react'
+import { QueryProvider } from './query-provider'
 
 interface ClientProvidersProps {
   children: ReactNode
@@ -10,7 +11,9 @@ interface ClientProvidersProps {
 export function ClientProviders({ children }: ClientProvidersProps) {
   return (
     <SessionProvider>
-      {children}
+      <QueryProvider>
+        {children}
+      </QueryProvider>
     </SessionProvider>
   )
 }
