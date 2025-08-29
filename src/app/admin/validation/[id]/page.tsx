@@ -1,7 +1,6 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
 import { useEffect, useState, useCallback } from 'react'
 import { ProductValidation } from '@prisma/client'
 import Image from 'next/image'
@@ -30,6 +29,8 @@ import {
   Shield,
   CheckSquare,
   X,
+  Eye,
+  Grid3x3,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -162,7 +163,6 @@ interface ValidationDetailPageProps {
 
 export default function ValidationDetailPage({ params }: ValidationDetailPageProps) {
   const { data: session } = useSession()
-  const router = useRouter()
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
@@ -170,12 +170,7 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
   const [reason, setReason] = useState('')
   const [productId, setProductId] = useState<string | null>(null)
   const [validationHistory, setValidationHistory] = useState<ValidationHistoryEntry[]>([])
-
-  useEffect(() => {
-    if (!session?.user?.roles || session.user.roles !== 'ADMIN') {
-      router.push('/')
-    }
-  }, [session, router])
+  const [showAllImages, setShowAllImages] = useState(false)
 
   useEffect(() => {
     const getParams = async () => {
@@ -397,27 +392,60 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
           <div className='lg:col-span-2 space-y-6'>
             {/* Images */}
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Photos de l&apos;annonce</CardTitle>
+                {product.img && product.img.length > 4 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAllImages(!showAllImages)}
+                    className="text-xs"
+                  >
+                    {showAllImages ? (
+                      <>
+                        <Grid3x3 className="h-3 w-3 mr-1" />
+                        Moins de photos
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="h-3 w-3 mr-1" />
+                        Voir toutes les photos ({product.img.length})
+                      </>
+                    )}
+                  </Button>
+                )}
               </CardHeader>
               <CardContent>
                 {product.img && product.img.length > 0 ? (
-                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                    {product.img.slice(0, 4).map((image, index) => (
-                      <div key={index} className='relative h-48 rounded-lg overflow-hidden'>
+                  <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+                    {(showAllImages ? product.img : product.img.slice(0, 6)).map((image, index) => (
+                      <div key={index} className='relative h-48 rounded-lg overflow-hidden group cursor-pointer'>
                         <Image
                           src={image.img}
                           alt={`Photo ${index + 1}`}
                           fill
-                          className='object-cover'
+                          className='object-cover transition-transform group-hover:scale-105'
                         />
+                        <div className='absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 flex items-center justify-center'>
+                          <Eye className='h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity' />
+                        </div>
+                        <div className='absolute top-2 left-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded'>
+                          {index + 1}/{product.img?.length || 0}
+                        </div>
                       </div>
                     ))}
-                    {product.img.length > 4 && (
-                      <div className='relative h-48 rounded-lg bg-gray-100 flex items-center justify-center'>
-                        <span className='text-gray-500'>
-                          +{product.img.length - 4} autres photos
-                        </span>
+                    {!showAllImages && product.img.length > 6 && (
+                      <div 
+                        className='relative h-48 rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100 border-2 border-dashed border-blue-300 flex items-center justify-center cursor-pointer hover:from-blue-200 hover:to-indigo-200 transition-all'
+                        onClick={() => setShowAllImages(true)}
+                      >
+                        <div className='text-center'>
+                          <Eye className='h-8 w-8 text-blue-500 mx-auto mb-2' />
+                          <span className='text-blue-700 font-medium'>
+                            +{product.img.length - 6} autres photos
+                          </span>
+                          <p className='text-blue-600 text-xs mt-1'>Cliquez pour voir toutes</p>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -427,6 +455,13 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
                       <Home className='h-12 w-12 text-gray-400 mx-auto mb-2' />
                       <p className='text-gray-500'>Aucune photo disponible</p>
                     </div>
+                  </div>
+                )}
+                {showAllImages && product.img && product.img.length > 6 && (
+                  <div className='mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200'>
+                    <p className='text-blue-700 text-sm text-center'>
+                      <strong>{product.img?.length || 0}</strong> photos au total affichées
+                    </p>
                   </div>
                 )}
               </CardContent>
@@ -927,3 +962,4 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
     </div>
   )
 }
+

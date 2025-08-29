@@ -22,7 +22,9 @@ export function AdminGuard({ children, fallback }: AdminGuardProps) {
               <div className='w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4'>
                 <Loader2 className='w-8 h-8 text-blue-600 animate-spin' />
               </div>
-              <h2 className='text-xl font-semibold text-gray-900 mb-2'>Vérification des autorisations</h2>
+              <h2 className='text-xl font-semibold text-gray-900 mb-2'>
+                Vérification des autorisations
+              </h2>
               <p className='text-gray-600'>Veuillez patienter...</p>
             </CardContent>
           </Card>
@@ -41,7 +43,9 @@ export function AdminGuard({ children, fallback }: AdminGuardProps) {
               <AlertTriangle className='w-8 h-8 text-red-600' />
             </div>
             <h2 className='text-xl font-semibold text-gray-900 mb-2'>Accès non autorisé</h2>
-            <p className='text-gray-600'>Vous n&apos;avez pas les permissions nécessaires pour accéder à cette page.</p>
+            <p className='text-gray-600'>
+              Vous n&apos;avez pas les permissions nécessaires pour accéder à cette page.
+            </p>
           </CardContent>
         </Card>
       </div>
