@@ -33,6 +33,7 @@ import { findAllServices } from '@/lib/services/services.service'
 import { findAllSecurity } from '@/lib/services/security.services'
 import { createProduct } from '@/lib/services/product.service'
 import { findAllUser } from '@/lib/services/user.service'
+import { compressImages, formatFileSize } from '@/lib/utils/imageCompression'
 
 interface TypeRent {
   id: string
@@ -246,7 +247,7 @@ export default function CreateProductPage() {
     }
   }
 
-  const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const filesArray = Array.from(e.target.files)
 
@@ -256,9 +257,9 @@ export default function CreateProductPage() {
           setError('Veuillez sélectionner uniquement des images')
           return
         }
-        if (file.size > 10 * 1024 * 1024) {
-          // 10MB max
-          setError('La taille de chaque image ne doit pas dépasser 10MB')
+        if (file.size > 50 * 1024 * 1024) {
+          // 50MB max before compression
+          setError('La taille de chaque image ne doit pas dépasser 50MB')
           return
         }
       }
@@ -268,8 +269,34 @@ export default function CreateProductPage() {
         return
       }
 
-      setSelectedFiles(prev => [...prev, ...filesArray])
-      setError('') // Clear any previous errors
+      try {
+        setIsUploadingImages(true)
+        setError('Compression des images en cours...')
+
+        // Compress images before adding them
+        const compressedFiles = await compressImages(filesArray, {
+          maxSizeMB: 0.8,
+          maxWidthOrHeight: 1920,
+          useWebWorker: true,
+          quality: 0.8,
+        })
+
+        setSelectedFiles(prev => [...prev, ...compressedFiles])
+        setError('') // Clear any previous errors
+
+        // Log compression results
+        compressedFiles.forEach((file, index) => {
+          const originalSize = filesArray[index].size
+          console.log(
+            `Compressed ${file.name}: ${formatFileSize(originalSize)} → ${formatFileSize(file.size)}`
+          )
+        })
+      } catch (error) {
+        console.error('Image compression failed:', error)
+        setError('Erreur lors de la compression des images')
+      } finally {
+        setIsUploadingImages(false)
+      }
     }
   }
 
@@ -281,18 +308,38 @@ export default function CreateProductPage() {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index))
   }
 
-  // Convert files to base64
-  const convertFilesToBase64 = (files: File[]): Promise<string[]> => {
-    return Promise.all(
-      files.map(file => {
+  // Convert files to base64 with compression
+  const convertFilesToBase64 = async (files: File[]): Promise<string[]> => {
+    setIsUploadingImages(true)
+    try {
+      // First compress the images
+      const compressedFiles = await compressImages(files, {
+        maxSizeMB: 0.8,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+        quality: 0.8,
+      })
+
+      // Then convert to base64
+      const promises = compressedFiles.map((file, index) => {
         return new Promise<string>((resolve, reject) => {
           const reader = new FileReader()
-          reader.onloadend = () => resolve(reader.result as string)
-          reader.onerror = reject
+          reader.onloadend = () => {
+            console.log(
+              `Image ${index + 1} (${file.name}) final size: ${formatFileSize(file.size)}`
+            )
+            resolve(reader.result as string)
+          }
+          reader.onerror = () => reject(new Error(`Erreur de lecture de l'image: ${file.name}`))
           reader.readAsDataURL(file)
         })
       })
-    )
+
+      const results = await Promise.all(promises)
+      return results
+    } finally {
+      setIsUploadingImages(false)
+    }
   }
 
   // Mémoriser les URLs des images pour éviter les re-créations
@@ -1070,10 +1117,15 @@ export default function CreateProductPage() {
                         </button>
                       </p>
                       <p className='text-xs text-slate-500 mt-1'>
-                        PNG, JPG, JPEG, WEBP jusqu&apos;à 10MB chacune
+                        PNG, JPG, JPEG, WEBP jusqu&apos;à 50MB chacune (compressées automatiquement)
                         {selectedFiles.length > 0 && (
                           <span className='block mt-1 text-green-600 font-medium'>
                             ✓ {selectedFiles.length}/10 photos sélectionnées
+                          </span>
+                        )}
+                        {isUploadingImages && (
+                          <span className='block mt-1 text-blue-600 font-medium animate-pulse'>
+                            🔄 Compression en cours...
                           </span>
                         )}
                       </p>
