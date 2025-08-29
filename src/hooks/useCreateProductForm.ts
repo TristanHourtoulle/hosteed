@@ -3,7 +3,10 @@ import { useForm, SubmitHandler } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { createProductSchema, type CreateProductFormData } from '@/lib/schemas/product.schema'
+import {
+  createProductSchema,
+  type CreateProductFormData,
+} from '@/lib/schemas/product.schema'
 import { createProduct } from '@/lib/services/product.service'
 import { compressImages, formatFileSize } from '@/lib/utils/imageCompression'
 

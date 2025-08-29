@@ -8,7 +8,7 @@ interface ImageGalleryProps {
   currentImageIndex: number
   nextImage: () => void
   prevImage: () => void
-  setShowAllPhotos: (show: boolean) => void
+  setShowAllPhotos?: (show: boolean) => void
   setShowFullscreen: (show: boolean) => void
   setCurrentImageIndex?: (index: number) => void
 }
@@ -24,6 +24,9 @@ export default function ImageGallery({
   setCurrentImageIndex,
 }: ImageGalleryProps) {
   const [showAllPhotosLocal, setShowAllPhotosLocal] = useState(false)
+  
+  // Variable intentionally unused - kept for API compatibility
+  void setShowAllPhotos
 
 
   if (!images || images.length === 0) {
@@ -86,10 +89,13 @@ export default function ImageGallery({
                 }
               }}
             >
-              <img
+              <Image
                 src={img.img}
                 alt={`${productName} ${index + 2}`}
-                className='absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105'
+                fill
+                className='object-cover transition-transform group-hover:scale-105'
+                unoptimized
+                sizes="(max-width: 768px) 50vw, 25vw"
               />
               <div className='absolute inset-0 group-hover:bg-black/20 transition-all duration-200 flex items-center justify-center pointer-events-none'>
                 <Expand className='h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none' />
@@ -113,10 +119,13 @@ export default function ImageGallery({
                 }
               }}
             >
-              <img
+              <Image
                 src={img.img}
                 alt={`${productName} ${index + 4}`}
-                className='absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105'
+                fill
+                className='object-cover transition-transform group-hover:scale-105'
+                unoptimized
+                sizes="(max-width: 768px) 50vw, 25vw"
               />
               <div className='absolute inset-0 group-hover:bg-black/20 transition-all duration-200 flex items-center justify-center pointer-events-none'>
                 <Expand className='h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none' />
@@ -153,10 +162,13 @@ export default function ImageGallery({
                   }
                 }}
               >
-                <img
+                <Image
                   src={img.img}
                   alt={`${productName} ${index + 6}`}
-                  className='absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105'
+                  fill
+                  className='object-cover transition-transform group-hover:scale-105'
+                  unoptimized
+                  sizes="(max-width: 768px) 50vw, 25vw"
                 />
                 <div className='absolute inset-0 group-hover:bg-black/20 transition-all duration-200 flex items-center justify-center pointer-events-none'>
                   <Expand className='h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none' />
