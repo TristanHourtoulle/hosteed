@@ -31,6 +31,7 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
   const suggestionsRef = useRef<HTMLDivElement>(null)
   const [isMobile, setIsMobile] = useState(false)
   const [typeRent, setTypeRent] = useState<TypeRent[]>([])
+  const [hasMounted, setHasMounted] = useState(false)
 
   useEffect(() => {
     const fetchTypeRent = async () => {
@@ -43,6 +44,7 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
   }, [])
 
   useEffect(() => {
+    setHasMounted(true)
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768)
     }
@@ -54,6 +56,8 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
 
   // Gestion du clic en dehors des suggestions
   useEffect(() => {
+    if (!hasMounted) return
+    
     function handleClickOutside(event: MouseEvent) {
       if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
         setShowSuggestions(false)
@@ -62,10 +66,11 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
 
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  }, [hasMounted])
 
   // Debounce pour les suggestions
   useEffect(() => {
+    if (!hasMounted) return
     if (location.length < 3) {
       setSuggestions([])
       return
@@ -96,7 +101,7 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
         clearTimeout(searchTimeout.current)
       }
     }
-  }, [location])
+  }, [location, hasMounted])
 
   const handleSuggestionClick = (suggestion: Suggestion) => {
     setLocation(suggestion.display_name)
@@ -111,6 +116,14 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
         searchRadius: 15, // Rayon de recherche par défaut de 15km
       })
     }
+  }
+
+  if (!hasMounted) {
+    return (
+      <div style={{ width: '100%', maxWidth: '1200px', margin: '0 auto', padding: '1rem' }}>
+        <div className='animate-pulse bg-gray-200 h-12 rounded-lg'></div>
+      </div>
+    )
   }
 
   return (

@@ -35,7 +35,7 @@ const PaymentFormContent = ({ amount, onSuccess, onError }: PaymentFormProps) =>
       const { error: confirmError } = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          return_url: `${window.location.origin}/payment/success`,
+          return_url: `${typeof window !== 'undefined' ? window.location.origin : ''}/payment/success`,
         },
       })
 
