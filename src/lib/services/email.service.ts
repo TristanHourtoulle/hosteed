@@ -5,63 +5,176 @@ import Mail from 'nodemailer/lib/mailer'
 import fs from 'fs'
 import path from 'path'
 
+// Types pour la configuration
+interface EmailConfig {
+  port: number
+  secure: boolean
+  requireTLS?: boolean
+  tls: { rejectUnauthorized: boolean }
+  priority: 'high' | 'normal' | 'low'
+  headers: Record<string, string | undefined>
+}
+
+// Configuration adaptative selon les providers email
+const getOptimalConfig = (email: string): EmailConfig => {
+  const domain = email.split('@')[1]?.toLowerCase()
+  
+  // Configuration spécifique pour Outlook/Office365
+  if (domain?.includes('outlook') || domain?.includes('epitech') || domain?.includes('microsoft') || domain?.includes('hotmail')) {
+    return {
+      port: 587,
+      secure: false,
+      requireTLS: true,
+      tls: { rejectUnauthorized: true },
+      priority: 'high',
+      headers: {
+        'X-Mailer': 'Hosteed Platform v1.0',
+        'X-Priority': '2',
+        'X-MS-Has-Attach': 'no',
+        'List-Unsubscribe': '<mailto:hello@hosteed.com?subject=unsubscribe>',
+        'Return-Path': process.env.EMAIL_LOGIN,
+        'Reply-To': process.env.EMAIL_LOGIN,
+      }
+    }
+  }
+  
+  // Configuration optimisée pour Gmail
+  if (domain?.includes('gmail') || domain?.includes('googlemail')) {
+    return {
+      port: 465,
+      secure: true,
+      tls: { rejectUnauthorized: true },
+      priority: 'normal',
+      headers: {
+        'X-Mailer': 'Hosteed Platform',
+        'X-Priority': '3',
+        'Return-Path': process.env.EMAIL_LOGIN,
+        'Reply-To': process.env.EMAIL_LOGIN,
+      }
+    }
+  }
+  
+  // Configuration pour iCloud et autres providers
+  return {
+    port: 587,
+    secure: false,
+    requireTLS: true,
+    tls: { rejectUnauthorized: true },
+    priority: 'normal',
+    headers: {
+      'X-Mailer': 'Hosteed Platform',
+      'X-Priority': '3',
+      'Return-Path': process.env.EMAIL_LOGIN,
+      'Reply-To': process.env.EMAIL_LOGIN,
+    }
+  }
+}
+
+// Fonction de retry intelligent
+async function retryEmailSend(
+  transportConfig: nodemailer.TransportOptions,
+  mailOptions: Mail.Options,
+  maxRetries: number = 3
+): Promise<nodemailer.SentMessageInfo> {
+  let lastError: Error | null = null
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const transport = nodemailer.createTransport(transportConfig)
+      const result = await transport.sendMail(mailOptions)
+      transport.close()
+      console.log(`✅ Email envoyé avec succès (tentative ${attempt})`)
+      return result
+    } catch (error) {
+      lastError = error as Error
+      console.warn(`⚠️ Tentative ${attempt}/${maxRetries} échouée:`, error)
+      
+      // Attendre avant de réessayer (backoff exponentiel)
+      if (attempt < maxRetries) {
+        const waitTime = Math.pow(2, attempt) * 1000 // 2s, 4s, 8s
+        console.log(`⏳ Retry dans ${waitTime/1000}s...`)
+        await new Promise(resolve => setTimeout(resolve, waitTime))
+      }
+    }
+  }
+  
+  throw lastError
+}
+
 export async function SendMail(
   email: string,
   name: string,
   message: string,
   isHtml: boolean = false
 ) {
-  const transport = nodemailer.createTransport({
+  // Configuration adaptative selon le provider
+  const config = getOptimalConfig(email)
+  
+  const transportConfig = {
     host: 'ssl0.ovh.net',
-    port: 465,
-    secure: true,
+    port: config.port,
+    secure: config.secure,
+    requireTLS: config.requireTLS,
+    tls: config.tls,
     auth: {
       user: process.env.EMAIL_LOGIN,
       pass: process.env.EMAIL_PASSWORD,
     },
-    tls: {
-      rejectUnauthorized: false,
+    // DKIM avec clé générée manuellement
+    dkim: {
+      domainName: 'hosteed.com',
+      keySelector: 'hosteed',
+      privateKey: (() => {
+        try {
+          return fs.readFileSync(
+            path.join(process.cwd(), 'dkim-keys', 'hosteed-private.pem'),
+            'utf8'
+          )
+        } catch {
+          console.warn('DKIM key not found, emails will be sent without DKIM signature')
+          return ''
+        }
+      })(),
     },
-    // DKIM temporairement désactivé pour éviter les conflits
-    // dkim: {
-    //   domainName: 'hosteed.com',
-    //   keySelector: 'ovh', 
-    //   privateKey: process.env.DKIM_PRIVATE_KEY || '',
-    // },
-  } as nodemailer.TransportOptions)
+    // Pool de connexions pour de meilleures performances
+    pool: true,
+    maxConnections: 5,
+    maxMessages: 100,
+  } as nodemailer.TransportOptions
 
   const mailOptions: Mail.Options = {
-    from: `"Hosteed" <${process.env.EMAIL_LOGIN}>`,
+    from: `"Hosteed Platform" <${process.env.EMAIL_LOGIN}>`,
     replyTo: process.env.EMAIL_LOGIN,
     to: email,
-    subject: `${name}`,
+    subject: name,
+    priority: config.priority,
     headers: {
-      'X-Mailer': 'Hosteed Platform',
-      'X-Priority': '3',
-    },
+      ...config.headers,
+      'Message-ID': `<${Date.now()}-${Math.random().toString(36)}@hosteed.com>`,
+      'Date': new Date().toUTCString(),
+      'X-Entity-Ref-ID': `hosteed-${Date.now()}`,
+    } as Record<string, string>,
     ...(isHtml ? { html: message } : { text: message }),
   }
-  const sendMailPromise = () =>
-    new Promise<string>((resolve, reject) => {
-      transport.sendMail(mailOptions, function (err) {
-        if (!err) {
-          resolve('Email sent')
-        } else {
-          reject(err.message)
-        }
-      })
-    })
 
   try {
-    await sendMailPromise()
+    console.log(`📧 Envoi email vers ${email} (provider: ${email.split('@')[1]})`)
+    const result = await retryEmailSend(transportConfig, mailOptions)
     console.log('EMAIL ENVOYÉ AVEC SUCCÈS')
-    return NextResponse.json({ message: 'Email sent' })
+    return NextResponse.json({ 
+      message: 'Email sent',
+      messageId: result.messageId,
+      provider: email.split('@')[1],
+      config: config.port
+    })
   } catch (err) {
     console.error("ERREUR D'ENVOI D'EMAIL:", err)
     return NextResponse.json(
       {
         error: err instanceof Error ? err.message : 'Erreur inconnue',
         details: err,
+        email: email,
+        provider: email.split('@')[1]
       },
       { status: 500 }
     )
@@ -75,6 +188,8 @@ export async function sendEmailFromTemplate(
   variables: Record<string, string>
 ) {
   try {
+    console.log(`📧 Préparation email template ${templateName} vers ${email}`)
+    
     // Lire le template
     const templatePath = path.join(process.cwd(), 'public/templates/emails', `${templateName}.html`)
     let htmlContent = fs.readFileSync(templatePath, 'utf8')
@@ -88,62 +203,82 @@ export async function sendEmailFromTemplate(
     // Gérer les conditions {{#if variable}}...{{/if}}
     htmlContent = htmlContent.replace(
       /{{#if\s+(\w+)}}([\s\S]*?){{\/if}}/g,
-      (match, variable, content) => {
+      (_, variable, content) => {
         return variables[variable] && variables[variable].trim() !== '' ? content : ''
       }
     )
 
-    // Créer le transport
-    const transport = nodemailer.createTransport({
+    // Configuration adaptative selon le provider
+    const config = getOptimalConfig(email)
+    
+    const transportConfig = {
       host: 'ssl0.ovh.net',
-      port: 465,
-      secure: true,
+      port: config.port,
+      secure: config.secure,
+      requireTLS: config.requireTLS,
+      tls: config.tls,
       auth: {
         user: process.env.EMAIL_LOGIN,
         pass: process.env.EMAIL_PASSWORD,
       },
-      tls: {
-        rejectUnauthorized: false,
+      // DKIM maintenant activé avec DNS configuré
+      dkim: {
+        domainName: 'hosteed.com',
+        keySelector: 'hosteed',
+        privateKey: (() => {
+          try {
+            return fs.readFileSync(
+              path.join(process.cwd(), 'dkim-keys', 'hosteed-private.pem'),
+              'utf8'
+            )
+          } catch {
+            console.warn('DKIM key not found, emails will be sent without DKIM signature')
+            return ''
+          }
+        })(),
       },
-      // DKIM temporairement désactivé pour éviter les conflits
-      // dkim: {
-      //   domainName: 'hosteed.com',
-      //   keySelector: 'ovh',
-      //   privateKey: process.env.DKIM_PRIVATE_KEY || '',
-      // },
-    } as nodemailer.TransportOptions)
+      // Pool de connexions pour de meilleures performances
+      pool: true,
+      maxConnections: 5,
+      maxMessages: 100,
+    } as nodemailer.TransportOptions
 
     const mailOptions: Mail.Options = {
-      from: `"Hosteed" <${process.env.EMAIL_LOGIN}>`,
+      from: `"Hosteed Platform" <${process.env.EMAIL_LOGIN}>`,
       replyTo: process.env.EMAIL_LOGIN,
       to: email,
       subject: subject,
+      priority: config.priority,
       headers: {
-        'X-Mailer': 'Hosteed Platform',
-        'X-Priority': '3',
-      },
+        ...config.headers,
+        'Message-ID': `<${Date.now()}-${Math.random().toString(36)}@hosteed.com>`,
+        'Date': new Date().toUTCString(),
+        'X-Entity-Ref-ID': `hosteed-template-${templateName}-${Date.now()}`,
+        'X-Template-Name': templateName,
+      } as Record<string, string>,
       html: htmlContent,
     }
 
-    const sendMailPromise = () =>
-      new Promise<string>((resolve, reject) => {
-        transport.sendMail(mailOptions, function (err) {
-          if (!err) {
-            resolve('Email sent')
-          } else {
-            reject(err.message)
-          }
-        })
-      })
-
-    await sendMailPromise()
+    console.log(`📧 Envoi template ${templateName} vers ${email} (provider: ${email.split('@')[1]})`)
+    const result = await retryEmailSend(transportConfig, mailOptions)
     console.log(`EMAIL TEMPLATE ${templateName} ENVOYÉ AVEC SUCCÈS À ${email}`)
-    return { success: true, message: 'Email sent' }
+    
+    return { 
+      success: true, 
+      message: 'Email sent',
+      messageId: result.messageId,
+      template: templateName,
+      provider: email.split('@')[1],
+      config: config.port
+    }
   } catch (err) {
     console.error(`ERREUR D'ENVOI D'EMAIL TEMPLATE ${templateName}:`, err)
     return {
       success: false,
       error: err instanceof Error ? err.message : 'Erreur inconnue',
+      template: templateName,
+      email: email,
+      provider: email.split('@')[1]
     }
   }
 }
