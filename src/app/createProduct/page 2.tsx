@@ -256,8 +256,8 @@ export default function CreateProductPage() {
         }
       }
 
-      if (selectedFiles.length + filesArray.length > 10) {
-        setError('Maximum 10 photos autorisées')
+      if (selectedFiles.length + filesArray.length > 35) {
+        setError('Maximum 35 photos autorisées')
         return
       }
 

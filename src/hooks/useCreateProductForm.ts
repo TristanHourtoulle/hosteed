@@ -9,6 +9,7 @@ import {
   validateImages,
 } from '@/lib/schemas/product.schema'
 import { createProduct } from '@/lib/services/product.service'
+import { compressImages, formatFileSize } from '@/lib/utils/imageCompression'
 
 // Hook personnalisé pour le formulaire de création de produit
 export function useCreateProductForm() {
@@ -49,14 +50,28 @@ export function useCreateProductForm() {
     mode: 'onChange', // Validation en temps réel
   })
 
-  // Fonction de conversion d'images en base64
+  // Fonction de conversion d'images en base64 avec compression
   const convertFilesToBase64 = async (files: File[]): Promise<string[]> => {
     setIsUploadingImages(true)
     try {
-      const promises = files.map(file => {
+      // First compress the images
+      const compressedFiles = await compressImages(files, {
+        maxSizeMB: 0.8,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+        quality: 0.8,
+      }, (progress, fileName) => {
+        console.log(`Compression: ${Math.round(progress)}% - ${fileName}`)
+      })
+
+      // Then convert to base64
+      const promises = compressedFiles.map((file, index) => {
         return new Promise<string>((resolve, reject) => {
           const reader = new FileReader()
-          reader.onloadend = () => resolve(reader.result as string)
+          reader.onloadend = () => {
+            console.log(`Image ${index + 1} (${file.name}) final size: ${formatFileSize(file.size)}`)
+            resolve(reader.result as string)
+          }
           reader.onerror = () => reject(new Error(`Erreur de lecture de l'image: ${file.name}`))
           reader.readAsDataURL(file)
         })
@@ -69,19 +84,49 @@ export function useCreateProductForm() {
     }
   }
 
-  // Validation des images
-  const validateAndSetImages = (files: File[]): boolean => {
-    const validation = validateImages(files)
+  // Validation et compression des images
+  const validateAndSetImages = async (files: File[]): Promise<boolean> => {
+    // Basic file validation first
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) {
+        setGlobalError('Veuillez sélectionner uniquement des images')
+        return false
+      }
+      if (file.size > 50 * 1024 * 1024) { // 50MB max before compression
+        setGlobalError('La taille de chaque image ne doit pas dépasser 50MB')
+        return false
+      }
+    }
 
-    if (!validation.success) {
-      const errorMessage = validation.error.issues.map(issue => issue.message).join(', ')
-      setGlobalError(`Erreur images: ${errorMessage}`)
+    if (selectedFiles.length + files.length > 35) {
+      setGlobalError('Maximum 35 photos autorisées')
       return false
     }
 
-    setSelectedFiles(files)
-    setGlobalError('')
-    return true
+    try {
+      setIsUploadingImages(true)
+      setGlobalError('Compression des images en cours...')
+      
+      // Compress images before adding them
+      const compressedFiles = await compressImages(files, {
+        maxSizeMB: 0.8,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+        quality: 0.8,
+      }, (progress, fileName) => {
+        setGlobalError(`Compression: ${Math.round(progress)}% - ${fileName}`)
+      })
+
+      setSelectedFiles(prev => [...prev, ...compressedFiles])
+      setGlobalError('')
+      return true
+    } catch (error) {
+      console.error('Image compression failed:', error)
+      setGlobalError('Erreur lors de la compression des images')
+      return false
+    } finally {
+      setIsUploadingImages(false)
+    }
   }
 
   // Gestion de la soumission du formulaire

@@ -92,7 +92,7 @@ export const imageFileSchema = z.object({
 export const imagesSchema = z
   .array(imageFileSchema)
   .min(1, 'Au moins une image est obligatoire')
-  .max(10, 'Maximum 10 images autorisées')
+  .max(35, 'Maximum 35 images autorisées')
 
 // Fonction utilitaire pour valider les données du formulaire
 export function validateProductForm(data: unknown) {
