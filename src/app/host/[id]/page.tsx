@@ -260,6 +260,7 @@ export default function ProductDetails() {
           prevImage={prevImage}
           setShowAllPhotos={setShowAllPhotos}
           setShowFullscreen={setShowFullscreen}
+          setCurrentImageIndex={setCurrentImageIndex}
         />
 
         {showFullscreen && (
@@ -306,7 +307,7 @@ export default function ProductDetails() {
               {/* Image */}
               <div className='relative max-h-[80vh] w-auto aspect-auto'>
                 <Image
-                  src={product.img[currentImageIndex]?.img || product.img[0].img}
+                  src={product.img[currentImageIndex]?.img || ''}
                   alt={product.name}
                   width={800}
                   height={600}
