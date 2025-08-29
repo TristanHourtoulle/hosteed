@@ -1,5 +1,6 @@
 'use server'
 import prisma from '@/lib/prisma'
+import { invalidateStaticDataCache } from '@/lib/cache/invalidation'
 
 export async function findAllEquipments() {
   try {
@@ -24,12 +25,17 @@ export async function findEquipmentById(id: string) {
 }
 export async function createEquipment(name: string, icon: string) {
   try {
-    return await prisma.equipment.create({
+    const result = await prisma.equipment.create({
       data: {
         name,
         icon,
       },
     })
+    
+    // Invalider le cache après création
+    await invalidateStaticDataCache('equipments')
+    
+    return result
   } catch (error) {
     console.error('Erreur lors de la création des equipements', error)
     return null
@@ -38,7 +44,7 @@ export async function createEquipment(name: string, icon: string) {
 
 export async function updateEquipment(id: string, name: string, icon: string) {
   try {
-    return await prisma.equipment.update({
+    const result = await prisma.equipment.update({
       where: {
         id,
       },
@@ -47,6 +53,11 @@ export async function updateEquipment(id: string, name: string, icon: string) {
         icon,
       },
     })
+    
+    // Invalider le cache après modification
+    await invalidateStaticDataCache('equipments')
+    
+    return result
   } catch (error) {
     console.error("Erreur lors de la mise à jour d'un équipement", error)
     return null
@@ -60,6 +71,10 @@ export async function deleteEquipement(id: string) {
         id,
       },
     })
+    
+    // Invalider le cache après suppression
+    await invalidateStaticDataCache('equipments')
+    
     if (req) return true
   } catch (error) {
     console.error("Erreur lors de la suppresion d'un equipement", error)

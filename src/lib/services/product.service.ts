@@ -6,6 +6,7 @@ import { findAllUserByRoles } from '@/lib/services/user.service'
 import { createValidationHistory } from '@/lib/services/validation.service'
 import { ProductValidation } from '@prisma/client'
 import { CreateProductInput } from '@/lib/interface/userInterface'
+import { invalidateProductCache } from '@/lib/cache/invalidation'
 
 export async function findProductById(id: string) {
   try {
@@ -328,6 +329,9 @@ export async function createProduct(data: CreateProductInput) {
       // Ne pas faire échouer la création du produit
     }
 
+    // Invalider le cache après création
+    await invalidateProductCache()
+    
     return finalProduct
   } catch (error) {
     console.error('Error creating product:', error)
@@ -382,6 +386,10 @@ export async function validateProduct(id: string) {
         )
       })
     }
+    
+    // Invalider le cache après validation
+    await invalidateProductCache(id)
+    
     return product
   } catch (error) {
     console.error('Erreur lors de la validation du produit:', error)
@@ -415,6 +423,9 @@ export async function rejectProduct(id: string) {
         )
       })
     }
+    
+    // Invalider le cache après rejet
+    await invalidateProductCache(id)
 
     return product
   } catch (error) {
