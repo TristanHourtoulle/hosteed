@@ -29,8 +29,8 @@ import {
   Shield,
   CheckSquare,
   X,
-  Eye,
-  Grid3x3,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -41,6 +41,7 @@ import {
   getValidationHistory,
 } from '../actions'
 import { ValidationHistoryCard } from '../components/ValidationHistoryCard'
+import ImageGallery from '@/app/host/[id]/components/ImageGallery'
 
 interface ValidationHistoryEntry {
   id: string
@@ -170,7 +171,9 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
   const [reason, setReason] = useState('')
   const [productId, setProductId] = useState<string | null>(null)
   const [validationHistory, setValidationHistory] = useState<ValidationHistoryEntry[]>([])
-  const [showAllImages, setShowAllImages] = useState(false)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [showAllPhotos, setShowAllPhotos] = useState(false)
+  const [showFullscreen, setShowFullscreen] = useState(false)
 
   useEffect(() => {
     const getParams = async () => {
@@ -223,6 +226,7 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
       fetchProduct()
     }
   }, [productId, fetchProduct])
+
 
   const handleApprove = async () => {
     if (!product || !session?.user?.id) return
@@ -294,6 +298,18 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
       setError('Erreur lors de la demande de révision')
     } finally {
       setActionLoading(false)
+    }
+  }
+
+  const nextImage = () => {
+    if (product?.img && product.img.length > 0) {
+      setCurrentImageIndex(prev => (prev + 1) % product.img!.length)
+    }
+  }
+
+  const prevImage = () => {
+    if (product?.img && product.img.length > 0) {
+      setCurrentImageIndex(prev => (prev - 1 + product.img!.length) % product.img!.length)
     }
   }
 
@@ -391,81 +407,81 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
           {/* Contenu principal */}
           <div className='lg:col-span-2 space-y-6'>
             {/* Images */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Photos de l&apos;annonce</CardTitle>
-                {product.img && product.img.length > 4 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowAllImages(!showAllImages)}
-                    className="text-xs"
+            {product.img && product.img.length > 0 && (
+              <ImageGallery
+                images={product.img}
+                productName={product.name}
+                currentImageIndex={currentImageIndex}
+                nextImage={nextImage}
+                prevImage={prevImage}
+                setShowAllPhotos={setShowAllPhotos}
+                setShowFullscreen={setShowFullscreen}
+                setCurrentImageIndex={setCurrentImageIndex}
+              />
+            )}
+
+            {/* Modale Fullscreen */}
+            {showFullscreen && (
+              <div
+                className='fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-lg transition-all animate-fadein'
+                tabIndex={-1}
+                onKeyDown={e => {
+                  if (e.key === 'Escape') setShowFullscreen(false)
+                  if (e.key === 'ArrowLeft') prevImage()
+                  if (e.key === 'ArrowRight') nextImage()
+                }}
+              >
+                <div className='relative bg-white p-0 rounded-2xl shadow-2xl flex items-center justify-center max-w-4xl w-full max-h-[80vh] animate-popin'>
+                  {/* Close button */}
+                  <button
+                    onClick={() => setShowFullscreen(false)}
+                    className='absolute top-4 right-4 bg-white hover:bg-gray-100 rounded-full p-2 shadow-lg z-10'
+                    aria-label='Fermer'
                   >
-                    {showAllImages ? (
-                      <>
-                        <Grid3x3 className="h-3 w-3 mr-1" />
-                        Moins de photos
-                      </>
-                    ) : (
-                      <>
-                        <Eye className="h-3 w-3 mr-1" />
-                        Voir toutes les photos ({product.img.length})
-                      </>
-                    )}
-                  </Button>
-                )}
-              </CardHeader>
-              <CardContent>
-                {product.img && product.img.length > 0 ? (
-                  <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                    {(showAllImages ? product.img : product.img.slice(0, 6)).map((image, index) => (
-                      <div key={index} className='relative h-48 rounded-lg overflow-hidden group cursor-pointer'>
-                        <Image
-                          src={image.img}
-                          alt={`Photo ${index + 1}`}
-                          fill
-                          className='object-cover transition-transform group-hover:scale-105'
-                        />
-                        <div className='absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 flex items-center justify-center'>
-                          <Eye className='h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity' />
-                        </div>
-                        <div className='absolute top-2 left-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded'>
-                          {index + 1}/{product.img?.length || 0}
-                        </div>
-                      </div>
-                    ))}
-                    {!showAllImages && product.img.length > 6 && (
-                      <div 
-                        className='relative h-48 rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100 border-2 border-dashed border-blue-300 flex items-center justify-center cursor-pointer hover:from-blue-200 hover:to-indigo-200 transition-all'
-                        onClick={() => setShowAllImages(true)}
-                      >
-                        <div className='text-center'>
-                          <Eye className='h-8 w-8 text-blue-500 mx-auto mb-2' />
-                          <span className='text-blue-700 font-medium'>
-                            +{product.img.length - 6} autres photos
-                          </span>
-                          <p className='text-blue-600 text-xs mt-1'>Cliquez pour voir toutes</p>
-                        </div>
-                      </div>
-                    )}
+                    <X className='h-6 w-6 text-gray-700' />
+                  </button>
+                  {/* Prev button */}
+                  {product.img && product.img.length > 1 && (
+                    <button
+                      onClick={e => {
+                        e.stopPropagation()
+                        prevImage()
+                      }}
+                      className='absolute left-2 top-1/2 -translate-y-1/2 bg-white hover:bg-gray-100 rounded-full p-2 shadow-lg z-10'
+                      aria-label='Précédent'
+                    >
+                      <ChevronLeft className='h-6 w-6 text-gray-700' />
+                    </button>
+                  )}
+                  {/* Next button */}
+                  {product.img && product.img.length > 1 && (
+                    <button
+                      onClick={e => {
+                        e.stopPropagation()
+                        nextImage()
+                      }}
+                      className='absolute right-2 top-1/2 -translate-y-1/2 bg-white hover:bg-gray-100 rounded-full p-2 shadow-lg z-10'
+                      aria-label='Suivant'
+                    >
+                      <ChevronRight className='h-6 w-6 text-gray-700' />
+                    </button>
+                  )}
+                  {/* Image */}
+                  <div className='relative max-h-[80vh] w-auto aspect-auto'>
+                    <Image
+                      src={product.img?.[currentImageIndex]?.img || ''}
+                      alt={product.name}
+                      width={800}
+                      height={600}
+                      className='max-h-[80vh] w-auto object-contain rounded-2xl transition-all'
+                      draggable={false}
+                      unoptimized
+                    />
                   </div>
-                ) : (
-                  <div className='h-48 bg-gray-100 rounded-lg flex items-center justify-center'>
-                    <div className='text-center'>
-                      <Home className='h-12 w-12 text-gray-400 mx-auto mb-2' />
-                      <p className='text-gray-500'>Aucune photo disponible</p>
-                    </div>
-                  </div>
-                )}
-                {showAllImages && product.img && product.img.length > 6 && (
-                  <div className='mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200'>
-                    <p className='text-blue-700 text-sm text-center'>
-                      <strong>{product.img?.length || 0}</strong> photos au total affichées
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                </div>
+              </div>
+            )}
+
 
             {/* Description */}
             <Card>
