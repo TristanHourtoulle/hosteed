@@ -140,7 +140,7 @@ export default function BookingCard({
             ) : (
               <div className='flex items-center gap-1'>
                 <Star className='h-4 w-4 text-gray-300' />
-                <span className='text-sm text-gray-500'>(aucune note)</span>
+                <span className='text-sm text-gray-500'>(aucun avis)</span>
               </div>
             )}
           </div>
