@@ -12,6 +12,7 @@ import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { toast } from 'sonner'
 import Image from 'next/image'
+import ExtraSelectionStep from '@/components/booking/ExtraSelectionStep'
 
 interface Option {
   id: string
@@ -60,7 +61,7 @@ export default function ReservationPage() {
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [step, setStep] = useState(2) // 2: personal info, 3: payment (étape dates supprimée)
+  const [step, setStep] = useState(2) // 2: extras selection, 3: personal info, 4: payment (étape dates supprimée)
 
   // Get URL parameters
   const checkInParam = searchParams.get('checkIn')
@@ -77,6 +78,10 @@ export default function ReservationPage() {
     phone: '',
     specialRequests: '',
   })
+
+  // États pour les extras
+  const [selectedExtraIds, setSelectedExtraIds] = useState<string[]>([])
+  const [extrasCost, setExtrasCost] = useState(0)
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -165,10 +170,7 @@ export default function ReservationPage() {
     if (nights <= 0) return 0
 
     const basePrice = parseFloat(product.basePrice) * nights
-    const optionsPrice = product.options
-      .filter(() => false) // Pas d'options sélectionnées dans cette version simplifiée
-      .reduce((sum, option) => sum + Number(option.price), 0)
-    const subtotal = basePrice + optionsPrice
+    const subtotal = basePrice + extrasCost
     const commission = (subtotal * product.commission) / 100
 
     return Math.round(subtotal + commission)
@@ -182,11 +184,14 @@ export default function ReservationPage() {
 
   const handleNextStep = () => {
     if (step === 2) {
+      // Étape des extras - pas de validation particulière, on peut continuer
+      setStep(3)
+    } else if (step === 3) {
       if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone) {
         toast.error('Veuillez remplir tous les champs obligatoires')
         return
       }
-      setStep(3)
+      setStep(4)
     }
   }
 
@@ -224,7 +229,7 @@ export default function ReservationPage() {
             lastName: formData.lastName,
             phone: formData.phone,
             specialRequests: formData.specialRequests,
-            options: [], // Pas d'options dans cette version simplifiée
+            selectedExtras: selectedExtraIds,
             prices: total,
           },
         }),
@@ -270,9 +275,6 @@ export default function ReservationPage() {
 
   const nights = calculateNights()
   const subtotal = parseFloat(product.basePrice) * nights
-  const optionsTotal = product.options
-    .filter(() => false) // Pas d'options sélectionnées
-    .reduce((sum, option) => sum + Number(option.price), 0)
   const cleaningFee = 25
   const serviceFee = 0
   const taxes = Math.round(subtotal * 0.1)
@@ -295,7 +297,7 @@ export default function ReservationPage() {
 
             {/* Progress Steps */}
             <div className='flex items-center space-x-2 sm:space-x-4'>
-              {[1, 2].map(stepNum => (
+              {[1, 2, 3].map(stepNum => (
                 <div key={stepNum} className='flex items-center'>
                   <div
                     className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium ${
@@ -308,7 +310,7 @@ export default function ReservationPage() {
                   >
                     {stepNum < step - 1 ? <Check className='w-3 h-3 sm:w-4 sm:h-4' /> : stepNum}
                   </div>
-                  {stepNum < 2 && (
+                  {stepNum < 3 && (
                     <div
                       className={`w-6 sm:w-12 h-1 mx-1 sm:mx-2 ${stepNum < step - 1 ? 'bg-green-500' : 'bg-gray-200'}`}
                     />
@@ -318,8 +320,8 @@ export default function ReservationPage() {
             </div>
 
             <div className='text-xs sm:text-sm text-gray-600'>
-              <span className='hidden sm:inline'>Étape {step - 1} sur 2</span>
-              <span className='sm:hidden'>{step - 1}/2</span>
+              <span className='hidden sm:inline'>Étape {step - 1} sur 3</span>
+              <span className='sm:hidden'>{step - 1}/3</span>
             </div>
           </div>
         </div>
@@ -370,6 +372,18 @@ export default function ReservationPage() {
 
             {/* Step Content */}
             {step === 2 && (
+              <ExtraSelectionStep
+                productId={id as string}
+                numberOfDays={calculateNights()}
+                guestCount={formData.peopleNumber}
+                currency='EUR'
+                selectedExtraIds={selectedExtraIds}
+                onSelectionChange={setSelectedExtraIds}
+                onCostChange={setExtrasCost}
+              />
+            )}
+
+            {step === 3 && (
               <Card>
                 <CardHeader>
                   <CardTitle className='text-lg sm:text-xl'>Informations personnelles</CardTitle>
@@ -448,7 +462,7 @@ export default function ReservationPage() {
               </Card>
             )}
 
-            {step === 3 && (
+            {step === 4 && (
               <Card>
                 <CardHeader>
                   <CardTitle className='flex items-center'>
@@ -518,13 +532,13 @@ export default function ReservationPage() {
                       </span>
                     </div>
 
-                    {optionsTotal > 0 && (
+                    {extrasCost > 0 && (
                       <div className='flex justify-between items-start'>
                         <span className='text-gray-600 text-sm sm:text-base flex-1 pr-2'>
-                          Options
+                          Options supplémentaires
                         </span>
                         <span className='font-medium text-sm sm:text-base flex-shrink-0'>
-                          +{optionsTotal}€
+                          +{extrasCost.toFixed(2)}€
                         </span>
                       </div>
                     )}
@@ -564,11 +578,11 @@ export default function ReservationPage() {
                 )}
 
                 <div className='pt-4'>
-                  {step < 3 ? (
+                  {step < 4 ? (
                     <Button
                       onClick={handleNextStep}
                       disabled={
-                        step === 2 &&
+                        step === 3 &&
                         (!formData.firstName ||
                           !formData.lastName ||
                           !formData.email ||
@@ -576,7 +590,7 @@ export default function ReservationPage() {
                       }
                       className='w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-3 sm:py-4 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base'
                     >
-                      Finaliser
+                      {step === 2 ? 'Continuer' : step === 3 ? 'Finaliser' : 'Continuer'}
                     </Button>
                   ) : (
                     <Button
