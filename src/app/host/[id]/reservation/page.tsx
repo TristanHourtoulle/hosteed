@@ -13,6 +13,7 @@ import { fr } from 'date-fns/locale'
 import { toast } from 'sonner'
 import Image from 'next/image'
 import ExtraSelectionStep from '@/components/booking/ExtraSelectionStep'
+import PhoneInput from '@/components/ui/PhoneInput'
 
 interface Option {
   id: string
@@ -50,6 +51,7 @@ interface FormData {
   lastName: string
   email: string
   phone: string
+  phoneCountry: string
   specialRequests: string
 }
 
@@ -76,6 +78,7 @@ export default function ReservationPage() {
     lastName: '',
     email: session?.user?.email || '',
     phone: '',
+    phoneCountry: 'MG',
     specialRequests: '',
   })
 
@@ -434,13 +437,19 @@ export default function ReservationPage() {
                       <label className='block text-sm font-medium text-gray-700 mb-2'>
                         Téléphone *
                       </label>
-                      <input
-                        type='tel'
-                        name='phone'
+                      <PhoneInput
                         value={formData.phone}
-                        onChange={handleInputChange}
-                        className='w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base'
+                        defaultCountry={formData.phoneCountry}
+                        onChange={(phoneNumber, countryCode) => {
+                          setFormData(prev => ({
+                            ...prev,
+                            phone: phoneNumber,
+                            phoneCountry: countryCode
+                          }))
+                        }}
+                        placeholder="XX XX XX XX"
                         required
+                        className="w-full"
                       />
                     </div>
                   </div>
