@@ -659,3 +659,21 @@ model Post {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+// Configuration des commissions (globale pour la plateforme)
+model CommissionSettings {
+  id                    String   @id @default(cuid())
+  // Commission côté hébergeur
+  hostCommissionRate    Float    @default(0.0)  // Taux en pourcentage (ex: 5.0 pour 5%)
+  hostCommissionFixed   Float    @default(0.0)  // Frais fixes en euros
+  // Commission côté client  
+  clientCommissionRate  Float    @default(0.0)  // Taux en pourcentage
+  clientCommissionFixed Float    @default(0.0)  // Frais fixes en euros
+  // Metadata
+  isActive             Boolean   @default(true)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  createdBy            String?   // ID de l'admin qui a créé
+  
+  @@map("commission_settings")
+}
