@@ -20,14 +20,10 @@ export enum ValidationCommentStatus {
 }
 
 export const validationService = {
-  // Récupérer tous les produits en attente de validation avec contexte enrichi
+  // Récupérer tous les produits pour la validation (tous les statuts)
   async getProductsForValidation() {
     const products = await prisma.product.findMany({
-      where: {
-        validate: {
-          in: [ProductValidation.NotVerified, ProductValidation.RecheckRequest],
-        },
-      },
+      where: {},
       include: {
         user: {
           select: {

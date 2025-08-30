@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { validationService } from '@/lib/services/validation-simple.service'
+import { deleteRejectedProduct, deleteMultipleRejectedProducts } from '@/lib/services/product.service'
 import prisma from '@/lib/prisma'
 
 export async function getProductsForValidation() {
@@ -202,3 +203,34 @@ export async function getValidationComments(productId: string) {
     return { success: false, error: 'Impossible de charger les commentaires' }
   }
 }
+
+export async function deleteSingleRejectedProduct(productId: string) {
+  try {
+    await deleteRejectedProduct(productId)
+
+    // Force la revalidation des pages
+    revalidatePath('/admin/validation', 'page')
+    revalidatePath('/admin', 'page')
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error deleting rejected product:', error)
+    return { success: false, error: 'Erreur lors de la suppression du produit rejeté' }
+  }
+}
+
+export async function deleteBulkRejectedProducts(productIds: string[]) {
+  try {
+    await deleteMultipleRejectedProducts(productIds)
+
+    // Force la revalidation des pages
+    revalidatePath('/admin/validation', 'page')
+    revalidatePath('/admin', 'page')
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error deleting rejected products:', error)
+    return { success: false, error: 'Erreur lors de la suppression des produits rejetés' }
+  }
+}
+

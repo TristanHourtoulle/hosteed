@@ -107,6 +107,12 @@ export async function SendMail(
   message: string,
   isHtml: boolean = false
 ) {
+  // Ignorer les emails de test en développement
+  if (process.env.NODE_ENV === 'development' && email.includes('@example.com')) {
+    console.log('📧 Email de test ignoré en développement:', email)
+    return { messageId: 'skipped-test-email', response: 'Test email skipped in development' }
+  }
+
   // Configuration adaptative selon le provider
   const config = getOptimalConfig(email)
   
