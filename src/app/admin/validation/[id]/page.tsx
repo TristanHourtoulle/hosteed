@@ -225,7 +225,7 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
     if (productId) {
       fetchProduct()
     }
-  }, [productId, fetchProduct])
+  }, [productId]) // Retirer fetchProduct des dépendances pour éviter la boucle infinie
 
 
   const handleApprove = async () => {
