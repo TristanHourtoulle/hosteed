@@ -13,7 +13,9 @@ export function ClientProviders({ children }: ClientProvidersProps) {
   return (
     <SessionProvider>
       <QueryProvider>
-        <UserProfileProvider>{children}</UserProfileProvider>
+        <UserProfileProvider>
+          {children}
+        </UserProfileProvider>
       </QueryProvider>
     </SessionProvider>
   )
