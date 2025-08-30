@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -35,13 +36,6 @@ import { findAllSecurity } from '@/lib/services/security.services'
 import { createProduct } from '@/lib/services/product.service'
 import { findAllUser } from '@/lib/services/user.service'
 import { compressImages, formatFileSize } from '@/lib/utils/imageCompression'
-import { ExtraPriceType } from '@prisma/client'
-import CreateServiceModal from '@/components/ui/CreateServiceModal'
-import CreateExtraModal from '@/components/ui/CreateExtraModal'
-import CreateHighlightModal from '@/components/ui/CreateHighlightModal'
-import BookingCostSummary from '@/components/ui/BookingCostSummary'
-import SortableImageGrid from '@/components/ui/SortableImageGrid'
-import ImageGalleryPreview from '@/components/ui/ImageGalleryPreview'
 
 interface TypeRent {
   id: string
@@ -72,29 +66,24 @@ interface Service {
 interface IncludedService {
   id: string
   name: string
-  description: string | null
-  icon: string | null
-  userId: string | null
+  description?: string
+  icon?: string
 }
 
 interface ProductExtra {
   id: string
   name: string
-  description: string | null
+  description?: string
   priceEUR: number
   priceMGA: number
-  type: ExtraPriceType
-  userId: string | null
-  createdAt?: Date
-  updatedAt?: Date
+  type: string
 }
 
 interface PropertyHighlight {
   id: string
   name: string
-  description: string | null
-  icon: string | null
-  userId: string | null
+  description?: string
+  icon?: string
 }
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -121,12 +110,6 @@ interface NearbyPlace {
   name: string
   distance: string
   unit: 'mètres' | 'kilomètres'
-}
-
-interface ImageFile {
-  file: File
-  preview: string
-  id: string
 }
 
 interface FormData {
@@ -165,8 +148,7 @@ export default function CreateProductPage() {
   const [isUploadingImages, setIsUploadingImages] = useState(false)
   const [error, setError] = useState('')
   const [dragActive, setDragActive] = useState(false)
-  const [selectedFiles, setSelectedFiles] = useState<ImageFile[]>([])
-  const [showGalleryPreview, setShowGalleryPreview] = useState(false)
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [newPlace, setNewPlace] = useState({
     name: '',
     distance: '',
@@ -174,18 +156,6 @@ export default function CreateProductPage() {
   })
   const [userSelected, setUserSelected] = useState('')
   const [assignToOtherUser, setAssignToOtherUser] = useState(false)
-
-  // États pour les modaux de création personnalisée
-  const [serviceModalOpen, setServiceModalOpen] = useState(false)
-  const [extraModalOpen, setExtraModalOpen] = useState(false)
-  const [highlightModalOpen, setHighlightModalOpen] = useState(false)
-
-  // État pour simuler une réservation de test pour l'aperçu des coûts
-  const [testBooking] = useState({
-    startDate: new Date(),
-    endDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 jours plus tard
-    guestCount: 2
-  })
 
   // Form data
   const [formData, setFormData] = useState<FormData>({
@@ -241,7 +211,7 @@ export default function CreateProductPage() {
 
   // Functions to load new data
   const loadIncludedServices = async (): Promise<IncludedService[]> => {
-    const response = await fetch('/api/user/included-services')
+    const response = await fetch('/api/admin/included-services')
     if (response.ok) {
       return await response.json()
     }
@@ -249,7 +219,7 @@ export default function CreateProductPage() {
   }
 
   const loadExtras = async (): Promise<ProductExtra[]> => {
-    const response = await fetch('/api/user/extras')
+    const response = await fetch('/api/admin/extras')
     if (response.ok) {
       return await response.json()
     }
@@ -257,7 +227,7 @@ export default function CreateProductPage() {
   }
 
   const loadHighlights = async (): Promise<PropertyHighlight[]> => {
-    const response = await fetch('/api/user/highlights')
+    const response = await fetch('/api/admin/highlights')
     if (response.ok) {
       return await response.json()
     }
@@ -298,29 +268,6 @@ export default function CreateProductPage() {
 
     loadData()
   }, [])
-
-  // Fonctions pour gérer les nouveaux services/extras/highlights créés
-  const handleServiceCreated = (newService: IncludedService) => {
-    setIncludedServices(prev => [...prev, newService])
-  }
-
-  const handleExtraCreated = (newExtra: ProductExtra) => {
-    setExtras(prev => [...prev, newExtra])
-  }
-
-  const handleHighlightCreated = (newHighlight: PropertyHighlight) => {
-    setHighlights(prev => [...prev, newHighlight])
-  }
-
-  // Calcul mémorisé pour les extras sélectionnés avec leurs données complètes
-  const selectedExtras = useMemo(() => {
-    return extras.filter(extra => formData.extraIds.includes(extra.id))
-  }, [extras, formData.extraIds])
-
-  // Calcul mémorisé pour le nombre de jours de la réservation de test
-  const numberOfDays = useMemo(() => {
-    return Math.ceil((testBooking.endDate.getTime() - testBooking.startDate.getTime()) / (1000 * 60 * 60 * 24))
-  }, [testBooking.startDate, testBooking.endDate])
 
   // Redirection si non connecté
   useEffect(() => {
@@ -382,8 +329,8 @@ export default function CreateProductPage() {
         }
       }
 
-      if (selectedFiles.length + filesArray.length > 35) {
-        setError('Maximum 35 photos autorisées')
+      if (selectedFiles.length + filesArray.length > 10) {
+        setError('Maximum 10 photos autorisées')
         return
       }
 
@@ -399,14 +346,7 @@ export default function CreateProductPage() {
           quality: 0.8,
         })
 
-        // Create ImageFile objects with previews and unique IDs
-        const imageFiles: ImageFile[] = compressedFiles.map((file, index) => ({
-          file,
-          preview: URL.createObjectURL(file),
-          id: `img-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 11)}`
-        }))
-
-        setSelectedFiles(prev => [...prev, ...imageFiles])
+        setSelectedFiles(prev => [...prev, ...compressedFiles])
         setError('') // Clear any previous errors
 
         // Log compression results
@@ -425,17 +365,16 @@ export default function CreateProductPage() {
     }
   }
 
-  const removeFileById = (id: string) => {
-    const imageFile = selectedFiles.find(img => img.id === id)
-    if (imageFile?.preview) {
-      URL.revokeObjectURL(imageFile.preview)
+  const removeFile = (index: number) => {
+    // Libérer la mémoire de l'URL d'objet correspondante
+    if (imageUrls[index]) {
+      URL.revokeObjectURL(imageUrls[index])
     }
-    setSelectedFiles(prev => prev.filter(img => img.id !== id))
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index))
   }
 
   // Convert files to base64 with compression
-  const convertFilesToBase64 = async (imageFiles: ImageFile[]): Promise<string[]> => {
-    const files = imageFiles.map(img => img.file)
+  const convertFilesToBase64 = async (files: File[]): Promise<string[]> => {
     setIsUploadingImages(true)
     try {
       // First compress the images
@@ -468,7 +407,27 @@ export default function CreateProductPage() {
     }
   }
 
-  // Note: Object URLs are cleaned up manually in removeFileById when images are removed
+  // Mémoriser les URLs des images pour éviter les re-créations
+  const imageUrls = useMemo(() => {
+    return selectedFiles.map(file => URL.createObjectURL(file))
+  }, [selectedFiles])
+
+  // Nettoyer les URLs quand les fichiers changent
+  useEffect(() => {
+    return () => {
+      imageUrls.forEach(url => URL.revokeObjectURL(url))
+    }
+  }, [imageUrls])
+
+  // Cleanup object URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      selectedFiles.forEach(file => {
+        const url = URL.createObjectURL(file)
+        URL.revokeObjectURL(url)
+      })
+    }
+  }, [selectedFiles])
 
   // Nearby places management
   const addNearbyPlace = () => {
@@ -1189,22 +1148,10 @@ export default function CreateProductPage() {
                 <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
                   {/* Services inclus */}
                   <div className='border-2 border-slate-200 rounded-xl p-4 bg-white/50 backdrop-blur-sm flex flex-col h-full'>
-                    <div className='flex items-center justify-between mb-4'>
-                      <h4 className='font-medium text-slate-700 flex items-center gap-2'>
-                        <Package className='h-4 w-4' />
-                        Services inclus
-                      </h4>
-                      <Button
-                        type='button'
-                        size='sm'
-                        variant='outline'
-                        onClick={() => setServiceModalOpen(true)}
-                        className='text-xs'
-                      >
-                        <Plus className='h-3 w-3 mr-1' />
-                        Ajouter
-                      </Button>
-                    </div>
+                    <h4 className='font-medium text-slate-700 flex items-center gap-2 mb-4'>
+                      <Package className='h-4 w-4' />
+                      Services inclus
+                    </h4>
                     <div className='flex-1 space-y-2 content-start'>
                       {includedServices.map(service => (
                         <label
@@ -1244,16 +1191,9 @@ export default function CreateProductPage() {
                               )}
                             </div>
                             <div className='flex-1 min-w-0'>
-                              <div className='flex items-center gap-1 mb-1'>
-                                <span className='text-xs font-medium text-slate-700 block truncate'>
-                                  {service.name}
-                                </span>
-                                {service.userId && (
-                                  <span className='text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium'>
-                                    Personnel
-                                  </span>
-                                )}
-                              </div>
+                              <span className='text-xs font-medium text-slate-700 block truncate'>
+                                {service.name}
+                              </span>
                               {service.description && (
                                 <span className='text-xs text-slate-500 block truncate'>
                                   {service.description}
@@ -1268,22 +1208,10 @@ export default function CreateProductPage() {
 
                   {/* Extras payants */}
                   <div className='border-2 border-slate-200 rounded-xl p-4 bg-white/50 backdrop-blur-sm flex flex-col h-full'>
-                    <div className='flex items-center justify-between mb-4'>
-                      <h4 className='font-medium text-slate-700 flex items-center gap-2'>
-                        <Plus className='h-4 w-4' />
-                        Options payantes
-                      </h4>
-                      <Button
-                        type='button'
-                        size='sm'
-                        variant='outline'
-                        onClick={() => setExtraModalOpen(true)}
-                        className='text-xs'
-                      >
-                        <Plus className='h-3 w-3 mr-1' />
-                        Ajouter
-                      </Button>
-                    </div>
+                    <h4 className='font-medium text-slate-700 flex items-center gap-2 mb-4'>
+                      <Plus className='h-4 w-4' />
+                      Options payantes
+                    </h4>
                     <div className='flex-1 space-y-2 content-start'>
                       {extras.map(extra => (
                         <label
@@ -1323,16 +1251,9 @@ export default function CreateProductPage() {
                               )}
                             </div>
                             <div className='flex-1 min-w-0'>
-                              <div className='flex items-center gap-1 mb-1'>
-                                <span className='text-xs font-medium text-slate-700 block truncate'>
-                                  {extra.name}
-                                </span>
-                                {extra.userId && (
-                                  <span className='text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium'>
-                                    Personnel
-                                  </span>
-                                )}
-                              </div>
+                              <span className='text-xs font-medium text-slate-700 block truncate'>
+                                {extra.name}
+                              </span>
                               <span className='text-xs text-green-600 block'>
                                 {extra.priceEUR}€ / {extra.priceMGA.toLocaleString()}Ar
                               </span>
@@ -1350,22 +1271,10 @@ export default function CreateProductPage() {
 
                   {/* Points forts */}
                   <div className='border-2 border-slate-200 rounded-xl p-4 bg-white/50 backdrop-blur-sm flex flex-col h-full'>
-                    <div className='flex items-center justify-between mb-4'>
-                      <h4 className='font-medium text-slate-700 flex items-center gap-2'>
-                        <Highlighter className='h-4 w-4' />
-                        Points forts
-                      </h4>
-                      <Button
-                        type='button'
-                        size='sm'
-                        variant='outline'
-                        onClick={() => setHighlightModalOpen(true)}
-                        className='text-xs'
-                      >
-                        <Plus className='h-3 w-3 mr-1' />
-                        Ajouter
-                      </Button>
-                    </div>
+                    <h4 className='font-medium text-slate-700 flex items-center gap-2 mb-4'>
+                      <Highlighter className='h-4 w-4' />
+                      Points forts
+                    </h4>
                     <div className='flex-1 space-y-2 content-start'>
                       {highlights.map(highlight => (
                         <label
@@ -1405,16 +1314,9 @@ export default function CreateProductPage() {
                               )}
                             </div>
                             <div className='flex-1 min-w-0'>
-                              <div className='flex items-center gap-1 mb-1'>
-                                <span className='text-xs font-medium text-slate-700 block truncate'>
-                                  {highlight.name}
-                                </span>
-                                {highlight.userId && (
-                                  <span className='text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full font-medium'>
-                                    Personnel
-                                  </span>
-                                )}
-                              </div>
+                              <span className='text-xs font-medium text-slate-700 block truncate'>
+                                {highlight.name}
+                              </span>
                               {highlight.description && (
                                 <span className='text-xs text-slate-500 block truncate'>
                                   {highlight.description}
@@ -1427,26 +1329,6 @@ export default function CreateProductPage() {
                     </div>
                   </div>
                 </div>
-
-                {/* Aperçu des coûts */}
-                {(selectedExtras.length > 0 && formData.basePrice) && (
-                  <div className='mt-6'>
-                    <h3 className='text-lg font-semibold mb-4 text-slate-700'>Aperçu des coûts</h3>
-                    <BookingCostSummary
-                      basePrice={parseFloat(formData.basePrice) || 0}
-                      numberOfDays={numberOfDays}
-                      guestCount={testBooking.guestCount}
-                      selectedExtras={selectedExtras}
-                      currency='EUR'
-                      startDate={testBooking.startDate}
-                      endDate={testBooking.endDate}
-                      className='max-w-md'
-                    />
-                    <p className='text-xs text-slate-500 mt-2'>
-                      * Exemple calculé sur {numberOfDays} jour{numberOfDays > 1 ? 's' : ''} pour {testBooking.guestCount} personne{testBooking.guestCount > 1 ? 's' : ''}
-                    </p>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </motion.div>
@@ -1462,7 +1344,7 @@ export default function CreateProductPage() {
                   <div>
                     <CardTitle className='text-xl'>Photos de l&apos;hébergement</CardTitle>
                     <p className='text-slate-600 text-sm mt-1'>
-                      Ajoutez des photos attrayantes de votre hébergement (maximum 35)
+                      Ajoutez des photos attrayantes de votre hébergement (maximum 10)
                       {selectedFiles.length > 0 && (
                         <span className='ml-2 font-medium text-blue-600'>
                           {selectedFiles.length} photo{selectedFiles.length > 1 ? 's' : ''}{' '}
@@ -1512,7 +1394,7 @@ export default function CreateProductPage() {
                         PNG, JPG, JPEG, WEBP jusqu&apos;à 50MB chacune (compressées automatiquement)
                         {selectedFiles.length > 0 && (
                           <span className='block mt-1 text-green-600 font-medium'>
-                            ✓ {selectedFiles.length}/35 photos sélectionnées
+                            ✓ {selectedFiles.length}/10 photos sélectionnées
                           </span>
                         )}
                         {isUploadingImages && (
@@ -1525,18 +1407,28 @@ export default function CreateProductPage() {
                   </div>
                 </div>
 
-                <SortableImageGrid
-                  images={selectedFiles}
-                  onReorder={setSelectedFiles}
-                  onRemove={removeFileById}
-                  onPreview={() => setShowGalleryPreview(true)}
-                />
-
-                <ImageGalleryPreview
-                  images={selectedFiles}
-                  isOpen={showGalleryPreview}
-                  onClose={() => setShowGalleryPreview(false)}
-                />
+                {selectedFiles.length > 0 && (
+                  <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
+                    {selectedFiles.map((file, index) => (
+                      <div key={index} className='relative group'>
+                        <Image
+                          src={imageUrls[index]}
+                          alt={`Aperçu ${index + 1}`}
+                          width={200}
+                          height={96}
+                          className='w-full h-24 object-cover rounded-lg border border-slate-200'
+                        />
+                        <button
+                          type='button'
+                          onClick={() => removeFile(index)}
+                          className='absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 transition-colors'
+                        >
+                          <X className='h-3 w-3' />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
@@ -1797,27 +1689,6 @@ export default function CreateProductPage() {
             </Button>
           </motion.div>
         </form>
-
-        {/* Modaux pour créer des services personnalisés */}
-        <CreateServiceModal
-          isOpen={serviceModalOpen}
-          onClose={() => setServiceModalOpen(false)}
-          onServiceCreated={handleServiceCreated}
-          title="Ajouter un service inclus personnalisé"
-          description="Créez un service inclus spécifique à votre hébergement"
-        />
-
-        <CreateExtraModal
-          isOpen={extraModalOpen}
-          onClose={() => setExtraModalOpen(false)}
-          onExtraCreated={handleExtraCreated}
-        />
-
-        <CreateHighlightModal
-          isOpen={highlightModalOpen}
-          onClose={() => setHighlightModalOpen(false)}
-          onHighlightCreated={handleHighlightCreated}
-        />
       </motion.div>
     </div>
   )

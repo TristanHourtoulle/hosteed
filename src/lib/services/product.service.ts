@@ -29,6 +29,9 @@ export async function findProductById(id: string) {
           },
         },
         securities: true,
+        includedServices: true,
+        extras: true,
+        highlights: true,
         reviews: {
           where: {
             approved: true,
@@ -202,6 +205,15 @@ export async function createProduct(data: CreateProductInput) {
         },
         securities: {
           connect: data.securities.map(securityId => ({ id: securityId })),
+        },
+        includedServices: {
+          connect: data.includedServices?.map(serviceId => ({ id: serviceId })) || [],
+        },
+        extras: {
+          connect: data.extras?.map(extraId => ({ id: extraId })) || [],
+        },
+        highlights: {
+          connect: data.highlights?.map(highlightId => ({ id: highlightId })) || [],
         },
         img: {
           create: data.images.map(img => ({ img })),

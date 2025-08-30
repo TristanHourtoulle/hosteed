@@ -27,6 +27,68 @@ model Services {
   products Product[] @relation("ProductToServices")
 }
 
+// Nouveaux modèles pour la gestion des services et extras
+
+model IncludedService {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  icon        String?   // Nom de l'icône pour l'affichage
+  userId      String?   // Si null = service global, si défini = service personnel
+  products    Product[] @relation("ProductToIncludedService")
+  user        User?     @relation("UserIncludedServices", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model ProductExtra {
+  id          String          @id @default(cuid())
+  name        String
+  description String?
+  priceEUR    Float
+  priceMGA    Float
+  type        ExtraPriceType
+  userId      String?         // Si null = extra global, si défini = extra personnel
+  products    Product[]       @relation("ProductToProductExtra")
+  rentExtras  RentExtra[]     // Relation avec les réservations
+  user        User?           @relation("UserExtras", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model PropertyHighlight {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  icon        String?   // Nom de l'icône pour l'affichage
+  userId      String?   // Si null = highlight global, si défini = highlight personnel
+  products    Product[] @relation("ProductToPropertyHighlight")
+  user        User?     @relation("UserHighlights", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// Modèle pour associer les extras aux réservations
+model RentExtra {
+  id            String       @id @default(cuid())
+  rentId        String
+  extraId       String
+  quantity      Int          @default(1)
+  totalPrice    Float
+  rent          Rent         @relation(fields: [rentId], references: [id], onDelete: Cascade)
+  extra         ProductExtra @relation(fields: [extraId], references: [id], onDelete: Cascade)
+  createdAt     DateTime     @default(now())
+
+  @@unique([rentId, extraId])
+}
+
+enum ExtraPriceType {
+  PER_DAY        // par jour
+  PER_PERSON     // par personne
+  PER_DAY_PERSON // par jour et par personne
+  PER_BOOKING    // par réservation
+}
+
 model Meals {
   id       String    @id @default(cuid())
   name     String
@@ -117,6 +179,11 @@ model Product {
   hotel hotel[]
 
   PromotedProduct PromotedProduct[]
+
+  // Nouvelles relations pour services, extras et points forts
+  includedServices   IncludedService[]    @relation("ProductToIncludedService")
+  extras             ProductExtra[]       @relation("ProductToProductExtra")
+  highlights         PropertyHighlight[]  @relation("ProductToPropertyHighlight")
 
   // Nouveaux champs pour la validation améliorée
   validationComments ValidationComment[]
@@ -244,6 +311,7 @@ model Rent {
   Chat          Chat[]
   RentRejection RentRejection?
   UserRating    UserRating[] // Nouvelle relation pour les notes bidirectionnelles
+  extras        RentExtra[]  // Relation avec les extras sélectionnés
 }
 
 model RentRejection {
@@ -389,6 +457,11 @@ model User {
   givenRatings    UserRating[] @relation("GivenRatings") // Notes données par cet utilisateur
   receivedRatings UserRating[] @relation("ReceivedRatings") // Notes reçues par cet utilisateur
   approvedRatings UserRating[] @relation("ApprovedRatings") // Notes validées par cet admin
+
+  // Relations pour les services personnalisés
+  personalIncludedServices IncludedService[]    @relation("UserIncludedServices") // Services inclus personnalisés
+  personalExtras          ProductExtra[]       @relation("UserExtras") // Extras personnalisés
+  personalHighlights      PropertyHighlight[]  @relation("UserHighlights") // Points forts personnalisés
 }
 
 model Account {
