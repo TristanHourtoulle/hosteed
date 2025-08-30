@@ -174,6 +174,7 @@ export default function ModernSearchBar({
                 selected={dateRange}
                 onSelect={setDateRange}
                 numberOfMonths={2}
+                locale={fr}
                 className='rounded-lg border'
                 classNames={{
                   months: 'flex gap-4 flex-col md:flex-row relative',
