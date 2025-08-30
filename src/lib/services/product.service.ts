@@ -529,6 +529,83 @@ export async function rejectProduct(id: string) {
   }
 }
 
+export async function deleteRejectedProduct(id: string) {
+  try {
+    // Récupérer le produit avec ses utilisateurs avant suppression
+    const product = await prisma.product.findUnique({
+      where: { id },
+      include: {
+        user: true,
+      },
+    })
+
+    if (!product) {
+      throw new Error('Produit non trouvé')
+    }
+
+    if (product.validate !== ProductValidation.Refused) {
+      throw new Error('Seuls les produits rejetés peuvent être supprimés')
+    }
+
+    // Supprimer le produit (les relations seront supprimées automatiquement grâce aux contraintes CASCADE)
+    await prisma.product.delete({
+      where: { id },
+    })
+
+    // Invalider le cache après suppression
+    await invalidateProductCache(id)
+
+    return { success: true, productName: product.name, userEmails: product.user.map(u => u.email) }
+  } catch (error) {
+    console.error('Erreur lors de la suppression du produit rejeté:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Erreur inconnue' }
+  }
+}
+
+export async function deleteMultipleRejectedProducts(ids: string[]) {
+  try {
+    // Récupérer tous les produits avec leurs utilisateurs avant suppression
+    const products = await prisma.product.findMany({
+      where: { 
+        id: { in: ids },
+        validate: ProductValidation.Refused // Sécurité supplémentaire
+      },
+      include: {
+        user: true,
+      },
+    })
+
+    if (products.length === 0) {
+      throw new Error('Aucun produit rejeté trouvé')
+    }
+
+    // Vérifier que tous les produits sont bien rejetés
+    const nonRejectedProducts = products.filter(p => p.validate !== ProductValidation.Refused)
+    if (nonRejectedProducts.length > 0) {
+      throw new Error('Certains produits ne sont pas rejetés et ne peuvent pas être supprimés')
+    }
+
+    // Supprimer tous les produits en une seule transaction
+    const deletedCount = await prisma.product.deleteMany({
+      where: { id: { in: products.map(p => p.id) } },
+    })
+
+    // Invalider le cache pour tous les produits
+    const cachePromises = products.map(p => invalidateProductCache(p.id))
+    await Promise.allSettled(cachePromises)
+
+    return { 
+      success: true, 
+      deletedCount: deletedCount.count,
+      productNames: products.map(p => p.name),
+      userEmails: [...new Set(products.flatMap(p => p.user.map(u => u.email)))] // Emails uniques
+    }
+  } catch (error) {
+    console.error('Erreur lors de la suppression en masse:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Erreur inconnue' }
+  }
+}
+
 export async function resubmitProductWithChange(
   id: string,
   params: {
