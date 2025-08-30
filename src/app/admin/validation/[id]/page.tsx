@@ -239,9 +239,8 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
         reason || 'Approuvé par admin'
       )
       if (result.success) {
-        // Rafraîchir les données
-        await fetchProduct()
-        setReason('')
+        // Rediriger vers la liste de validation
+        window.location.href = '/admin/validation'
       } else {
         setError(result.error || "Erreur lors de l'approbation")
       }
@@ -263,9 +262,8 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
     try {
       const result = await rejectProduct(product.id, session.user.id, reason)
       if (result.success) {
-        // Rafraîchir les données
-        await fetchProduct()
-        setReason('')
+        // Rediriger vers la liste de validation
+        window.location.href = '/admin/validation'
       } else {
         setError(result.error || 'Erreur lors du refus')
       }

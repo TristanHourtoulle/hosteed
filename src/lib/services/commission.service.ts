@@ -45,7 +45,12 @@ async function getCommissionSettings() {
         clientCommissionFixed: 0.0,
       }
     } else {
-      cachedCommissionSettings = settings
+      cachedCommissionSettings = {
+        hostCommissionRate: Number(settings.hostCommissionRate) || 0,
+        hostCommissionFixed: Number(settings.hostCommissionFixed) || 0,
+        clientCommissionRate: Number(settings.clientCommissionRate) || 0,
+        clientCommissionFixed: Number(settings.clientCommissionFixed) || 0,
+      }
     }
     
     cacheTimestamp = now
