@@ -261,9 +261,11 @@ export default function BookingCard({
                         {guests} {guests === 1 ? 'voyageur' : 'voyageurs'}
                       </span>
                     </div>
-                    <div className='text-xs text-gray-500'>
-                      Max {product.maxPeople || 8} voyageurs
-                    </div>
+                    {product.maxPeople && (
+                      <div className='text-xs text-gray-500'>
+                        Max {product.maxPeople} voyageur{product.maxPeople > 1 ? 's' : ''}
+                      </div>
+                    )}
                   </div>
                 </button>
               </PopoverTrigger>
@@ -294,10 +296,11 @@ export default function BookingCard({
                         size='icon'
                         className='rounded-full flex items-center justify-center h-8 w-8'
                         onClick={() => {
-                          if (guests < (product.maxPeople || 8)) {
+                          const maxGuests = product.maxPeople || 1
+                          if (guests < maxGuests) {
                             setGuests(guests + 1)
                           } else {
-                            toast.error(`Nombre maximum de voyageurs: ${product.maxPeople || 8}`)
+                            toast.error(`Nombre maximum de voyageurs: ${maxGuests}`)
                           }
                         }}
                       >

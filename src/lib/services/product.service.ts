@@ -34,6 +34,10 @@ export async function findProductById(id: string) {
         extras: true,
         highlights: true,
         hotel: true, // Inclure les informations hôtel
+        rules: true, // Inclure les règles
+        nearbyPlaces: true, // Inclure les lieux à proximité
+        transportOptions: true, // Inclure les options de transport
+        propertyInfo: true, // Inclure les informations de propriété
         reviews: {
           where: {
             approved: true,
@@ -296,6 +300,24 @@ export async function createProduct(data: CreateProductInput) {
       })
     }
     */
+
+    // Créer automatiquement les règles avec les heures converties en format string
+    const formatHour = (hour: number | string): string => {
+      const hourNumber = typeof hour === 'string' ? parseInt(hour, 10) : hour
+      return `${hourNumber.toString().padStart(2, '0')}:00`
+    }
+
+    await prisma.rules.create({
+      data: {
+        productId: createdProduct.id,
+        checkInTime: formatHour(data.arriving),
+        checkOutTime: formatHour(data.leaving),
+        smokingAllowed: false,
+        petsAllowed: false,
+        eventsAllowed: false,
+        selfCheckIn: false,
+      },
+    })
 
     // Gestion spécifique aux hôtels
     if (data.isHotel && data.hotelInfo) {
