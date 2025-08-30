@@ -38,6 +38,11 @@ export interface CancellationPolicy {
   additionalTerms?: string
 }
 
+export interface HotelInfo {
+  name: string
+  availableRooms: number
+}
+
 export interface CreateProductInput {
   name: string
   description: string
@@ -65,6 +70,9 @@ export interface CreateProductInput {
   transportOptions?: TransportOption[]
   propertyInfo?: PropertyInfo
   cancellationPolicy?: CancellationPolicy
+  // Nouveaux champs pour les hôtels
+  isHotel?: boolean
+  hotelInfo?: HotelInfo | null
 }
 
 export interface Product {
