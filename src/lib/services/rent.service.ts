@@ -28,12 +28,149 @@ export interface RentDetails {
   payment: string
 }
 
+export async function checkHotelRoomAvailability(
+  productId: string,
+  startDate: Date,
+  endDate: Date
+): Promise<{ available: boolean; message?: string; availableRooms?: number }> {
+  try {
+    // Récupérer les informations du produit (chambre d'hôtel)
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      select: {
+        availableRooms: true,
+        name: true,
+        hotel: {
+          select: {
+            name: true,
+          }
+        }
+      },
+    })
+
+    if (!product || !product.availableRooms) {
+      return {
+        available: false,
+        message: 'Informations sur le nombre de chambres non disponibles',
+      }
+    }
+
+    // Compter le nombre de réservations confirmées sur cette période
+    const existingRents = await prisma.rent.findMany({
+      where: {
+        productId: productId,
+        status: RentStatus.RESERVED,
+        OR: [
+          // Réservation qui commence pendant la période
+          {
+            arrivingDate: {
+              gte: startDate,
+              lte: endDate,
+            },
+          },
+          // Réservation qui se termine pendant la période
+          {
+            leavingDate: {
+              gte: startDate,
+              lte: endDate,
+            },
+          },
+          // Réservation qui englobe la période
+          {
+            arrivingDate: {
+              lte: startDate,
+            },
+            leavingDate: {
+              gte: endDate,
+            },
+          },
+        ],
+      },
+    })
+
+    const bookedRooms = existingRents.length
+    const availableRooms = product.availableRooms - bookedRooms
+
+    // Vérifier s'il existe des périodes d'indisponibilité (maintenance, etc.)
+    const existingUnavailable = await prisma.unAvailableProduct.findMany({
+      where: {
+        productId: productId,
+        OR: [
+          {
+            startDate: {
+              gte: startDate,
+              lte: endDate,
+            },
+          },
+          {
+            endDate: {
+              gte: startDate,
+              lte: endDate,
+            },
+          },
+          {
+            startDate: {
+              lte: startDate,
+            },
+            endDate: {
+              gte: endDate,
+            },
+          },
+        ],
+      },
+    })
+
+    if (existingUnavailable.length > 0) {
+      return {
+        available: false,
+        message: 'Cette période est marquée comme indisponible par l\'hébergeur',
+        availableRooms: 0,
+      }
+    }
+
+    return {
+      available: availableRooms > 0,
+      message: availableRooms > 0 
+        ? `${availableRooms} chambre(s) disponible(s) sur ${product.availableRooms}`
+        : 'Aucune chambre disponible pour cette période',
+      availableRooms: availableRooms,
+    }
+  } catch (error) {
+    console.error('Erreur lors de la vérification de disponibilité hôtel:', error)
+    return {
+      available: false,
+      message: 'Erreur lors de la vérification de disponibilité',
+    }
+  }
+}
+
 export async function checkRentIsAvailable(
   productId: string,
   startDate: Date,
   endDate: Date
 ): Promise<{ available: boolean; message?: string }> {
   try {
+    // Vérifier d'abord si c'est un produit d'hôtel avec plusieurs chambres
+    const productInfo = await prisma.product.findUnique({
+      where: { id: productId },
+      select: {
+        availableRooms: true,
+        hotel: {
+          select: { id: true }
+        }
+      },
+    })
+
+    // Si c'est un hôtel avec plusieurs chambres, utiliser la logique hôtel
+    if (productInfo?.availableRooms && productInfo.availableRooms > 1) {
+      const hotelAvailability = await checkHotelRoomAvailability(productId, startDate, endDate)
+      return {
+        available: hotelAvailability.available,
+        message: hotelAvailability.message,
+      }
+    }
+
+    // Sinon, utiliser la logique classique (une seule unité)
     // Vérifier s'il existe des réservations sur cette période
     const existingRents = await prisma.rent.findMany({
       where: {

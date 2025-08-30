@@ -7,6 +7,7 @@ import { createValidationHistory } from '@/lib/services/validation.service'
 import { ProductValidation } from '@prisma/client'
 import { CreateProductInput } from '@/lib/interface/userInterface'
 import { invalidateProductCache } from '@/lib/cache/invalidation'
+import { create as createHotel, findHotelByManagerId } from '@/lib/services/hotel.service'
 
 export async function findProductById(id: string) {
   try {
@@ -32,6 +33,7 @@ export async function findProductById(id: string) {
         includedServices: true,
         extras: true,
         highlights: true,
+        hotel: true, // Inclure les informations hôtel
         reviews: {
           where: {
             approved: true,
@@ -190,6 +192,8 @@ export async function createProduct(data: CreateProductInput) {
         categories: BigInt(0),
         validate: ProductValidation.NotVerified,
         userManager: BigInt(0),
+        // Gestion du nombre de chambres disponibles pour les hôtels
+        availableRooms: data.hotelInfo ? data.hotelInfo.availableRooms : null,
         type: { connect: { id: data.typeId } },
         user: {
           connect: data.userId.map(id => ({ id })),
@@ -290,6 +294,61 @@ export async function createProduct(data: CreateProductInput) {
       })
     }
     */
+
+    // Gestion spécifique aux hôtels
+    if (data.isHotel && data.hotelInfo) {
+      try {
+        // Vérifier si l'utilisateur a déjà un hôtel avec ce nom
+        const managerId = data.userId[0] // Premier utilisateur comme manager
+        const existingHotels = await findHotelByManagerId({ id: managerId })
+        
+        let hotelId: string | null = null
+        
+        if (existingHotels && Array.isArray(existingHotels)) {
+          // Chercher un hôtel existant avec le même nom
+          const existingHotel = existingHotels.find(hotel => 
+            hotel.name.toLowerCase() === data.hotelInfo!.name.toLowerCase()
+          )
+          
+          if (existingHotel) {
+            hotelId = existingHotel.id
+            console.log(`Hôtel existant trouvé: ${existingHotel.name} (ID: ${hotelId})`)
+          }
+        }
+        
+        // Si aucun hôtel existant, en créer un nouveau
+        if (!hotelId) {
+          const newHotel = await createHotel({
+            name: data.hotelInfo.name,
+            number: data.phone || '', // Utiliser le téléphone ou string vide
+            adress: data.address,
+            manager: managerId,
+          })
+          
+          if (newHotel && typeof newHotel === 'object' && 'id' in newHotel) {
+            hotelId = newHotel.id
+            console.log(`Nouvel hôtel créé: ${data.hotelInfo.name} (ID: ${hotelId})`)
+          }
+        }
+        
+        // Associer le produit (chambre) à l'hôtel
+        if (hotelId) {
+          await prisma.product.update({
+            where: { id: createdProduct.id },
+            data: {
+              hotel: {
+                connect: { id: hotelId },
+              },
+            },
+          })
+          console.log(`Produit associé à l'hôtel: ${hotelId}`)
+        }
+        
+      } catch (hotelError) {
+        console.error('Erreur lors de la gestion de l\'hôtel:', hotelError)
+        // Ne pas faire échouer la création du produit pour un problème d'hôtel
+      }
+    }
 
     // Récupérer le produit avec toutes ses relations
     const finalProduct = await prisma.product.findUnique({

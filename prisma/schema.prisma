@@ -154,6 +154,7 @@ model Product {
   certified        Boolean           @default(false)
   contract         Boolean           @default(false)
   sizeRoom         Int?
+  availableRooms   Int?              // Nombre de chambres disponibles pour les hôtels
   options          Options[]
   type             TypeRent          @relation(fields: [typeId], references: [id])
   user             User[]

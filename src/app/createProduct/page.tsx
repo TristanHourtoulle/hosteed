@@ -155,6 +155,10 @@ interface FormData {
   petFriendly: boolean
   nearbyPlaces: NearbyPlace[]
   transportation: string
+  // Nouveaux champs pour les hôtels
+  isHotel: boolean
+  hotelName: string
+  availableRooms: string
 }
 
 export default function CreateProductPage() {
@@ -214,6 +218,10 @@ export default function CreateProductPage() {
     petFriendly: false,
     nearbyPlaces: [],
     transportation: '',
+    // Nouveaux champs pour les hôtels
+    isHotel: false,
+    hotelName: '',
+    availableRooms: '',
   })
 
   // Data from services
@@ -233,10 +241,26 @@ export default function CreateProductPage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value, type } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
-    }))
+    
+    // Si on change le type d'hébergement, vérifier si c'est un hôtel
+    if (name === 'typeId') {
+      const selectedType = types.find(t => t.id === value)
+      const isHotelType = Boolean(selectedType?.name.toLowerCase().includes('hôtel') || selectedType?.name.toLowerCase().includes('hotel'))
+      
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        isHotel: isHotelType,
+        // Réinitialiser les champs hôtel si ce n'est pas un hôtel
+        hotelName: isHotelType ? prev.hotelName : '',
+        availableRooms: isHotelType ? prev.availableRooms : '',
+      }))
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
+      }))
+    }
   }
 
   // Functions to load new data
@@ -519,6 +543,21 @@ export default function CreateProductPage() {
       return
     }
 
+    // Validation spécifique aux hôtels
+    if (formData.isHotel) {
+      if (!formData.hotelName.trim()) {
+        setError("Le nom de l'hôtel est requis")
+        setIsLoading(false)
+        return
+      }
+      
+      if (!formData.availableRooms || Number(formData.availableRooms) <= 0) {
+        setError('Le nombre de chambres disponibles doit être supérieur à 0')
+        setIsLoading(false)
+        return
+      }
+    }
+
     if (selectedFiles.length === 0) {
       setError('Veuillez ajouter au moins une photo de votre hébergement')
       setIsLoading(false)
@@ -564,6 +603,12 @@ export default function CreateProductPage() {
           duration: 0, // TODO: Calculer la durée si nécessaire
           transport: place.unit === 'kilomètres' ? 'voiture' : 'à pied',
         })),
+        // Données spécifiques aux hôtels
+        isHotel: formData.isHotel,
+        hotelInfo: formData.isHotel ? {
+          name: formData.hotelName,
+          availableRooms: Number(formData.availableRooms),
+        } : null,
       }
 
       const result = await createProduct(productData)
@@ -859,6 +904,86 @@ export default function CreateProductPage() {
                   </CardContent>
                 </Card>
               </motion.div>
+
+              {/* Configuration Hôtel - Affiché uniquement si c'est un hôtel */}
+              {formData.isHotel && (
+                <motion.div variants={itemVariants}>
+                  <Card className='border-0 shadow-lg bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50'>
+                    <CardHeader className='space-y-2'>
+                      <div className='flex items-center gap-2'>
+                        <div className='p-2 bg-amber-100 rounded-lg'>
+                          <Users className='h-5 w-5 text-amber-700' />
+                        </div>
+                        <div>
+                          <CardTitle className='text-xl text-amber-900'>Configuration Hôtel</CardTitle>
+                          <p className='text-amber-700 text-sm mt-1'>
+                            Configuration spécifique pour la gestion hôtelière
+                          </p>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className='space-y-6'>
+                      <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+                        <div className='space-y-2'>
+                          <label htmlFor='hotelName' className='text-sm font-medium text-amber-800'>
+                            Nom de l&apos;hôtel
+                          </label>
+                          <Input
+                            id='hotelName'
+                            name='hotelName'
+                            type='text'
+                            placeholder='Ex: Hôtel des Jardins'
+                            value={formData.hotelName}
+                            onChange={handleInputChange}
+                            className='border-amber-200 focus:border-amber-400 focus:ring-amber-200 bg-white/80'
+                          />
+                          <p className='text-xs text-amber-600'>
+                            Nom officiel de l&apos;établissement hôtelier
+                          </p>
+                        </div>
+
+                        <div className='space-y-2'>
+                          <label htmlFor='availableRooms' className='text-sm font-medium text-amber-800'>
+                            Nombre de chambres disponibles
+                          </label>
+                          <Input
+                            id='availableRooms'
+                            name='availableRooms'
+                            type='number'
+                            min='1'
+                            placeholder='Ex: 5'
+                            value={formData.availableRooms}
+                            onChange={handleInputChange}
+                            className='border-amber-200 focus:border-amber-400 focus:ring-amber-200 bg-white/80'
+                          />
+                          <p className='text-xs text-amber-600'>
+                            Nombre de chambres de ce type disponibles
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className='bg-amber-100 border border-amber-200 rounded-lg p-4'>
+                        <div className='flex items-start gap-3'>
+                          <div className='p-1.5 bg-amber-200 rounded-full'>
+                            <Home className='h-4 w-4 text-amber-700' />
+                          </div>
+                          <div className='flex-1'>
+                            <h4 className='text-sm font-semibold text-amber-800 mb-1'>
+                              Fonctionnement Hôtelier
+                            </h4>
+                            <p className='text-xs text-amber-700 leading-relaxed'>
+                              Cette chambre représente un type de chambre dans votre hôtel. 
+                              Si vous avez <span className='font-semibold'>{formData.availableRooms || 'X'}</span> chambres 
+                              de ce type, plusieurs clients pourront réserver en même temps sur les mêmes dates, 
+                              tant que le nombre de chambres disponibles le permet.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
 
               {/* Tarification */}
               <motion.div variants={itemVariants}>
