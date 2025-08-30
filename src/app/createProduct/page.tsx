@@ -43,6 +43,7 @@ import BookingCostSummary from '@/components/ui/BookingCostSummary'
 import SortableImageGrid from '@/components/ui/SortableImageGrid'
 import ImageGalleryPreview from '@/components/ui/ImageGalleryPreview'
 import CommissionDisplay from '@/components/ui/CommissionDisplay'
+import PhoneInput from '@/components/ui/PhoneInput'
 
 interface TypeRent {
   id: string
@@ -135,6 +136,7 @@ interface FormData {
   description: string
   address: string
   phone: string
+  phoneCountry: string
   room: string
   bathroom: string
   arriving: string
@@ -198,6 +200,7 @@ export default function CreateProductPage() {
     description: '',
     address: '',
     phone: '',
+    phoneCountry: 'MG',
     room: '',
     bathroom: '',
     arriving: '',
@@ -797,15 +800,19 @@ export default function CreateProductPage() {
                         <label htmlFor='phone' className='text-sm font-medium text-slate-700'>
                           Téléphone de contact
                         </label>
-                        <Input
-                          id='phone'
-                          name='phone'
-                          type='tel'
-                          placeholder='+33 6 XX XX XX XX'
+                        <PhoneInput
                           value={formData.phone}
-                          onChange={handleInputChange}
+                          defaultCountry={formData.phoneCountry}
+                          onChange={(phoneNumber, countryCode) => {
+                            setFormData(prev => ({
+                              ...prev,
+                              phone: phoneNumber,
+                              phoneCountry: countryCode
+                            }))
+                          }}
+                          placeholder="XX XX XX XX"
                           required
-                          className='border-slate-200 focus:border-green-300 focus:ring-green-200'
+                          className="border-slate-200 focus:border-green-300 focus:ring-green-200"
                         />
                       </div>
                     </div>

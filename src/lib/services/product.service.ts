@@ -189,6 +189,7 @@ export async function createProduct(data: CreateProductInput) {
         leaving: Number(data.leaving),
         autoAccept: false,
         phone: data.phone || '',
+        phoneCountry: data.phoneCountry || 'MG',
         categories: BigInt(0),
         validate: ProductValidation.NotVerified,
         userManager: BigInt(0),

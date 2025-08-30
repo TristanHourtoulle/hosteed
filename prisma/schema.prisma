@@ -149,6 +149,7 @@ model Product {
   userManager      BigInt
   typeId           String
   phone            String
+  phoneCountry     String            @default("MG")
   latitude         Float
   longitude        Float
   certified        Boolean           @default(false)
