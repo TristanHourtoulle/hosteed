@@ -202,16 +202,16 @@ const Navbar = () => {
   return (
     <nav className='bg-white shadow-md sticky top-0 z-50'>
       <div className='container mx-auto px-4 sm:px-6 lg:px-8'>
-        <div className='flex justify-between items-center h-16'>
+        <div className='flex justify-between items-center h-20'>
           {/* Logo */}
           <div className='flex items-center'>
             <Link href='/' className='flex items-center cursor-pointer'>
               <Image
                 src='/logo-hosteed.png'
                 alt='Hosteed'
-                width={80}
-                height={80}
-                className='h-8 w-auto'
+                width={120}
+                height={120}
+                className='h-14 w-auto'
               />
             </Link>
           </div>
