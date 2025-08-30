@@ -44,6 +44,8 @@ import SortableImageGrid from '@/components/ui/SortableImageGrid'
 import ImageGalleryPreview from '@/components/ui/ImageGalleryPreview'
 import CommissionDisplay from '@/components/ui/CommissionDisplay'
 import PhoneInput from '@/components/ui/PhoneInput'
+import ErrorAlert, { ErrorDetails } from '@/components/ui/ErrorAlert'
+import { parseCreateProductError, createValidationError } from '@/lib/utils/errorHandler'
 
 interface TypeRent {
   id: string
@@ -170,7 +172,7 @@ export default function CreateProductPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isUploadingImages, setIsUploadingImages] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState<ErrorDetails | null>(null)
   const [dragActive, setDragActive] = useState(false)
   const [selectedFiles, setSelectedFiles] = useState<ImageFile[]>([])
   const [showGalleryPreview, setShowGalleryPreview] = useState(false)
@@ -320,7 +322,21 @@ export default function CreateProductPage() {
         setUsers(usersData || [])
       } catch (error) {
         console.error('Error loading data:', error)
-        setError('Erreur lors du chargement des données')
+        setError({
+          type: 'network',
+          title: 'Erreur de chargement',
+          message: 'Impossible de charger les données nécessaires à la création d\'annonce.',
+          details: [
+            'Échec du chargement des types d\'hébergement, équipements ou services',
+            'Vérifiez votre connexion internet'
+          ],
+          suggestions: [
+            'Actualisez la page pour réessayer',
+            'Vérifiez votre connexion internet',
+            'Si le problème persiste, contactez le support'
+          ],
+          retryable: true
+        })
       }
     }
 
@@ -400,24 +416,65 @@ export default function CreateProductPage() {
       // Validation des fichiers
       for (const file of filesArray) {
         if (!file.type.startsWith('image/')) {
-          setError('Veuillez sélectionner uniquement des images')
+          setError({
+            type: 'file',
+            title: 'Format de fichier non supporté',
+            message: 'Seules les images sont acceptées.',
+            details: [
+              `Fichier rejeté: ${file.name}`,
+              `Type détecté: ${file.type || 'inconnu'}`
+            ],
+            suggestions: [
+              'Utilisez uniquement des fichiers image (JPEG, PNG, WebP, GIF)',
+              'Vérifiez l\'extension de vos fichiers',
+              'Évitez les documents ou vidéos'
+            ]
+          })
           return
         }
         if (file.size > 50 * 1024 * 1024) {
-          // 50MB max before compression
-          setError('La taille de chaque image ne doit pas dépasser 50MB')
+          setError({
+            type: 'file',
+            title: 'Image trop volumineuse',
+            message: 'La taille de chaque image ne doit pas dépasser 50MB.',
+            details: [
+              `Fichier: ${file.name}`,
+              `Taille: ${(file.size / (1024 * 1024)).toFixed(1)}MB`,
+              'Limite: 50MB par image'
+            ],
+            suggestions: [
+              'Réduisez la résolution de votre image',
+              'Utilisez un outil de compression d\'image en ligne',
+              'Choisissez le format JPEG pour des images de plus petite taille'
+            ]
+          })
           return
         }
       }
 
       if (selectedFiles.length + filesArray.length > 35) {
-        setError('Maximum 35 photos autorisées')
+        setError({
+          type: 'file',
+          title: 'Trop d\'images sélectionnées',
+          message: 'Vous pouvez ajouter maximum 35 photos par annonce.',
+          details: [
+            `Images actuelles: ${selectedFiles.length}`,
+            `Images à ajouter: ${filesArray.length}`,
+            `Total: ${selectedFiles.length + filesArray.length}`,
+            'Limite: 35 photos maximum'
+          ],
+          suggestions: [
+            'Supprimez quelques images existantes avant d\'en ajouter de nouvelles',
+            'Sélectionnez vos meilleures photos pour mettre en valeur votre hébergement',
+            'Vous pourrez ajouter d\'autres photos après la création de l\'annonce'
+          ]
+        })
         return
       }
 
       try {
         setIsUploadingImages(true)
-        setError('Compression des images en cours...')
+        setError(null) // Clear any previous errors
 
         // Compress images before adding them
         const compressedFiles = await compressImages(filesArray, {
@@ -435,7 +492,7 @@ export default function CreateProductPage() {
         }))
 
         setSelectedFiles(prev => [...prev, ...imageFiles])
-        setError('') // Clear any previous errors
+        setError(null) // Clear any previous errors
 
         // Log compression results
         compressedFiles.forEach((file, index) => {
@@ -446,7 +503,22 @@ export default function CreateProductPage() {
         })
       } catch (error) {
         console.error('Image compression failed:', error)
-        setError('Erreur lors de la compression des images')
+        setError({
+          type: 'file',
+          title: 'Erreur de compression',
+          message: 'La compression automatique des images a échoué.',
+          details: [
+            'Certaines images peuvent être corrompues ou dans un format non supporté',
+            `Erreur technique: ${error instanceof Error ? error.message : 'inconnue'}`
+          ],
+          suggestions: [
+            'Vérifiez que vos images ne sont pas corrompues',
+            'Essayez de compresser vos images manuellement avant de les télécharger',
+            'Utilisez des formats d\'image standards (JPEG, PNG)',
+            'Réduisez la résolution de vos images si elles sont très grandes'
+          ],
+          retryable: true
+        })
       } finally {
         setIsUploadingImages(false)
       }
@@ -520,29 +592,29 @@ export default function CreateProductPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    setError('')
+    setError(null)
 
     if (!session?.user?.id) {
-      setError('Vous devez être connecté pour créer une annonce')
+      setError(createValidationError('auth', 'Vous devez être connecté pour créer une annonce'))
       setIsLoading(false)
       return
     }
 
     // Validation basique
     if (!formData.name.trim()) {
-      setError("Le nom de l'hébergement est requis")
+      setError(createValidationError('name', "Le nom de l'hébergement est requis"))
       setIsLoading(false)
       return
     }
 
     if (!formData.description.trim()) {
-      setError('La description est requise')
+      setError(createValidationError('description', 'La description est requise'))
       setIsLoading(false)
       return
     }
 
     if (!formData.typeId) {
-      setError("Veuillez sélectionner un type d'hébergement")
+      setError(createValidationError('typeId', "Veuillez sélectionner un type d'hébergement"))
       setIsLoading(false)
       return
     }
@@ -550,20 +622,20 @@ export default function CreateProductPage() {
     // Validation spécifique aux hôtels
     if (formData.isHotel) {
       if (!formData.hotelName.trim()) {
-        setError("Le nom de l'hôtel est requis")
+        setError(createValidationError('hotelName', "Le nom de l'hôtel est requis"))
         setIsLoading(false)
         return
       }
       
       if (!formData.availableRooms || Number(formData.availableRooms) <= 0) {
-        setError('Le nombre de chambres disponibles doit être supérieur à 0')
+        setError(createValidationError('availableRooms', 'Le nombre de chambres disponibles doit être supérieur à 0'))
         setIsLoading(false)
         return
       }
     }
 
     if (selectedFiles.length === 0) {
-      setError('Veuillez ajouter au moins une photo de votre hébergement')
+      setError(createValidationError('images', 'Veuillez ajouter au moins une photo de votre hébergement'))
       setIsLoading(false)
       return
     }
@@ -626,7 +698,7 @@ export default function CreateProductPage() {
       }
     } catch (error) {
       console.error('Error creating product:', error)
-      setError("Erreur lors de la création de l'annonce")
+      setError(parseCreateProductError(error))
     } finally {
       setIsLoading(false)
       setIsUploadingImages(false)
@@ -680,9 +752,14 @@ export default function CreateProductPage() {
 
         {error && (
           <motion.div variants={itemVariants}>
-            <div className='max-w-2xl mx-auto p-4 bg-red-50 border border-red-200 rounded-lg'>
-              <p className='text-red-700'>{error}</p>
-            </div>
+            <ErrorAlert 
+              error={error}
+              onClose={() => setError(null)}
+              onRetry={error.retryable ? () => {
+                setError(null)
+                // Optionally trigger the last failed action again
+              } : undefined}
+            />
           </motion.div>
         )}
 
