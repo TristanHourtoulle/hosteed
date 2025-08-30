@@ -591,6 +591,8 @@ export default function CreateProductPage() {
         arriving: Number(formData.arriving),
         leaving: Number(formData.leaving),
         phone: formData.phone,
+        phoneCountry: formData.phoneCountry || 'MG',
+        maxPeople: formData.maxPeople ? Number(formData.maxPeople) : null,
         typeId: formData.typeId,
         userId: [finalUserId],
         equipments: formData.equipmentIds,

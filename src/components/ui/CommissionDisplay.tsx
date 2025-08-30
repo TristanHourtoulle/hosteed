@@ -4,7 +4,35 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
 import { Badge } from '@/components/ui/shadcnui/badge'
 import { Calculator, TrendingUp, TrendingDown, Info } from 'lucide-react'
-import { calculateCommissions, formatCommissionBreakdown, type CommissionCalculation } from '@/lib/services/commission.service'
+
+// Interface pour les calculs de commission
+interface CommissionCalculation {
+  basePrice: number
+  hostCommission: number
+  clientCommission: number
+  totalPrice: number
+  hostReceives: number
+  clientPays: number
+  breakdown: {
+    hostCommissionRate: number
+    hostCommissionFixed: number
+    clientCommissionRate: number
+    clientCommissionFixed: number
+  }
+}
+
+// Fonction pour formater les résultats
+function formatCommissionBreakdown(calculation: CommissionCalculation) {
+  return {
+    basePrice: `${calculation.basePrice.toFixed(2)}€`,
+    hostCommission: `${calculation.hostCommission.toFixed(2)}€`,
+    clientCommission: `${calculation.clientCommission.toFixed(2)}€`,
+    hostReceives: `${calculation.hostReceives.toFixed(2)}€`,
+    clientPays: `${calculation.clientPays.toFixed(2)}€`,
+    hostCommissionPercentage: `${(calculation.breakdown.hostCommissionRate * 100).toFixed(2)}%`,
+    clientCommissionPercentage: `${(calculation.breakdown.clientCommissionRate * 100).toFixed(2)}%`,
+  }
+}
 
 interface CommissionDisplayProps {
   basePrice: number
@@ -23,8 +51,28 @@ export default function CommissionDisplay({
   useEffect(() => {
     if (basePrice && basePrice > 0) {
       setLoading(true)
-      calculateCommissions(basePrice)
-        .then(setCalculation)
+      
+      // Appel à l'API au lieu du service direct
+      fetch('/api/commission/calculate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ basePrice }),
+      })
+        .then(async (response) => {
+          const data = await response.json()
+          if (data.success) {
+            setCalculation(data.data)
+          } else {
+            console.error('Erreur API:', data.error)
+            setCalculation(null)
+          }
+        })
+        .catch((error) => {
+          console.error('Erreur lors du calcul des commissions:', error)
+          setCalculation(null)
+        })
         .finally(() => setLoading(false))
     } else {
       setCalculation(null)
