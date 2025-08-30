@@ -213,7 +213,7 @@ export default function ProductCard({ product, index = 0 }: { product: Product; 
                   ) : (
                     <>
                       <Star className='h-4 w-4 text-white/60' />
-                      <span className='text-sm text-white/80'>(aucune note)</span>
+                      <span className='text-sm text-white/80'>(aucun avis)</span>
                     </>
                   )}
                 </div>

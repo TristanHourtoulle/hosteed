@@ -7,6 +7,7 @@ import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import {
   Home,
   MapPin,
@@ -35,7 +36,9 @@ import { findAllSecurity } from '@/lib/services/security.services'
 import { createProduct } from '@/lib/services/product.service'
 import { findAllUser } from '@/lib/services/user.service'
 import { compressImages, formatFileSize } from '@/lib/utils/imageCompression'
-import { ExtraPriceType } from '@prisma/client'
+import { googleSuggestionService } from '@/lib/services/GoogleSuggestion.service'
+// Définition locale du type ExtraPriceType pour éviter les erreurs d'import
+type ExtraPriceType = 'PER_DAY' | 'PER_PERSON' | 'PER_DAY_PERSON' | 'PER_BOOKING'
 import CreateServiceModal from '@/components/ui/CreateServiceModal'
 import CreateExtraModal from '@/components/ui/CreateExtraModal'
 import CreateHighlightModal from '@/components/ui/CreateHighlightModal'
@@ -133,6 +136,7 @@ interface FormData {
   name: string
   description: string
   address: string
+  placeId?: string // ID Google Places pour récupérer les coordonnées
   phone: string
   room: string
   bathroom: string
@@ -196,6 +200,7 @@ export default function CreateProductPage() {
     name: '',
     description: '',
     address: '',
+    placeId: '',
     phone: '',
     room: '',
     bathroom: '',
@@ -241,12 +246,12 @@ export default function CreateProductPage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value, type } = e.target
-    
+
     // Si on change le type d'hébergement, vérifier si c'est un hôtel
     if (name === 'typeId') {
       const selectedType = types.find(t => t.id === value)
       const isHotelType = Boolean(selectedType?.name.toLowerCase().includes('hôtel') || selectedType?.name.toLowerCase().includes('hotel'))
-      
+
       setFormData(prev => ({
         ...prev,
         [name]: value,
@@ -550,7 +555,7 @@ export default function CreateProductPage() {
         setIsLoading(false)
         return
       }
-      
+
       if (!formData.availableRooms || Number(formData.availableRooms) <= 0) {
         setError('Le nombre de chambres disponibles doit être supérieur à 0')
         setIsLoading(false)
@@ -570,6 +575,27 @@ export default function CreateProductPage() {
       const base64Images = await convertFilesToBase64(selectedFiles)
       setIsUploadingImages(false)
 
+      // Récupérer les coordonnées géographiques si un placeId est disponible
+      let latitude = 0
+      let longitude = 0
+
+      if (formData.placeId) {
+        try {
+          const placeDetails = await googleSuggestionService.getPlaceDetails({
+            placeId: formData.placeId,
+            fields: ['geometry']
+          })
+
+          if (placeDetails?.geometry?.location) {
+            latitude = placeDetails.geometry.location.lat
+            longitude = placeDetails.geometry.location.lng
+            console.log('Coordonnées récupérées:', { latitude, longitude })
+          }
+        } catch (error) {
+          console.warn('Impossible de récupérer les coordonnées:', error)
+        }
+      }
+
       // Déterminer l'utilisateur final (admin peut assigner à un autre utilisateur)
       const finalUserId = assignToOtherUser && userSelected ? userSelected : session.user.id
 
@@ -578,8 +604,8 @@ export default function CreateProductPage() {
         name: formData.name,
         description: formData.description,
         address: formData.address,
-        longitude: 0, // Valeur par défaut puisqu'on supprime les champs
-        latitude: 0, // Valeur par défaut puisqu'on supprime les champs
+        longitude: longitude,
+        latitude: latitude,
         basePrice: formData.basePrice,
         priceMGA: formData.priceMGA,
         room: formData.room ? Number(formData.room) : null,
@@ -759,8 +785,8 @@ export default function CreateProductPage() {
               </motion.div>
 
               {/* Localisation et Contact */}
-              <motion.div variants={itemVariants}>
-                <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm'>
+              <motion.div variants={itemVariants} className="relative z-50">
+                <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm relative z-50'>
                   <CardHeader className='space-y-2'>
                     <div className='flex items-center gap-2'>
                       <div className='p-2 bg-green-50 rounded-lg'>
@@ -780,15 +806,19 @@ export default function CreateProductPage() {
                         <label htmlFor='address' className='text-sm font-medium text-slate-700'>
                           Adresse complète
                         </label>
-                        <Input
-                          id='address'
-                          name='address'
-                          type='text'
-                          placeholder='Numéro, rue, code postal, ville'
+                        <AddressAutocomplete
                           value={formData.address}
-                          onChange={handleInputChange}
-                          required
+                          onChange={(value) => setFormData(prev => ({ ...prev, address: value }))}
+                          placeholder='Numéro, rue, code postal, ville'
                           className='border-slate-200 focus:border-green-300 focus:ring-green-200'
+                          countryFilter='MG'
+                          onAddressSelect={(address, placeId) => {
+                            setFormData(prev => ({
+                              ...prev,
+                              address: address,
+                              placeId: placeId || ''
+                            }))
+                          }}
                         />
                       </div>
 
@@ -972,9 +1002,9 @@ export default function CreateProductPage() {
                               Fonctionnement Hôtelier
                             </h4>
                             <p className='text-xs text-amber-700 leading-relaxed'>
-                              Cette chambre représente un type de chambre dans votre hôtel. 
-                              Si vous avez <span className='font-semibold'>{formData.availableRooms || 'X'}</span> chambres 
-                              de ce type, plusieurs clients pourront réserver en même temps sur les mêmes dates, 
+                              Cette chambre représente un type de chambre dans votre hôtel.
+                              Si vous avez <span className='font-semibold'>{formData.availableRooms || 'X'}</span> chambres
+                              de ce type, plusieurs clients pourront réserver en même temps sur les mêmes dates,
                               tant que le nombre de chambres disponibles le permet.
                             </p>
                           </div>

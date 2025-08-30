@@ -10,6 +10,8 @@ import type { DateRange } from 'react-day-picker'
 import { Card, CardContent, CardHeader, CardTitle } from './shadcnui/card'
 import { toast } from 'sonner'
 import FilterPopover from '@/components/host/FilterPopover'
+import CityAutocomplete from './CityAutocomplete'
+import { GooglePlacePrediction } from '@/lib/services/GoogleSuggestion.service'
 
 interface FilterState {
   selectedSecurities: string[]
@@ -105,11 +107,16 @@ export default function ModernSearchBar({
     }
   }
 
+  // Gérer la sélection d'une ville depuis les suggestions
+  const handleCitySelect = (city: GooglePlacePrediction) => {
+    setLocation(city.description);
+  }
+
   return (
     <div className='w-full max-w-5xl mx-auto relative'>
       {/* Unified responsive design */}
       <div className='bg-white rounded-3xl md:rounded-full shadow-sm border border-gray-100 overflow-visible relative backdrop-blur-sm flex flex-col md:flex-row'>
-        {/* Localisation */}
+        {/* Localisation avec suggestions */}
         <div className='flex-1 md:flex-[2] px-4 md:px-5 py-4 md:py-5 md:border-r border-gray-100 min-w-0'>
           <div className='flex items-center space-x-3 h-full md:h-16'>
             <div className='p-1.5 bg-blue-50 rounded-full'>
@@ -119,17 +126,12 @@ export default function ModernSearchBar({
               <div className='text-xs font-semibold text-gray-900 mb-0.5 uppercase tracking-wide'>
                 Localisation
               </div>
-              <input
-                type='text'
+              <CityAutocomplete
+                onCitySelect={handleCitySelect}
                 placeholder='Où souhaitez-vous aller ?'
-                value={location}
-                onChange={e => setLocation(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    handleSearch()
-                  }
-                }}
-                className='w-full text-sm text-gray-700 placeholder-gray-400 border-none outline-none bg-transparent truncate font-medium'
+                defaultValue={location}
+                className='w-full'
+                countryFilter='MG' // Filtrer par défaut sur Madagascar
               />
             </div>
           </div>

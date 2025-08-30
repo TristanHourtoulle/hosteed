@@ -347,7 +347,7 @@ export default function FilterPopover({
                     placeholder='200'
                     value={localFilters.sizeMax}
                     onChange={e => handleInputChange('sizeMax', e.target.value)}
-                    className='w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                    className='w-full p-2 text-sm border border-gray-300 rounded-md focus:border-transparent'
                   />
                 </div>
               </div>
