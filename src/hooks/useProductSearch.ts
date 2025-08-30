@@ -208,7 +208,6 @@ export function useProductSearch() {
         (!filters.maxPrice || price <= parseFloat(filters.maxPrice))
 
       // Vérification du nombre de personnes : le logement doit pouvoir accueillir au moins le nombre d'invités demandé
-      console.log(`DEBUG - Produit: ${product.name}, maxPeople: ${product.maxPeople}, guests demandés: ${guests}`)
       const matchesPeople =
         // Si des invités sont spécifiés dans la recherche (barre de recherche moderne)
         (guests <= 1 || (product.maxPeople && Number(product.maxPeople) >= guests)) &&
