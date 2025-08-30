@@ -203,7 +203,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       )
 
       if (result) {
-        router.push('/dashboard/host/validation')
+        router.push('/dashboard/host')
       } else {
         setError("Erreur lors de la mise à jour de l'annonce")
         console.log(product, securities, meals)
