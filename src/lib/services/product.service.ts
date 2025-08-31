@@ -746,3 +746,374 @@ export async function resubmitProductWithChange(
     return null
   }
 }
+
+// Create a draft copy of an approved product for modification
+export async function createDraftProduct(originalProductId: string) {
+  try {
+    // Get the original product with all relationships
+    const originalProduct = await prisma.product.findUnique({
+      where: { id: originalProductId },
+      include: {
+        img: true,
+        equipments: true,
+        servicesList: true,
+        mealsList: true,
+        securities: true,
+        includedServices: true,
+        extras: true,
+        highlights: true,
+        hotel: true,
+        rules: true,
+        nearbyPlaces: true,
+        transportOptions: true,
+        propertyInfo: true,
+        options: true,
+        typeRoom: true,
+      },
+    })
+
+    if (!originalProduct) {
+      throw new Error('Product not found')
+    }
+
+    // Create the draft product
+    const draft = await prisma.product.create({
+      data: {
+        // Copy all basic fields
+        name: originalProduct.name,
+        description: originalProduct.description,
+        address: originalProduct.address,
+        basePrice: originalProduct.basePrice,
+        priceMGA: originalProduct.priceMGA,
+        room: originalProduct.room,
+        bathroom: originalProduct.bathroom,
+        arriving: originalProduct.arriving,
+        leaving: originalProduct.leaving,
+        autoAccept: originalProduct.autoAccept,
+        equipement: originalProduct.equipement,
+        meal: originalProduct.meal,
+        services: originalProduct.services,
+        security: originalProduct.security,
+        minRent: originalProduct.minRent,
+        maxRent: originalProduct.maxRent,
+        advanceRent: originalProduct.advanceRent,
+        delayTime: originalProduct.delayTime,
+        categories: originalProduct.categories,
+        minPeople: originalProduct.minPeople,
+        maxPeople: originalProduct.maxPeople,
+        commission: originalProduct.commission,
+        validate: ProductValidation.NotVerified,
+        userManager: originalProduct.userManager,
+        typeId: originalProduct.typeId,
+        phone: originalProduct.phone,
+        phoneCountry: originalProduct.phoneCountry,
+        latitude: originalProduct.latitude,
+        longitude: originalProduct.longitude,
+        certified: originalProduct.certified,
+        contract: originalProduct.contract,
+        sizeRoom: originalProduct.sizeRoom,
+        availableRooms: originalProduct.availableRooms,
+        
+        // Mark as draft and link to original
+        isDraft: true,
+        originalProductId: originalProductId,
+        
+        // Copy relationships
+        img: {
+          create: originalProduct.img.map(img => ({ img: img.img })),
+        },
+        equipments: {
+          connect: originalProduct.equipments.map(eq => ({ id: eq.id })),
+        },
+        servicesList: {
+          connect: originalProduct.servicesList.map(srv => ({ id: srv.id })),
+        },
+        mealsList: {
+          connect: originalProduct.mealsList.map(meal => ({ id: meal.id })),
+        },
+        securities: {
+          connect: originalProduct.securities.map(sec => ({ id: sec.id })),
+        },
+        includedServices: {
+          connect: originalProduct.includedServices.map(service => ({ id: service.id })),
+        },
+        extras: {
+          connect: originalProduct.extras.map(extra => ({ id: extra.id })),
+        },
+        highlights: {
+          connect: originalProduct.highlights.map(highlight => ({ id: highlight.id })),
+        },
+        nearbyPlaces: {
+          create: originalProduct.nearbyPlaces.map(place => ({
+            name: place.name,
+            distance: place.distance,
+            duration: place.duration,
+            transport: place.transport,
+          })),
+        },
+        transportOptions: {
+          create: originalProduct.transportOptions.map(transport => ({
+            name: transport.name,
+            description: transport.description,
+          })),
+        },
+      },
+    })
+
+    // Update original product status to indicate a pending modification
+    await prisma.product.update({
+      where: { id: originalProductId },
+      data: {
+        validate: ProductValidation.ModificationPending,
+      },
+    })
+
+    // Copy property info if exists
+    if (originalProduct.propertyInfo) {
+      await prisma.propertyInfo.create({
+        data: {
+          productId: draft.id,
+          hasStairs: originalProduct.propertyInfo.hasStairs,
+          hasElevator: originalProduct.propertyInfo.hasElevator,
+          hasHandicapAccess: originalProduct.propertyInfo.hasHandicapAccess,
+          hasPetsOnProperty: originalProduct.propertyInfo.hasPetsOnProperty,
+          additionalNotes: originalProduct.propertyInfo.additionalNotes,
+        },
+      })
+    }
+
+    // Copy hotel info if exists
+    if (originalProduct.hotel.length > 0) {
+      await prisma.product.update({
+        where: { id: draft.id },
+        data: {
+          hotel: {
+            connect: originalProduct.hotel.map(hotel => ({ id: hotel.id })),
+          },
+        },
+      })
+    }
+
+    return draft
+  } catch (error) {
+    console.error('Error creating draft product:', error)
+    throw error
+  }
+}
+
+// Apply approved draft changes to the original product
+export async function applyDraftChanges(draftId: string) {
+  try {
+    const draft = await prisma.product.findUnique({
+      where: { id: draftId, isDraft: true },
+      include: {
+        img: true,
+        equipments: true,
+        servicesList: true,
+        mealsList: true,
+        securities: true,
+        includedServices: true,
+        extras: true,
+        highlights: true,
+        rules: true,
+        nearbyPlaces: true,
+        transportOptions: true,
+        propertyInfo: true,
+      },
+    })
+
+    if (!draft || !draft.originalProductId) {
+      throw new Error('Draft product not found')
+    }
+
+    // Update the original product with draft data
+    const updatedProduct = await prisma.product.update({
+      where: { id: draft.originalProductId },
+      data: {
+        // Update all basic fields
+        name: draft.name,
+        description: draft.description,
+        address: draft.address,
+        basePrice: draft.basePrice,
+        priceMGA: draft.priceMGA,
+        room: draft.room,
+        bathroom: draft.bathroom,
+        arriving: draft.arriving,
+        leaving: draft.leaving,
+        autoAccept: draft.autoAccept,
+        equipement: draft.equipement,
+        meal: draft.meal,
+        services: draft.services,
+        security: draft.security,
+        minRent: draft.minRent,
+        maxRent: draft.maxRent,
+        advanceRent: draft.advanceRent,
+        delayTime: draft.delayTime,
+        categories: draft.categories,
+        minPeople: draft.minPeople,
+        maxPeople: draft.maxPeople,
+        commission: draft.commission,
+        validate: ProductValidation.Approve,
+        phone: draft.phone,
+        phoneCountry: draft.phoneCountry,
+        latitude: draft.latitude,
+        longitude: draft.longitude,
+        certified: draft.certified,
+        contract: draft.contract,
+        sizeRoom: draft.sizeRoom,
+        availableRooms: draft.availableRooms,
+        
+        // Update relationships
+        img: {
+          deleteMany: {},
+          create: draft.img.map(img => ({ img: img.img })),
+        },
+        equipments: {
+          set: draft.equipments.map(eq => ({ id: eq.id })),
+        },
+        servicesList: {
+          set: draft.servicesList.map(srv => ({ id: srv.id })),
+        },
+        mealsList: {
+          set: draft.mealsList.map(meal => ({ id: meal.id })),
+        },
+        securities: {
+          set: draft.securities.map(sec => ({ id: sec.id })),
+        },
+        includedServices: {
+          set: draft.includedServices.map(service => ({ id: service.id })),
+        },
+        extras: {
+          set: draft.extras.map(extra => ({ id: extra.id })),
+        },
+        highlights: {
+          set: draft.highlights.map(highlight => ({ id: highlight.id })),
+        },
+        nearbyPlaces: {
+          deleteMany: {},
+          create: draft.nearbyPlaces.map(place => ({
+            name: place.name,
+            distance: place.distance,
+            duration: place.duration,
+            transport: place.transport,
+          })),
+        },
+        transportOptions: {
+          deleteMany: {},
+          create: draft.transportOptions.map(transport => ({
+            name: transport.name,
+            description: transport.description,
+          })),
+        },
+      },
+    })
+
+    // Update property info if exists
+    if (draft.propertyInfo) {
+      await prisma.propertyInfo.upsert({
+        where: { productId: draft.originalProductId },
+        update: {
+          hasStairs: draft.propertyInfo.hasStairs,
+          hasElevator: draft.propertyInfo.hasElevator,
+          hasHandicapAccess: draft.propertyInfo.hasHandicapAccess,
+          hasPetsOnProperty: draft.propertyInfo.hasPetsOnProperty,
+          additionalNotes: draft.propertyInfo.additionalNotes,
+        },
+        create: {
+          productId: draft.originalProductId,
+          hasStairs: draft.propertyInfo.hasStairs,
+          hasElevator: draft.propertyInfo.hasElevator,
+          hasHandicapAccess: draft.propertyInfo.hasHandicapAccess,
+          hasPetsOnProperty: draft.propertyInfo.hasPetsOnProperty,
+          additionalNotes: draft.propertyInfo.additionalNotes,
+        },
+      })
+    }
+
+    // Delete the draft product (will cascade delete related data)
+    await prisma.product.delete({
+      where: { id: draftId },
+    })
+
+    // Invalidate cache
+    await invalidateProductCache(draft.originalProductId)
+
+    return updatedProduct
+  } catch (error) {
+    console.error('Error applying draft changes:', error)
+    throw error
+  }
+}
+
+// Reject and delete a draft product
+export async function rejectDraftChanges(draftId: string, reason: string): Promise<void> {
+  try {
+    const draft = await prisma.product.findUnique({
+      where: { id: draftId, isDraft: true },
+      include: {
+        user: true,
+      },
+    })
+
+    if (!draft || !draft.originalProductId) {
+      throw new Error('Draft product not found')
+    }
+
+    // Update original product status back to Approve
+    await prisma.product.update({
+      where: { id: draft.originalProductId },
+      data: {
+        validate: ProductValidation.Approve,
+      },
+    })
+
+    // Send rejection email to host
+    if (draft.user && draft.user.length > 0) {
+      const host = draft.user[0]
+      try {
+        await sendTemplatedMail(
+          host.email,
+          'Votre demande de modification a été rejetée',
+          'modification-rejected.html',
+          {
+            name: host.name || 'Hébergeur',
+            productName: draft.name,
+            reason: reason,
+            supportEmail: process.env.SUPPORT_EMAIL || 'support@hosteed.com',
+          }
+        )
+      } catch (emailError) {
+        console.error('Error sending rejection email:', emailError)
+      }
+    }
+
+    // Delete the draft product (will cascade delete related data)
+    await prisma.product.delete({
+      where: { id: draftId },
+    })
+  } catch (error) {
+    console.error('Error rejecting draft changes:', error)
+    throw error
+  }
+}
+
+// Check if a product has a pending draft
+export async function hasPendingDraft(productId: string): Promise<boolean> {
+  const draft = await prisma.product.findFirst({
+    where: {
+      originalProductId: productId,
+      isDraft: true,
+    },
+  })
+  return !!draft
+}
+
+// Get draft product for an original product
+export async function getDraftProduct(originalProductId: string) {
+  return await prisma.product.findFirst({
+    where: {
+      originalProductId: originalProductId,
+      isDraft: true,
+    },
+  })
+}

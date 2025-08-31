@@ -18,7 +18,7 @@ export async function getProductsForValidation() {
 export async function getValidationStats() {
   try {
     const stats = await validationService.getValidationStats()
-    const total = stats.pending + stats.approved + stats.rejected + stats.recheckRequest
+    const total = stats.pending + stats.approved + stats.rejected + stats.recheckRequest + stats.modificationPending + stats.drafts
     return { success: true, data: { ...stats, total } }
   } catch (error) {
     console.error('Error fetching validation stats:', error)

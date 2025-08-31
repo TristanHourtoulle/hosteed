@@ -42,6 +42,8 @@ interface Product {
   address: string
   basePrice: string
   validate: ProductValidation
+  isDraft?: boolean
+  originalProductId?: string | null
   img?: { img: string }[]
   user: {
     id: string
@@ -57,6 +59,8 @@ interface ValidationStats {
   approved: number
   rejected: number
   recheckRequest: number
+  modificationPending: number
+  drafts: number
   total: number
 }
 
@@ -71,6 +75,8 @@ export default function ValidationPage() {
     approved: 0,
     rejected: 0,
     recheckRequest: 0,
+    modificationPending: 0,
+    drafts: 0,
     total: 0,
   })
 
