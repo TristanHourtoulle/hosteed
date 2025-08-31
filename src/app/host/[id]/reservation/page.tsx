@@ -221,19 +221,19 @@ export default function ReservationPage() {
           amount: total,
           productName: product.name,
           metadata: {
-            productId: id,
-            userId: session.user.id,
-            userEmail: formData.email,
-            productName: product.name,
-            arrivingDate: formData.arrivingDate,
-            leavingDate: formData.leavingDate,
-            peopleNumber: formData.peopleNumber,
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            phone: formData.phone,
-            specialRequests: formData.specialRequests,
-            selectedExtras: selectedExtraIds,
-            prices: total,
+            productId: String(id),
+            userId: String(session.user.id),
+            userEmail: String(formData.email),
+            productName: String(product.name),
+            arrivingDate: String(formData.arrivingDate),
+            leavingDate: String(formData.leavingDate),
+            peopleNumber: String(formData.peopleNumber),
+            firstName: String(formData.firstName),
+            lastName: String(formData.lastName),
+            phone: String(formData.phone),
+            specialRequests: String(formData.specialRequests),
+            selectedExtras: JSON.stringify(selectedExtraIds),
+            prices: String(total),
           },
         }),
       })
@@ -612,9 +612,11 @@ export default function ReservationPage() {
                   )}
                 </div>
 
-                <p className='text-xs text-gray-500 text-center leading-relaxed'>
-                  Vous ne serez débité qu&apos;après confirmation de la réservation
-                </p>
+                <div className='p-3 bg-green-50 border border-green-200 rounded-lg'>
+                  <p className='text-sm text-green-800 text-center leading-relaxed font-medium'>
+                    Vous ne serez débité qu&apos;après confirmation de la réservation
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </div>

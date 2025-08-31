@@ -7,11 +7,12 @@ import { Button } from '@/components/ui/shadcnui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
 import { Calendar } from '@/components/ui/shadcnui/calendar'
 import { toast } from 'sonner'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import type { DateRange } from 'react-day-picker'
 import { getProfileImageUrl } from '@/lib/utils'
+import { calculateTotalRentPrice, type CommissionCalculation } from '@/lib/services/commission.service'
 
 interface Reviews {
   id: string
@@ -79,6 +80,7 @@ export default function BookingCard({
     from: formData.arrivingDate ? new Date(formData.arrivingDate) : undefined,
     to: formData.leavingDate ? new Date(formData.leavingDate) : undefined,
   })
+  const [priceCalculation, setPriceCalculation] = useState<CommissionCalculation | null>(null)
 
   // Update parent component when date range changes
   const handleDateRangeChange = (range: DateRange | undefined) => {
@@ -114,11 +116,35 @@ export default function BookingCard({
   }
 
   const nights = calculateNights()
+
+  // Effect to calculate prices when dates change
+  useEffect(() => {
+    const updatePrices = async () => {
+      if (nights > 0) {
+        try {
+          const calculation = await calculateTotalRentPrice(
+            parseFloat(product.basePrice),
+            nights,
+            25 // cleaning fee
+          )
+          setPriceCalculation(calculation)
+        } catch (error) {
+          console.error('Error calculating prices:', error)
+          setPriceCalculation(null)
+        }
+      } else {
+        setPriceCalculation(null)
+      }
+    }
+
+    updatePrices()
+  }, [nights, product.basePrice])
+
   const subtotal = parseFloat(product.basePrice) * nights
   const cleaningFee = 25
-  const serviceFee = 0
-  const taxes = Math.round(parseFloat(product.basePrice) * 0.1)
-  const total = subtotal + cleaningFee + serviceFee + taxes
+  const serviceFee = priceCalculation ? Math.round(priceCalculation.clientCommission) : 0
+  const taxes = 0 // Taxes are now included in the commission calculation
+  const total = priceCalculation ? Math.round(priceCalculation.clientPays) : subtotal + cleaningFee + serviceFee + taxes
 
   const hasValidDates = dateRange?.from && dateRange?.to
 
@@ -342,9 +368,11 @@ export default function BookingCard({
           {!hasValidDates ? 'Sélectionnez des dates' : !isAvailable ? 'Non disponible' : 'Réserver'}
         </Link>
 
-        <p className='text-center text-gray-600 text-sm mt-4'>
-          Vous ne serez pas débité pour le moment
-        </p>
+        <div className='mt-4 p-3 bg-green-50 border border-green-200 rounded-lg'>
+          <p className='text-center text-green-800 text-base font-medium'>
+            Vous ne serez pas débité pour le moment
+          </p>
+        </div>
 
         {hasValidDates && isAvailable && (
           <div className='mt-6 pt-6 border-t border-gray-200'>
@@ -361,16 +389,20 @@ export default function BookingCard({
                 </span>
                 <span className='text-gray-900 font-medium'>{cleaningFee}€</span>
               </div>
-              <div className='flex justify-between items-center'>
-                <span className='text-gray-600 underline decoration-dotted cursor-help'>
-                  Frais de service Hosteed
-                </span>
-                <span className='text-gray-900 font-medium'>{serviceFee}€</span>
-              </div>
-              <div className='flex justify-between items-center'>
-                <span className='text-gray-600'>Taxes et frais</span>
-                <span className='text-gray-900 font-medium'>{taxes}€</span>
-              </div>
+              {serviceFee > 0 && (
+                <div className='flex justify-between items-center'>
+                  <span className='text-gray-600 underline decoration-dotted cursor-help'>
+                    Frais de service
+                  </span>
+                  <span className='text-gray-900 font-medium'>{serviceFee}€</span>
+                </div>
+              )}
+              {taxes > 0 && (
+                <div className='flex justify-between items-center'>
+                  <span className='text-gray-600'>Taxes et frais</span>
+                  <span className='text-gray-900 font-medium'>{taxes}€</span>
+                </div>
+              )}
               <div className='border-t border-gray-200 pt-3 flex justify-between items-center font-semibold text-base'>
                 <span>Total</span>
                 <span>{total.toFixed(0)}€</span>
