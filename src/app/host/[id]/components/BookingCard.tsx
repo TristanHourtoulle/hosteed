@@ -115,10 +115,8 @@ export default function BookingCard({
 
   const nights = calculateNights()
   const subtotal = parseFloat(product.basePrice) * nights
-  const cleaningFee = 25
   const serviceFee = 0
-  const taxes = Math.round(parseFloat(product.basePrice) * 0.1)
-  const total = subtotal + cleaningFee + serviceFee + taxes
+  const total = subtotal + serviceFee
 
   const hasValidDates = dateRange?.from && dateRange?.to
 
@@ -354,19 +352,9 @@ export default function BookingCard({
               </div>
               <div className='flex justify-between items-center'>
                 <span className='text-gray-600 underline decoration-dotted cursor-help'>
-                  Frais de nettoyage
-                </span>
-                <span className='text-gray-900 font-medium'>{cleaningFee}€</span>
-              </div>
-              <div className='flex justify-between items-center'>
-                <span className='text-gray-600 underline decoration-dotted cursor-help'>
                   Frais de service Hosteed
                 </span>
                 <span className='text-gray-900 font-medium'>{serviceFee}€</span>
-              </div>
-              <div className='flex justify-between items-center'>
-                <span className='text-gray-600'>Taxes et frais</span>
-                <span className='text-gray-900 font-medium'>{taxes}€</span>
               </div>
               <div className='border-t border-gray-200 pt-3 flex justify-between items-center font-semibold text-base'>
                 <span>Total</span>

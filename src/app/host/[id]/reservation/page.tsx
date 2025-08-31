@@ -271,9 +271,7 @@ export default function ReservationPage() {
   const optionsTotal = product.options
     .filter(() => false) // Pas d'options sélectionnées
     .reduce((sum, option) => sum + Number(option.price), 0)
-  const cleaningFee = 25
   const serviceFee = 0
-  const taxes = Math.round(subtotal * 0.1)
   const total = calculateTotalPrice()
 
   return (
@@ -526,16 +524,6 @@ export default function ReservationPage() {
                         </span>
                       </div>
                     )}
-
-                    <div className='flex justify-between items-start'>
-                      <span className='text-gray-600 text-sm sm:text-base flex-1 pr-2'>
-                        Frais de nettoyage
-                      </span>
-                      <span className='font-medium text-sm sm:text-base flex-shrink-0'>
-                        {cleaningFee}€
-                      </span>
-                    </div>
-
                     <div className='flex justify-between items-start'>
                       <span className='text-gray-600 text-sm sm:text-base flex-1 pr-2'>
                         Frais de service
@@ -544,14 +532,6 @@ export default function ReservationPage() {
                         {serviceFee}€
                       </span>
                     </div>
-
-                    <div className='flex justify-between items-start'>
-                      <span className='text-gray-600 text-sm sm:text-base flex-1 pr-2'>Taxes</span>
-                      <span className='font-medium text-sm sm:text-base flex-shrink-0'>
-                        {taxes}€
-                      </span>
-                    </div>
-
                     <div className='border-t pt-4'>
                       <div className='flex justify-between text-lg sm:text-xl font-bold'>
                         <span>Total</span>
@@ -587,7 +567,7 @@ export default function ReservationPage() {
                   )}
                 </div>
 
-                <p className='text-xs text-gray-500 text-center leading-relaxed'>
+                <p className='text-sm text-gray-500 text-center leading-relaxed'>
                   Vous ne serez débité qu&apos;après confirmation de la réservation
                 </p>
               </CardContent>
