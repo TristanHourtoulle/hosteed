@@ -36,6 +36,7 @@ import { createProduct } from '@/lib/services/product.service'
 import { findAllUser } from '@/lib/services/user.service'
 import { compressImages, formatFileSize } from '@/lib/utils/imageCompression'
 import { ExtraPriceType } from '@prisma/client'
+import { TypeRentInterface } from '@/lib/interface/typeRentInterface'
 import CreateServiceModal from '@/components/ui/CreateServiceModal'
 import CreateExtraModal from '@/components/ui/CreateExtraModal'
 import CreateHighlightModal from '@/components/ui/CreateHighlightModal'
@@ -231,7 +232,7 @@ export default function CreateProductPage() {
   })
 
   // Data from services
-  const [types, setTypes] = useState<TypeRent[]>([])
+  const [types, setTypes] = useState<TypeRentInterface[]>([])
   const [equipments, setEquipments] = useState<Equipment[]>([])
   const [meals, setMeals] = useState<Meal[]>([])
   const [securities, setSecurities] = useState<Security[]>([])
@@ -251,7 +252,7 @@ export default function CreateProductPage() {
     // Si on change le type d'hébergement, vérifier si c'est un hôtel
     if (name === 'typeId') {
       const selectedType = types.find(t => t.id === value)
-      const isHotelType = Boolean(selectedType?.name.toLowerCase().includes('hôtel') || selectedType?.name.toLowerCase().includes('hotel'))
+      const isHotelType = Boolean(selectedType?.isHotelType)
       
       setFormData(prev => ({
         ...prev,

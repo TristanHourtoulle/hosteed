@@ -10,13 +10,13 @@ importers:
     dependencies:
       '@auth/prisma-adapter':
         specifier: ^2.9.0
-        version: 2.9.1(@prisma/client@6.13.0(prisma@6.11.0(typescript@5.8.3))(typescript@5.8.3))(nodemailer@6.10.1)
+        version: 2.9.1(@prisma/client@6.15.0(prisma@6.11.0(typescript@5.8.3))(typescript@5.8.3))(nodemailer@6.10.1)
       '@hookform/resolvers':
         specifier: ^5.1.1
         version: 5.1.1(react-hook-form@7.59.0(react@19.1.0))
       '@prisma/client':
-        specifier: 6.13.0
-        version: 6.13.0(prisma@6.11.0(typescript@5.8.3))(typescript@5.8.3)
+        specifier: 6.15.0
+        version: 6.15.0(prisma@6.11.0(typescript@5.8.3))(typescript@5.8.3)
       '@radix-ui/react-avatar':
         specifier: ^1.1.10
         version: 1.1.10(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -549,8 +549,8 @@ packages:
   '@panva/hkdf@1.2.1':
     resolution: {integrity: sha512-6oclG6Y3PiDFcoyk8srjLfVKyMfVCKJ27JwNPViuXziFpmdz+MZnZN/aKY0JGXgYuO/VghU0jcOAZgWXZ1Dmrw==}
 
-  '@prisma/client@6.13.0':
-    resolution: {integrity: sha512-8m2+I3dQovkV8CkDMluiwEV1TxV9EXdT6xaCz39O6jYw7mkf5gwfmi+cL4LJsEPwz5tG7sreBwkRpEMJedGYUQ==}
+  '@prisma/client@6.15.0':
+    resolution: {integrity: sha512-wR2LXUbOH4cL/WToatI/Y2c7uzni76oNFND7+23ypLllBmIS8e3ZHhO+nud9iXSXKFt1SoM3fTZvHawg63emZw==}
     engines: {node: '>=18.18'}
     peerDependencies:
       prisma: '*'
@@ -3404,10 +3404,10 @@ snapshots:
     optionalDependencies:
       nodemailer: 6.10.1
 
-  '@auth/prisma-adapter@2.9.1(@prisma/client@6.13.0(prisma@6.11.0(typescript@5.8.3))(typescript@5.8.3))(nodemailer@6.10.1)':
+  '@auth/prisma-adapter@2.9.1(@prisma/client@6.15.0(prisma@6.11.0(typescript@5.8.3))(typescript@5.8.3))(nodemailer@6.10.1)':
     dependencies:
       '@auth/core': 0.39.1(nodemailer@6.10.1)
-      '@prisma/client': 6.13.0(prisma@6.11.0(typescript@5.8.3))(typescript@5.8.3)
+      '@prisma/client': 6.15.0(prisma@6.11.0(typescript@5.8.3))(typescript@5.8.3)
     transitivePeerDependencies:
       - '@simplewebauthn/browser'
       - '@simplewebauthn/server'
@@ -3676,7 +3676,7 @@ snapshots:
 
   '@panva/hkdf@1.2.1': {}
 
-  '@prisma/client@6.13.0(prisma@6.11.0(typescript@5.8.3))(typescript@5.8.3)':
+  '@prisma/client@6.15.0(prisma@6.11.0(typescript@5.8.3))(typescript@5.8.3)':
     optionalDependencies:
       prisma: 6.11.0(typescript@5.8.3)
       typescript: 5.8.3
