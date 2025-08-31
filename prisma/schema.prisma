@@ -191,6 +191,12 @@ model Product {
   // Nouveaux champs pour la validation améliorée
   validationComments ValidationComment[]
   validationHistory  ValidationHistory[]
+  
+  // Draft product support for modification workflow
+  originalProductId String?     // Reference to original product if this is a draft
+  isDraft           Boolean     @default(false)  // Flag to identify draft products
+  originalProduct   Product?    @relation("ProductDraft", fields: [originalProductId], references: [id], onDelete: Cascade)
+  draftProducts     Product[]   @relation("ProductDraft")  // Draft versions of this product
 }
 
 // Nouveau modèle pour les commentaires de validation
@@ -591,6 +597,7 @@ enum ProductValidation {
   Approve
   Refused
   RecheckRequest
+  ModificationPending  // Product has a pending modification draft
 }
 
 model Favorite {

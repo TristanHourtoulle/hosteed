@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Demande de modification refusée</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f9f9f9;
+      }
+      .container {
+        background: #fff;
+        padding: 32px;
+        border-radius: 8px;
+        max-width: 600px;
+        margin: 40px auto;
+        box-shadow: 0 2px 8px #eee;
+      }
+      .header {
+        color: #2d3748;
+        font-size: 24px;
+        font-weight: bold;
+      }
+      .content {
+        margin-top: 24px;
+        color: #444;
+        line-height: 1.6;
+      }
+      .reason-box {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 6px;
+        padding: 16px;
+        margin: 20px 0;
+      }
+      .reason-title {
+        color: #dc2626;
+        font-weight: bold;
+        margin-bottom: 8px;
+      }
+      .reason-text {
+        color: #7f1d1d;
+      }
+      .footer {
+        margin-top: 32px;
+        color: #888;
+        font-size: 13px;
+        text-align: center;
+      }
+      .button {
+        display: inline-block;
+        background: #4f46e5;
+        color: #fff;
+        padding: 10px 24px;
+        border-radius: 5px;
+        text-decoration: none;
+        margin-top: 16px;
+      }
+      .support-button {
+        background: #dc2626;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">Demande de modification refusée</div>
+      <div class="content">
+        <p>Bonjour {{name}},</p>
+        
+        <p>Nous vous informons que votre demande de modification pour l'annonce <strong>{{productName}}</strong> a été refusée par notre équipe de validation.</p>
+        
+        <div class="reason-box">
+          <div class="reason-title">Raison du refus :</div>
+          <div class="reason-text">{{reason}}</div>
+        </div>
+        
+        <p>Votre annonce originale reste active et visible sur Hosteed. Les modifications proposées n'ont pas été appliquées.</p>
+        
+        <p>Si vous souhaitez apporter de nouvelles modifications à votre annonce, vous pouvez :</p>
+        <ul>
+          <li>Prendre en compte les commentaires de notre équipe</li>
+          <li>Modifier votre annonce en tenant compte des raisons du refus</li>
+          <li>Soumettre une nouvelle demande de modification</li>
+        </ul>
+        
+        <p>Si vous avez des questions concernant ce refus ou si vous avez besoin d'assistance, n'hésitez pas à contacter notre équipe de support :</p>
+        
+        <a href="mailto:{{supportEmail}}" class="button support-button">Contacter le support</a>
+        
+        <p style="margin-top: 20px;">Nous vous remercions pour votre compréhension et restons à votre disposition pour vous accompagner.</p>
+      </div>
+      <div class="footer">
+        Cordialement,<br />
+        L'équipe Hosteed
+      </div>
+    </div>
+  </body>
+</html>
