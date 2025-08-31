@@ -12,7 +12,7 @@ const buttonVariants = cva(
         default:
           'flex py-[12.5px] px-5 items-center gap-[10px] rounded-full bg-gradient-to-r from-[#015993] to-[#0379C7] text-white shadow-xs hover:opacity-90',
         destructive:
-          'bg-destructive text-white shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60',
+          'flex py-[12.5px] px-5 items-center gap-[10px] rounded-full bg-red-600 text-white shadow-xs hover:bg-red-700 focus-visible:ring-red-500/20 dark:focus-visible:ring-red-500/40',
         outline:
           'flex py-[12.5px] px-5 items-center gap-[10px] rounded-full border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50',
         secondary:

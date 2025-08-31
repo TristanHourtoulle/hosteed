@@ -11,6 +11,7 @@ model TypeRent {
   id          String    @id @default(cuid())
   name        String
   description String
+  isHotelType Boolean   @default(false) // Indique si ce type fonctionne comme un hôtel
   products    Product[]
 }
 
