@@ -654,12 +654,17 @@ model PropertyInfo {
 }
 
 model Post {
-  id        String   @id @default(cuid())
-  title     String   @unique
-  content   String   @db.Text
-  image     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String   @id @default(cuid())
+  title           String   @unique
+  content         String   @db.Text
+  image           String?
+  // SEO fields
+  metaTitle       String?
+  metaDescription String?
+  keywords        String?
+  slug            String?  @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 // Configuration des commissions (globale pour la plateforme)
