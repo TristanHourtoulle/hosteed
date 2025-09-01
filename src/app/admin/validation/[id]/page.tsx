@@ -2,37 +2,12 @@
 
 import { useSession } from 'next-auth/react'
 import { useEffect, useState, useCallback } from 'react'
-import { ProductValidation } from '@prisma/client'
-import Image from 'next/image'
-import Link from 'next/link'
+import { ProductValidation, ExtraPriceType } from '@prisma/client'
 import { motion } from 'framer-motion'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
-import {
-  Loader2,
-  ArrowLeft,
-  CheckCircle,
-  XCircle,
-  AlertTriangle,
-  MapPin,
-  User,
-  Euro,
-  Home,
-  Users,
-  Bath,
-  Bed,
-  Car,
-  Utensils,
-  Shield,
-  CheckSquare,
-  X,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Loader2, XCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import {
   getProductForValidation,
   approveProduct,
@@ -41,22 +16,18 @@ import {
   getValidationHistory,
 } from '../actions'
 import { ValidationHistoryCard } from '../components/ValidationHistoryCard'
-import ImageGallery from '@/app/host/[id]/components/ImageGallery'
+import { ProductHeader } from './components/ProductHeader'
+import { ProductDetails } from './components/ProductDetails'
+import { ProductSidebar } from './components/ProductSidebar'
+import { ComparisonView } from './components/ComparisonView'
 
 interface ValidationHistoryEntry {
   id: string
   previousStatus: ProductValidation
   newStatus: ProductValidation
   reason?: string | null
-  createdAt: Date
-  admin?: {
-    id: string
-    name?: string | null
-    lastname?: string | null
-    email: string
-  } | null
-  host?: {
-    id: string
+  createdAt: string | Date
+  admin: {
     name?: string | null
     lastname?: string | null
     email: string
@@ -69,91 +40,61 @@ interface Product {
   description: string
   address: string
   basePrice: string
-  priceMGA: string
-  room: bigint | null
-  bathroom: bigint | null
+  priceMGA?: string
+  availableRooms?: number
+  guest: number
+  bedroom: number
+  bed: number
+  bathroom: number
   arriving: number
   leaving: number
-  autoAccept: boolean
-  minRent: bigint | null
-  maxRent: bigint | null
-  advanceRent: bigint | null
-  delayTime: bigint | null
-  minPeople: bigint | null
-  maxPeople: bigint | null
-  commission: number
   validate: ProductValidation
-  phone: string
-  latitude: number
-  longitude: number
-  certified: boolean
-  contract: boolean
-  sizeRoom: number | null
+  isDraft?: boolean
+  originalProductId?: string
+  originalProduct?: Product
   img?: { img: string }[]
   user: {
     id: string
+    name?: string | null
+    lastname?: string | null
     email: string
-    name: string | null
-    lastname: string | null
-    image: string | null
+    image?: string | null
+    profilePicture?: string | null
+    profilePictureBase64?: string | null
   }[]
-  type: {
-    id: string
-    name: string
-    description: string
-  }
-  equipments: {
-    id: string
-    name: string
-    icon: string
-  }[]
-  mealsList: {
-    id: string
-    name: string
-  }[]
-  servicesList: {
-    id: string
-    name: string
-  }[]
-  securities: {
-    id: string
-    name: string
-  }[]
-  typeRoom: {
-    id: string
-    name: string
-    description: string
-  }[]
-  rules: {
-    id: string
+  type?: { name: string; description: string }
+  equipments?: { name: string; icon: string }[]
+  mealsList?: { name: string }[]
+  servicesList?: { name: string }[]
+  securities?: { name: string }[]
+  typeRoom?: { name: string; description: string }
+  rules?: {
     smokingAllowed: boolean
     petsAllowed: boolean
     eventsAllowed: boolean
     checkInTime: string
     checkOutTime: string
     selfCheckIn: boolean
-    selfCheckInType: string | null
-  }[]
-  nearbyPlaces: {
-    id: string
+    selfCheckInType?: string
+  }
+  nearbyPlaces?: {
     name: string
-    distance: number
-    duration: number
+    distance: string
+    duration: string
     transport: string
   }[]
-  transportOptions: {
-    id: string
-    name: string
-    description: string | null
-  }[]
-  propertyInfo: {
-    id: string
+  transportOptions?: { name: string; description: string }[]
+  propertyInfo?: {
     hasStairs: boolean
     hasElevator: boolean
     hasHandicapAccess: boolean
     hasPetsOnProperty: boolean
-    additionalNotes: string | null
-  } | null
+    additionalNotes?: string
+  }
+  hotel?: { id: string; userId: string }
+  includedServices?: { id: string; name: string; description: string | null; icon: string | null }[]
+  extras?: { id: string; name: string; description: string | null; priceEUR: number; priceMGA: number; type: ExtraPriceType }[]
+  highlights?: { id: string; name: string; description: string | null; icon: string | null }[]
 }
 
 interface ValidationDetailPageProps {
@@ -164,6 +105,7 @@ interface ValidationDetailPageProps {
 
 export default function ValidationDetailPage({ params }: ValidationDetailPageProps) {
   const { data: session } = useSession()
+  const router = useRouter()
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
@@ -171,9 +113,7 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
   const [reason, setReason] = useState('')
   const [productId, setProductId] = useState<string | null>(null)
   const [validationHistory, setValidationHistory] = useState<ValidationHistoryEntry[]>([])
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
-  const [, setShowAllPhotos] = useState(false)
-  const [showFullscreen, setShowFullscreen] = useState(false)
+  const [activeTab, setActiveTab] = useState<'details' | 'comparison'>('details')
 
   useEffect(() => {
     const getParams = async () => {
@@ -188,12 +128,11 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
 
     try {
       const historyResult = await getValidationHistory(productId)
-
       if (historyResult.success && historyResult.data) {
         setValidationHistory(historyResult.data)
       }
-    } catch (err) {
-      console.error("Erreur lors du chargement de l'historique:", err)
+    } catch (error) {
+      console.error('Error fetching validation history:', error)
     }
   }, [productId])
 
@@ -207,138 +146,88 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
       const result = await getProductForValidation(productId)
 
       if (result.success && result.data) {
-        setProduct(result.data)
-        // Charger l'historique en parallèle
-        fetchValidationHistory()
+        setProduct(result.data as unknown as Product)
       } else {
         setError(result.error || 'Erreur lors du chargement du produit')
       }
     } catch (err) {
-      setError("Erreur lors du chargement de l'annonce")
-      console.error(err)
+      console.error('Error fetching product:', err)
+      setError('Erreur lors du chargement du produit')
     } finally {
       setLoading(false)
     }
-  }, [productId, fetchValidationHistory])
+  }, [productId])
 
   useEffect(() => {
     if (productId) {
       fetchProduct()
+      fetchValidationHistory()
     }
-  }, [productId]) // Retirer fetchProduct des dépendances pour éviter la boucle infinie
-
+  }, [productId, fetchProduct, fetchValidationHistory])
 
   const handleApprove = async () => {
     if (!product || !session?.user?.id) return
 
-    setActionLoading(true)
     try {
-      const result = await approveProduct(
-        product.id,
-        session.user.id,
-        reason || 'Approuvé par admin'
-      )
+      setActionLoading(true)
+      const result = await approveProduct(product.id, session.user.id, reason.trim() || undefined)
+
       if (result.success) {
-        // Rediriger vers la liste de validation
-        window.location.href = '/admin/validation'
+        // Rediriger vers la liste des validations après approbation
+        router.push('/admin/validation')
+        return
       } else {
-        setError(result.error || "Erreur lors de l'approbation")
+        setError(result.error || 'Erreur lors de la validation')
       }
     } catch (err) {
-      console.error("Erreur lors de l'approbation:", err)
-      setError("Erreur lors de l'approbation de l'annonce")
+      console.error('Error approving product:', err)
+      setError('Erreur lors de la validation')
     } finally {
       setActionLoading(false)
     }
   }
 
   const handleReject = async () => {
-    if (!product || !session?.user?.id || !reason.trim()) {
-      setError('Une raison est requise pour refuser une annonce')
-      return
-    }
+    if (!product || !session?.user?.id || !reason.trim()) return
 
-    setActionLoading(true)
     try {
-      const result = await rejectProduct(product.id, session.user.id, reason)
+      setActionLoading(true)
+      const result = await rejectProduct(product.id, session.user.id, reason.trim())
+
       if (result.success) {
-        // Rediriger vers la liste de validation
-        window.location.href = '/admin/validation'
+        // Rediriger vers la liste des validations après refus
+        router.push('/admin/validation')
+        return
       } else {
         setError(result.error || 'Erreur lors du refus')
       }
     } catch (err) {
-      console.error('Erreur lors du refus:', err)
-      setError("Erreur lors du refus de l'annonce")
+      console.error('Error rejecting product:', err)
+      setError('Erreur lors du refus')
     } finally {
       setActionLoading(false)
     }
   }
 
   const handleRequestRecheck = async () => {
-    if (!product || !session?.user?.id || !reason.trim()) {
-      setError('Une raison est requise pour demander une révision')
-      return
-    }
+    if (!product || !session?.user?.id || !reason.trim()) return
 
-    setActionLoading(true)
     try {
-      const result = await requestRecheck(product.id, session.user.id, reason)
+      setActionLoading(true)
+      const result = await requestRecheck(product.id, session.user.id, reason.trim())
+
       if (result.success) {
-        // Rafraîchir les données
-        await fetchProduct()
-        setReason('')
+        // Rediriger vers la liste des validations après demande de révision
+        router.push('/admin/validation')
+        return
       } else {
         setError(result.error || 'Erreur lors de la demande de révision')
       }
     } catch (err) {
-      console.error('Erreur lors de la demande de révision:', err)
+      console.error('Error requesting recheck:', err)
       setError('Erreur lors de la demande de révision')
     } finally {
       setActionLoading(false)
-    }
-  }
-
-  const nextImage = () => {
-    if (product?.img && product.img.length > 0) {
-      setCurrentImageIndex(prev => (prev + 1) % product.img!.length)
-    }
-  }
-
-  const prevImage = () => {
-    if (product?.img && product.img.length > 0) {
-      setCurrentImageIndex(prev => (prev - 1 + product.img!.length) % product.img!.length)
-    }
-  }
-
-  const getStatusBadge = (status: ProductValidation) => {
-    switch (status) {
-      case ProductValidation.NotVerified:
-        return (
-          <Badge variant='secondary' className='bg-yellow-100 text-yellow-800'>
-            En attente
-          </Badge>
-        )
-      case ProductValidation.Approve:
-        return (
-          <Badge variant='secondary' className='bg-green-100 text-green-800'>
-            Approuvé
-          </Badge>
-        )
-      case ProductValidation.Refused:
-        return (
-          <Badge variant='secondary' className='bg-red-100 text-red-800'>
-            Refusé
-          </Badge>
-        )
-      case ProductValidation.RecheckRequest:
-        return (
-          <Badge variant='secondary' className='bg-blue-100 text-blue-800'>
-            Révision demandée
-          </Badge>
-        )
-      default:
-        return <Badge variant='secondary'>Inconnu</Badge>
     }
   }
 
@@ -380,600 +269,68 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
         className='space-y-8'
       >
         {/* Header */}
-        <div className='flex items-center justify-between'>
-          <div>
-            <Button variant='outline' asChild className='mb-4'>
-              <Link href='/admin/validation'>
-                <ArrowLeft className='h-4 w-4 mr-2' />
-                Retour à la liste
-              </Link>
-            </Button>
-            <h1 className='text-3xl font-bold text-gray-900'>{product.name}</h1>
-            <div className='flex items-center gap-4 mt-2'>
-              {getStatusBadge(product.validate)}
-              <span className='text-sm text-gray-500'>ID: {product.id}</span>
-            </div>
-          </div>
-          <Button variant='outline' asChild>
-            <Link href={`/host/${product.id}?preview=true`} target='_blank'>
-              Prévisualiser
-            </Link>
-          </Button>
-        </div>
+        <ProductHeader product={product} />
 
-        <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
-          {/* Contenu principal */}
-          <div className='lg:col-span-2 space-y-6'>
-            {/* Images */}
-            {product.img && product.img.length > 0 && (
-              <ImageGallery
-                images={product.img}
-                productName={product.name}
-                currentImageIndex={currentImageIndex}
-                nextImage={nextImage}
-                prevImage={prevImage}
-                setShowAllPhotos={setShowAllPhotos}
-                setShowFullscreen={setShowFullscreen}
-                setCurrentImageIndex={setCurrentImageIndex}
-              />
-            )}
-
-            {/* Modale Fullscreen */}
-            {showFullscreen && (
-              <div
-                className='fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-lg transition-all animate-fadein'
-                tabIndex={-1}
-                onKeyDown={e => {
-                  if (e.key === 'Escape') setShowFullscreen(false)
-                  if (e.key === 'ArrowLeft') prevImage()
-                  if (e.key === 'ArrowRight') nextImage()
-                }}
+        {/* Tabs */}
+        {product.isDraft && product.originalProduct && (
+          <div className='border-b border-gray-200'>
+            <nav className='flex space-x-8'>
+              <button
+                onClick={() => setActiveTab('details')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'details'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
               >
-                <div className='relative bg-white p-0 rounded-2xl shadow-2xl flex items-center justify-center max-w-4xl w-full max-h-[80vh] animate-popin'>
-                  {/* Close button */}
-                  <button
-                    onClick={() => setShowFullscreen(false)}
-                    className='absolute top-4 right-4 bg-white hover:bg-gray-100 rounded-full p-2 shadow-lg z-10'
-                    aria-label='Fermer'
-                  >
-                    <X className='h-6 w-6 text-gray-700' />
-                  </button>
-                  {/* Prev button */}
-                  {product.img && product.img.length > 1 && (
-                    <button
-                      onClick={e => {
-                        e.stopPropagation()
-                        prevImage()
-                      }}
-                      className='absolute left-2 top-1/2 -translate-y-1/2 bg-white hover:bg-gray-100 rounded-full p-2 shadow-lg z-10'
-                      aria-label='Précédent'
-                    >
-                      <ChevronLeft className='h-6 w-6 text-gray-700' />
-                    </button>
-                  )}
-                  {/* Next button */}
-                  {product.img && product.img.length > 1 && (
-                    <button
-                      onClick={e => {
-                        e.stopPropagation()
-                        nextImage()
-                      }}
-                      className='absolute right-2 top-1/2 -translate-y-1/2 bg-white hover:bg-gray-100 rounded-full p-2 shadow-lg z-10'
-                      aria-label='Suivant'
-                    >
-                      <ChevronRight className='h-6 w-6 text-gray-700' />
-                    </button>
-                  )}
-                  {/* Image */}
-                  <div className='relative max-h-[80vh] w-auto aspect-auto'>
-                    <Image
-                      src={product.img?.[currentImageIndex]?.img || ''}
-                      alt={product.name}
-                      width={800}
-                      height={600}
-                      className='max-h-[80vh] w-auto object-contain rounded-2xl transition-all'
-                      draggable={false}
-                      unoptimized
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-
-            {/* Description */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Description</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className='text-gray-700 whitespace-pre-wrap'>{product.description}</p>
-              </CardContent>
-            </Card>
-
-            {/* Informations générales */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Informations générales</CardTitle>
-              </CardHeader>
-              <CardContent className='space-y-4'>
-                <div className='grid grid-cols-2 gap-4'>
-                  <div className='flex items-center'>
-                    <MapPin className='h-4 w-4 text-gray-400 mr-2' />
-                    <span className='text-sm'>{product.address}</span>
-                  </div>
-                  <div className='flex items-center'>
-                    <Euro className='h-4 w-4 text-gray-400 mr-2' />
-                    <span className='text-sm'>{product.basePrice}€ / nuit</span>
-                  </div>
-                  <div className='flex items-center'>
-                    <Home className='h-4 w-4 text-gray-400 mr-2' />
-                    <span className='text-sm'>{product.type.name}</span>
-                  </div>
-                  <div className='flex items-center'>
-                    <Users className='h-4 w-4 text-gray-400 mr-2' />
-                    <span className='text-sm'>
-                      {Number(product.minPeople || 0)} - {Number(product.maxPeople || 0)} personnes
-                    </span>
-                  </div>
-                  {product.room && (
-                    <div className='flex items-center'>
-                      <Bed className='h-4 w-4 text-gray-400 mr-2' />
-                      <span className='text-sm'>{Number(product.room)} chambre(s)</span>
-                    </div>
-                  )}
-                  {product.bathroom && (
-                    <div className='flex items-center'>
-                      <Bath className='h-4 w-4 text-gray-400 mr-2' />
-                      <span className='text-sm'>{Number(product.bathroom)} salle(s) de bain</span>
-                    </div>
-                  )}
-                  {product.sizeRoom && (
-                    <div className='flex items-center'>
-                      <Home className='h-4 w-4 text-gray-400 mr-2' />
-                      <span className='text-sm'>{product.sizeRoom} m²</span>
-                    </div>
-                  )}
-                  <div className='flex items-center'>
-                    <CheckSquare className='h-4 w-4 text-gray-400 mr-2' />
-                    <span className='text-sm'>
-                      Acceptation {product.autoAccept ? 'automatique' : 'manuelle'}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Conditions de location */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Conditions de location</CardTitle>
-              </CardHeader>
-              <CardContent className='space-y-3'>
-                <div className='grid grid-cols-2 gap-4 text-sm'>
-                  {product.minRent && (
-                    <div>
-                      <span className='font-medium'>Durée min :</span> {Number(product.minRent)}{' '}
-                      jour(s)
-                    </div>
-                  )}
-                  {product.maxRent && (
-                    <div>
-                      <span className='font-medium'>Durée max :</span> {Number(product.maxRent)}{' '}
-                      jour(s)
-                    </div>
-                  )}
-                  {product.advanceRent && (
-                    <div>
-                      <span className='font-medium'>Préavis :</span> {Number(product.advanceRent)}{' '}
-                      jour(s)
-                    </div>
-                  )}
-                  <div>
-                    <span className='font-medium'>Commission :</span> {product.commission}%
-                  </div>
-                  <div>
-                    <span className='font-medium'>Certifié :</span>{' '}
-                    {product.certified ? 'Oui' : 'Non'}
-                  </div>
-                  <div>
-                    <span className='font-medium'>Contrat :</span>{' '}
-                    {product.contract ? 'Oui' : 'Non'}
-                  </div>
-                </div>
-                <div className='pt-2 border-t'>
-                  <span className='font-medium text-sm'>Téléphone de contact :</span>
-                  <p className='text-sm text-gray-600'>{product.phone}</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Équipements */}
-            {product.equipments.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Équipements</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='grid grid-cols-2 gap-3'>
-                    {product.equipments.map(equipment => (
-                      <div key={equipment.id} className='flex items-center text-sm'>
-                        <CheckCircle className='h-4 w-4 text-green-500 mr-2' />
-                        <span>{equipment.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Services */}
-            {product.servicesList.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Services</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='grid grid-cols-1 gap-2'>
-                    {product.servicesList.map(service => (
-                      <div key={service.id} className='flex items-center text-sm'>
-                        <CheckCircle className='h-4 w-4 text-blue-500 mr-2' />
-                        <span>{service.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Repas */}
-            {product.mealsList.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Options de repas</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='grid grid-cols-1 gap-2'>
-                    {product.mealsList.map(meal => (
-                      <div key={meal.id} className='flex items-center text-sm'>
-                        <Utensils className='h-4 w-4 text-orange-500 mr-2' />
-                        <span>{meal.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Sécurité */}
-            {product.securities.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Mesures de sécurité</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='grid grid-cols-1 gap-2'>
-                    {product.securities.map(security => (
-                      <div key={security.id} className='flex items-center text-sm'>
-                        <Shield className='h-4 w-4 text-red-500 mr-2' />
-                        <span>{security.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Types de chambres */}
-            {product.typeRoom.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Types de chambres</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='space-y-3'>
-                    {product.typeRoom.map(room => (
-                      <div key={room.id} className='border-l-4 border-blue-500 pl-3'>
-                        <h4 className='font-medium text-sm'>{room.name}</h4>
-                        <p className='text-xs text-gray-600'>{room.description}</p>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Règles de la maison */}
-            {product.rules.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Règles de la maison</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {product.rules.map(rule => (
-                    <div key={rule.id} className='space-y-3'>
-                      <div className='grid grid-cols-2 gap-4 text-sm'>
-                        <div className='flex items-center'>
-                          <span className='font-medium mr-2'>Fumeur :</span>
-                          {rule.smokingAllowed ? (
-                            <CheckCircle className='h-4 w-4 text-green-500' />
-                          ) : (
-                            <X className='h-4 w-4 text-red-500' />
-                          )}
-                        </div>
-                        <div className='flex items-center'>
-                          <span className='font-medium mr-2'>Animaux :</span>
-                          {rule.petsAllowed ? (
-                            <CheckCircle className='h-4 w-4 text-green-500' />
-                          ) : (
-                            <X className='h-4 w-4 text-red-500' />
-                          )}
-                        </div>
-                        <div className='flex items-center'>
-                          <span className='font-medium mr-2'>Événements :</span>
-                          {rule.eventsAllowed ? (
-                            <CheckCircle className='h-4 w-4 text-green-500' />
-                          ) : (
-                            <X className='h-4 w-4 text-red-500' />
-                          )}
-                        </div>
-                        <div className='flex items-center'>
-                          <span className='font-medium mr-2'>Check-in auto :</span>
-                          {rule.selfCheckIn ? (
-                            <CheckCircle className='h-4 w-4 text-green-500' />
-                          ) : (
-                            <X className='h-4 w-4 text-red-500' />
-                          )}
-                        </div>
-                      </div>
-                      <div className='grid grid-cols-2 gap-4 text-sm pt-2 border-t'>
-                        <div>
-                          <span className='font-medium'>Check-in :</span> {rule.checkInTime}
-                        </div>
-                        <div>
-                          <span className='font-medium'>Check-out :</span> {rule.checkOutTime}
-                        </div>
-                        {rule.selfCheckInType && (
-                          <div className='col-span-2'>
-                            <span className='font-medium'>Type check-in auto :</span>{' '}
-                            {rule.selfCheckInType}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Lieux à proximité */}
-            {product.nearbyPlaces.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Lieux à proximité</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='space-y-3'>
-                    {product.nearbyPlaces.map(place => (
-                      <div key={place.id} className='flex justify-between items-center text-sm'>
-                        <div>
-                          <span className='font-medium'>{place.name}</span>
-                          <p className='text-xs text-gray-600'>{place.transport}</p>
-                        </div>
-                        <div className='text-right'>
-                          <div>{place.distance}m</div>
-                          <div className='text-xs text-gray-600'>{place.duration} min</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Options de transport */}
-            {product.transportOptions.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Options de transport</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='space-y-2'>
-                    {product.transportOptions.map(transport => (
-                      <div key={transport.id}>
-                        <div className='flex items-center text-sm'>
-                          <Car className='h-4 w-4 text-blue-500 mr-2' />
-                          <span className='font-medium'>{transport.name}</span>
-                        </div>
-                        {transport.description && (
-                          <p className='text-xs text-gray-600 ml-6'>{transport.description}</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Informations sur la propriété */}
-            {product.propertyInfo && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Accessibilité et informations supplémentaires</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='space-y-2'>
-                    <div className='grid grid-cols-2 gap-3 text-sm'>
-                      <div className='flex items-center'>
-                        <span className='font-medium mr-2'>Escaliers :</span>
-                        {product.propertyInfo.hasStairs ? (
-                          <CheckCircle className='h-4 w-4 text-yellow-500' />
-                        ) : (
-                          <X className='h-4 w-4 text-green-500' />
-                        )}
-                      </div>
-                      <div className='flex items-center'>
-                        <span className='font-medium mr-2'>Ascenseur :</span>
-                        {product.propertyInfo.hasElevator ? (
-                          <CheckCircle className='h-4 w-4 text-green-500' />
-                        ) : (
-                          <X className='h-4 w-4 text-red-500' />
-                        )}
-                      </div>
-                      <div className='flex items-center'>
-                        <span className='font-medium mr-2'>Accès handicapé :</span>
-                        {product.propertyInfo.hasHandicapAccess ? (
-                          <CheckCircle className='h-4 w-4 text-green-500' />
-                        ) : (
-                          <X className='h-4 w-4 text-red-500' />
-                        )}
-                      </div>
-                      <div className='flex items-center'>
-                        <span className='font-medium mr-2'>Animaux sur place :</span>
-                        {product.propertyInfo.hasPetsOnProperty ? (
-                          <CheckCircle className='h-4 w-4 text-yellow-500' />
-                        ) : (
-                          <X className='h-4 w-4 text-green-500' />
-                        )}
-                      </div>
-                    </div>
-                    {product.propertyInfo.additionalNotes && (
-                      <div className='pt-3 border-t'>
-                        <span className='font-medium text-sm'>Notes supplémentaires :</span>
-                        <p className='text-sm text-gray-600 mt-1'>
-                          {product.propertyInfo.additionalNotes}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                Détails
+              </button>
+              <button
+                onClick={() => setActiveTab('comparison')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'comparison'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Comparaison
+                <Badge variant="secondary" className="ml-2">Modifications</Badge>
+              </button>
+            </nav>
           </div>
+        )}
 
-          {/* Sidebar */}
-          <div className='space-y-6'>
-            {/* Informations hôte */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Hôte</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className='flex items-center space-x-3'>
-                  {product.user[0]?.image ? (
-                    <Image
-                      src={product.user[0].image}
-                      alt='Photo de profil'
-                      width={48}
-                      height={48}
-                      className='rounded-full'
-                    />
-                  ) : (
-                    <div className='w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center'>
-                      <User className='h-6 w-6 text-gray-400' />
-                    </div>
-                  )}
-                  <div>
-                    <p className='font-medium'>
-                      {product.user[0]?.name && product.user[0]?.lastname
-                        ? `${product.user[0].name} ${product.user[0].lastname}`
-                        : product.user[0]?.name || product.user[0]?.lastname || 'Nom non défini'}
-                    </p>
-                    <p className='text-sm text-gray-500'>{product.user[0]?.email}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Actions de validation */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Actions de validation</CardTitle>
-              </CardHeader>
-              <CardContent className='space-y-4'>
-                <div>
-                  <Label htmlFor='reason'>Commentaire/Raison (optionnel pour approbation)</Label>
-                  <Textarea
-                    id='reason'
-                    placeholder='Ajoutez un commentaire ou une raison...'
-                    value={reason}
-                    onChange={e => setReason(e.target.value)}
-                    className='mt-1'
-                    rows={3}
-                  />
-                </div>
-
-                <div className='space-y-2'>
-                  {product.validate !== ProductValidation.Approve && (
-                    <Button
-                      onClick={handleApprove}
-                      disabled={actionLoading}
-                      className='w-full bg-green-600 hover:bg-green-700'
-                    >
-                      {actionLoading ? (
-                        <Loader2 className='h-4 w-4 animate-spin mr-2' />
-                      ) : (
-                        <CheckCircle className='h-4 w-4 mr-2' />
-                      )}
-                      Approuver l&apos;annonce
-                    </Button>
-                  )}
-
-                  {product.validate !== ProductValidation.RecheckRequest && (
-                    <Button
-                      onClick={handleRequestRecheck}
-                      disabled={actionLoading || !reason.trim()}
-                      variant='outline'
-                      className='w-full border-yellow-300 text-yellow-700 hover:bg-yellow-50'
-                    >
-                      {actionLoading ? (
-                        <Loader2 className='h-4 w-4 animate-spin mr-2' />
-                      ) : (
-                        <AlertTriangle className='h-4 w-4 mr-2' />
-                      )}
-                      Demander une révision
-                    </Button>
-                  )}
-
-                  {product.validate !== ProductValidation.Refused && (
-                    <Button
-                      onClick={handleReject}
-                      disabled={actionLoading || !reason.trim()}
-                      variant='destructive'
-                      className='w-full'
-                    >
-                      {actionLoading ? (
-                        <Loader2 className='h-4 w-4 animate-spin mr-2' />
-                      ) : (
-                        <XCircle className='h-4 w-4 mr-2' />
-                      )}
-                      Refuser l&apos;annonce
-                    </Button>
-                  )}
-                </div>
-
-                {!reason.trim() && (
-                  <p className='text-sm text-amber-600 bg-amber-50 p-2 rounded'>
-                    <strong>Info:</strong> Une raison est requise pour refuser ou demander une
-                    révision
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+        {activeTab === 'details' && (
+          <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
+            <ProductDetails product={product} />
+            <ProductSidebar
+              product={product}
+              reason={reason}
+              setReason={setReason}
+              actionLoading={actionLoading}
+              handleApprove={handleApprove}
+              handleReject={handleReject}
+              handleRequestRecheck={handleRequestRecheck}
+            />
           </div>
-        </div>
+        )}
+
+        {activeTab === 'comparison' && product.isDraft && product.originalProduct && (
+          <ComparisonView draft={product} original={product.originalProduct} />
+        )}
 
         {/* Historique des validations */}
-        <motion.div
-          className='mt-8'
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-        >
-          <ValidationHistoryCard history={validationHistory} />
-        </motion.div>
+        {activeTab === 'details' && (
+          <motion.div
+            className='mt-8'
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+          >
+            <ValidationHistoryCard history={validationHistory as unknown as Parameters<typeof ValidationHistoryCard>[0]['history']} />
+          </motion.div>
+        )}
       </motion.div>
     </div>
   )
 }
-
