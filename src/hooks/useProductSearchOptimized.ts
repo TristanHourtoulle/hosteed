@@ -1,7 +1,8 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
-import { TypeRent } from '@prisma/client'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { useQuery, useQueries } from '@tanstack/react-query'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
 import { findAllProducts } from '@/lib/services/product.service'
 import { findAllTypeRent } from '@/lib/services/typeRent.service'
 import { findAllSecurity } from '@/lib/services/security.services'
@@ -73,13 +74,8 @@ interface FilterState {
   contractRequired: boolean
 }
 
-export function useProductSearch() {
+export function useProductSearchOptimized() {
   const searchParams = useSearchParams()
-
-  const [typeRent, setTypeRent] = useState<TypeRent[]>([])
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
   // Get URL parameters
   const typeRentId = searchParams.get('type') || searchParams.get('typeRent') || ''
@@ -99,10 +95,6 @@ export function useProductSearch() {
   const searchTimeout = useRef<NodeJS.Timeout | undefined>(undefined)
 
   // Filter state
-  const [securities, setSecurities] = useState<{ id: string; name: string }[]>([])
-  const [meals, setMeals] = useState<{ id: string; name: string }[]>([])
-  const [equipments, setEquipments] = useState<{ id: string; name: string }[]>([])
-  const [services, setServices] = useState<{ id: string; name: string }[]>([])
   const [filters, setFilters] = useState<FilterState>({
     selectedSecurities: [],
     selectedMeals: [],
@@ -127,37 +119,63 @@ export function useProductSearch() {
     contractRequired: false,
   })
 
-  // Load initial data
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true)
-        const [types, securityList, mealsList, equipmentsList, servicesList] = await Promise.all([
-          findAllTypeRent(),
-          findAllSecurity(),
-          findAllMeals(),
-          findAllEquipments(),
-          findAllServices(),
-        ])
+  // Use React Query for static data with long cache times
+  const staticQueries = useQueries({
+    queries: [
+      {
+        queryKey: ['typeRent'],
+        queryFn: findAllTypeRent,
+        staleTime: 1000 * 60 * 60 * 24, // 24 hours
+        gcTime: 1000 * 60 * 60 * 24 * 7, // 7 days
+      },
+      {
+        queryKey: CACHE_TAGS.staticData.security,
+        queryFn: findAllSecurity,
+        staleTime: 1000 * 60 * 60 * 24,
+        gcTime: 1000 * 60 * 60 * 24 * 7,
+      },
+      {
+        queryKey: CACHE_TAGS.staticData.meals,
+        queryFn: findAllMeals,
+        staleTime: 1000 * 60 * 60 * 24,
+        gcTime: 1000 * 60 * 60 * 24 * 7,
+      },
+      {
+        queryKey: CACHE_TAGS.staticData.equipments,
+        queryFn: findAllEquipments,
+        staleTime: 1000 * 60 * 60 * 24,
+        gcTime: 1000 * 60 * 60 * 24 * 7,
+      },
+      {
+        queryKey: CACHE_TAGS.staticData.services,
+        queryFn: findAllServices,
+        staleTime: 1000 * 60 * 60 * 24,
+        gcTime: 1000 * 60 * 60 * 24 * 7,
+      },
+    ],
+  })
 
-        if (types) setTypeRent(types)
-        if (securityList) setSecurities(securityList)
-        if (mealsList) setMeals(mealsList)
-        if (equipmentsList) setEquipments(equipmentsList)
-        if (servicesList) setServices(servicesList)
-      } catch (error) {
-        console.error('Error loading data:', error)
-        setError('Erreur lors du chargement des données')
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchData()
-  }, [])
+  const [typeRentQuery, securityQuery, mealsQuery, equipmentsQuery, servicesQuery] = staticQueries
 
-  // Filter products
-  const filterProducts = (allProducts: Product[]) => {
-    return allProducts.filter((product: Product) => {
+  const typeRent = typeRentQuery.data || []
+  const securities = securityQuery.data || []
+  const meals = mealsQuery.data || []
+  const equipments = equipmentsQuery.data || []
+  const services = servicesQuery.data || []
+
+  // Use React Query for products with shorter cache time
+  const { data: allProducts = [], isLoading: productsLoading } = useQuery({
+    queryKey: CACHE_TAGS.products,
+    queryFn: findAllProducts,
+    staleTime: 1000 * 60 * 2, // 2 minutes
+    gcTime: 1000 * 60 * 5, // 5 minutes
+  })
+
+  // Filter products using useMemo for optimization
+  const filteredProducts = useMemo(() => {
+    if (!allProducts || allProducts.length === 0) return []
+
+    let filtered = allProducts.filter((product: Product) => {
       const matchesTypeRent = !selectedType || product.typeRentId === selectedType
       const matchesSearch =
         !location ||
@@ -192,7 +210,6 @@ export function useProductSearch() {
         }
       }
 
-      // Skip date filtering if product dates are just numbers (not proper dates)
       const matchesDates =
         !filters.arrivingDate ||
         !filters.leavingDate ||
@@ -201,7 +218,6 @@ export function useProductSearch() {
         (new Date(product.arriving) <= new Date(filters.arrivingDate) &&
           new Date(product.leaving) >= new Date(filters.leavingDate))
 
-      // New filters based on Prisma schema
       const price = parseFloat(product.basePrice)
       const matchesPrice =
         (!filters.minPrice || price >= parseFloat(filters.minPrice)) &&
@@ -254,18 +270,14 @@ export function useProductSearch() {
         matchesSpecialOptions
       )
     })
-  }
 
-  // Apply special filters
-  const applySpecialFilters = (filteredProducts: Product[]) => {
-    let result = [...filteredProducts]
-
+    // Apply special filters
     if (featured) {
-      result = result.filter(product => product.certified || product.validate === 'Approve')
+      filtered = filtered.filter(product => product.certified || product.validate === 'Approve')
     }
 
     if (popular) {
-      result = result.sort((a, b) => {
+      filtered = filtered.sort((a, b) => {
         const aScore = (a.equipments?.length || 0) + (a.servicesList?.length || 0)
         const bScore = (b.equipments?.length || 0) + (b.servicesList?.length || 0)
         return bScore - aScore
@@ -273,46 +285,21 @@ export function useProductSearch() {
     }
 
     if (recent) {
-      result = result.sort((a, b) => b.id.localeCompare(a.id))
+      filtered = filtered.sort((a, b) => b.id.localeCompare(a.id))
     }
 
     if (promo) {
-      result = result.filter(product => {
+      filtered = filtered.filter(product => {
         const price = parseFloat(product.basePrice)
         return price < 100
       })
     }
 
     // Always sort with sponsored products first
-    result = sortProductsWithSponsoredFirst(result)
+    return sortProductsWithSponsoredFirst(filtered)
+  }, [allProducts, selectedType, location, filters, featured, popular, recent, promo])
 
-    return result
-  }
-
-  // Load and filter products
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true)
-        const allProducts = await findAllProducts()
-        if (allProducts) {
-          let filteredProducts = filterProducts(allProducts)
-          filteredProducts = applySpecialFilters(filteredProducts)
-          setProducts(filteredProducts)
-        }
-      } catch (error) {
-        console.error('Error loading products:', error)
-        setError('Erreur lors de la récupération des produits')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchProducts()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedType, location, filters, featured, popular, recent, promo])
-
-  // Location suggestions
+  // Location suggestions with debounce
   useEffect(() => {
     if (location.length < 3) {
       setSuggestions([])
@@ -343,7 +330,6 @@ export function useProductSearch() {
     checkOut: string
     guests: number
   }) => {
-    // Always set location, even if it's empty (to allow searching all locations)
     setLocation(data.location)
     if (data.checkIn) {
       setFilters(prev => ({ ...prev, arrivingDate: data.checkIn }))
@@ -395,9 +381,12 @@ export function useProductSearch() {
     })
   }
 
+  const loading = staticQueries.some(q => q.isLoading) || productsLoading
+  const error = staticQueries.some(q => q.isError) ? 'Erreur lors du chargement des données' : null
+
   return {
     // State
-    products,
+    products: filteredProducts,
     loading,
     error,
     location,

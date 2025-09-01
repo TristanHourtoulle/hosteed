@@ -19,12 +19,26 @@ export async function SendMail(
       user: process.env.EMAIL_LOGIN,
       pass: process.env.EMAIL_PASSWORD,
     },
-  })
+    tls: {
+      rejectUnauthorized: false,
+    },
+    // DKIM temporairement désactivé pour éviter les conflits
+    // dkim: {
+    //   domainName: 'hosteed.com',
+    //   keySelector: 'ovh', 
+    //   privateKey: process.env.DKIM_PRIVATE_KEY || '',
+    // },
+  } as nodemailer.TransportOptions)
 
   const mailOptions: Mail.Options = {
-    from: process.env.EMAIL_LOGIN,
+    from: `"Hosteed" <${process.env.EMAIL_LOGIN}>`,
+    replyTo: process.env.EMAIL_LOGIN,
     to: email,
     subject: `${name}`,
+    headers: {
+      'X-Mailer': 'Hosteed Platform',
+      'X-Priority': '3',
+    },
     ...(isHtml ? { html: message } : { text: message }),
   }
   const sendMailPromise = () =>
@@ -88,12 +102,26 @@ export async function sendEmailFromTemplate(
         user: process.env.EMAIL_LOGIN,
         pass: process.env.EMAIL_PASSWORD,
       },
-    })
+      tls: {
+        rejectUnauthorized: false,
+      },
+      // DKIM temporairement désactivé pour éviter les conflits
+      // dkim: {
+      //   domainName: 'hosteed.com',
+      //   keySelector: 'ovh',
+      //   privateKey: process.env.DKIM_PRIVATE_KEY || '',
+      // },
+    } as nodemailer.TransportOptions)
 
     const mailOptions: Mail.Options = {
-      from: process.env.EMAIL_LOGIN,
+      from: `"Hosteed" <${process.env.EMAIL_LOGIN}>`,
+      replyTo: process.env.EMAIL_LOGIN,
       to: email,
       subject: subject,
+      headers: {
+        'X-Mailer': 'Hosteed Platform',
+        'X-Priority': '3',
+      },
       html: htmlContent,
     }
 

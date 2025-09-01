@@ -42,7 +42,11 @@ export function EmailVerificationPanel({ users, refreshUsers }: EmailVerificatio
   const [singleUser, setSingleUser] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
   const [results, setResults] = useState<SendResult[]>([])
-  const [summary, setSummary] = useState<{ total: number; success: number; failures: number } | null>(null)
+  const [summary, setSummary] = useState<{
+    total: number
+    success: number
+    failures: number
+  } | null>(null)
 
   // Filtrer les utilisateurs non vérifiés
   const unverifiedUsers = users.filter(user => !user.emailVerified)
@@ -70,7 +74,7 @@ export function EmailVerificationPanel({ users, refreshUsers }: EmailVerificatio
 
     try {
       let userIds: string[] = []
-      
+
       if (mode === 'all') {
         userIds = unverifiedUsers.map(user => user.id)
       } else if (mode === 'selected') {
@@ -100,18 +104,18 @@ export function EmailVerificationPanel({ users, refreshUsers }: EmailVerificatio
       if (response.ok) {
         setResults(data.results || [])
         setSummary(data.summary || null)
-        
+
         // Afficher un toast de succès
         const successCount = data.summary?.success || 0
         const failureCount = data.summary?.failures || 0
-        
+
         if (successCount > 0) {
           console.log(`${successCount} email(s) envoyé(s) avec succès`)
         }
         if (failureCount > 0) {
           console.warn(`${failureCount} échec(s) lors de l'envoi`)
         }
-        
+
         // Rafraîchir la liste des utilisateurs après envoi
         setTimeout(() => {
           refreshUsers()
@@ -119,12 +123,12 @@ export function EmailVerificationPanel({ users, refreshUsers }: EmailVerificatio
       } else {
         console.error('Erreur:', data.error)
         // Afficher un toast d'erreur
-        console.error('Erreur lors de l\'envoi des emails')
+        console.error("Erreur lors de l'envoi des emails")
       }
     } catch (error) {
-      console.error('Erreur lors de l\'envoi des emails:', error)
+      console.error("Erreur lors de l'envoi des emails:", error)
       // Afficher un toast d'erreur
-      console.error('Erreur de connexion lors de l\'envoi des emails')
+      console.error("Erreur de connexion lors de l'envoi des emails")
     } finally {
       setIsLoading(false)
     }
@@ -146,54 +150,53 @@ export function EmailVerificationPanel({ users, refreshUsers }: EmailVerificatio
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button
-          variant="outline"
-          className="gap-2"
-          disabled={unverifiedUsers.length === 0}
-        >
-          <Mail className="h-4 w-4" />
+        <Button variant='outline' className='gap-2' disabled={unverifiedUsers.length === 0}>
+          <Mail className='h-4 w-4' />
           Renvoyer emails de vérification
           {unverifiedUsers.length > 0 && (
-            <span className="ml-1 px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded-full">
+            <span className='ml-1 px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded-full'>
               {unverifiedUsers.length}
             </span>
           )}
         </Button>
       </DialogTrigger>
-      
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+
+      <DialogContent className='max-w-2xl max-h-[80vh] overflow-y-auto'>
         <DialogHeader>
           <DialogTitle>Renvoyer les emails de vérification</DialogTitle>
           <DialogDescription>
-            Choisissez les utilisateurs à qui renvoyer l&apos;email de vérification de compte.
-            Seuls les comptes non vérifiés sont concernés ({unverifiedUsers.length} comptes).
+            Choisissez les utilisateurs à qui renvoyer l&apos;email de vérification de compte. Seuls
+            les comptes non vérifiés sont concernés ({unverifiedUsers.length} comptes).
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className='space-y-4'>
           {/* Mode de sélection */}
           <div>
-            <label className="text-sm font-medium">Mode d&apos;envoi</label>
-            <Select value={mode} onValueChange={(value: 'all' | 'selected' | 'single') => setMode(value)}>
+            <label className='text-sm font-medium'>Mode d&apos;envoi</label>
+            <Select
+              value={mode}
+              onValueChange={(value: 'all' | 'selected' | 'single') => setMode(value)}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
+                <SelectItem value='all'>
+                  <div className='flex items-center gap-2'>
+                    <Users className='h-4 w-4' />
                     Tous les comptes non vérifiés ({unverifiedUsers.length})
                   </div>
                 </SelectItem>
-                <SelectItem value="selected">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
+                <SelectItem value='selected'>
+                  <div className='flex items-center gap-2'>
+                    <Users className='h-4 w-4' />
                     Comptes sélectionnés
                   </div>
                 </SelectItem>
-                <SelectItem value="single">
-                  <div className="flex items-center gap-2">
-                    <UserIcon className="h-4 w-4" />
+                <SelectItem value='single'>
+                  <div className='flex items-center gap-2'>
+                    <UserIcon className='h-4 w-4' />
                     Un seul compte
                   </div>
                 </SelectItem>
@@ -203,34 +206,34 @@ export function EmailVerificationPanel({ users, refreshUsers }: EmailVerificatio
 
           {/* Sélection multiple */}
           {mode === 'selected' && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
+            <div className='space-y-3'>
+              <div className='flex items-center gap-2'>
                 <Checkbox
                   checked={selectedUsers.length === unverifiedUsers.length}
                   onCheckedChange={handleSelectAll}
                 />
-                <label className="text-sm">Sélectionner tout</label>
+                <label className='text-sm'>Sélectionner tout</label>
               </div>
-              
-              <div className="max-h-48 overflow-y-auto border rounded p-3 space-y-2">
-                {unverifiedUsers.map((user) => (
-                  <div key={user.id} className="flex items-center gap-2">
+
+              <div className='max-h-48 overflow-y-auto border rounded p-3 space-y-2'>
+                {unverifiedUsers.map(user => (
+                  <div key={user.id} className='flex items-center gap-2'>
                     <Checkbox
                       checked={selectedUsers.includes(user.id)}
                       onCheckedChange={(checked: boolean) => handleUserSelection(user.id, checked)}
                     />
-                    <div className="flex-1">
-                      <div className="text-sm font-medium">
+                    <div className='flex-1'>
+                      <div className='text-sm font-medium'>
                         {user.name} {user.lastname}
                       </div>
-                      <div className="text-xs text-gray-500">{user.email}</div>
+                      <div className='text-xs text-gray-500'>{user.email}</div>
                     </div>
                   </div>
                 ))}
               </div>
-              
+
               {selectedUsers.length > 0 && (
-                <div className="text-sm text-blue-600">
+                <div className='text-sm text-blue-600'>
                   {selectedUsers.length} compte(s) sélectionné(s)
                 </div>
               )}
@@ -240,19 +243,19 @@ export function EmailVerificationPanel({ users, refreshUsers }: EmailVerificatio
           {/* Sélection unique */}
           {mode === 'single' && (
             <div>
-              <label className="text-sm font-medium">Utilisateur</label>
+              <label className='text-sm font-medium'>Utilisateur</label>
               <Select value={singleUser} onValueChange={setSingleUser}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Choisir un utilisateur" />
+                  <SelectValue placeholder='Choisir un utilisateur' />
                 </SelectTrigger>
                 <SelectContent>
-                  {unverifiedUsers.map((user) => (
+                  {unverifiedUsers.map(user => (
                     <SelectItem key={user.id} value={user.id}>
                       <div>
-                        <div className="font-medium">
+                        <div className='font-medium'>
                           {user.name} {user.lastname}
                         </div>
-                        <div className="text-xs text-gray-500">{user.email}</div>
+                        <div className='text-xs text-gray-500'>{user.email}</div>
                       </div>
                     </SelectItem>
                   ))}
@@ -264,31 +267,30 @@ export function EmailVerificationPanel({ users, refreshUsers }: EmailVerificatio
           {/* Résultats */}
           {summary && (
             <Alert>
-              <CheckCircle className="h-4 w-4" />
+              <CheckCircle className='h-4 w-4' />
               <AlertDescription>
-                <div className="font-medium">Envoi terminé</div>
-                <div className="text-sm">
-                  {summary.success} emails envoyés avec succès, {summary.failures} échecs sur {summary.total} total
+                <div className='font-medium'>Envoi terminé</div>
+                <div className='text-sm'>
+                  {summary.success} emails envoyés avec succès, {summary.failures} échecs sur{' '}
+                  {summary.total} total
                 </div>
               </AlertDescription>
             </Alert>
           )}
 
           {results.length > 0 && (
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium">Détails des envois :</h4>
-              <div className="max-h-32 overflow-y-auto space-y-1">
+            <div className='space-y-2'>
+              <h4 className='text-sm font-medium'>Détails des envois :</h4>
+              <div className='max-h-32 overflow-y-auto space-y-1'>
                 {results.map((result, index) => (
-                  <div key={index} className="flex items-center gap-2 text-xs">
+                  <div key={index} className='flex items-center gap-2 text-xs'>
                     {result.success ? (
-                      <CheckCircle className="h-3 w-3 text-green-500" />
+                      <CheckCircle className='h-3 w-3 text-green-500' />
                     ) : (
-                      <XCircle className="h-3 w-3 text-red-500" />
+                      <XCircle className='h-3 w-3 text-red-500' />
                     )}
-                    <span className="flex-1">{result.email}</span>
-                    {!result.success && (
-                      <span className="text-red-500">{result.error}</span>
-                    )}
+                    <span className='flex-1'>{result.email}</span>
+                    {!result.success && <span className='text-red-500'>{result.error}</span>}
                   </div>
                 ))}
               </div>
@@ -297,7 +299,7 @@ export function EmailVerificationPanel({ users, refreshUsers }: EmailVerificatio
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>
+          <Button variant='outline' onClick={handleClose}>
             Fermer
           </Button>
           <Button
@@ -309,9 +311,9 @@ export function EmailVerificationPanel({ users, refreshUsers }: EmailVerificatio
             }
           >
             {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              <Loader2 className='h-4 w-4 animate-spin mr-2' />
             ) : (
-              <Mail className="h-4 w-4 mr-2" />
+              <Mail className='h-4 w-4 mr-2' />
             )}
             {isLoading ? 'Envoi en cours...' : 'Envoyer les emails'}
           </Button>

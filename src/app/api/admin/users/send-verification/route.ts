@@ -6,13 +6,10 @@ import prisma from '@/lib/prisma'
 export async function POST(request: NextRequest) {
   try {
     const session = await auth()
-    
+
     // Vérifier que l'utilisateur est admin
     if (!session || session.user.roles !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'Accès non autorisé' },
-        { status: 403 }
-      )
+      return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })
     }
 
     const body = await request.json()
@@ -62,14 +59,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (usersToNotify.length === 0) {
-      return NextResponse.json(
-        { message: 'Aucun utilisateur non vérifié trouvé' },
-        { status: 404 }
-      )
+      return NextResponse.json({ message: 'Aucun utilisateur non vérifié trouvé' }, { status: 404 })
     }
 
     const results = []
-    
+
     for (const user of usersToNotify) {
       try {
         await sendEmailVerification(user.id)
@@ -100,12 +94,8 @@ export async function POST(request: NextRequest) {
         failures: failureCount,
       },
     })
-
   } catch (error) {
-    console.error('Erreur lors de l\'envoi des emails de vérification:', error)
-    return NextResponse.json(
-      { error: 'Erreur serveur' },
-      { status: 500 }
-    )
+    console.error("Erreur lors de l'envoi des emails de vérification:", error)
+    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }
