@@ -68,7 +68,9 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
               onPhotoUpdate={async () => {
                 // Ici on met à jour directement avec l'API endpoint
                 // qui est déjà géré dans le composant EditPhotoDialog
-                window.location.reload() // Recharger pour voir les changements
+                if (typeof window !== 'undefined') {
+                  window.location.reload() // Recharger pour voir les changements
+                }
               }}
             />
           </motion.div>

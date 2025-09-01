@@ -232,7 +232,9 @@ export default function ReservationPage() {
 
       const data = await response.json()
       if (data.url) {
-        window.location.href = data.url
+        if (typeof window !== 'undefined') {
+          window.location.href = data.url
+        }
       } else {
         toast.error('Erreur lors de la création de la session de paiement')
       }

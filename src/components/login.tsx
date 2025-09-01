@@ -31,7 +31,9 @@ export const Login = () => {
           setError('Email ou mot de passe incorrect')
         }
       } else {
-        window.location.href = '/host'
+        if (typeof window !== 'undefined') {
+          window.location.href = '/host'
+        }
       }
     } catch {
       setError('Une erreur est survenue')
@@ -59,7 +61,9 @@ export const Login = () => {
       }
 
       // Redirection après inscription réussie
-      window.location.href = '/host'
+      if (typeof window !== 'undefined') {
+        window.location.href = '/host'
+      }
     } catch {
       setError("Une erreur est survenue lors de l'inscription")
     }

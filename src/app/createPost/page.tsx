@@ -120,7 +120,7 @@ export default function CreatePostPage() {
               {images.length > 0 && (
                 <div className='relative w-full aspect-video rounded-lg overflow-hidden border'>
                   <Image
-                    src={URL.createObjectURL(images[0])}
+                    src={typeof window !== 'undefined' ? URL.createObjectURL(images[0]) : ''}
                     alt='Image principale'
                     fill
                     className='object-cover'
