@@ -213,7 +213,7 @@ export function CityAutocomplete({
       {showSuggestions && !loading && suggestions.length === 0 && inputValue.length >= 2 && (
         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg p-4">
           <div className="text-sm text-gray-500 text-center">
-            Aucune ville trouvée pour "{inputValue}"
+            Aucune ville trouvée pour &quot;{inputValue}&quot;
           </div>
         </div>
       )}

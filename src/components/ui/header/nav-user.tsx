@@ -17,10 +17,12 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { findUserById } from '@/lib/services/user.service'
 import { getProfileImageUrl } from '@/lib/utils'
+import { useUserProfile } from '@/contexts/UserProfileContext'
 
 export function NavUser({ session }: { session: Session | null }) {
-  const [user, setUser] = useState<Pick<User, 'id' | 'name' | 'email' | 'image'> | null>(null)
+  const [user, setUser] = useState<Pick<User, 'id' | 'name' | 'email' | 'image' | 'profilePicture'> | null>(null)
   const [imageError, setImageError] = useState(false)
+  const { profileUpdateTrigger } = useUserProfile()
 
   const handleLogout = () => {
     signOut()
@@ -38,11 +40,12 @@ export function NavUser({ session }: { session: Session | null }) {
           name: userData.name,
           email: userData.email,
           image: userData.image,
+          profilePicture: userData.profilePicture,
         })
       }
     }
     fetchUser()
-  }, [session])
+  }, [session, profileUpdateTrigger])
 
   if (!session) {
     return null
@@ -52,7 +55,8 @@ export function NavUser({ session }: { session: Session | null }) {
     return <div>Loading...</div>
   }
 
-  const profileImage = getProfileImageUrl(user.image)
+  // Prioritize profilePicture over image (OAuth profile photo)
+  const profileImage = getProfileImageUrl(user.profilePicture || user.image)
 
   const UserAvatar = () => (
     <div className='relative h-10 w-10 rounded-full overflow-hidden bg-gray-200'>

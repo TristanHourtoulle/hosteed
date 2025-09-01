@@ -136,43 +136,100 @@ export async function CheckRentIsAvailable(
     const normalizedLeavingDate = new Date(leavingDate)
     normalizedLeavingDate.setHours(0, 0, 0, 0)
 
-    // Vérifier les réservations existantes
-    const existingRent = await prisma.rent.findFirst({
-      where: {
-        productId: productId,
-        status: RentStatus.RESERVED,
-        OR: [
-          // Réservation qui commence pendant la période demandée
-          {
-            arrivingDate: {
-              gte: normalizedArrivalDate,
-              lte: normalizedLeavingDate,
-            },
-          },
-          // Réservation qui se termine pendant la période demandée
-          {
-            leavingDate: {
-              gte: normalizedArrivalDate,
-              lte: normalizedLeavingDate,
-            },
-          },
-          // Réservation qui englobe la période demandée
-          {
-            arrivingDate: {
-              lte: normalizedArrivalDate,
-            },
-            leavingDate: {
-              gte: normalizedLeavingDate,
-            },
-          },
-        ],
+    // Vérifier d'abord si c'est un produit d'hôtel avec plusieurs chambres
+    const productInfo = await prisma.product.findUnique({
+      where: { id: productId },
+      select: {
+        availableRooms: true,
+        hotel: {
+          select: { id: true }
+        }
       },
     })
 
-    if (existingRent) {
-      return {
-        available: false,
-        message: 'Il existe déjà une réservation sur cette période',
+    // Si c'est un hôtel avec plusieurs chambres, utiliser la logique hôtel
+    if (productInfo?.availableRooms && productInfo.availableRooms > 1) {
+      // Compter le nombre de réservations confirmées sur cette période
+      const existingRents = await prisma.rent.findMany({
+        where: {
+          productId: productId,
+          status: RentStatus.RESERVED,
+          OR: [
+            // Réservation qui commence pendant la période
+            {
+              arrivingDate: {
+                gte: normalizedArrivalDate,
+                lte: normalizedLeavingDate,
+              },
+            },
+            // Réservation qui se termine pendant la période
+            {
+              leavingDate: {
+                gte: normalizedArrivalDate,
+                lte: normalizedLeavingDate,
+              },
+            },
+            // Réservation qui englobe la période
+            {
+              arrivingDate: {
+                lte: normalizedArrivalDate,
+              },
+              leavingDate: {
+                gte: normalizedLeavingDate,
+              },
+            },
+          ],
+        },
+      })
+
+      const bookedRooms = existingRents.length
+      const availableRooms = productInfo.availableRooms - bookedRooms
+
+      if (availableRooms <= 0) {
+        return {
+          available: false,
+          message: 'Aucune chambre disponible pour cette période',
+        }
+      }
+    } else {
+      // Sinon, utiliser la logique classique (une seule unité)
+      const existingRent = await prisma.rent.findFirst({
+        where: {
+          productId: productId,
+          status: RentStatus.RESERVED,
+          OR: [
+            // Réservation qui commence pendant la période demandée
+            {
+              arrivingDate: {
+                gte: normalizedArrivalDate,
+                lte: normalizedLeavingDate,
+              },
+            },
+            // Réservation qui se termine pendant la période demandée
+            {
+              leavingDate: {
+                gte: normalizedArrivalDate,
+                lte: normalizedLeavingDate,
+              },
+            },
+            // Réservation qui englobe la période demandée
+            {
+              arrivingDate: {
+                lte: normalizedArrivalDate,
+              },
+              leavingDate: {
+                gte: normalizedLeavingDate,
+              },
+            },
+          ],
+        },
+      })
+
+      if (existingRent) {
+        return {
+          available: false,
+          message: 'Il existe déjà une réservation sur cette période',
+        }
       }
     }
     const existingUnavailable = await prisma.unAvailableProduct.findFirst({

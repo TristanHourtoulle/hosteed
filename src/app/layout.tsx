@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
-import { SessionProvider } from 'next-auth/react'
+import { ClientProviders } from '@/components/providers/ClientProviders'
 import Navbar from '@/components/ui/header/Navbar'
 import { Toaster } from '@/components/ui/shadcnui/sonner'
 
@@ -26,13 +26,13 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang='en'>
+    <html lang='fr'>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <SessionProvider>
+        <ClientProviders>
           <Navbar />
           <main className='min-h-screen'>{children}</main>
           <Toaster />
-        </SessionProvider>
+        </ClientProviders>
       </body>
     </html>
   )

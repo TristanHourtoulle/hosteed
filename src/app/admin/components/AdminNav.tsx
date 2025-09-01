@@ -20,6 +20,10 @@ import {
   Calendar,
   Menu,
   X,
+  Settings,
+  Package,
+  Plus,
+  Highlighter,
 } from 'lucide-react'
 import { Button } from '@/components/ui/shadcnui/button'
 import {
@@ -120,6 +124,27 @@ const navGroups: NavGroup[] = [
         title: 'Sponsorisés',
         href: '/admin/promoted',
         icon: Star,
+      },
+    ],
+  },
+  {
+    title: 'Configuration',
+    icon: Settings,
+    items: [
+      {
+        title: 'Services inclus',
+        href: '/admin/included-services',
+        icon: Package,
+      },
+      {
+        title: 'Extras',
+        href: '/admin/extras',
+        icon: Plus,
+      },
+      {
+        title: 'Points forts',
+        href: '/admin/highlights',
+        icon: Highlighter,
       },
     ],
   },

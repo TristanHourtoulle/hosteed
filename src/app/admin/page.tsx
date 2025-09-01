@@ -22,6 +22,7 @@ import {
   Cctv,
   Soup,
   BrushCleaning,
+  Calculator,
 } from 'lucide-react'
 import { StatsOverview } from './components/StatsOverview'
 import { ActionCardGroup } from './components/ActionCardGroup'
@@ -201,6 +202,12 @@ export default function AdminDashboard() {
           description: 'Gérer les mises en avant',
           icon: Star,
           href: '/admin/promoted',
+        },
+        {
+          title: 'Configuration des commissions',
+          description: 'Gérer les taux de commission et frais',
+          icon: Calculator,
+          href: '/admin/commission-settings',
         },
       ],
     },

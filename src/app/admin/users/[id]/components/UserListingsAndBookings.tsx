@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcn
 import { Badge } from '@/components/ui/shadcnui/badge'
 import { Button } from '@/components/ui/shadcnui/button'
 import Link from 'next/link'
+import Image from 'next/image'
 
 interface UserListingsAndBookingsProps {
   userId: string
@@ -121,10 +122,12 @@ export function UserListingsAndBookings({ posts, bookings }: UserListingsAndBook
                 >
                   {post.images && post.images.length > 0 && (
                     <div className='aspect-video bg-gray-100 relative'>
-                      <img
+                      <Image
                         src={post.images[0]}
                         alt={post.title}
-                        className='w-full h-full object-cover'
+                        fill
+                        className='object-cover'
+                        unoptimized
                       />
                       {post.isPromoted && (
                         <Badge className='absolute top-2 right-2 bg-yellow-500 text-white border-0'>
@@ -193,11 +196,13 @@ export function UserListingsAndBookings({ posts, bookings }: UserListingsAndBook
                 >
                   <div className='flex items-start gap-4'>
                     {booking.product.images && booking.product.images.length > 0 && (
-                      <div className='w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0'>
-                        <img
+                      <div className='w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 relative'>
+                        <Image
                           src={booking.product.images[0]}
                           alt={booking.product.title}
-                          className='w-full h-full object-cover'
+                          fill
+                          className='object-cover'
+                          unoptimized
                         />
                       </div>
                     )}

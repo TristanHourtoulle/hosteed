@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bienvenue chez Hosteed</title>
+    <style>
+        @media only screen and (max-width: 600px) {
+            .container { width: 100% !important; padding: 10px !important; }
+            .content { padding: 20px !important; }
+            .button { padding: 12px 20px !important; font-size: 16px !important; }
+        }
+    </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f5f7fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+    <div class="container" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+        
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">🏠 Hosteed</h1>
+            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Votre plateforme de location de confiance</p>
+        </div>
+        
+        <!-- Content -->
+        <div class="content" style="padding: 40px 30px; background: #ffffff;">
+            <h2 style="color: #2d3748; margin: 0 0 20px 0; font-size: 24px;">Bienvenue {{userName}} ! 🎉</h2>
+            
+            <p style="color: #4a5568; line-height: 1.6; margin: 0 0 25px 0; font-size: 16px;">
+                Merci de rejoindre <strong>Hosteed</strong>, votre nouvelle plateforme de location qui connecte voyageurs et hôtes dans le monde entier.
+            </p>
+            
+            <!-- Next Steps Box -->
+            <div style="background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%); border: 1px solid #e2e8f0; padding: 25px; border-radius: 12px; margin: 30px 0;">
+                <h3 style="margin: 0 0 15px 0; color: #667eea; font-size: 18px; display: flex; align-items: center;">
+                    🎯 Vos prochaines étapes
+                </h3>
+                <ul style="color: #4a5568; line-height: 1.8; margin: 0; padding-left: 20px; font-size: 15px;">
+                    <li style="margin-bottom: 8px;">✅ Vérifiez votre email en cliquant sur le bouton ci-dessous</li>
+                    <li style="margin-bottom: 8px;">📝 Complétez votre profil pour une meilleure expérience</li>
+                    <li style="margin-bottom: 8px;">🔍 Explorez nos hébergements disponibles</li>
+                    <li>🏡 Ou proposez votre propre logement à la location</li>
+                </ul>
+            </div>
+            
+            <!-- Verification Button -->
+            <div style="text-align: center; margin: 35px 0;">
+                <a href="{{verificationLink}}" 
+                   class="button"
+                   style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                          color: white; 
+                          padding: 15px 35px; 
+                          text-decoration: none; 
+                          border-radius: 8px; 
+                          display: inline-block; 
+                          font-weight: bold; 
+                          font-size: 16px;
+                          box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);
+                          transition: all 0.2s ease;">
+                    ✨ Vérifier mon email
+                </a>
+            </div>
+            
+            <!-- Info Box -->
+            <div style="background: #f0fff4; border-left: 4px solid #48bb78; padding: 20px; margin: 30px 0; border-radius: 0 8px 8px 0;">
+                <p style="margin: 0; color: #2f855a; font-size: 14px; line-height: 1.5;">
+                    💡 <strong>Astuce :</strong> Ajoutez <strong>contact@hosteed.fr</strong> à vos contacts pour ne jamais manquer nos communications importantes.
+                </p>
+            </div>
+            
+            <!-- Separator -->
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 35px 0;">
+            
+            <!-- Support Section -->
+            <div style="background: #fffbeb; border: 1px solid #fed7aa; padding: 20px; border-radius: 8px; text-align: center;">
+                <h4 style="margin: 0 0 10px 0; color: #92400e; font-size: 16px;">🤝 Besoin d'aide ?</h4>
+                <p style="margin: 0; color: #a16207; font-size: 14px; line-height: 1.5;">
+                    Notre équipe est là pour vous accompagner.<br>
+                    Contactez-nous à <a href="mailto:contact@hosteed.fr" style="color: #667eea; text-decoration: none; font-weight: bold;">contact@hosteed.fr</a>
+                </p>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div style="background: #f7fafc; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0;">
+            <div style="margin-bottom: 20px;">
+                <a href="https://hosteed.fr" style="color: #667eea; text-decoration: none; font-weight: bold; margin: 0 15px;">🌐 Visiter le site</a>
+                <a href="https://hosteed.fr/help" style="color: #667eea; text-decoration: none; font-weight: bold; margin: 0 15px;">❓ Centre d'aide</a>
+                <a href="https://hosteed.fr/contact" style="color: #667eea; text-decoration: none; font-weight: bold; margin: 0 15px;">📞 Contact</a>
+            </div>
+            
+            <p style="color: #718096; font-size: 12px; margin: 15px 0 5px 0;">
+                © 2024 <strong>Hosteed</strong> - Plateforme de location collaborative
+            </p>
+            
+            <div style="font-size: 11px; color: #a0aec0;">
+                <a href="mailto:unsubscribe@hosteed.fr" style="color: #a0aec0; text-decoration: none; margin: 0 10px;">Se désabonner</a>
+                <span>|</span>
+                <a href="https://hosteed.fr/privacy" style="color: #a0aec0; text-decoration: none; margin: 0 10px;">Confidentialité</a>
+                <span>|</span>
+                <a href="https://hosteed.fr/terms" style="color: #a0aec0; text-decoration: none; margin: 0 10px;">Conditions</a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tracking Pixel (optional) -->
+    <img src="https://hosteed.fr/track/email-open?user={{userId}}&campaign=welcome" width="1" height="1" style="display: none;" alt="">
+</body>
+</html>
