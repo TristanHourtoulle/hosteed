@@ -83,6 +83,13 @@ export async function GET() {
                         'cron-reminder-client.html',
                         {
                             bookId: unique.id,
+                            establishmentName: unique.product.name,
+                            establishmentAddress: unique.product.address,
+                            checkInDate: unique.arrivingDate.toDateString(),
+                            checkInTime: unique.product.arriving,
+                            checkOutDate: unique.leavingDate.toDateString(),
+                            checkOutTime: unique.product.leaving,
+                            establishmentPhone: unique.product.phone,
                             name: unique.user.name || '',
                             bookUrl: (process.env.NEXTAUTH_URL + '/reservation/' + unique.id),
                         }
