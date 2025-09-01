@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronDown, Search, Check } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/shadcnui/button'
 import { COUNTRIES, DEFAULT_COUNTRY, type Country } from '@/lib/data/countryCodes'
 
 interface PhoneInputProps {

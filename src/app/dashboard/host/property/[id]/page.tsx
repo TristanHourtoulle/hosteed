@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/shadcnui/tabs'
@@ -64,7 +64,6 @@ interface Rent {
 export default function PropertyDashboard() {
   const { data: session } = useSession()
   const params = useParams()
-  const router = useRouter()
   const productId = params.id as string
 
   const [product, setProduct] = useState<Product | null>(null)
@@ -429,7 +428,7 @@ export default function PropertyDashboard() {
                 <CardContent>
                   <div className='space-y-4'>
                     <div className='flex justify-between items-center'>
-                      <span className='text-gray-600'>Taux d'occupation</span>
+                      <span className='text-gray-600'>Taux d&apos;occupation</span>
                       <span className='font-semibold'>75%</span>
                     </div>
                     <div className='flex justify-between items-center'>

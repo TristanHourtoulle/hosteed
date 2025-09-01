@@ -47,11 +47,6 @@ import PhoneInput from '@/components/ui/PhoneInput'
 import ErrorAlert, { ErrorDetails } from '@/components/ui/ErrorAlert'
 import { parseCreateProductError, createValidationError } from '@/lib/utils/errorHandler'
 
-interface TypeRent {
-  id: string
-  name: string
-  description?: string
-}
 
 interface Equipment {
   id: string
@@ -455,7 +450,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     if (session?.user) {
       loadData()
     }
-  }, [session, resolvedParams.id])
+  }, [session, resolvedParams.id, router])
 
   // Fonctions pour gérer les nouveaux services/extras/highlights créés
   const handleServiceCreated = (newService: IncludedService) => {
@@ -917,7 +912,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                 </div>
                 <div className='ml-3'>
                   <h3 className='text-sm font-medium text-amber-800'>
-                    Modification d'une annonce approuvée
+                    Modification d&apos;une annonce approuvée
                   </h3>
                   <div className='mt-2 text-sm text-amber-700'>
                     <p>
@@ -946,7 +941,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                   </h3>
                   <div className='mt-2 text-sm text-blue-700'>
                     <p>
-                      Une demande de modification est déjà en cours d'examen pour cette annonce. 
+                      Une demande de modification est déjà en cours d&apos;examen pour cette annonce. 
                       Vous éditez actuellement le brouillon de modification.
                     </p>
                   </div>

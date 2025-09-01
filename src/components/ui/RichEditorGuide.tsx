@@ -17,9 +17,7 @@ import {
   HelpCircle, 
   Bold, 
   Italic, 
-  List, 
   Link2, 
-  Image as ImageIcon, 
   Code,
   Quote,
   Hash,
@@ -109,7 +107,7 @@ export default function RichEditorGuide() {
           className="gap-2 text-purple-600 border-purple-200 hover:bg-purple-50"
         >
           <HelpCircle className="w-4 h-4" />
-          Guide d'écriture
+          Guide d&apos;écriture
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[90vh]">
@@ -118,7 +116,7 @@ export default function RichEditorGuide() {
             <div className="p-2 bg-purple-100 rounded-lg">
               <Type className="w-6 h-6 text-purple-600" />
             </div>
-            Guide d'écriture Markdown
+            Guide d&apos;écriture Markdown
           </DialogTitle>
         </DialogHeader>
         
@@ -270,10 +268,10 @@ export default function RichEditorGuide() {
                   </CardHeader>
                   <CardContent className="space-y-4 text-amber-700">
                     <div className="space-y-3">
-                      <p>• N'oubliez pas l'<strong>espace après #</strong> pour les titres</p>
+                      <p>• N&apos;oubliez pas l&apos;<strong>espace après #</strong> pour les titres</p>
                       <p>• Les <strong>liens</strong> doivent être au format [texte](url)</p>
                       <p>• Attention aux <strong>caractères spéciaux</strong> dans les URLs</p>
-                      <p>• Vérifiez l'<strong>indentation</strong> pour les listes imbriquées</p>
+                      <p>• Vérifiez l&apos;<strong>indentation</strong> pour les listes imbriquées</p>
                     </div>
                   </CardContent>
                 </Card>

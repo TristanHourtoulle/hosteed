@@ -122,7 +122,7 @@ export default function CreatePostPage() {
           // Redirect to the newly created article
           router.push(`/posts/article/${newPost.slug}`)
         } else {
-          toast.error("Erreur lors de la création de l'article")
+          toast.error("Erreur lors de la création de l&apos;article")
         }
       }
     } catch (error) {
@@ -154,7 +154,7 @@ export default function CreatePostPage() {
             <div className="text-center space-y-4">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
                 <BookOpen className="h-4 w-4" />
-                Création d'article
+                Création d&apos;article
               </div>
               <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 via-purple-700 to-indigo-700">
                 Créer un nouvel article
@@ -175,7 +175,7 @@ export default function CreatePostPage() {
                       <div className="p-2 bg-purple-100 rounded-lg">
                         <Edit3 className="w-6 h-6 text-purple-600" />
                       </div>
-                      Rédaction de l'article
+                      Rédaction de l&apos;article
                     </CardTitle>
                     <CardDescription className="text-lg mt-2">
                       Utilisez Markdown pour une mise en forme riche et professionnelle
@@ -200,7 +200,7 @@ export default function CreatePostPage() {
                   >
                     <Label htmlFor="title" className="text-lg font-semibold flex items-center gap-2">
                       <Sparkles className="w-5 h-5 text-purple-600" />
-                      Titre de l'article
+                      Titre de l&apos;article
                     </Label>
                     <Input
                       id="title"
@@ -212,7 +212,7 @@ export default function CreatePostPage() {
                     />
                     <p className="text-sm text-slate-600 flex items-center gap-1">
                       <TrendingUp className="w-4 h-4" />
-                      Un bon titre augmente de 73% l'engagement des lecteurs
+                      Un bon titre augmente de 73% l&apos;engagement des lecteurs
                     </p>
                   </motion.div>
 
@@ -271,7 +271,7 @@ export default function CreatePostPage() {
                           onClick={() => document.getElementById('image-upload')?.click()}
                         >
                           <ImagePlus className="w-4 h-4 mr-2" />
-                          Changer l'image
+                          Changer l&apos;image
                         </Button>
                       </div>
                     )}
@@ -293,7 +293,7 @@ export default function CreatePostPage() {
                     <div className="flex items-center justify-between">
                       <Label className="text-lg font-semibold flex items-center gap-2">
                         <Edit3 className="w-5 h-5 text-purple-600" />
-                        Contenu de l'article
+                        Contenu de l&apos;article
                       </Label>
                       <div className="flex items-center gap-2">
                         <Badge variant="secondary" className="bg-green-50 text-green-700">
@@ -337,7 +337,7 @@ export default function CreatePostPage() {
                         </div>
                         <p className="text-sm text-slate-600 mt-3 flex items-center gap-2">
                           <BookOpen className="w-4 h-4" />
-                          Utilisez le guide d'écriture pour découvrir toutes les possibilités du Markdown
+                          Utilisez le guide d&apos;écriture pour découvrir toutes les possibilités du Markdown
                         </p>
                       </TabsContent>
                       
@@ -388,7 +388,7 @@ export default function CreatePostPage() {
               ) : (
                 <>
                   <Save className="w-5 h-5 mr-3" />
-                  Publier l'article
+                  Publier l&apos;article
                 </>
               )}
             </Button>

@@ -30,7 +30,7 @@ export default function ShareButton({ title, description, url }: ShareButtonProp
       try {
         await navigator.clipboard.writeText(url)
         toast.success('Lien copié dans le presse-papiers!')
-      } catch (clipboardError) {
+      } catch {
         toast.error('Impossible de partager ou copier le lien')
       }
     }

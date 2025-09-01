@@ -48,11 +48,6 @@ import PhoneInput from '@/components/ui/PhoneInput'
 import ErrorAlert, { ErrorDetails } from '@/components/ui/ErrorAlert'
 import { parseCreateProductError, createValidationError } from '@/lib/utils/errorHandler'
 
-interface TypeRent {
-  id: string
-  name: string
-  description?: string
-}
 
 interface Equipment {
   id: string

@@ -194,7 +194,6 @@ export default function FilterPopover({
                     type='number'
                     min="0"
                     placeholder='0 €'
-                    min='0'
                     value={localFilters.minPrice}
                     onChange={e => handleInputChange('minPrice', e.target.value)}
                     className='w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent'
@@ -208,7 +207,6 @@ export default function FilterPopover({
                     type='number'
                     min="0"
                     placeholder='1000 €'
-                    min='0'
                     value={localFilters.maxPrice}
                     onChange={e => handleInputChange('maxPrice', e.target.value)}
                     className='w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent'
@@ -236,7 +234,6 @@ export default function FilterPopover({
                     type='number'
                     min="1"
                     placeholder='1'
-                    min='0'
                     value={localFilters.minPeople}
                     onChange={e => handleInputChange('minPeople', e.target.value)}
                     className='w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent'
@@ -250,7 +247,6 @@ export default function FilterPopover({
                     type='number'
                     min="1"
                     placeholder='10'
-                    min='0'
                     value={localFilters.maxPeople}
                     onChange={e => handleInputChange('maxPeople', e.target.value)}
                     className='w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent'
@@ -278,7 +274,6 @@ export default function FilterPopover({
                     type='number'
                     min="0"
                     placeholder='1'
-                    min='0'
                     value={localFilters.minRooms}
                     onChange={e => handleInputChange('minRooms', e.target.value)}
                     className='w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent'
@@ -292,7 +287,6 @@ export default function FilterPopover({
                     type='number'
                     min="0"
                     placeholder='5'
-                    min='0'
                     value={localFilters.maxRooms}
                     onChange={e => handleInputChange('maxRooms', e.target.value)}
                     className='w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent'
@@ -309,7 +303,6 @@ export default function FilterPopover({
                     type='number'
                     min="0"
                     placeholder='1'
-                    min='0'
                     value={localFilters.minBathrooms}
                     onChange={e => handleInputChange('minBathrooms', e.target.value)}
                     className='w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent'
@@ -323,7 +316,6 @@ export default function FilterPopover({
                     type='number'
                     min="0"
                     placeholder='3'
-                    min='0'
                     value={localFilters.maxBathrooms}
                     onChange={e => handleInputChange('maxBathrooms', e.target.value)}
                     className='w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent'
@@ -340,7 +332,6 @@ export default function FilterPopover({
                     type='number'
                     min="0"
                     placeholder='20'
-                    min='0'
                     value={localFilters.sizeMin}
                     onChange={e => handleInputChange('sizeMin', e.target.value)}
                     className='w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent'
@@ -354,7 +345,6 @@ export default function FilterPopover({
                     type='number'
                     min="0"
                     placeholder='200'
-                    min='0'
                     value={localFilters.sizeMax}
                     onChange={e => handleInputChange('sizeMax', e.target.value)}
                     className='w-full p-2 text-sm border border-gray-300 rounded-md focus:border-transparent'

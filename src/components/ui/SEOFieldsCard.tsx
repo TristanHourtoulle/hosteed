@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
 import { Input } from '@/components/ui/shadcnui/input'
@@ -34,7 +33,6 @@ interface SEOFieldsCardProps {
 }
 
 export default function SEOFieldsCard({ seoData, onSeoChange, articleTitle }: SEOFieldsCardProps) {
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
 
   const handleChange = (field: keyof SEOData, value: string) => {
     onSeoChange({
@@ -204,7 +202,7 @@ export default function SEOFieldsCard({ seoData, onSeoChange, articleTitle }: SE
               <div className="flex items-center justify-between">
                 <Label htmlFor="slug" className="flex items-center gap-2 text-base font-medium">
                   <Globe className="w-4 h-4 text-purple-600" />
-                  URL de l'article
+                  URL de l&apos;article
                 </Label>
                 <Button 
                   type="button"

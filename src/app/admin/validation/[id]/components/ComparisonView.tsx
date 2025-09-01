@@ -237,7 +237,7 @@ export function ComparisonView({ draft, original }: ComparisonViewProps) {
         <div className="bg-blue-50 p-4 rounded-lg">
           <h3 className="text-lg font-semibold text-blue-800 mb-2">Aucune modification détectée</h3>
           <p className="text-sm text-blue-700">
-            Aucune différence n'a été trouvée entre l'annonce originale et la version modifiée.
+            Aucune différence n&apos;a été trouvée entre l&apos;annonce originale et la version modifiée.
           </p>
         </div>
       </div>
@@ -249,7 +249,7 @@ export function ComparisonView({ draft, original }: ComparisonViewProps) {
       <div className="bg-blue-50 p-4 rounded-lg">
         <h3 className="text-lg font-semibold text-blue-800 mb-2">Comparaison des modifications</h3>
         <p className="text-sm text-blue-700">
-          Voici les {differences.length} différence(s) détectée(s) entre l'annonce originale et les modifications proposées.
+          Voici les {differences.length} différence(s) détectée(s) entre l&apos;annonce originale et les modifications proposées.
         </p>
       </div>
 

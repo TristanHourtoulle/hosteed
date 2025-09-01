@@ -85,7 +85,7 @@ interface ProductDetailsProps {
 
 export function ProductDetails({ product }: ProductDetailsProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
-  const [showAllPhotos, setShowAllPhotos] = useState(false)
+  const [, setShowAllPhotos] = useState(false)
   const [showFullscreen, setShowFullscreen] = useState(false)
 
   const nextImage = () => {
@@ -154,11 +154,11 @@ export function ProductDetails({ product }: ProductDetailsProps) {
           <CardHeader>
             <CardTitle className='flex items-center'>
               <User className='h-4 w-4 mr-2' />
-              Informations sur l'hôte
+              Informations sur l&apos;hôte
             </CardTitle>
           </CardHeader>
           <CardContent className='space-y-3'>
-            {product.user.map((host, index) => (
+            {product.user.map((host) => (
               <div key={host.id} className='flex items-start space-x-3'>
                 {(host.image || host.profilePicture || host.profilePictureBase64) && (
                   <Image
@@ -227,7 +227,7 @@ export function ProductDetails({ product }: ProductDetailsProps) {
           <div className='flex items-center space-x-6'>
             <div className='flex items-center space-x-2'>
               <Calendar className='h-4 w-4 text-gray-400' />
-              <span className='text-sm'>Heure d'arrivée: {product.arriving}h</span>
+              <span className='text-sm'>Heure d&apos;arrivée: {product.arriving}h</span>
             </div>
             <div className='flex items-center space-x-2'>
               <Calendar className='h-4 w-4 text-gray-400' />

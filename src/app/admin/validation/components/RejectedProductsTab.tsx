@@ -34,7 +34,7 @@ interface RejectedProductsTabProps {
   onUpdate: () => void
 }
 
-export function RejectedProductsTab({ products, currentUserId, onUpdate }: RejectedProductsTabProps) {
+export function RejectedProductsTab({ products, onUpdate }: RejectedProductsTabProps) {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([])
   const [isDeleting, setIsDeleting] = useState(false)
   const [isDeletingBulk, setIsDeletingBulk] = useState(false)

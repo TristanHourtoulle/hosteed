@@ -79,7 +79,7 @@ export default function PaymentDetailsCard({ paymentDetails }: PaymentDetailsCar
 
         <div className='mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200'>
           <p className='text-sm text-blue-800'>
-            <strong>Note :</strong> Ces informations vous permettent de suivre l'état du paiement à votre hôte.
+            <strong>Note :</strong> Ces informations vous permettent de suivre l&apos;état du paiement à votre hôte.
             Le prix viré correspond au montant déjà transféré à l&apos;hébergeur après déduction de la commission plateforme.
           </p>
         </div>
