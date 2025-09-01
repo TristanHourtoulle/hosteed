@@ -73,7 +73,11 @@ export async function findAllProducts() {
   try {
     const products = await prisma.product.findMany({
       where: {
-        validate: ProductValidation.Approve,
+        validate: {
+          in: [ProductValidation.Approve, ProductValidation.ModificationPending]
+        },
+        // Only show original products, not drafts
+        isDraft: false,
       },
       include: {
         img: true,
@@ -128,6 +132,8 @@ export async function findAllProductByHostId(id: string) {
             },
           },
         },
+        // Exclude draft products from host dashboard - only show original products
+        isDraft: false,
       },
       include: {
         img: true,
@@ -769,6 +775,7 @@ export async function createDraftProduct(originalProductId: string) {
         propertyInfo: true,
         options: true,
         typeRoom: true,
+        user: true,
       },
     })
 
@@ -842,6 +849,9 @@ export async function createDraftProduct(originalProductId: string) {
         },
         highlights: {
           connect: originalProduct.highlights.map(highlight => ({ id: highlight.id })),
+        },
+        user: {
+          connect: originalProduct.user.map(u => ({ id: u.id })),
         },
         nearbyPlaces: {
           create: originalProduct.nearbyPlaces.map(place => ({
