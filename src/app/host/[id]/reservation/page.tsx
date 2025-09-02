@@ -278,9 +278,7 @@ export default function ReservationPage() {
 
   const nights = calculateNights()
   const subtotal = parseFloat(product.basePrice) * nights
-  const cleaningFee = 25
   const serviceFee = 0
-  const taxes = Math.round(subtotal * 0.1)
   const total = calculateTotalPrice()
 
   return (
@@ -551,16 +549,6 @@ export default function ReservationPage() {
                         </span>
                       </div>
                     )}
-
-                    <div className='flex justify-between items-start'>
-                      <span className='text-gray-600 text-sm sm:text-base flex-1 pr-2'>
-                        Frais de nettoyage
-                      </span>
-                      <span className='font-medium text-sm sm:text-base flex-shrink-0'>
-                        {cleaningFee}€
-                      </span>
-                    </div>
-
                     <div className='flex justify-between items-start'>
                       <span className='text-gray-600 text-sm sm:text-base flex-1 pr-2'>
                         Frais de service
@@ -569,14 +557,6 @@ export default function ReservationPage() {
                         {serviceFee}€
                       </span>
                     </div>
-
-                    <div className='flex justify-between items-start'>
-                      <span className='text-gray-600 text-sm sm:text-base flex-1 pr-2'>Taxes</span>
-                      <span className='font-medium text-sm sm:text-base flex-shrink-0'>
-                        {taxes}€
-                      </span>
-                    </div>
-
                     <div className='border-t pt-4'>
                       <div className='flex justify-between text-lg sm:text-xl font-bold'>
                         <span>Total</span>
@@ -611,7 +591,6 @@ export default function ReservationPage() {
                     </Button>
                   )}
                 </div>
-
                 <div className='p-3 bg-green-50 border border-green-200 rounded-lg'>
                   <p className='text-sm text-green-800 text-center leading-relaxed font-medium'>
                     Vous ne serez débité qu&apos;après confirmation de la réservation

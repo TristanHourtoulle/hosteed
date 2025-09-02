@@ -278,19 +278,13 @@ export async function POST(req: Request): Promise<Response> {
       const paymentIntent = event.data.object as Stripe.PaymentIntent
       console.log('Nouveau paiement créé avec capture manuelle:', paymentIntent.id)
 
-      // Mettre à jour le statut de la location en attente de capture
+      // Ne pas changer le statut ici, attendre la capture ou le succès
       const rent = await prisma.rent.findFirst({
         where: { stripeId: paymentIntent.id },
       })
 
       if (rent) {
-        await prisma.rent.update({
-          where: { id: rent.id },
-          data: {
-            status: 'RESERVED' as RentStatus,
-            payment: 'NOT_PAID',
-          },
-        })
+        console.log('Paiement créé, en attente de capture pour passer en RESERVED')
       }
     }
 
@@ -304,7 +298,16 @@ export async function POST(req: Request): Promise<Response> {
       })
 
       if (rent) {
-        return NextResponse.json(await approveRent(rent.id))
+        // Mettre à jour directement le statut en RESERVED car le paiement est capturé
+        await prisma.rent.update({
+          where: { id: rent.id },
+          data: {
+            status: 'RESERVED' as RentStatus,
+            accepted: true,
+            payment: 'CLIENT_PAID',
+          },
+        })
+        console.log('Location mise à jour en RESERVED après capture du paiement')
       }
     }
 

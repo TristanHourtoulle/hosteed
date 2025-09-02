@@ -141,10 +141,8 @@ export default function BookingCard({
   }, [nights, product.basePrice])
 
   const subtotal = parseFloat(product.basePrice) * nights
-  const cleaningFee = 25
   const serviceFee = priceCalculation ? Math.round(priceCalculation.clientCommission) : 0
-  const taxes = 0 // Taxes are now included in the commission calculation
-  const total = priceCalculation ? Math.round(priceCalculation.clientPays) : subtotal + cleaningFee + serviceFee + taxes
+  const total = priceCalculation ? Math.round(priceCalculation.clientPays) : subtotal + serviceFee
 
   const hasValidDates = dateRange?.from && dateRange?.to
 
@@ -385,24 +383,10 @@ export default function BookingCard({
               </div>
               <div className='flex justify-between items-center'>
                 <span className='text-gray-600 underline decoration-dotted cursor-help'>
-                  Frais de nettoyage
+                  Frais de service Hosteed
                 </span>
-                <span className='text-gray-900 font-medium'>{cleaningFee}€</span>
+                <span className='text-gray-900 font-medium'>{serviceFee}€</span>
               </div>
-              {serviceFee > 0 && (
-                <div className='flex justify-between items-center'>
-                  <span className='text-gray-600 underline decoration-dotted cursor-help'>
-                    Frais de service
-                  </span>
-                  <span className='text-gray-900 font-medium'>{serviceFee}€</span>
-                </div>
-              )}
-              {taxes > 0 && (
-                <div className='flex justify-between items-center'>
-                  <span className='text-gray-600'>Taxes et frais</span>
-                  <span className='text-gray-900 font-medium'>{taxes}€</span>
-                </div>
-              )}
               <div className='border-t border-gray-200 pt-3 flex justify-between items-center font-semibold text-base'>
                 <span>Total</span>
                 <span>{total.toFixed(0)}€</span>
