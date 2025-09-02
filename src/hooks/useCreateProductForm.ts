@@ -3,10 +3,7 @@ import { useForm, SubmitHandler } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import {
-  createProductSchema,
-  type CreateProductFormData,
-} from '@/lib/schemas/product.schema'
+import { createProductSchema, type CreateProductFormData } from '@/lib/schemas/product.schema'
 import { createProduct } from '@/lib/services/product.service'
 import { compressImages, formatFileSize } from '@/lib/utils/imageCompression'
 
@@ -54,21 +51,27 @@ export function useCreateProductForm() {
     setIsUploadingImages(true)
     try {
       // First compress the images
-      const compressedFiles = await compressImages(files, {
-        maxSizeMB: 0.8,
-        maxWidthOrHeight: 1920,
-        useWebWorker: true,
-        quality: 0.8,
-      }, (progress, fileName) => {
-        console.log(`Compression: ${Math.round(progress)}% - ${fileName}`)
-      })
+      const compressedFiles = await compressImages(
+        files,
+        {
+          maxSizeMB: 0.8,
+          maxWidthOrHeight: 1920,
+          useWebWorker: true,
+          quality: 0.8,
+        },
+        (progress, fileName) => {
+          console.log(`Compression: ${Math.round(progress)}% - ${fileName}`)
+        }
+      )
 
       // Then convert to base64
       const promises = compressedFiles.map((file, index) => {
         return new Promise<string>((resolve, reject) => {
           const reader = new FileReader()
           reader.onloadend = () => {
-            console.log(`Image ${index + 1} (${file.name}) final size: ${formatFileSize(file.size)}`)
+            console.log(
+              `Image ${index + 1} (${file.name}) final size: ${formatFileSize(file.size)}`
+            )
             resolve(reader.result as string)
           }
           reader.onerror = () => reject(new Error(`Erreur de lecture de l'image: ${file.name}`))
@@ -91,7 +94,8 @@ export function useCreateProductForm() {
         setGlobalError('Veuillez sélectionner uniquement des images')
         return false
       }
-      if (file.size > 50 * 1024 * 1024) { // 50MB max before compression
+      if (file.size > 50 * 1024 * 1024) {
+        // 50MB max before compression
         setGlobalError('La taille de chaque image ne doit pas dépasser 50MB')
         return false
       }
@@ -105,16 +109,20 @@ export function useCreateProductForm() {
     try {
       setIsUploadingImages(true)
       setGlobalError('Compression des images en cours...')
-      
+
       // Compress images before adding them
-      const compressedFiles = await compressImages(files, {
-        maxSizeMB: 0.8,
-        maxWidthOrHeight: 1920,
-        useWebWorker: true,
-        quality: 0.8,
-      }, (progress, fileName) => {
-        setGlobalError(`Compression: ${Math.round(progress)}% - ${fileName}`)
-      })
+      const compressedFiles = await compressImages(
+        files,
+        {
+          maxSizeMB: 0.8,
+          maxWidthOrHeight: 1920,
+          useWebWorker: true,
+          quality: 0.8,
+        },
+        (progress, fileName) => {
+          setGlobalError(`Compression: ${Math.round(progress)}% - ${fileName}`)
+        }
+      )
 
       setSelectedFiles(prev => [...prev, ...compressedFiles])
       setGlobalError('')

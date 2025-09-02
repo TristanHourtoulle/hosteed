@@ -56,6 +56,8 @@ export interface CreateProductInput {
   arriving: number | string
   leaving: number | string
   phone?: string
+  phoneCountry?: string
+  maxPeople?: number | null
   typeId: string
   userId: string[]
   equipments: string[]

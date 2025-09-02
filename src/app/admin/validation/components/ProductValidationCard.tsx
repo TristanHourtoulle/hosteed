@@ -110,6 +110,7 @@ export function ProductValidationCard({
     }
   }
 
+
   return (
     <Card className='overflow-hidden hover:shadow-lg transition-all duration-300'>
       {/* Product Image */}

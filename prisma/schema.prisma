@@ -11,6 +11,7 @@ model TypeRent {
   id          String    @id @default(cuid())
   name        String
   description String
+  isHotelType Boolean   @default(false) // Indique si ce type fonctionne comme un hôtel
   products    Product[]
 }
 
@@ -149,6 +150,7 @@ model Product {
   userManager      BigInt
   typeId           String
   phone            String
+  phoneCountry     String            @default("MG")
   latitude         Float
   longitude        Float
   certified        Boolean           @default(false)
@@ -189,6 +191,12 @@ model Product {
   // Nouveaux champs pour la validation améliorée
   validationComments ValidationComment[]
   validationHistory  ValidationHistory[]
+  
+  // Draft product support for modification workflow
+  originalProductId String?     // Reference to original product if this is a draft
+  isDraft           Boolean     @default(false)  // Flag to identify draft products
+  originalProduct   Product?    @relation("ProductDraft", fields: [originalProductId], references: [id], onDelete: Cascade)
+  draftProducts     Product[]   @relation("ProductDraft")  // Draft versions of this product
 }
 
 // Nouveau modèle pour les commentaires de validation
@@ -589,6 +597,7 @@ enum ProductValidation {
   Approve
   Refused
   RecheckRequest
+  ModificationPending  // Product has a pending modification draft
 }
 
 model Favorite {
@@ -652,10 +661,33 @@ model PropertyInfo {
 }
 
 model Post {
-  id        String   @id @default(cuid())
-  title     String   @unique
-  content   String   @db.Text
-  image     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String   @id @default(cuid())
+  title           String   @unique
+  content         String   @db.Text
+  image           String?
+  // SEO fields
+  metaTitle       String?
+  metaDescription String?
+  keywords        String?
+  slug            String?  @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// Configuration des commissions (globale pour la plateforme)
+model CommissionSettings {
+  id                    String   @id @default(cuid())
+  // Commission côté hébergeur
+  hostCommissionRate    Float    @default(0.0)  // Taux en pourcentage (ex: 5.0 pour 5%)
+  hostCommissionFixed   Float    @default(0.0)  // Frais fixes en euros
+  // Commission côté client  
+  clientCommissionRate  Float    @default(0.0)  // Taux en pourcentage
+  clientCommissionFixed Float    @default(0.0)  // Frais fixes en euros
+  // Metadata
+  isActive             Boolean   @default(true)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  createdBy            String?   // ID de l'admin qui a créé
+  
+  @@map("commission_settings")
 }

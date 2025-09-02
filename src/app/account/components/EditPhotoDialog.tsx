@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/shadcnui/button'
 import { Camera, Upload, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { compressImage, formatFileSize } from '@/lib/utils/imageCompression'
+import { useUserProfile } from '@/contexts/UserProfileContext'
 
 interface EditPhotoDialogProps {
   currentPhoto?: string
@@ -25,6 +26,7 @@ export function EditPhotoDialog({ currentPhoto, onPhotoUpdate }: EditPhotoDialog
   const [preview, setPreview] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [dragActive, setDragActive] = useState(false)
+  const { refreshUserProfile } = useUserProfile()
 
   const handleFileSelect = async (file: File) => {
     // Vérifier la taille (max 20MB avant compression)
@@ -111,6 +113,10 @@ export function EditPhotoDialog({ currentPhoto, onPhotoUpdate }: EditPhotoDialog
       onPhotoUpdate(preview)
       setIsOpen(false)
       setPreview(null)
+      
+      // Trigger a refresh of the user profile in the header
+      refreshUserProfile()
+      
       toast.success('Photo de profil mise à jour avec succès')
     } catch (error) {
       console.error('Erreur:', error)

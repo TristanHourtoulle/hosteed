@@ -10,6 +10,7 @@ interface Post {
   title: string
   content: string
   image: string
+  slug?: string
   createdAt: Date
 }
 
@@ -27,7 +28,7 @@ export default function SuggestedPosts({ posts }: SuggestedPostsProps) {
         {posts.map(post => (
           <Link
             key={post.id}
-            href={`/posts/${post.id}`}
+            href={`/posts/article/${post.slug || post.id}`}
             className='group block bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200'
           >
             <div className='relative h-48 rounded-t-lg overflow-hidden'>

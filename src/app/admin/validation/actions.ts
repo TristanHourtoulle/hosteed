@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { validationService } from '@/lib/services/validation-simple.service'
+import { deleteRejectedProduct, deleteMultipleRejectedProducts } from '@/lib/services/product.service'
 import prisma from '@/lib/prisma'
 
 export async function getProductsForValidation() {
@@ -17,7 +18,7 @@ export async function getProductsForValidation() {
 export async function getValidationStats() {
   try {
     const stats = await validationService.getValidationStats()
-    const total = stats.pending + stats.approved + stats.rejected + stats.recheckRequest
+    const total = stats.pending + stats.approved + stats.rejected + stats.recheckRequest + stats.modificationPending + stats.drafts
     return { success: true, data: { ...stats, total } }
   } catch (error) {
     console.error('Error fetching validation stats:', error)
@@ -27,108 +28,159 @@ export async function getValidationStats() {
 
 export async function getProductForValidation(productId: string) {
   try {
-    const product = await prisma.product.findUnique({
-      where: { id: productId },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            lastname: true,
-            email: true,
-            image: true,
-          },
-        },
-        img: {
-          select: {
-            img: true,
-          },
-        },
-        type: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-          },
-        },
-        equipments: {
-          select: {
-            id: true,
-            name: true,
-            icon: true,
-          },
-        },
-        mealsList: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        servicesList: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        securities: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        typeRoom: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-          },
-        },
-        rules: {
-          select: {
-            id: true,
-            smokingAllowed: true,
-            petsAllowed: true,
-            eventsAllowed: true,
-            checkInTime: true,
-            checkOutTime: true,
-            selfCheckIn: true,
-            selfCheckInType: true,
-          },
-        },
-        nearbyPlaces: {
-          select: {
-            id: true,
-            name: true,
-            distance: true,
-            duration: true,
-            transport: true,
-          },
-        },
-        transportOptions: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-          },
-        },
-        propertyInfo: {
-          select: {
-            id: true,
-            hasStairs: true,
-            hasElevator: true,
-            hasHandicapAccess: true,
-            hasPetsOnProperty: true,
-            additionalNotes: true,
-          },
+    const productIncludeConfig = {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          lastname: true,
+          email: true,
+          image: true,
+          profilePicture: true,
+          profilePictureBase64: true,
         },
       },
+      img: {
+        select: {
+          img: true,
+        },
+      },
+      type: {
+        select: {
+          id: true,
+          name: true,
+          description: true,
+        },
+      },
+      equipments: {
+        select: {
+          id: true,
+          name: true,
+          icon: true,
+        },
+      },
+      mealsList: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      servicesList: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      securities: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      typeRoom: {
+        select: {
+          id: true,
+          name: true,
+          description: true,
+        },
+      },
+      rules: {
+        select: {
+          id: true,
+          smokingAllowed: true,
+          petsAllowed: true,
+          eventsAllowed: true,
+          checkInTime: true,
+          checkOutTime: true,
+          selfCheckIn: true,
+          selfCheckInType: true,
+        },
+      },
+      nearbyPlaces: {
+        select: {
+          id: true,
+          name: true,
+          distance: true,
+          duration: true,
+          transport: true,
+        },
+      },
+      transportOptions: {
+        select: {
+          id: true,
+          name: true,
+          description: true,
+        },
+      },
+      propertyInfo: {
+        select: {
+          id: true,
+          hasStairs: true,
+          hasElevator: true,
+          hasHandicapAccess: true,
+          hasPetsOnProperty: true,
+          additionalNotes: true,
+        },
+      },
+      hotel: {
+        select: {
+          id: true,
+          userId: true,
+        },
+      },
+      includedServices: {
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          icon: true,
+        },
+      },
+      extras: {
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          priceEUR: true,
+          priceMGA: true,
+          type: true,
+        },
+      },
+      highlights: {
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          icon: true,
+        },
+      },
+    }
+
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      include: productIncludeConfig,
     })
 
     if (!product) {
       return { success: false, error: 'Produit non trouvé' }
     }
 
-    return { success: true, data: product }
+    // If this is a draft product, also fetch the original for comparison
+    let originalProduct = null
+    if (product.isDraft && product.originalProductId) {
+      originalProduct = await prisma.product.findUnique({
+        where: { id: product.originalProductId },
+        include: productIncludeConfig,
+      })
+    }
+
+    return { 
+      success: true, 
+      data: {
+        ...product,
+        originalProduct: originalProduct
+      }
+    }
   } catch (error) {
     console.error('Error fetching product for validation:', error)
     return { success: false, error: 'Impossible de charger le produit' }
@@ -202,3 +254,34 @@ export async function getValidationComments(productId: string) {
     return { success: false, error: 'Impossible de charger les commentaires' }
   }
 }
+
+export async function deleteSingleRejectedProduct(productId: string) {
+  try {
+    await deleteRejectedProduct(productId)
+
+    // Force la revalidation des pages
+    revalidatePath('/admin/validation', 'page')
+    revalidatePath('/admin', 'page')
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error deleting rejected product:', error)
+    return { success: false, error: 'Erreur lors de la suppression du produit rejeté' }
+  }
+}
+
+export async function deleteBulkRejectedProducts(productIds: string[]) {
+  try {
+    await deleteMultipleRejectedProducts(productIds)
+
+    // Force la revalidation des pages
+    revalidatePath('/admin/validation', 'page')
+    revalidatePath('/admin', 'page')
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error deleting rejected products:', error)
+    return { success: false, error: 'Erreur lors de la suppression des produits rejetés' }
+  }
+}
+

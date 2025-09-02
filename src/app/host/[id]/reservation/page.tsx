@@ -13,6 +13,7 @@ import { fr } from 'date-fns/locale'
 import { toast } from 'sonner'
 import Image from 'next/image'
 import ExtraSelectionStep from '@/components/booking/ExtraSelectionStep'
+import PhoneInput from '@/components/ui/PhoneInput'
 
 interface Option {
   id: string
@@ -50,6 +51,7 @@ interface FormData {
   lastName: string
   email: string
   phone: string
+  phoneCountry: string
   specialRequests: string
 }
 
@@ -76,6 +78,7 @@ export default function ReservationPage() {
     lastName: '',
     email: session?.user?.email || '',
     phone: '',
+    phoneCountry: 'MG',
     specialRequests: '',
   })
 
@@ -218,19 +221,19 @@ export default function ReservationPage() {
           amount: total,
           productName: product.name,
           metadata: {
-            productId: id,
-            userId: session.user.id,
-            userEmail: formData.email,
-            productName: product.name,
-            arrivingDate: formData.arrivingDate,
-            leavingDate: formData.leavingDate,
-            peopleNumber: formData.peopleNumber,
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            phone: formData.phone,
-            specialRequests: formData.specialRequests,
-            selectedExtras: selectedExtraIds,
-            prices: total,
+            productId: String(id),
+            userId: String(session.user.id),
+            userEmail: String(formData.email),
+            productName: String(product.name),
+            arrivingDate: String(formData.arrivingDate),
+            leavingDate: String(formData.leavingDate),
+            peopleNumber: String(formData.peopleNumber),
+            firstName: String(formData.firstName),
+            lastName: String(formData.lastName),
+            phone: String(formData.phone),
+            specialRequests: String(formData.specialRequests),
+            selectedExtras: JSON.stringify(selectedExtraIds),
+            prices: String(total),
           },
         }),
       })
@@ -275,9 +278,7 @@ export default function ReservationPage() {
 
   const nights = calculateNights()
   const subtotal = parseFloat(product.basePrice) * nights
-  const cleaningFee = 25
   const serviceFee = 0
-  const taxes = Math.round(subtotal * 0.1)
   const total = calculateTotalPrice()
 
   return (
@@ -434,13 +435,19 @@ export default function ReservationPage() {
                       <label className='block text-sm font-medium text-gray-700 mb-2'>
                         Téléphone *
                       </label>
-                      <input
-                        type='tel'
-                        name='phone'
+                      <PhoneInput
                         value={formData.phone}
-                        onChange={handleInputChange}
-                        className='w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base'
+                        defaultCountry={formData.phoneCountry}
+                        onChange={(phoneNumber, countryCode) => {
+                          setFormData(prev => ({
+                            ...prev,
+                            phone: phoneNumber,
+                            phoneCountry: countryCode
+                          }))
+                        }}
+                        placeholder="XX XX XX XX"
                         required
+                        className="w-full"
                       />
                     </div>
                   </div>
@@ -542,16 +549,6 @@ export default function ReservationPage() {
                         </span>
                       </div>
                     )}
-
-                    <div className='flex justify-between items-start'>
-                      <span className='text-gray-600 text-sm sm:text-base flex-1 pr-2'>
-                        Frais de nettoyage
-                      </span>
-                      <span className='font-medium text-sm sm:text-base flex-shrink-0'>
-                        {cleaningFee}€
-                      </span>
-                    </div>
-
                     <div className='flex justify-between items-start'>
                       <span className='text-gray-600 text-sm sm:text-base flex-1 pr-2'>
                         Frais de service
@@ -560,14 +557,6 @@ export default function ReservationPage() {
                         {serviceFee}€
                       </span>
                     </div>
-
-                    <div className='flex justify-between items-start'>
-                      <span className='text-gray-600 text-sm sm:text-base flex-1 pr-2'>Taxes</span>
-                      <span className='font-medium text-sm sm:text-base flex-shrink-0'>
-                        {taxes}€
-                      </span>
-                    </div>
-
                     <div className='border-t pt-4'>
                       <div className='flex justify-between text-lg sm:text-xl font-bold'>
                         <span>Total</span>
@@ -602,10 +591,11 @@ export default function ReservationPage() {
                     </Button>
                   )}
                 </div>
-
-                <p className='text-xs text-gray-500 text-center leading-relaxed'>
-                  Vous ne serez débité qu&apos;après confirmation de la réservation
-                </p>
+                <div className='p-3 bg-green-50 border border-green-200 rounded-lg'>
+                  <p className='text-sm text-green-800 text-center leading-relaxed font-medium'>
+                    Vous ne serez débité qu&apos;après confirmation de la réservation
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </div>

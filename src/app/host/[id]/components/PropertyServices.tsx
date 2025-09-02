@@ -6,6 +6,8 @@ interface PropertyServicesProps {
 }
 
 export default function PropertyServices({ services }: PropertyServicesProps) {
+  if (!services || services.length === 0) return null
+
   return (
     <div className='border-b border-gray-200 pb-8'>
       <h3 className='text-lg font-semibold text-gray-900 mb-6'>Services</h3>
