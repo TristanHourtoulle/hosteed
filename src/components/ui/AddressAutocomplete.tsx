@@ -156,8 +156,6 @@ export default function AddressAutocomplete({
     }
   }, [value, countryFilter, sessionToken, selectedPlaceId])
 
-
-
     const handleSuggestionClick = async (suggestion: GooglePlacePrediction) => {
     try {
       const params = new URLSearchParams({
