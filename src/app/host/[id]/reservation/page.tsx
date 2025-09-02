@@ -12,6 +12,8 @@ import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { toast } from 'sonner'
 import Image from 'next/image'
+import ExtraSelectionStep from '@/components/booking/ExtraSelectionStep'
+import PhoneInput from '@/components/ui/PhoneInput'
 
 interface Option {
   id: string
@@ -49,6 +51,7 @@ interface FormData {
   lastName: string
   email: string
   phone: string
+  phoneCountry: string
   specialRequests: string
 }
 
@@ -60,7 +63,7 @@ export default function ReservationPage() {
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [step, setStep] = useState(2) // 2: personal info, 3: payment (étape dates supprimée)
+  const [step, setStep] = useState(2) // 2: extras selection, 3: personal info, 4: payment (étape dates supprimée)
 
   // Get URL parameters
   const checkInParam = searchParams.get('checkIn')
@@ -75,8 +78,13 @@ export default function ReservationPage() {
     lastName: '',
     email: session?.user?.email || '',
     phone: '',
+    phoneCountry: 'MG',
     specialRequests: '',
   })
+
+  // États pour les extras
+  const [selectedExtraIds, setSelectedExtraIds] = useState<string[]>([])
+  const [extrasCost, setExtrasCost] = useState(0)
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -165,10 +173,7 @@ export default function ReservationPage() {
     if (nights <= 0) return 0
 
     const basePrice = parseFloat(product.basePrice) * nights
-    const optionsPrice = product.options
-      .filter(() => false) // Pas d'options sélectionnées dans cette version simplifiée
-      .reduce((sum, option) => sum + Number(option.price), 0)
-    const subtotal = basePrice + optionsPrice
+    const subtotal = basePrice + extrasCost
     const commission = (subtotal * product.commission) / 100
 
     return Math.round(subtotal + commission)
@@ -182,11 +187,14 @@ export default function ReservationPage() {
 
   const handleNextStep = () => {
     if (step === 2) {
+      // Étape des extras - pas de validation particulière, on peut continuer
+      setStep(3)
+    } else if (step === 3) {
       if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone) {
         toast.error('Veuillez remplir tous les champs obligatoires')
         return
       }
-      setStep(3)
+      setStep(4)
     }
   }
 
@@ -213,26 +221,28 @@ export default function ReservationPage() {
           amount: total,
           productName: product.name,
           metadata: {
-            productId: id,
-            userId: session.user.id,
-            userEmail: formData.email,
-            productName: product.name,
-            arrivingDate: formData.arrivingDate,
-            leavingDate: formData.leavingDate,
-            peopleNumber: formData.peopleNumber,
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            phone: formData.phone,
-            specialRequests: formData.specialRequests,
-            options: [], // Pas d'options dans cette version simplifiée
-            prices: total,
+            productId: String(id),
+            userId: String(session.user.id),
+            userEmail: String(formData.email),
+            productName: String(product.name),
+            arrivingDate: String(formData.arrivingDate),
+            leavingDate: String(formData.leavingDate),
+            peopleNumber: String(formData.peopleNumber),
+            firstName: String(formData.firstName),
+            lastName: String(formData.lastName),
+            phone: String(formData.phone),
+            specialRequests: String(formData.specialRequests),
+            selectedExtras: JSON.stringify(selectedExtraIds),
+            prices: String(total),
           },
         }),
       })
 
       const data = await response.json()
       if (data.url) {
-        window.location.href = data.url
+        if (typeof window !== 'undefined') {
+          window.location.href = data.url
+        }
       } else {
         toast.error('Erreur lors de la création de la session de paiement')
       }
@@ -268,9 +278,6 @@ export default function ReservationPage() {
 
   const nights = calculateNights()
   const subtotal = parseFloat(product.basePrice) * nights
-  const optionsTotal = product.options
-    .filter(() => false) // Pas d'options sélectionnées
-    .reduce((sum, option) => sum + Number(option.price), 0)
   const serviceFee = 0
   const total = calculateTotalPrice()
 
@@ -291,7 +298,7 @@ export default function ReservationPage() {
 
             {/* Progress Steps */}
             <div className='flex items-center space-x-2 sm:space-x-4'>
-              {[1, 2].map(stepNum => (
+              {[1, 2, 3].map(stepNum => (
                 <div key={stepNum} className='flex items-center'>
                   <div
                     className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium ${
@@ -304,7 +311,7 @@ export default function ReservationPage() {
                   >
                     {stepNum < step - 1 ? <Check className='w-3 h-3 sm:w-4 sm:h-4' /> : stepNum}
                   </div>
-                  {stepNum < 2 && (
+                  {stepNum < 3 && (
                     <div
                       className={`w-6 sm:w-12 h-1 mx-1 sm:mx-2 ${stepNum < step - 1 ? 'bg-green-500' : 'bg-gray-200'}`}
                     />
@@ -314,8 +321,8 @@ export default function ReservationPage() {
             </div>
 
             <div className='text-xs sm:text-sm text-gray-600'>
-              <span className='hidden sm:inline'>Étape {step - 1} sur 2</span>
-              <span className='sm:hidden'>{step - 1}/2</span>
+              <span className='hidden sm:inline'>Étape {step - 1} sur 3</span>
+              <span className='sm:hidden'>{step - 1}/3</span>
             </div>
           </div>
         </div>
@@ -366,6 +373,18 @@ export default function ReservationPage() {
 
             {/* Step Content */}
             {step === 2 && (
+              <ExtraSelectionStep
+                productId={id as string}
+                numberOfDays={calculateNights()}
+                guestCount={formData.peopleNumber}
+                currency='EUR'
+                selectedExtraIds={selectedExtraIds}
+                onSelectionChange={setSelectedExtraIds}
+                onCostChange={setExtrasCost}
+              />
+            )}
+
+            {step === 3 && (
               <Card>
                 <CardHeader>
                   <CardTitle className='text-lg sm:text-xl'>Informations personnelles</CardTitle>
@@ -416,13 +435,19 @@ export default function ReservationPage() {
                       <label className='block text-sm font-medium text-gray-700 mb-2'>
                         Téléphone *
                       </label>
-                      <input
-                        type='tel'
-                        name='phone'
+                      <PhoneInput
                         value={formData.phone}
-                        onChange={handleInputChange}
-                        className='w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base'
+                        defaultCountry={formData.phoneCountry}
+                        onChange={(phoneNumber, countryCode) => {
+                          setFormData(prev => ({
+                            ...prev,
+                            phone: phoneNumber,
+                            phoneCountry: countryCode
+                          }))
+                        }}
+                        placeholder="XX XX XX XX"
                         required
+                        className="w-full"
                       />
                     </div>
                   </div>
@@ -444,7 +469,7 @@ export default function ReservationPage() {
               </Card>
             )}
 
-            {step === 3 && (
+            {step === 4 && (
               <Card>
                 <CardHeader>
                   <CardTitle className='flex items-center'>
@@ -514,13 +539,13 @@ export default function ReservationPage() {
                       </span>
                     </div>
 
-                    {optionsTotal > 0 && (
+                    {extrasCost > 0 && (
                       <div className='flex justify-between items-start'>
                         <span className='text-gray-600 text-sm sm:text-base flex-1 pr-2'>
-                          Options
+                          Options supplémentaires
                         </span>
                         <span className='font-medium text-sm sm:text-base flex-shrink-0'>
-                          +{optionsTotal}€
+                          +{extrasCost.toFixed(2)}€
                         </span>
                       </div>
                     )}
@@ -542,11 +567,11 @@ export default function ReservationPage() {
                 )}
 
                 <div className='pt-4'>
-                  {step < 3 ? (
+                  {step < 4 ? (
                     <Button
                       onClick={handleNextStep}
                       disabled={
-                        step === 2 &&
+                        step === 3 &&
                         (!formData.firstName ||
                           !formData.lastName ||
                           !formData.email ||
@@ -554,7 +579,7 @@ export default function ReservationPage() {
                       }
                       className='w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-3 sm:py-4 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base'
                     >
-                      Finaliser
+                      {step === 2 ? 'Continuer' : step === 3 ? 'Finaliser' : 'Continuer'}
                     </Button>
                   ) : (
                     <Button
@@ -566,10 +591,11 @@ export default function ReservationPage() {
                     </Button>
                   )}
                 </div>
-
-                <p className='text-sm text-gray-500 text-center leading-relaxed'>
-                  Vous ne serez débité qu&apos;après confirmation de la réservation
-                </p>
+                <div className='p-3 bg-green-50 border border-green-200 rounded-lg'>
+                  <p className='text-sm text-green-800 text-center leading-relaxed font-medium'>
+                    Vous ne serez débité qu&apos;après confirmation de la réservation
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </div>

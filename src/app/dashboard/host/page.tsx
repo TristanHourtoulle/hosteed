@@ -20,6 +20,8 @@ interface Product {
   address: string
   basePrice: string
   validate: ProductValidation
+  isDraft?: boolean
+  originalProductId?: string | null
   img?: { img: string }[]
 }
 
@@ -66,7 +68,10 @@ export default function HostDashboard() {
     }
   }, [session])
 
-  const getStatusBadgeColor = (status: ProductValidation) => {
+  const getStatusBadgeColor = (status: ProductValidation, isDraft?: boolean) => {
+    if (isDraft) {
+      return 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+    }
     switch (status) {
       case ProductValidation.Approve:
         return 'bg-emerald-100 text-emerald-800 border border-emerald-200'
@@ -76,12 +81,17 @@ export default function HostDashboard() {
         return 'bg-amber-100 text-amber-800 border border-amber-200'
       case ProductValidation.RecheckRequest:
         return 'bg-blue-100 text-blue-800 border border-blue-200'
+      case ProductValidation.ModificationPending:
+        return 'bg-purple-100 text-purple-800 border border-purple-200'
       default:
         return 'bg-gray-100 text-gray-800 border border-gray-200'
     }
   }
 
-  const getStatusText = (status: ProductValidation) => {
+  const getStatusText = (status: ProductValidation, isDraft?: boolean) => {
+    if (isDraft) {
+      return 'Brouillon de modification'
+    }
     switch (status) {
       case ProductValidation.Approve:
         return 'Validé'
@@ -91,6 +101,8 @@ export default function HostDashboard() {
         return 'En attente'
       case ProductValidation.RecheckRequest:
         return 'Révision demandée'
+      case ProductValidation.ModificationPending:
+        return 'Modification en attente'
       default:
         return 'Inconnu'
     }
@@ -206,9 +218,9 @@ export default function HostDashboard() {
                         {product.name}
                       </h2>
                       <span
-                        className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeColor(product.validate)}`}
+                        className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeColor(product.validate, product.isDraft)}`}
                       >
-                        {getStatusText(product.validate)}
+                        {getStatusText(product.validate, product.isDraft)}
                       </span>
                     </div>
                     <div className='space-y-2'>
@@ -235,6 +247,16 @@ export default function HostDashboard() {
                           <Link href={`/dashboard/host/calendar?property=${product.id}`}>
                             <Calendar className='w-4 h-4 mr-2' />
                             Calendrier
+                          </Link>
+                        </Button>
+                        <Button
+                          asChild
+                          variant='ghost'
+                          className='hover:bg-green-50 hover:text-green-600 rounded-full px-4 py-2'
+                        >
+                          <Link href={`/dashboard/host/property/${product.id}`}>
+                            <Home className='w-4 h-4 mr-2' />
+                            Tableau de bord
                           </Link>
                         </Button>
                         <Button

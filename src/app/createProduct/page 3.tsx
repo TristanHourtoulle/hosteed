@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Image from 'next/image'
@@ -24,6 +24,8 @@ import {
   UtensilsCrossed,
   Shield,
   Star,
+  Package,
+  Highlighter,
 } from 'lucide-react'
 
 import { findAllTypeRent } from '@/lib/services/typeRent.service'
@@ -32,6 +34,8 @@ import { findAllMeals } from '@/lib/services/meals.service'
 import { findAllServices } from '@/lib/services/services.service'
 import { findAllSecurity } from '@/lib/services/security.services'
 import { createProduct } from '@/lib/services/product.service'
+import { findAllUser } from '@/lib/services/user.service'
+import { compressImages, formatFileSize } from '@/lib/utils/imageCompression'
 
 interface TypeRent {
   id: string
@@ -57,6 +61,29 @@ interface Security {
 interface Service {
   id: string
   name: string
+}
+
+interface IncludedService {
+  id: string
+  name: string
+  description?: string
+  icon?: string
+}
+
+interface ProductExtra {
+  id: string
+  name: string
+  description?: string
+  priceEUR: number
+  priceMGA: number
+  type: string
+}
+
+interface PropertyHighlight {
+  id: string
+  name: string
+  description?: string
+  icon?: string
 }
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -102,6 +129,9 @@ interface FormData {
   mealIds: string[]
   securityIds: string[]
   serviceIds: string[]
+  includedServiceIds: string[]
+  extraIds: string[]
+  highlightIds: string[]
   surface: string
   maxPeople: string
   accessibility: boolean
@@ -124,6 +154,8 @@ export default function CreateProductPage() {
     distance: '',
     unit: 'mètres' as 'mètres' | 'kilomètres',
   })
+  const [userSelected, setUserSelected] = useState('')
+  const [assignToOtherUser, setAssignToOtherUser] = useState(false)
 
   // Form data
   const [formData, setFormData] = useState<FormData>({
@@ -143,6 +175,9 @@ export default function CreateProductPage() {
     mealIds: [],
     securityIds: [],
     serviceIds: [],
+    includedServiceIds: [],
+    extraIds: [],
+    highlightIds: [],
     surface: '',
     maxPeople: '',
     accessibility: false,
@@ -157,6 +192,11 @@ export default function CreateProductPage() {
   const [meals, setMeals] = useState<Meal[]>([])
   const [securities, setSecurities] = useState<Security[]>([])
   const [services, setServices] = useState<Service[]>([])
+  const [includedServices, setIncludedServices] = useState<IncludedService[]>([])
+  const [extras, setExtras] = useState<ProductExtra[]>([])
+  const [highlights, setHighlights] = useState<PropertyHighlight[]>([])
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [users, setUsers] = useState<any[]>([])
 
   // Handle input changes
   const handleInputChange = (
@@ -169,17 +209,46 @@ export default function CreateProductPage() {
     }))
   }
 
+  // Functions to load new data
+  const loadIncludedServices = async (): Promise<IncludedService[]> => {
+    const response = await fetch('/api/admin/included-services')
+    if (response.ok) {
+      return await response.json()
+    }
+    return []
+  }
+
+  const loadExtras = async (): Promise<ProductExtra[]> => {
+    const response = await fetch('/api/admin/extras')
+    if (response.ok) {
+      return await response.json()
+    }
+    return []
+  }
+
+  const loadHighlights = async (): Promise<PropertyHighlight[]> => {
+    const response = await fetch('/api/admin/highlights')
+    if (response.ok) {
+      return await response.json()
+    }
+    return []
+  }
+
   // Load data on component mount
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [typesData, equipmentsData, mealsData, securitiesData, servicesData] =
+        const [typesData, equipmentsData, mealsData, securitiesData, servicesData, includedServicesData, extrasData, highlightsData, usersData] =
           await Promise.all([
             findAllTypeRent(),
             findAllEquipments(),
             findAllMeals(),
             findAllSecurity(),
             findAllServices(),
+            loadIncludedServices(),
+            loadExtras(),
+            loadHighlights(),
+            findAllUser(),
           ])
 
         setTypes(typesData || [])
@@ -187,6 +256,10 @@ export default function CreateProductPage() {
         setMeals(mealsData || [])
         setSecurities(securitiesData || [])
         setServices(servicesData || [])
+        setIncludedServices(includedServicesData || [])
+        setExtras(extrasData || [])
+        setHighlights(highlightsData || [])
+        setUsers(usersData || [])
       } catch (error) {
         console.error('Error loading data:', error)
         setError('Erreur lors du chargement des données')
@@ -239,7 +312,7 @@ export default function CreateProductPage() {
     }
   }
 
-  const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const filesArray = Array.from(e.target.files)
 
@@ -249,46 +322,102 @@ export default function CreateProductPage() {
           setError('Veuillez sélectionner uniquement des images')
           return
         }
-        if (file.size > 10 * 1024 * 1024) {
-          // 10MB max
-          setError('La taille de chaque image ne doit pas dépasser 10MB')
+        if (file.size > 50 * 1024 * 1024) {
+          // 50MB max before compression
+          setError('La taille de chaque image ne doit pas dépasser 50MB')
           return
         }
       }
 
-      if (selectedFiles.length + filesArray.length > 10) {
-        setError('Maximum 10 photos autorisées')
+      if (selectedFiles.length + filesArray.length > 35) {
+        setError('Maximum 35 photos autorisées')
         return
       }
 
-      setSelectedFiles(prev => [...prev, ...filesArray])
-      setError('') // Clear any previous errors
+      try {
+        setIsUploadingImages(true)
+        setError('Compression des images en cours...')
+
+        // Compress images before adding them
+        const compressedFiles = await compressImages(filesArray, {
+          maxSizeMB: 0.8,
+          maxWidthOrHeight: 1920,
+          useWebWorker: true,
+          quality: 0.8,
+        })
+
+        setSelectedFiles(prev => [...prev, ...compressedFiles])
+        setError('') // Clear any previous errors
+
+        // Log compression results
+        compressedFiles.forEach((file, index) => {
+          const originalSize = filesArray[index].size
+          console.log(
+            `Compressed ${file.name}: ${formatFileSize(originalSize)} → ${formatFileSize(file.size)}`
+          )
+        })
+      } catch (error) {
+        console.error('Image compression failed:', error)
+        setError('Erreur lors de la compression des images')
+      } finally {
+        setIsUploadingImages(false)
+      }
     }
   }
 
   const removeFile = (index: number) => {
-    const fileToRemove = selectedFiles[index]
-    if (fileToRemove) {
-      // Libérer la mémoire de l'URL d'objet
-      const url = URL.createObjectURL(fileToRemove)
-      URL.revokeObjectURL(url)
+    // Libérer la mémoire de l'URL d'objet correspondante
+    if (imageUrls[index]) {
+      URL.revokeObjectURL(imageUrls[index])
     }
     setSelectedFiles(prev => prev.filter((_, i) => i !== index))
   }
 
-  // Convert files to base64
-  const convertFilesToBase64 = (files: File[]): Promise<string[]> => {
-    return Promise.all(
-      files.map(file => {
+  // Convert files to base64 with compression
+  const convertFilesToBase64 = async (files: File[]): Promise<string[]> => {
+    setIsUploadingImages(true)
+    try {
+      // First compress the images
+      const compressedFiles = await compressImages(files, {
+        maxSizeMB: 0.8,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+        quality: 0.8,
+      })
+
+      // Then convert to base64
+      const promises = compressedFiles.map((file, index) => {
         return new Promise<string>((resolve, reject) => {
           const reader = new FileReader()
-          reader.onloadend = () => resolve(reader.result as string)
-          reader.onerror = reject
+          reader.onloadend = () => {
+            console.log(
+              `Image ${index + 1} (${file.name}) final size: ${formatFileSize(file.size)}`
+            )
+            resolve(reader.result as string)
+          }
+          reader.onerror = () => reject(new Error(`Erreur de lecture de l'image: ${file.name}`))
           reader.readAsDataURL(file)
         })
       })
-    )
+
+      const results = await Promise.all(promises)
+      return results
+    } finally {
+      setIsUploadingImages(false)
+    }
   }
+
+  // Mémoriser les URLs des images pour éviter les re-créations
+  const imageUrls = useMemo(() => {
+    return selectedFiles.map(file => URL.createObjectURL(file))
+  }, [selectedFiles])
+
+  // Nettoyer les URLs quand les fichiers changent
+  useEffect(() => {
+    return () => {
+      imageUrls.forEach(url => URL.revokeObjectURL(url))
+    }
+  }, [imageUrls])
 
   // Cleanup object URLs when component unmounts
   useEffect(() => {
@@ -318,7 +447,7 @@ export default function CreateProductPage() {
     }))
   }
 
-  // Form submission
+  // Form submission avec validation basique
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
@@ -326,6 +455,25 @@ export default function CreateProductPage() {
 
     if (!session?.user?.id) {
       setError('Vous devez être connecté pour créer une annonce')
+      setIsLoading(false)
+      return
+    }
+
+    // Validation basique
+    if (!formData.name.trim()) {
+      setError("Le nom de l'hébergement est requis")
+      setIsLoading(false)
+      return
+    }
+
+    if (!formData.description.trim()) {
+      setError('La description est requise')
+      setIsLoading(false)
+      return
+    }
+
+    if (!formData.typeId) {
+      setError("Veuillez sélectionner un type d'hébergement")
       setIsLoading(false)
       return
     }
@@ -342,6 +490,9 @@ export default function CreateProductPage() {
       const base64Images = await convertFilesToBase64(selectedFiles)
       setIsUploadingImages(false)
 
+      // Déterminer l'utilisateur final (admin peut assigner à un autre utilisateur)
+      const finalUserId = assignToOtherUser && userSelected ? userSelected : session.user.id
+
       // Préparer les données pour le service
       const productData = {
         name: formData.name,
@@ -357,11 +508,14 @@ export default function CreateProductPage() {
         leaving: Number(formData.leaving),
         phone: formData.phone,
         typeId: formData.typeId,
-        userId: [session.user.id],
+        userId: [finalUserId],
         equipments: formData.equipmentIds,
         services: formData.serviceIds,
         meals: formData.mealIds,
         securities: formData.securityIds,
+        includedServices: formData.includedServiceIds,
+        extras: formData.extraIds,
+        highlights: formData.highlightIds,
         images: base64Images, // Utiliser les images converties en base64
         nearbyPlaces: formData.nearbyPlaces.map(place => ({
           name: place.name,
@@ -470,10 +624,9 @@ export default function CreateProductPage() {
                           id='name'
                           name='name'
                           type='text'
-                          placeholder='Ex: Villa avec vue sur mer'
                           value={formData.name}
                           onChange={handleInputChange}
-                          required
+                          placeholder='Ex: Villa avec vue sur mer'
                           className='border-slate-200 focus:border-blue-300 focus:ring-blue-200'
                         />
                       </div>
@@ -974,6 +1127,212 @@ export default function CreateProductPage() {
             </Card>
           </motion.div>
 
+          {/* Services inclus, Extras et Points forts */}
+          <motion.div variants={itemVariants}>
+            <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm'>
+              <CardHeader className='space-y-2'>
+                <div className='flex items-center gap-2'>
+                  <div className='p-2 bg-indigo-50 rounded-lg'>
+                    <Star className='h-5 w-5 text-indigo-600' />
+                  </div>
+                  <div>
+                    <CardTitle className='text-xl'>Services et Options</CardTitle>
+                    <p className='text-slate-600 text-sm mt-1'>
+                      Sélectionnez les services inclus, extras payants et points forts de votre hébergement
+                    </p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className='space-y-6'>
+                {/* Grille 1x3 pour les nouvelles options */}
+                <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
+                  {/* Services inclus */}
+                  <div className='border-2 border-slate-200 rounded-xl p-4 bg-white/50 backdrop-blur-sm flex flex-col h-full'>
+                    <h4 className='font-medium text-slate-700 flex items-center gap-2 mb-4'>
+                      <Package className='h-4 w-4' />
+                      Services inclus
+                    </h4>
+                    <div className='flex-1 space-y-2 content-start'>
+                      {includedServices.map(service => (
+                        <label
+                          key={service.id}
+                          className={`relative flex items-center p-2 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-sm ${
+                            formData.includedServiceIds.includes(service.id)
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-slate-200 bg-white hover:border-blue-300'
+                          }`}
+                        >
+                          <input
+                            type='checkbox'
+                            checked={formData.includedServiceIds.includes(service.id)}
+                            onChange={() => handleCheckboxChange('includedServiceIds', service.id)}
+                            className='sr-only'
+                          />
+                          <div className='flex items-center space-x-2 w-full'>
+                            <div
+                              className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                                formData.includedServiceIds.includes(service.id)
+                                  ? 'border-blue-500 bg-blue-500'
+                                  : 'border-slate-300'
+                              }`}
+                            >
+                              {formData.includedServiceIds.includes(service.id) && (
+                                <svg
+                                  className='w-2 h-2 text-white'
+                                  fill='currentColor'
+                                  viewBox='0 0 20 20'
+                                >
+                                  <path
+                                    fillRule='evenodd'
+                                    d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z'
+                                    clipRule='evenodd'
+                                  />
+                                </svg>
+                              )}
+                            </div>
+                            <div className='flex-1 min-w-0'>
+                              <span className='text-xs font-medium text-slate-700 block truncate'>
+                                {service.name}
+                              </span>
+                              {service.description && (
+                                <span className='text-xs text-slate-500 block truncate'>
+                                  {service.description}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Extras payants */}
+                  <div className='border-2 border-slate-200 rounded-xl p-4 bg-white/50 backdrop-blur-sm flex flex-col h-full'>
+                    <h4 className='font-medium text-slate-700 flex items-center gap-2 mb-4'>
+                      <Plus className='h-4 w-4' />
+                      Options payantes
+                    </h4>
+                    <div className='flex-1 space-y-2 content-start'>
+                      {extras.map(extra => (
+                        <label
+                          key={extra.id}
+                          className={`relative flex items-center p-2 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-sm ${
+                            formData.extraIds.includes(extra.id)
+                              ? 'border-green-500 bg-green-50'
+                              : 'border-slate-200 bg-white hover:border-green-300'
+                          }`}
+                        >
+                          <input
+                            type='checkbox'
+                            checked={formData.extraIds.includes(extra.id)}
+                            onChange={() => handleCheckboxChange('extraIds', extra.id)}
+                            className='sr-only'
+                          />
+                          <div className='flex items-center space-x-2 w-full'>
+                            <div
+                              className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                                formData.extraIds.includes(extra.id)
+                                  ? 'border-green-500 bg-green-500'
+                                  : 'border-slate-300'
+                              }`}
+                            >
+                              {formData.extraIds.includes(extra.id) && (
+                                <svg
+                                  className='w-2 h-2 text-white'
+                                  fill='currentColor'
+                                  viewBox='0 0 20 20'
+                                >
+                                  <path
+                                    fillRule='evenodd'
+                                    d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z'
+                                    clipRule='evenodd'
+                                  />
+                                </svg>
+                              )}
+                            </div>
+                            <div className='flex-1 min-w-0'>
+                              <span className='text-xs font-medium text-slate-700 block truncate'>
+                                {extra.name}
+                              </span>
+                              <span className='text-xs text-green-600 block'>
+                                {extra.priceEUR}€ / {extra.priceMGA.toLocaleString()}Ar
+                              </span>
+                              {extra.description && (
+                                <span className='text-xs text-slate-500 block truncate'>
+                                  {extra.description}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Points forts */}
+                  <div className='border-2 border-slate-200 rounded-xl p-4 bg-white/50 backdrop-blur-sm flex flex-col h-full'>
+                    <h4 className='font-medium text-slate-700 flex items-center gap-2 mb-4'>
+                      <Highlighter className='h-4 w-4' />
+                      Points forts
+                    </h4>
+                    <div className='flex-1 space-y-2 content-start'>
+                      {highlights.map(highlight => (
+                        <label
+                          key={highlight.id}
+                          className={`relative flex items-center p-2 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-sm ${
+                            formData.highlightIds.includes(highlight.id)
+                              ? 'border-yellow-500 bg-yellow-50'
+                              : 'border-slate-200 bg-white hover:border-yellow-300'
+                          }`}
+                        >
+                          <input
+                            type='checkbox'
+                            checked={formData.highlightIds.includes(highlight.id)}
+                            onChange={() => handleCheckboxChange('highlightIds', highlight.id)}
+                            className='sr-only'
+                          />
+                          <div className='flex items-center space-x-2 w-full'>
+                            <div
+                              className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                                formData.highlightIds.includes(highlight.id)
+                                  ? 'border-yellow-500 bg-yellow-500'
+                                  : 'border-slate-300'
+                              }`}
+                            >
+                              {formData.highlightIds.includes(highlight.id) && (
+                                <svg
+                                  className='w-2 h-2 text-white'
+                                  fill='currentColor'
+                                  viewBox='0 0 20 20'
+                                >
+                                  <path
+                                    fillRule='evenodd'
+                                    d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z'
+                                    clipRule='evenodd'
+                                  />
+                                </svg>
+                              )}
+                            </div>
+                            <div className='flex-1 min-w-0'>
+                              <span className='text-xs font-medium text-slate-700 block truncate'>
+                                {highlight.name}
+                              </span>
+                              {highlight.description && (
+                                <span className='text-xs text-slate-500 block truncate'>
+                                  {highlight.description}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
           {/* Photos */}
           <motion.div variants={itemVariants}>
             <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm'>
@@ -1032,10 +1391,15 @@ export default function CreateProductPage() {
                         </button>
                       </p>
                       <p className='text-xs text-slate-500 mt-1'>
-                        PNG, JPG, JPEG, WEBP jusqu&apos;à 10MB chacune
+                        PNG, JPG, JPEG, WEBP jusqu&apos;à 50MB chacune (compressées automatiquement)
                         {selectedFiles.length > 0 && (
                           <span className='block mt-1 text-green-600 font-medium'>
                             ✓ {selectedFiles.length}/10 photos sélectionnées
+                          </span>
+                        )}
+                        {isUploadingImages && (
+                          <span className='block mt-1 text-blue-600 font-medium animate-pulse'>
+                            🔄 Compression en cours...
                           </span>
                         )}
                       </p>
@@ -1048,7 +1412,7 @@ export default function CreateProductPage() {
                     {selectedFiles.map((file, index) => (
                       <div key={index} className='relative group'>
                         <Image
-                          src={URL.createObjectURL(file)}
+                          src={imageUrls[index]}
                           alt={`Aperçu ${index + 1}`}
                           width={200}
                           height={96}
@@ -1241,6 +1605,63 @@ export default function CreateProductPage() {
               </CardContent>
             </Card>
           </motion.div>
+
+          {/* Section Admin - Assigner à un autre utilisateur */}
+          {session?.user?.roles === 'ADMIN' && (
+            <motion.div variants={itemVariants}>
+              <Card className='border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50'>
+                <CardHeader>
+                  <CardTitle className='flex items-center gap-3 text-orange-800'>
+                    <Users className='h-5 w-5 text-orange-600' />
+                    Administration - Assigner l&apos;annonce
+                  </CardTitle>
+                  <p className='text-sm text-orange-600'>
+                    En tant qu&apos;administrateur, vous pouvez créer cette annonce pour un autre
+                    utilisateur
+                  </p>
+                </CardHeader>
+                <CardContent className='space-y-4'>
+                  <div className='flex items-center space-x-2'>
+                    <input
+                      type='checkbox'
+                      id='assignToOtherUser'
+                      checked={assignToOtherUser}
+                      onChange={e => setAssignToOtherUser(e.target.checked)}
+                      className='rounded border-orange-300 focus:ring-orange-200'
+                    />
+                    <label
+                      htmlFor='assignToOtherUser'
+                      className='text-sm font-medium text-orange-700'
+                    >
+                      Assigner cette annonce à un autre utilisateur
+                    </label>
+                  </div>
+
+                  {assignToOtherUser && (
+                    <div className='space-y-2'>
+                      <label htmlFor='userSelect' className='text-sm font-medium text-orange-700'>
+                        Sélectionner l&apos;utilisateur
+                      </label>
+                      <select
+                        id='userSelect'
+                        value={userSelected}
+                        onChange={e => setUserSelected(e.target.value)}
+                        className='w-full p-2 border border-orange-200 rounded-md focus:ring-orange-200 focus:border-orange-300'
+                        required={assignToOtherUser}
+                      >
+                        <option value=''>Choisir un utilisateur...</option>
+                        {users.map(user => (
+                          <option key={user.id} value={user.id}>
+                            {user.firstname} {user.lastname} ({user.email})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
 
           {/* Bouton de soumission */}
           <motion.div className='flex justify-center pt-8' variants={itemVariants}>

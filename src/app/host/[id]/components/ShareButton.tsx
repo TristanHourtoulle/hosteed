@@ -11,6 +11,9 @@ interface ShareButtonProps {
 export function ShareButton({ className }: ShareButtonProps) {
   const handleShare = async () => {
     try {
+      if (typeof window === 'undefined' || !navigator.clipboard) {
+        throw new Error('Clipboard not available')
+      }
       await navigator.clipboard.writeText(window.location.href)
       toast.success('Lien copié dans le presse-papier !', {
         description: 'Vous pouvez maintenant le partager avec vos amis.',

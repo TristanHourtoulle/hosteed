@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Home } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { ProductValidationCard } from './ProductValidationCard'
+import { RejectedProductsTab } from './RejectedProductsTab'
 
 interface Product {
   id: string
@@ -124,7 +125,7 @@ export function ValidationTabs({ products, stats, currentUserId, onUpdate }: Val
 
   return (
     <Tabs defaultValue='all' className='w-full'>
-      <TabsList className='grid w-full grid-cols-5'>
+      <TabsList className='grid w-full grid-cols-6'>
         <TabsTrigger value='all'>Toutes ({stats.total})</TabsTrigger>
         <TabsTrigger value='pending'>
           À traiter ({stats.pending + stats.recheckRequest})
@@ -134,6 +135,9 @@ export function ValidationTabs({ products, stats, currentUserId, onUpdate }: Val
           Modifiées ({stats.recheckRequest})
         </TabsTrigger>
         <TabsTrigger value='approved'>Validées ({stats.approved})</TabsTrigger>
+        <TabsTrigger value='rejected' className='text-red-600'>
+          Rejetées ({stats.rejected})
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value='all' className='mt-6'>
@@ -174,6 +178,14 @@ export function ValidationTabs({ products, stats, currentUserId, onUpdate }: Val
             ? renderEmptyState('approved')
             : renderProductGrid(filteredProducts)
         })()}
+      </TabsContent>
+
+      <TabsContent value='rejected' className='mt-6'>
+        <RejectedProductsTab
+          products={products}
+          currentUserId={currentUserId}
+          onUpdate={onUpdate}
+        />
       </TabsContent>
     </Tabs>
   )

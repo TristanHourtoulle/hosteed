@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,6 +23,8 @@ import {
   UtensilsCrossed,
   Shield,
   Star,
+  Package,
+  Highlighter,
 } from 'lucide-react'
 
 import { findAllTypeRent } from '@/lib/services/typeRent.service'
@@ -32,15 +33,21 @@ import { findAllMeals } from '@/lib/services/meals.service'
 import { findAllServices } from '@/lib/services/services.service'
 import { findAllSecurity } from '@/lib/services/security.services'
 import { createProduct } from '@/lib/services/product.service'
-import { UserInterface } from '@/lib/interface/userInterface'
 import { findAllUser } from '@/lib/services/user.service'
-import { User } from '@prisma/client'
+import { compressImages, formatFileSize } from '@/lib/utils/imageCompression'
+import { ExtraPriceType } from '@prisma/client'
+import { TypeRentInterface } from '@/lib/interface/typeRentInterface'
+import CreateServiceModal from '@/components/ui/CreateServiceModal'
+import CreateExtraModal from '@/components/ui/CreateExtraModal'
+import CreateHighlightModal from '@/components/ui/CreateHighlightModal'
+import BookingCostSummary from '@/components/ui/BookingCostSummary'
+import SortableImageGrid from '@/components/ui/SortableImageGrid'
+import ImageGalleryPreview from '@/components/ui/ImageGalleryPreview'
+import CommissionDisplay from '@/components/ui/CommissionDisplay'
+import PhoneInput from '@/components/ui/PhoneInput'
+import ErrorAlert, { ErrorDetails } from '@/components/ui/ErrorAlert'
+import { parseCreateProductError, createValidationError } from '@/lib/utils/errorHandler'
 
-interface TypeRent {
-  id: string
-  name: string
-  description?: string
-}
 
 interface Equipment {
   id: string
@@ -60,6 +67,34 @@ interface Security {
 interface Service {
   id: string
   name: string
+}
+
+interface IncludedService {
+  id: string
+  name: string
+  description: string | null
+  icon: string | null
+  userId: string | null
+}
+
+interface ProductExtra {
+  id: string
+  name: string
+  description: string | null
+  priceEUR: number
+  priceMGA: number
+  type: ExtraPriceType
+  userId: string | null
+  createdAt?: Date
+  updatedAt?: Date
+}
+
+interface PropertyHighlight {
+  id: string
+  name: string
+  description: string | null
+  icon: string | null
+  userId: string | null
 }
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -88,11 +123,18 @@ interface NearbyPlace {
   unit: 'mètres' | 'kilomètres'
 }
 
+interface ImageFile {
+  file: File
+  preview: string
+  id: string
+}
+
 interface FormData {
   name: string
   description: string
   address: string
   phone: string
+  phoneCountry: string
   room: string
   bathroom: string
   arriving: string
@@ -105,12 +147,19 @@ interface FormData {
   mealIds: string[]
   securityIds: string[]
   serviceIds: string[]
+  includedServiceIds: string[]
+  extraIds: string[]
+  highlightIds: string[]
   surface: string
   maxPeople: string
   accessibility: boolean
   petFriendly: boolean
   nearbyPlaces: NearbyPlace[]
   transportation: string
+  // Nouveaux champs pour les hôtels
+  isHotel: boolean
+  hotelName: string
+  availableRooms: string
 }
 
 export default function CreateProductPage() {
@@ -119,9 +168,10 @@ export default function CreateProductPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isUploadingImages, setIsUploadingImages] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState<ErrorDetails | null>(null)
   const [dragActive, setDragActive] = useState(false)
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [selectedFiles, setSelectedFiles] = useState<ImageFile[]>([])
+  const [showGalleryPreview, setShowGalleryPreview] = useState(false)
   const [newPlace, setNewPlace] = useState({
     name: '',
     distance: '',
@@ -130,12 +180,25 @@ export default function CreateProductPage() {
   const [userSelected, setUserSelected] = useState('')
   const [assignToOtherUser, setAssignToOtherUser] = useState(false)
 
+  // États pour les modaux de création personnalisée
+  const [serviceModalOpen, setServiceModalOpen] = useState(false)
+  const [extraModalOpen, setExtraModalOpen] = useState(false)
+  const [highlightModalOpen, setHighlightModalOpen] = useState(false)
+
+  // État pour simuler une réservation de test pour l'aperçu des coûts
+  const [testBooking] = useState({
+    startDate: new Date(),
+    endDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 jours plus tard
+    guestCount: 2
+  })
+
   // Form data
   const [formData, setFormData] = useState<FormData>({
     name: '',
     description: '',
     address: '',
     phone: '',
+    phoneCountry: 'MG',
     room: '',
     bathroom: '',
     arriving: '',
@@ -148,20 +211,30 @@ export default function CreateProductPage() {
     mealIds: [],
     securityIds: [],
     serviceIds: [],
+    includedServiceIds: [],
+    extraIds: [],
+    highlightIds: [],
     surface: '',
     maxPeople: '',
     accessibility: false,
     petFriendly: false,
     nearbyPlaces: [],
     transportation: '',
+    // Nouveaux champs pour les hôtels
+    isHotel: false,
+    hotelName: '',
+    availableRooms: '',
   })
 
   // Data from services
-  const [types, setTypes] = useState<TypeRent[]>([])
+  const [types, setTypes] = useState<TypeRentInterface[]>([])
   const [equipments, setEquipments] = useState<Equipment[]>([])
   const [meals, setMeals] = useState<Meal[]>([])
   const [securities, setSecurities] = useState<Security[]>([])
   const [services, setServices] = useState<Service[]>([])
+  const [includedServices, setIncludedServices] = useState<IncludedService[]>([])
+  const [extras, setExtras] = useState<ProductExtra[]>([])
+  const [highlights, setHighlights] = useState<PropertyHighlight[]>([])
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [users, setUsers] = useState<any[]>([])
 
@@ -170,23 +243,67 @@ export default function CreateProductPage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value, type } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
-    }))
+    
+    // Si on change le type d'hébergement, vérifier si c'est un hôtel
+    if (name === 'typeId') {
+      const selectedType = types.find(t => t.id === value)
+      const isHotelType = Boolean(selectedType?.isHotelType)
+      
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        isHotel: isHotelType,
+        // Réinitialiser les champs hôtel si ce n'est pas un hôtel
+        hotelName: isHotelType ? prev.hotelName : '',
+        availableRooms: isHotelType ? prev.availableRooms : '',
+      }))
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
+      }))
+    }
+  }
+
+  // Functions to load new data
+  const loadIncludedServices = async (): Promise<IncludedService[]> => {
+    const response = await fetch('/api/user/included-services')
+    if (response.ok) {
+      return await response.json()
+    }
+    return []
+  }
+
+  const loadExtras = async (): Promise<ProductExtra[]> => {
+    const response = await fetch('/api/user/extras')
+    if (response.ok) {
+      return await response.json()
+    }
+    return []
+  }
+
+  const loadHighlights = async (): Promise<PropertyHighlight[]> => {
+    const response = await fetch('/api/user/highlights')
+    if (response.ok) {
+      return await response.json()
+    }
+    return []
   }
 
   // Load data on component mount
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [typesData, equipmentsData, mealsData, securitiesData, servicesData, usersData] =
+        const [typesData, equipmentsData, mealsData, securitiesData, servicesData, includedServicesData, extrasData, highlightsData, usersData] =
           await Promise.all([
             findAllTypeRent(),
             findAllEquipments(),
             findAllMeals(),
             findAllSecurity(),
             findAllServices(),
+            loadIncludedServices(),
+            loadExtras(),
+            loadHighlights(),
             findAllUser(),
           ])
 
@@ -195,15 +312,55 @@ export default function CreateProductPage() {
         setMeals(mealsData || [])
         setSecurities(securitiesData || [])
         setServices(servicesData || [])
+        setIncludedServices(includedServicesData || [])
+        setExtras(extrasData || [])
+        setHighlights(highlightsData || [])
         setUsers(usersData || [])
       } catch (error) {
         console.error('Error loading data:', error)
-        setError('Erreur lors du chargement des données')
+        setError({
+          type: 'network',
+          title: 'Erreur de chargement',
+          message: 'Impossible de charger les données nécessaires à la création d\'annonce.',
+          details: [
+            'Échec du chargement des types d\'hébergement, équipements ou services',
+            'Vérifiez votre connexion internet'
+          ],
+          suggestions: [
+            'Actualisez la page pour réessayer',
+            'Vérifiez votre connexion internet',
+            'Si le problème persiste, contactez le support'
+          ],
+          retryable: true
+        })
       }
     }
 
     loadData()
   }, [])
+
+  // Fonctions pour gérer les nouveaux services/extras/highlights créés
+  const handleServiceCreated = (newService: IncludedService) => {
+    setIncludedServices(prev => [...prev, newService])
+  }
+
+  const handleExtraCreated = (newExtra: ProductExtra) => {
+    setExtras(prev => [...prev, newExtra])
+  }
+
+  const handleHighlightCreated = (newHighlight: PropertyHighlight) => {
+    setHighlights(prev => [...prev, newHighlight])
+  }
+
+  // Calcul mémorisé pour les extras sélectionnés avec leurs données complètes
+  const selectedExtras = useMemo(() => {
+    return extras.filter(extra => formData.extraIds.includes(extra.id))
+  }, [extras, formData.extraIds])
+
+  // Calcul mémorisé pour le nombre de jours de la réservation de test
+  const numberOfDays = useMemo(() => {
+    return Math.ceil((testBooking.endDate.getTime() - testBooking.startDate.getTime()) / (1000 * 60 * 60 * 24))
+  }, [testBooking.startDate, testBooking.endDate])
 
   // Redirection si non connecté
   useEffect(() => {
@@ -248,76 +405,166 @@ export default function CreateProductPage() {
     }
   }
 
-  const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const filesArray = Array.from(e.target.files)
 
       // Validation des fichiers
       for (const file of filesArray) {
         if (!file.type.startsWith('image/')) {
-          setError('Veuillez sélectionner uniquement des images')
+          setError({
+            type: 'file',
+            title: 'Format de fichier non supporté',
+            message: 'Seules les images sont acceptées.',
+            details: [
+              `Fichier rejeté: ${file.name}`,
+              `Type détecté: ${file.type || 'inconnu'}`
+            ],
+            suggestions: [
+              'Utilisez uniquement des fichiers image (JPEG, PNG, WebP, GIF)',
+              'Vérifiez l\'extension de vos fichiers',
+              'Évitez les documents ou vidéos'
+            ]
+          })
           return
         }
-        if (file.size > 10 * 1024 * 1024) {
-          // 10MB max
-          setError('La taille de chaque image ne doit pas dépasser 10MB')
+        if (file.size > 50 * 1024 * 1024) {
+          setError({
+            type: 'file',
+            title: 'Image trop volumineuse',
+            message: 'La taille de chaque image ne doit pas dépasser 50MB.',
+            details: [
+              `Fichier: ${file.name}`,
+              `Taille: ${(file.size / (1024 * 1024)).toFixed(1)}MB`,
+              'Limite: 50MB par image'
+            ],
+            suggestions: [
+              'Réduisez la résolution de votre image',
+              'Utilisez un outil de compression d\'image en ligne',
+              'Choisissez le format JPEG pour des images de plus petite taille'
+            ]
+          })
           return
         }
       }
 
-      if (selectedFiles.length + filesArray.length > 10) {
-        setError('Maximum 10 photos autorisées')
+      if (selectedFiles.length + filesArray.length > 35) {
+        setError({
+          type: 'file',
+          title: 'Trop d\'images sélectionnées',
+          message: 'Vous pouvez ajouter maximum 35 photos par annonce.',
+          details: [
+            `Images actuelles: ${selectedFiles.length}`,
+            `Images à ajouter: ${filesArray.length}`,
+            `Total: ${selectedFiles.length + filesArray.length}`,
+            'Limite: 35 photos maximum'
+          ],
+          suggestions: [
+            'Supprimez quelques images existantes avant d\'en ajouter de nouvelles',
+            'Sélectionnez vos meilleures photos pour mettre en valeur votre hébergement',
+            'Vous pourrez ajouter d\'autres photos après la création de l\'annonce'
+          ]
+        })
         return
       }
 
-      setSelectedFiles(prev => [...prev, ...filesArray])
-      setError('') // Clear any previous errors
+      try {
+        setIsUploadingImages(true)
+        setError(null) // Clear any previous errors
+
+        // Compress images before adding them
+        const compressedFiles = await compressImages(filesArray, {
+          maxSizeMB: 0.8,
+          maxWidthOrHeight: 1920,
+          useWebWorker: true,
+          quality: 0.8,
+        })
+
+        // Create ImageFile objects with previews and unique IDs
+        const imageFiles: ImageFile[] = compressedFiles.map((file, index) => ({
+          file,
+          preview: URL.createObjectURL(file),
+          id: `img-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 11)}`
+        }))
+
+        setSelectedFiles(prev => [...prev, ...imageFiles])
+        setError(null) // Clear any previous errors
+
+        // Log compression results
+        compressedFiles.forEach((file, index) => {
+          const originalSize = filesArray[index].size
+          console.log(
+            `Compressed ${file.name}: ${formatFileSize(originalSize)} → ${formatFileSize(file.size)}`
+          )
+        })
+      } catch (error) {
+        console.error('Image compression failed:', error)
+        setError({
+          type: 'file',
+          title: 'Erreur de compression',
+          message: 'La compression automatique des images a échoué.',
+          details: [
+            'Certaines images peuvent être corrompues ou dans un format non supporté',
+            `Erreur technique: ${error instanceof Error ? error.message : 'inconnue'}`
+          ],
+          suggestions: [
+            'Vérifiez que vos images ne sont pas corrompues',
+            'Essayez de compresser vos images manuellement avant de les télécharger',
+            'Utilisez des formats d\'image standards (JPEG, PNG)',
+            'Réduisez la résolution de vos images si elles sont très grandes'
+          ],
+          retryable: true
+        })
+      } finally {
+        setIsUploadingImages(false)
+      }
     }
   }
 
-  const removeFile = (index: number) => {
-    // Libérer la mémoire de l'URL d'objet correspondante
-    if (imageUrls[index]) {
-      URL.revokeObjectURL(imageUrls[index])
+  const removeFileById = (id: string) => {
+    const imageFile = selectedFiles.find(img => img.id === id)
+    if (imageFile?.preview) {
+      URL.revokeObjectURL(imageFile.preview)
     }
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index))
+    setSelectedFiles(prev => prev.filter(img => img.id !== id))
   }
 
-  // Convert files to base64
-  const convertFilesToBase64 = (files: File[]): Promise<string[]> => {
-    return Promise.all(
-      files.map(file => {
+  // Convert files to base64 with compression
+  const convertFilesToBase64 = async (imageFiles: ImageFile[]): Promise<string[]> => {
+    const files = imageFiles.map(img => img.file)
+    setIsUploadingImages(true)
+    try {
+      // First compress the images
+      const compressedFiles = await compressImages(files, {
+        maxSizeMB: 0.8,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+        quality: 0.8,
+      })
+
+      // Then convert to base64
+      const promises = compressedFiles.map((file, index) => {
         return new Promise<string>((resolve, reject) => {
           const reader = new FileReader()
-          reader.onloadend = () => resolve(reader.result as string)
-          reader.onerror = reject
+          reader.onloadend = () => {
+            console.log(
+              `Image ${index + 1} (${file.name}) final size: ${formatFileSize(file.size)}`
+            )
+            resolve(reader.result as string)
+          }
+          reader.onerror = () => reject(new Error(`Erreur de lecture de l'image: ${file.name}`))
           reader.readAsDataURL(file)
         })
       })
-    )
+
+      const results = await Promise.all(promises)
+      return results
+    } finally {
+      setIsUploadingImages(false)
+    }
   }
 
-  // Mémoriser les URLs des images pour éviter les re-créations
-  const imageUrls = useMemo(() => {
-    return selectedFiles.map(file => URL.createObjectURL(file))
-  }, [selectedFiles])
-
-  // Nettoyer les URLs quand les fichiers changent
-  useEffect(() => {
-    return () => {
-      imageUrls.forEach(url => URL.revokeObjectURL(url))
-    }
-  }, [imageUrls])
-
-  // Cleanup object URLs when component unmounts
-  useEffect(() => {
-    return () => {
-      selectedFiles.forEach(file => {
-        const url = URL.createObjectURL(file)
-        URL.revokeObjectURL(url)
-      })
-    }
-  }, [selectedFiles])
+  // Note: Object URLs are cleaned up manually in removeFileById when images are removed
 
   // Nearby places management
   const addNearbyPlace = () => {
@@ -341,35 +588,50 @@ export default function CreateProductPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    setError('')
+    setError(null)
 
     if (!session?.user?.id) {
-      setError('Vous devez être connecté pour créer une annonce')
+      setError(createValidationError('auth', 'Vous devez être connecté pour créer une annonce'))
       setIsLoading(false)
       return
     }
 
     // Validation basique
     if (!formData.name.trim()) {
-      setError("Le nom de l'hébergement est requis")
+      setError(createValidationError('name', "Le nom de l'hébergement est requis"))
       setIsLoading(false)
       return
     }
 
     if (!formData.description.trim()) {
-      setError('La description est requise')
+      setError(createValidationError('description', 'La description est requise'))
       setIsLoading(false)
       return
     }
 
     if (!formData.typeId) {
-      setError("Veuillez sélectionner un type d'hébergement")
+      setError(createValidationError('typeId', "Veuillez sélectionner un type d'hébergement"))
       setIsLoading(false)
       return
     }
 
+    // Validation spécifique aux hôtels
+    if (formData.isHotel) {
+      if (!formData.hotelName.trim()) {
+        setError(createValidationError('hotelName', "Le nom de l'hôtel est requis"))
+        setIsLoading(false)
+        return
+      }
+      
+      if (!formData.availableRooms || Number(formData.availableRooms) <= 0) {
+        setError(createValidationError('availableRooms', 'Le nombre de chambres disponibles doit être supérieur à 0'))
+        setIsLoading(false)
+        return
+      }
+    }
+
     if (selectedFiles.length === 0) {
-      setError('Veuillez ajouter au moins une photo de votre hébergement')
+      setError(createValidationError('images', 'Veuillez ajouter au moins une photo de votre hébergement'))
       setIsLoading(false)
       return
     }
@@ -397,12 +659,17 @@ export default function CreateProductPage() {
         arriving: Number(formData.arriving),
         leaving: Number(formData.leaving),
         phone: formData.phone,
+        phoneCountry: formData.phoneCountry || 'MG',
+        maxPeople: formData.maxPeople ? Number(formData.maxPeople) : null,
         typeId: formData.typeId,
         userId: [finalUserId],
         equipments: formData.equipmentIds,
         services: formData.serviceIds,
         meals: formData.mealIds,
         securities: formData.securityIds,
+        includedServices: formData.includedServiceIds,
+        extras: formData.extraIds,
+        highlights: formData.highlightIds,
         images: base64Images, // Utiliser les images converties en base64
         nearbyPlaces: formData.nearbyPlaces.map(place => ({
           name: place.name,
@@ -410,6 +677,12 @@ export default function CreateProductPage() {
           duration: 0, // TODO: Calculer la durée si nécessaire
           transport: place.unit === 'kilomètres' ? 'voiture' : 'à pied',
         })),
+        // Données spécifiques aux hôtels
+        isHotel: formData.isHotel,
+        hotelInfo: formData.isHotel ? {
+          name: formData.hotelName,
+          availableRooms: Number(formData.availableRooms),
+        } : null,
       }
 
       const result = await createProduct(productData)
@@ -421,7 +694,7 @@ export default function CreateProductPage() {
       }
     } catch (error) {
       console.error('Error creating product:', error)
-      setError("Erreur lors de la création de l'annonce")
+      setError(parseCreateProductError(error))
     } finally {
       setIsLoading(false)
       setIsUploadingImages(false)
@@ -475,9 +748,14 @@ export default function CreateProductPage() {
 
         {error && (
           <motion.div variants={itemVariants}>
-            <div className='max-w-2xl mx-auto p-4 bg-red-50 border border-red-200 rounded-lg'>
-              <p className='text-red-700'>{error}</p>
-            </div>
+            <ErrorAlert 
+              error={error}
+              onClose={() => setError(null)}
+              onRetry={error.retryable ? () => {
+                setError(null)
+                // Optionally trigger the last failed action again
+              } : undefined}
+            />
           </motion.div>
         )}
 
@@ -597,15 +875,19 @@ export default function CreateProductPage() {
                         <label htmlFor='phone' className='text-sm font-medium text-slate-700'>
                           Téléphone de contact
                         </label>
-                        <Input
-                          id='phone'
-                          name='phone'
-                          type='tel'
-                          placeholder='+33 6 XX XX XX XX'
+                        <PhoneInput
                           value={formData.phone}
-                          onChange={handleInputChange}
+                          defaultCountry={formData.phoneCountry}
+                          onChange={(phoneNumber, countryCode) => {
+                            setFormData(prev => ({
+                              ...prev,
+                              phone: phoneNumber,
+                              phoneCountry: countryCode
+                            }))
+                          }}
+                          placeholder="XX XX XX XX"
                           required
-                          className='border-slate-200 focus:border-green-300 focus:ring-green-200'
+                          className="border-slate-200 focus:border-green-300 focus:ring-green-200"
                         />
                       </div>
                     </div>
@@ -706,6 +988,86 @@ export default function CreateProductPage() {
                 </Card>
               </motion.div>
 
+              {/* Configuration Hôtel - Affiché uniquement si c'est un hôtel */}
+              {formData.isHotel && (
+                <motion.div variants={itemVariants}>
+                  <Card className='border-0 shadow-lg bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50'>
+                    <CardHeader className='space-y-2'>
+                      <div className='flex items-center gap-2'>
+                        <div className='p-2 bg-amber-100 rounded-lg'>
+                          <Users className='h-5 w-5 text-amber-700' />
+                        </div>
+                        <div>
+                          <CardTitle className='text-xl text-amber-900'>Configuration Hôtel</CardTitle>
+                          <p className='text-amber-700 text-sm mt-1'>
+                            Configuration spécifique pour la gestion hôtelière
+                          </p>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className='space-y-6'>
+                      <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+                        <div className='space-y-2'>
+                          <label htmlFor='hotelName' className='text-sm font-medium text-amber-800'>
+                            Nom de l&apos;hôtel
+                          </label>
+                          <Input
+                            id='hotelName'
+                            name='hotelName'
+                            type='text'
+                            placeholder='Ex: Hôtel des Jardins'
+                            value={formData.hotelName}
+                            onChange={handleInputChange}
+                            className='border-amber-200 focus:border-amber-400 focus:ring-amber-200 bg-white/80'
+                          />
+                          <p className='text-xs text-amber-600'>
+                            Nom officiel de l&apos;établissement hôtelier
+                          </p>
+                        </div>
+
+                        <div className='space-y-2'>
+                          <label htmlFor='availableRooms' className='text-sm font-medium text-amber-800'>
+                            Nombre de chambres disponibles
+                          </label>
+                          <Input
+                            id='availableRooms'
+                            name='availableRooms'
+                            type='number'
+                            min='1'
+                            placeholder='Ex: 5'
+                            value={formData.availableRooms}
+                            onChange={handleInputChange}
+                            className='border-amber-200 focus:border-amber-400 focus:ring-amber-200 bg-white/80'
+                          />
+                          <p className='text-xs text-amber-600'>
+                            Nombre de chambres de ce type disponibles
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className='bg-amber-100 border border-amber-200 rounded-lg p-4'>
+                        <div className='flex items-start gap-3'>
+                          <div className='p-1.5 bg-amber-200 rounded-full'>
+                            <Home className='h-4 w-4 text-amber-700' />
+                          </div>
+                          <div className='flex-1'>
+                            <h4 className='text-sm font-semibold text-amber-800 mb-1'>
+                              Fonctionnement Hôtelier
+                            </h4>
+                            <p className='text-xs text-amber-700 leading-relaxed'>
+                              Cette chambre représente un type de chambre dans votre hôtel. 
+                              Si vous avez <span className='font-semibold'>{formData.availableRooms || 'X'}</span> chambres 
+                              de ce type, plusieurs clients pourront réserver en même temps sur les mêmes dates, 
+                              tant que le nombre de chambres disponibles le permet.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+
               {/* Tarification */}
               <motion.div variants={itemVariants}>
                 <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm'>
@@ -773,6 +1135,14 @@ export default function CreateProductPage() {
                         Acceptation automatique des réservations
                       </label>
                     </div>
+
+                    {/* Calcul des commissions */}
+                    {formData.basePrice && (
+                      <CommissionDisplay 
+                        basePrice={parseFloat(formData.basePrice) || 0}
+                        className="border-orange-200 bg-orange-50/30"
+                      />
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>
@@ -1014,6 +1384,290 @@ export default function CreateProductPage() {
             </Card>
           </motion.div>
 
+          {/* Services inclus, Extras et Points forts */}
+          <motion.div variants={itemVariants}>
+            <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm'>
+              <CardHeader className='space-y-2'>
+                <div className='flex items-center gap-2'>
+                  <div className='p-2 bg-indigo-50 rounded-lg'>
+                    <Star className='h-5 w-5 text-indigo-600' />
+                  </div>
+                  <div>
+                    <CardTitle className='text-xl'>Services et Options</CardTitle>
+                    <p className='text-slate-600 text-sm mt-1'>
+                      Sélectionnez les services inclus, extras payants et points forts de votre hébergement
+                    </p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className='space-y-6'>
+                {/* Grille 1x3 pour les nouvelles options */}
+                <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
+                  {/* Services inclus */}
+                  <div className='border-2 border-slate-200 rounded-xl p-4 bg-white/50 backdrop-blur-sm flex flex-col h-full'>
+                    <div className='flex items-center justify-between mb-4'>
+                      <h4 className='font-medium text-slate-700 flex items-center gap-2'>
+                        <Package className='h-4 w-4' />
+                        Services inclus
+                      </h4>
+                      <Button
+                        type='button'
+                        size='sm'
+                        variant='outline'
+                        onClick={() => setServiceModalOpen(true)}
+                        className='text-xs'
+                      >
+                        <Plus className='h-3 w-3 mr-1' />
+                        Ajouter
+                      </Button>
+                    </div>
+                    <div className='flex-1 space-y-2 content-start'>
+                      {includedServices.map(service => (
+                        <label
+                          key={service.id}
+                          className={`relative flex items-center p-2 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-sm ${
+                            formData.includedServiceIds.includes(service.id)
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-slate-200 bg-white hover:border-blue-300'
+                          }`}
+                        >
+                          <input
+                            type='checkbox'
+                            checked={formData.includedServiceIds.includes(service.id)}
+                            onChange={() => handleCheckboxChange('includedServiceIds', service.id)}
+                            className='sr-only'
+                          />
+                          <div className='flex items-center space-x-2 w-full'>
+                            <div
+                              className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                                formData.includedServiceIds.includes(service.id)
+                                  ? 'border-blue-500 bg-blue-500'
+                                  : 'border-slate-300'
+                              }`}
+                            >
+                              {formData.includedServiceIds.includes(service.id) && (
+                                <svg
+                                  className='w-2 h-2 text-white'
+                                  fill='currentColor'
+                                  viewBox='0 0 20 20'
+                                >
+                                  <path
+                                    fillRule='evenodd'
+                                    d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z'
+                                    clipRule='evenodd'
+                                  />
+                                </svg>
+                              )}
+                            </div>
+                            <div className='flex-1 min-w-0'>
+                              <div className='flex items-center gap-1 mb-1'>
+                                <span className='text-xs font-medium text-slate-700 block truncate'>
+                                  {service.name}
+                                </span>
+                                {service.userId && (
+                                  <span className='text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium'>
+                                    Personnel
+                                  </span>
+                                )}
+                              </div>
+                              {service.description && (
+                                <span className='text-xs text-slate-500 block truncate'>
+                                  {service.description}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Extras payants */}
+                  <div className='border-2 border-slate-200 rounded-xl p-4 bg-white/50 backdrop-blur-sm flex flex-col h-full'>
+                    <div className='flex items-center justify-between mb-4'>
+                      <h4 className='font-medium text-slate-700 flex items-center gap-2'>
+                        <Plus className='h-4 w-4' />
+                        Options payantes
+                      </h4>
+                      <Button
+                        type='button'
+                        size='sm'
+                        variant='outline'
+                        onClick={() => setExtraModalOpen(true)}
+                        className='text-xs'
+                      >
+                        <Plus className='h-3 w-3 mr-1' />
+                        Ajouter
+                      </Button>
+                    </div>
+                    <div className='flex-1 space-y-2 content-start'>
+                      {extras.map(extra => (
+                        <label
+                          key={extra.id}
+                          className={`relative flex items-center p-2 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-sm ${
+                            formData.extraIds.includes(extra.id)
+                              ? 'border-green-500 bg-green-50'
+                              : 'border-slate-200 bg-white hover:border-green-300'
+                          }`}
+                        >
+                          <input
+                            type='checkbox'
+                            checked={formData.extraIds.includes(extra.id)}
+                            onChange={() => handleCheckboxChange('extraIds', extra.id)}
+                            className='sr-only'
+                          />
+                          <div className='flex items-center space-x-2 w-full'>
+                            <div
+                              className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                                formData.extraIds.includes(extra.id)
+                                  ? 'border-green-500 bg-green-500'
+                                  : 'border-slate-300'
+                              }`}
+                            >
+                              {formData.extraIds.includes(extra.id) && (
+                                <svg
+                                  className='w-2 h-2 text-white'
+                                  fill='currentColor'
+                                  viewBox='0 0 20 20'
+                                >
+                                  <path
+                                    fillRule='evenodd'
+                                    d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z'
+                                    clipRule='evenodd'
+                                  />
+                                </svg>
+                              )}
+                            </div>
+                            <div className='flex-1 min-w-0'>
+                              <div className='flex items-center gap-1 mb-1'>
+                                <span className='text-xs font-medium text-slate-700 block truncate'>
+                                  {extra.name}
+                                </span>
+                                {extra.userId && (
+                                  <span className='text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium'>
+                                    Personnel
+                                  </span>
+                                )}
+                              </div>
+                              <span className='text-xs text-green-600 block'>
+                                {extra.priceEUR}€ / {extra.priceMGA.toLocaleString()}Ar
+                              </span>
+                              {extra.description && (
+                                <span className='text-xs text-slate-500 block truncate'>
+                                  {extra.description}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Points forts */}
+                  <div className='border-2 border-slate-200 rounded-xl p-4 bg-white/50 backdrop-blur-sm flex flex-col h-full'>
+                    <div className='flex items-center justify-between mb-4'>
+                      <h4 className='font-medium text-slate-700 flex items-center gap-2'>
+                        <Highlighter className='h-4 w-4' />
+                        Points forts
+                      </h4>
+                      <Button
+                        type='button'
+                        size='sm'
+                        variant='outline'
+                        onClick={() => setHighlightModalOpen(true)}
+                        className='text-xs'
+                      >
+                        <Plus className='h-3 w-3 mr-1' />
+                        Ajouter
+                      </Button>
+                    </div>
+                    <div className='flex-1 space-y-2 content-start'>
+                      {highlights.map(highlight => (
+                        <label
+                          key={highlight.id}
+                          className={`relative flex items-center p-2 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-sm ${
+                            formData.highlightIds.includes(highlight.id)
+                              ? 'border-yellow-500 bg-yellow-50'
+                              : 'border-slate-200 bg-white hover:border-yellow-300'
+                          }`}
+                        >
+                          <input
+                            type='checkbox'
+                            checked={formData.highlightIds.includes(highlight.id)}
+                            onChange={() => handleCheckboxChange('highlightIds', highlight.id)}
+                            className='sr-only'
+                          />
+                          <div className='flex items-center space-x-2 w-full'>
+                            <div
+                              className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                                formData.highlightIds.includes(highlight.id)
+                                  ? 'border-yellow-500 bg-yellow-500'
+                                  : 'border-slate-300'
+                              }`}
+                            >
+                              {formData.highlightIds.includes(highlight.id) && (
+                                <svg
+                                  className='w-2 h-2 text-white'
+                                  fill='currentColor'
+                                  viewBox='0 0 20 20'
+                                >
+                                  <path
+                                    fillRule='evenodd'
+                                    d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z'
+                                    clipRule='evenodd'
+                                  />
+                                </svg>
+                              )}
+                            </div>
+                            <div className='flex-1 min-w-0'>
+                              <div className='flex items-center gap-1 mb-1'>
+                                <span className='text-xs font-medium text-slate-700 block truncate'>
+                                  {highlight.name}
+                                </span>
+                                {highlight.userId && (
+                                  <span className='text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full font-medium'>
+                                    Personnel
+                                  </span>
+                                )}
+                              </div>
+                              {highlight.description && (
+                                <span className='text-xs text-slate-500 block truncate'>
+                                  {highlight.description}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Aperçu des coûts */}
+                {(selectedExtras.length > 0 && formData.basePrice) && (
+                  <div className='mt-6'>
+                    <h3 className='text-lg font-semibold mb-4 text-slate-700'>Aperçu des coûts</h3>
+                    <BookingCostSummary
+                      basePrice={parseFloat(formData.basePrice) || 0}
+                      numberOfDays={numberOfDays}
+                      guestCount={testBooking.guestCount}
+                      selectedExtras={selectedExtras}
+                      currency='EUR'
+                      startDate={testBooking.startDate}
+                      endDate={testBooking.endDate}
+                      className='max-w-md'
+                      showCommissions={true}
+                    />
+                    <p className='text-xs text-slate-500 mt-2'>
+                      * Exemple calculé sur {numberOfDays} jour{numberOfDays > 1 ? 's' : ''} pour {testBooking.guestCount} personne{testBooking.guestCount > 1 ? 's' : ''}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+
           {/* Photos */}
           <motion.div variants={itemVariants}>
             <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm'>
@@ -1025,7 +1679,7 @@ export default function CreateProductPage() {
                   <div>
                     <CardTitle className='text-xl'>Photos de l&apos;hébergement</CardTitle>
                     <p className='text-slate-600 text-sm mt-1'>
-                      Ajoutez des photos attrayantes de votre hébergement (maximum 10)
+                      Ajoutez des photos attrayantes de votre hébergement (maximum 35)
                       {selectedFiles.length > 0 && (
                         <span className='ml-2 font-medium text-blue-600'>
                           {selectedFiles.length} photo{selectedFiles.length > 1 ? 's' : ''}{' '}
@@ -1072,10 +1726,15 @@ export default function CreateProductPage() {
                         </button>
                       </p>
                       <p className='text-xs text-slate-500 mt-1'>
-                        PNG, JPG, JPEG, WEBP jusqu&apos;à 10MB chacune
+                        PNG, JPG, JPEG, WEBP jusqu&apos;à 50MB chacune (compressées automatiquement)
                         {selectedFiles.length > 0 && (
                           <span className='block mt-1 text-green-600 font-medium'>
-                            ✓ {selectedFiles.length}/10 photos sélectionnées
+                            ✓ {selectedFiles.length}/35 photos sélectionnées
+                          </span>
+                        )}
+                        {isUploadingImages && (
+                          <span className='block mt-1 text-blue-600 font-medium animate-pulse'>
+                            🔄 Compression en cours...
                           </span>
                         )}
                       </p>
@@ -1083,28 +1742,18 @@ export default function CreateProductPage() {
                   </div>
                 </div>
 
-                {selectedFiles.length > 0 && (
-                  <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
-                    {selectedFiles.map((file, index) => (
-                      <div key={index} className='relative group'>
-                        <Image
-                          src={imageUrls[index]}
-                          alt={`Aperçu ${index + 1}`}
-                          width={200}
-                          height={96}
-                          className='w-full h-24 object-cover rounded-lg border border-slate-200'
-                        />
-                        <button
-                          type='button'
-                          onClick={() => removeFile(index)}
-                          className='absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 transition-colors'
-                        >
-                          <X className='h-3 w-3' />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <SortableImageGrid
+                  images={selectedFiles}
+                  onReorder={setSelectedFiles}
+                  onRemove={removeFileById}
+                  onPreview={() => setShowGalleryPreview(true)}
+                />
+
+                <ImageGalleryPreview
+                  images={selectedFiles}
+                  isOpen={showGalleryPreview}
+                  onClose={() => setShowGalleryPreview(false)}
+                />
               </CardContent>
             </Card>
           </motion.div>
@@ -1289,10 +1938,10 @@ export default function CreateProductPage() {
                 <CardHeader>
                   <CardTitle className='flex items-center gap-3 text-orange-800'>
                     <Users className='h-5 w-5 text-orange-600' />
-                    Administration - Assigner l'annonce
+                    Administration - Assigner l&apos;annonce
                   </CardTitle>
                   <p className='text-sm text-orange-600'>
-                    En tant qu'administrateur, vous pouvez créer cette annonce pour un autre
+                    En tant qu&apos;administrateur, vous pouvez créer cette annonce pour un autre
                     utilisateur
                   </p>
                 </CardHeader>
@@ -1316,7 +1965,7 @@ export default function CreateProductPage() {
                   {assignToOtherUser && (
                     <div className='space-y-2'>
                       <label htmlFor='userSelect' className='text-sm font-medium text-orange-700'>
-                        Sélectionner l'utilisateur
+                        Sélectionner l&apos;utilisateur
                       </label>
                       <select
                         id='userSelect'
@@ -1365,6 +2014,27 @@ export default function CreateProductPage() {
             </Button>
           </motion.div>
         </form>
+
+        {/* Modaux pour créer des services personnalisés */}
+        <CreateServiceModal
+          isOpen={serviceModalOpen}
+          onClose={() => setServiceModalOpen(false)}
+          onServiceCreated={handleServiceCreated}
+          title="Ajouter un service inclus personnalisé"
+          description="Créez un service inclus spécifique à votre hébergement"
+        />
+
+        <CreateExtraModal
+          isOpen={extraModalOpen}
+          onClose={() => setExtraModalOpen(false)}
+          onExtraCreated={handleExtraCreated}
+        />
+
+        <CreateHighlightModal
+          isOpen={highlightModalOpen}
+          onClose={() => setHighlightModalOpen(false)}
+          onHighlightCreated={handleHighlightCreated}
+        />
       </motion.div>
     </div>
   )

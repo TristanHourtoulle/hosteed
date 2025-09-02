@@ -13,6 +13,8 @@ import {
 import { Button } from '@/components/ui/shadcnui/button'
 import { Camera, Upload, X } from 'lucide-react'
 import { toast } from 'sonner'
+import { compressImage, formatFileSize } from '@/lib/utils/imageCompression'
+import { useUserProfile } from '@/contexts/UserProfileContext'
 
 interface EditPhotoDialogProps {
   currentPhoto?: string
@@ -24,11 +26,12 @@ export function EditPhotoDialog({ currentPhoto, onPhotoUpdate }: EditPhotoDialog
   const [preview, setPreview] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [dragActive, setDragActive] = useState(false)
+  const { refreshUserProfile } = useUserProfile()
 
-  const handleFileSelect = (file: File) => {
-    // Vérifier la taille (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('La taille du fichier ne doit pas dépasser 5MB')
+  const handleFileSelect = async (file: File) => {
+    // Vérifier la taille (max 20MB avant compression)
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error('La taille du fichier ne doit pas dépasser 20MB')
       return
     }
 
@@ -38,12 +41,35 @@ export function EditPhotoDialog({ currentPhoto, onPhotoUpdate }: EditPhotoDialog
       return
     }
 
-    const reader = new FileReader()
-    reader.onload = e => {
-      const result = e.target?.result as string
-      setPreview(result)
+    try {
+      setIsUploading(true)
+      toast.info("Compression de l'image en cours...")
+
+      // Compress the image
+      const compressedFile = await compressImage(file, {
+        maxSizeMB: 0.5, // Max 500KB for profile pictures
+        maxWidthOrHeight: 800, // Max 800px for profile pictures
+        useWebWorker: true,
+        quality: 0.8,
+      })
+
+      console.log(
+        `Profile image compressed: ${formatFileSize(file.size)} → ${formatFileSize(compressedFile.size)}`
+      )
+
+      const reader = new FileReader()
+      reader.onload = e => {
+        const result = e.target?.result as string
+        setPreview(result)
+        toast.success('Image compressée avec succès')
+      }
+      reader.readAsDataURL(compressedFile)
+    } catch (error) {
+      console.error('Image compression failed:', error)
+      toast.error("Erreur lors de la compression de l'image")
+    } finally {
+      setIsUploading(false)
     }
-    reader.readAsDataURL(file)
   }
 
   const handleDrop = (e: React.DragEvent) => {
@@ -87,6 +113,10 @@ export function EditPhotoDialog({ currentPhoto, onPhotoUpdate }: EditPhotoDialog
       onPhotoUpdate(preview)
       setIsOpen(false)
       setPreview(null)
+      
+      // Trigger a refresh of the user profile in the header
+      refreshUserProfile()
+      
       toast.success('Photo de profil mise à jour avec succès')
     } catch (error) {
       console.error('Erreur:', error)
@@ -167,7 +197,9 @@ export function EditPhotoDialog({ currentPhoto, onPhotoUpdate }: EditPhotoDialog
                   <p className='text-sm text-gray-600'>
                     Glissez une image ici ou cliquez pour sélectionner
                   </p>
-                  <p className='text-xs text-gray-500 mt-1'>PNG, JPG jusqu&apos;à 5MB</p>
+                  <p className='text-xs text-gray-500 mt-1'>
+                    PNG, JPG jusqu&apos;à 20MB (compressée automatiquement)
+                  </p>
                 </div>
               </div>
             )}

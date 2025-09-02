@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { redirect } from 'next/navigation'
+import { getPayablePricesPerRent } from '@/lib/services/payment.service'
 import { ReservationDetails } from './types'
 
 export async function getReservationDetails(reservationId: string): Promise<ReservationDetails> {
@@ -59,4 +60,35 @@ export async function getReservationDetails(reservationId: string): Promise<Rese
   })
 
   return { reservation, host } as unknown as ReservationDetails
+}
+
+export async function getPaymentDetailsForReservation(reservationId: string) {
+  const session = await auth()
+
+  if (!session?.user) {
+    redirect('/auth')
+  }
+
+  // Vérifier que l'utilisateur peut accéder à cette réservation
+  const reservation = await prisma.rent.findUnique({
+    where: {
+      id: reservationId,
+      userId: session.user.id,
+    },
+    select: {
+      id: true,
+    },
+  })
+
+  if (!reservation) {
+    redirect('/account')
+  }
+
+  try {
+    const paymentDetails = await getPayablePricesPerRent(reservationId)
+    return paymentDetails
+  } catch (error) {
+    console.error('Error fetching payment details:', error)
+    return null
+  }
 }

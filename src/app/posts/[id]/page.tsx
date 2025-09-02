@@ -345,7 +345,7 @@ export default function PostPage() {
           </article>
 
           {/* Suggested Posts */}
-          <SuggestedPosts posts={suggestedPosts.map(p => ({ ...p, image: p.image ?? '' }))} />
+          <SuggestedPosts posts={suggestedPosts.map(p => ({ ...p, image: p.image ?? '', slug: p.slug ?? undefined }))} />
 
           {/* Article Footer */}
           <div className='mt-12 pt-8 border-t border-gray-200'>

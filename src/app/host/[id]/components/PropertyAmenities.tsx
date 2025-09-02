@@ -6,6 +6,8 @@ interface PropertyAmenitiesProps {
 }
 
 export default function PropertyAmenities({ equipments }: PropertyAmenitiesProps) {
+  if (!equipments || equipments.length === 0) return null
+
   return (
     <div className='border-b border-gray-200 pb-8'>
       <h3 className='text-lg font-semibold text-gray-900 mb-6'>Équipements</h3>
