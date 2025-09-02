@@ -4,8 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   getCitySuggestions, 
   GooglePlacePrediction,
-  googleSuggestionService 
-} from '@/lib/services/GoogleSuggestion.service';
+  googleSuggestionService } from '@/lib/services/GoogleSuggestion.service';
 import { MapPin, Loader2 } from 'lucide-react';
 
 interface CityAutocompleteProps {
@@ -30,7 +29,6 @@ export function CityAutocomplete({
   const [loading, setLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
-  
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const sessionTokenRef = useRef<string>('');
@@ -58,7 +56,6 @@ export function CityAutocomplete({
         country: countryFilter,
         sessionToken: sessionTokenRef.current
       });
-      
       setSuggestions(results);
       setShowSuggestions(results.length > 0);
       setSelectedIndex(-1);
@@ -74,7 +71,6 @@ export function CityAutocomplete({
   // Debounce la recherche
   const handleInputChange = useCallback((value: string) => {
     setInputValue(value);
-    
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
     }
@@ -90,11 +86,9 @@ export function CityAutocomplete({
     setShowSuggestions(false);
     setSuggestions([]);
     setSelectedIndex(-1);
-    
     if (onCitySelect) {
       onCitySelect(city);
     }
-    
     // Générer un nouveau token de session pour la prochaine recherche
     sessionTokenRef.current = googleSuggestionService.generateSessionToken();
   }, [onCitySelect]);
@@ -106,7 +100,7 @@ export function CityAutocomplete({
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        setSelectedIndex(prev => 
+        setSelectedIndex(prev =>
           prev < suggestions.length - 1 ? prev + 1 : prev
         );
         break;
@@ -208,7 +202,6 @@ export function CityAutocomplete({
           ))}
         </div>
       )}
-
       {/* Message d'erreur si pas de suggestions */}
       {showSuggestions && !loading && suggestions.length === 0 && inputValue.length >= 2 && (
         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg p-4">
