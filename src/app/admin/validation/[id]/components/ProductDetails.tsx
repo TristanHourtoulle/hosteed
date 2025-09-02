@@ -92,14 +92,14 @@ export function ProductDetails({ product }: ProductDetailsProps) {
   const [showFullscreen, setShowFullscreen] = useState(false)
 
   const nextImage = () => {
-    if (product.img) {
-      setCurrentImageIndex(prev => (prev + 1) % product.img.length)
+    if (product.img && product.img.length > 0) {
+      setCurrentImageIndex(prev => (prev + 1) % product.img!.length)
     }
   }
 
   const prevImage = () => {
-    if (product.img) {
-      setCurrentImageIndex(prev => (prev - 1 + product.img.length) % product.img.length)
+    if (product.img && product.img.length > 0) {
+      setCurrentImageIndex(prev => (prev - 1 + product.img!.length) % product.img!.length)
     }
   }
 

@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { useEffect, useState, useCallback } from 'react'
-import { ProductValidation, ExtraPriceType } from '@prisma/client'
+import { ProductValidation, ExtraPriceType, DayEnum } from '@prisma/client'
 import { motion } from 'framer-motion'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -41,11 +41,20 @@ interface SpecialPrice {
   id: string
   pricesMga: string
   pricesEuro: string
-  day: string[]
+  day: DayEnum[]
   startDate: Date | null
   endDate: Date | null
   activate: boolean
   productId: string
+}
+
+interface SpecialPriceData {
+  pricesMga: string
+  pricesEuro: string
+  day: DayEnum[]
+  startDate: Date | null
+  endDate: Date | null
+  activate: boolean
 }
 
 interface Product {
@@ -76,11 +85,11 @@ interface Product {
     profilePicture?: string | null
     profilePictureBase64?: string | null
   }[]
-  type?: { name: string; description: string }
-  equipments?: { name: string; icon: string }[]
-  mealsList?: { name: string }[]
-  servicesList?: { name: string }[]
-  securities?: { name: string }[]
+  type?: { id: string; name: string; description: string }
+  equipments?: { id: string; name: string; icon: string }[]
+  mealsList?: { id: string; name: string }[]
+  servicesList?: { id: string; name: string }[]
+  securities?: { id: string; name: string }[]
   typeRoom?: { name: string; description: string }
   rules?: {
     smokingAllowed: boolean
@@ -128,7 +137,6 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
   const [productId, setProductId] = useState<string | null>(null)
   const [validationHistory, setValidationHistory] = useState<ValidationHistoryEntry[]>([])
   const [activeTab, setActiveTab] = useState<'details' | 'comparison' | 'edit'>('details')
-  const [isEditing, setIsEditing] = useState(false)
   const [specialPrices, setSpecialPrices] = useState<SpecialPrice[]>([])
   const [specialPriceModalOpen, setSpecialPriceModalOpen] = useState(false)
   const [editingSpecialPrice, setEditingSpecialPrice] = useState<SpecialPrice | null>(null)
@@ -257,25 +265,22 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
   }
 
   const handleEditProduct = () => {
-    setIsEditing(true)
     setActiveTab('edit')
   }
 
   const handleSaveProduct = (updatedProduct: Product) => {
     setProduct(updatedProduct)
-    setIsEditing(false)
     setActiveTab('details')
     // Rafraîchir les données
     fetchProduct()
   }
 
   const handleCancelEdit = () => {
-    setIsEditing(false)
     setActiveTab('details')
   }
 
   // Fonctions pour gérer les prix spéciaux
-  const handleSpecialPriceCreated = async (specialPriceData: any) => {
+  const handleSpecialPriceCreated = async (specialPriceData: SpecialPriceData) => {
     try {
       let result
       

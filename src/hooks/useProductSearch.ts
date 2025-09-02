@@ -300,7 +300,7 @@ export function useProductSearch() {
         setLoading(true)
         const allProducts = await findAllProducts()
         if (allProducts) {
-          let filteredProducts = filterProducts(allProducts)
+          let filteredProducts = filterProducts(allProducts as unknown as Product[])
           filteredProducts = applySpecialFilters(filteredProducts)
           setProducts(filteredProducts)
         }

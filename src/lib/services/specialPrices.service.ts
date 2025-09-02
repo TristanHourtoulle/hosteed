@@ -1,7 +1,7 @@
 'use server'
 import prisma from "@/lib/prisma";
 import { DayEnum } from "@prisma/client"
-export async function createSpecialPrices(pricesMga: string, pricesEuro: String, day: DayEnum[], startDate: Date | null, endDate: Date | null, activate: boolean, productId: string ) {
+export async function createSpecialPrices(pricesMga: string, pricesEuro: string, day: DayEnum[], startDate: Date | null, endDate: Date | null, activate: boolean, productId: string ) {
     try {
         console.log('=== createSpecialPrices called ===')
         console.log('Parameters:', { pricesMga, pricesEuro, day, startDate, endDate, activate, productId })

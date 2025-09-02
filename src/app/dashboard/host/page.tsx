@@ -52,7 +52,7 @@ export default function HostDashboard() {
         if (session?.user?.id) {
           const userProducts = await findAllProductByHostId(session.user.id)
           if (userProducts) {
-            setProducts(userProducts)
+            setProducts(userProducts as unknown as Product[])
           }
         }
       } catch (err) {

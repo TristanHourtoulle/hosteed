@@ -33,7 +33,7 @@ import { findAllEquipments } from '@/lib/services/equipments.service'
 import { findAllMeals } from '@/lib/services/meals.service'
 import { findAllServices } from '@/lib/services/services.service'
 import { findAllSecurity } from '@/lib/services/security.services'
-import { ExtraPriceType } from '@prisma/client'
+import { ExtraPriceType, ProductValidation } from '@prisma/client'
 import { TypeRentInterface } from '@/lib/interface/typeRentInterface'
 import CreateServiceModal from '@/components/ui/CreateServiceModal'
 import CreateExtraModal from '@/components/ui/CreateExtraModal'
@@ -142,6 +142,7 @@ interface Product {
   bathroom: number
   arriving: number
   leaving: number
+  validate: ProductValidation
   img?: { img: string }[]
   user: {
     id: string
@@ -710,7 +711,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
     } catch (error) {
       console.error('Erreur lors de la mise à jour du produit:', error)
       setError({
-        type: 'server',
+        type: 'general',
         title: 'Erreur de sauvegarde',
         message: 'Une erreur est survenue lors de la sauvegarde',
         details: ['Impossible de sauvegarder les modifications'],

@@ -10,8 +10,38 @@ import { invalidateProductCache } from '@/lib/cache/invalidation'
 import { create as createHotel, findHotelByManagerId } from '@/lib/services/hotel.service'
 import { createSpecialPrices } from '@/lib/services/specialPrices.service'
 
+// Interfaces pour typer les prix spéciaux
+interface SpecialPrice {
+  id: string
+  pricesMga: string
+  pricesEuro: string
+  day: string[]
+  startDate: Date | null
+  endDate: Date | null
+  activate: boolean
+  productId: string
+}
+
+interface ProductWithSpecialPrice {
+  id: string
+  name: string
+  description: string
+  address: string
+  basePrice: string
+  originalBasePrice?: string
+  specialPriceApplied?: boolean
+  specialPriceInfo?: {
+    id: string
+    pricesEuro: string
+    day: string[]
+    startDate: Date | null
+    endDate: Date | null
+  }
+  [key: string]: unknown // Pour les autres propriétés du produit
+}
+
 // Fonction utilitaire pour filtrer les prix spéciaux par dates et jour
-function filterActiveSpecialPrices(specialPrices: any[], currentDate: Date = new Date()) {
+function filterActiveSpecialPrices(specialPrices: SpecialPrice[], currentDate: Date = new Date()) {
   const currentDay = currentDate.toLocaleDateString('en-US', { weekday: 'long' }) // Ex: "Monday", "Tuesday", etc.
   
   return specialPrices.filter(sp => {
@@ -56,7 +86,7 @@ async function getSpecialPricesForProduct(productId: string) {
       FROM "SpecialPrices"
       WHERE "productId" = ${productId}
     `
-    return specialPrices as any[]
+    return specialPrices as SpecialPrice[]
   } catch (error) {
     console.error('Erreur lors de la récupération des prix spéciaux:', error)
     return []
@@ -64,7 +94,7 @@ async function getSpecialPricesForProduct(productId: string) {
 }
 
 // Fonction pour appliquer le prix spécial au produit
-function applySpecialPriceToProduct(product: any, specialPrices: any[]) {
+function applySpecialPriceToProduct(product: ProductWithSpecialPrice, specialPrices: SpecialPrice[]) {
   if (!specialPrices || specialPrices.length === 0) {
     return product
   }

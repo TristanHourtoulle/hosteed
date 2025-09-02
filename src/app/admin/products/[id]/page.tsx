@@ -5,7 +5,7 @@ import { useEffect, useState, use } from 'react'
 import { findProductById, validateProduct, rejectProduct } from '@/lib/services/product.service'
 import { findAllRentByProductId } from '@/lib/services/rents.service'
 import { findSpecialsPricesByProduct, createSpecialPrices, updateSpecialPrices, toggleSpecialPriceStatus, deleteSpecialsPricesByProduct } from '@/lib/services/specialPrices.service'
-import { Product, RentStatus, PaymentStatus, ProductValidation } from '@prisma/client'
+import { Product, RentStatus, PaymentStatus, ProductValidation, DayEnum } from '@prisma/client'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { getCityFromAddress } from '@/lib/utils'
@@ -73,11 +73,20 @@ interface SpecialPrice {
   id: string
   pricesMga: string
   pricesEuro: string
-  day: string[]
+  day: DayEnum[]
   startDate: Date | null
   endDate: Date | null
   activate: boolean
   productId: string
+}
+
+interface SpecialPriceData {
+  pricesMga: string
+  pricesEuro: string
+  day: DayEnum[]
+  startDate: Date | null
+  endDate: Date | null
+  activate: boolean
 }
 
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -100,7 +109,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         ])
 
         if (productData) {
-          setProduct(productData)
+          setProduct(productData as unknown as ProductWithRelations)
         }
         if (rentsData) {
           setRents(rentsData)
@@ -141,7 +150,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   }
 
   // Fonctions pour gérer les prix spéciaux
-  const handleSpecialPriceCreated = async (specialPriceData: any) => {
+  const handleSpecialPriceCreated = async (specialPriceData: SpecialPriceData) => {
     try {
       let result
       

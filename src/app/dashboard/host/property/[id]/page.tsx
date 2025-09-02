@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/shadcnui/badge'
 import { findProductById } from '@/lib/services/product.service'
 import { findAllRentByProductId } from '@/lib/services/rents.service'
 import { findSpecialsPricesByProduct, createSpecialPrices, updateSpecialPrices, toggleSpecialPriceStatus, deleteSpecialsPricesByProduct } from '@/lib/services/specialPrices.service'
+import { DayEnum } from '@prisma/client'
 import CreateSpecialPriceModal from '@/components/ui/CreateSpecialPriceModal'
 import { 
   ArrowLeft, 
@@ -39,11 +40,20 @@ interface SpecialPrice {
   id: string
   pricesMga: string
   pricesEuro: string
-  day: string[]
+  day: DayEnum[]
   startDate: Date | null
   endDate: Date | null
   activate: boolean
   productId: string
+}
+
+interface SpecialPriceData {
+  pricesMga: string
+  pricesEuro: string
+  day: DayEnum[]
+  startDate: Date | null
+  endDate: Date | null
+  activate: boolean
 }
 
 interface Product {
@@ -124,7 +134,7 @@ export default function PropertyDashboard() {
     fetchData()
   }, [productId, session])
 
-  const handleSpecialPriceCreated = async (specialPriceData: any) => {
+  const handleSpecialPriceCreated = async (specialPriceData: SpecialPriceData) => {
     try {
       let result
       
