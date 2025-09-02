@@ -8,6 +8,89 @@ import { ProductValidation } from '@prisma/client'
 import { CreateProductInput } from '@/lib/interface/userInterface'
 import { invalidateProductCache } from '@/lib/cache/invalidation'
 import { create as createHotel, findHotelByManagerId } from '@/lib/services/hotel.service'
+import { createSpecialPrices } from '@/lib/services/specialPrices.service'
+
+// Fonction utilitaire pour filtrer les prix spéciaux par dates et jour
+function filterActiveSpecialPrices(specialPrices: any[], currentDate: Date = new Date()) {
+  const currentDay = currentDate.toLocaleDateString('en-US', { weekday: 'long' }) // Ex: "Monday", "Tuesday", etc.
+  
+  return specialPrices.filter(sp => {
+    // Vérifier si le prix spécial est activé
+    if (!sp.activate) return false
+    
+    // Vérifier si le jour actuel est dans la liste des jours du prix spécial
+    if (!sp.day || !sp.day.includes(currentDay)) return false
+    
+    // Si pas de dates définies, inclure le prix spécial
+    if (!sp.startDate && !sp.endDate) return true
+    
+    // Vérifier si la date actuelle est dans la plage
+    const startDate = sp.startDate ? new Date(sp.startDate) : null
+    const endDate = sp.endDate ? new Date(sp.endDate) : null
+    
+    if (startDate && endDate) {
+      return currentDate >= startDate && currentDate <= endDate
+    } else if (startDate) {
+      return currentDate >= startDate
+    } else if (endDate) {
+      return currentDate <= endDate
+    }
+    
+    return true
+  })
+}
+
+// Fonction pour récupérer les prix spéciaux d'un produit avec requête SQL brute
+async function getSpecialPricesForProduct(productId: string) {
+  try {
+    const specialPrices = await prisma.$queryRaw`
+      SELECT 
+        "id",
+        "pricesMga",
+        "pricesEuro",
+        "day",
+        "startDate",
+        "endDate",
+        "activate",
+        "productId"
+      FROM "SpecialPrices"
+      WHERE "productId" = ${productId}
+    `
+    return specialPrices as any[]
+  } catch (error) {
+    console.error('Erreur lors de la récupération des prix spéciaux:', error)
+    return []
+  }
+}
+
+// Fonction pour appliquer le prix spécial au produit
+function applySpecialPriceToProduct(product: any, specialPrices: any[]) {
+  if (!specialPrices || specialPrices.length === 0) {
+    return product
+  }
+  
+  // Prendre le premier prix spécial valide (on pourrait aussi prendre le plus récent ou le plus avantageux)
+  const activeSpecialPrice = specialPrices[0]
+  
+  if (activeSpecialPrice && activeSpecialPrice.pricesEuro) {
+    // Remplacer le basePrice par le prix spécial en euros
+    return {
+      ...product,
+      basePrice: activeSpecialPrice.pricesEuro,
+      originalBasePrice: product.basePrice, // Garder une référence au prix original
+      specialPriceApplied: true,
+      specialPriceInfo: {
+        pricesMga: activeSpecialPrice.pricesMga,
+        pricesEuro: activeSpecialPrice.pricesEuro,
+        day: activeSpecialPrice.day,
+        startDate: activeSpecialPrice.startDate,
+        endDate: activeSpecialPrice.endDate
+      }
+    }
+  }
+  
+  return product
+}
 
 export async function findProductById(id: string) {
   try {
@@ -38,6 +121,7 @@ export async function findProductById(id: string) {
         nearbyPlaces: true, // Inclure les lieux à proximité
         transportOptions: true, // Inclure les options de transport
         propertyInfo: true, // Inclure les informations de propriété
+        // specialPrices: true, // Temporairement désactivé car le modèle n'est pas généré
         reviews: {
           where: {
             approved: true,
@@ -60,7 +144,18 @@ export async function findProductById(id: string) {
       },
     })
     if (product) {
-      return product
+      // Récupérer et filtrer les prix spéciaux activés et dans les dates actuelles
+      const specialPrices = await getSpecialPricesForProduct(product.id)
+      const filteredSpecialPrices = filterActiveSpecialPrices(specialPrices)
+      
+      // Appliquer le prix spécial au produit si applicable
+      const productWithSpecialPrice = applySpecialPriceToProduct(product, filteredSpecialPrices)
+      
+      // Ajouter les prix spéciaux filtrés au produit
+      return {
+        ...productWithSpecialPrice,
+        specialPrices: filteredSpecialPrices
+      }
     }
     return null
   } catch (error) {
@@ -111,10 +206,27 @@ export async function findAllProducts() {
             },
           },
         },
+        // specialPrices: true, // Temporairement désactivé car le modèle n'est pas généré
       },
     })
 
-    return products
+    // Récupérer et filtrer les prix spéciaux pour chaque produit
+    const productsWithFilteredSpecialPrices = await Promise.all(
+      products.map(async (product) => {
+        const specialPrices = await getSpecialPricesForProduct(product.id)
+        const filteredSpecialPrices = filterActiveSpecialPrices(specialPrices)
+        
+        // Appliquer le prix spécial au produit si applicable
+        const productWithSpecialPrice = applySpecialPriceToProduct(product, filteredSpecialPrices)
+        
+        return {
+          ...productWithSpecialPrice,
+          specialPrices: filteredSpecialPrices
+        }
+      })
+    )
+
+    return productsWithFilteredSpecialPrices
   } catch (error) {
     console.error('Erreur lors de la recherche des produits:', error)
     return null
@@ -150,10 +262,27 @@ export async function findAllProductByHostId(id: string) {
             email: true,
           },
         },
+        // specialPrices: true, // Temporairement désactivé car le modèle n'est pas généré
       },
     })
 
-    return products
+    // Récupérer et filtrer les prix spéciaux pour chaque produit
+    const productsWithFilteredSpecialPrices = await Promise.all(
+      products.map(async (product) => {
+        const specialPrices = await getSpecialPricesForProduct(product.id)
+        const filteredSpecialPrices = filterActiveSpecialPrices(specialPrices)
+        
+        // Appliquer le prix spécial au produit si applicable
+        const productWithSpecialPrice = applySpecialPriceToProduct(product, filteredSpecialPrices)
+        
+        return {
+          ...productWithSpecialPrice,
+          specialPrices: filteredSpecialPrices
+        }
+      })
+    )
+
+    return productsWithFilteredSpecialPrices
   } catch (error) {
     console.error("Erreur lors de la recherche des produits de l'hôte:", error)
     return null
@@ -306,6 +435,35 @@ export async function createProduct(data: CreateProductInput) {
       })
     }
     */
+
+    // Créer les prix spéciaux si fournis
+    console.log('=== Special Prices Debug ===')
+    console.log('data.specialPrices:', data.specialPrices)
+    console.log('data.specialPrices length:', data.specialPrices?.length)
+    
+    if (data.specialPrices && data.specialPrices.length > 0) {
+      console.log('Creating special prices...')
+      for (const specialPrice of data.specialPrices) {
+        console.log('Creating special price:', specialPrice)
+        try {
+          // Utiliser la fonction createSpecialPrices du service
+          const result = await createSpecialPrices(
+            specialPrice.pricesMga,
+            specialPrice.pricesEuro,
+            specialPrice.day,
+            specialPrice.startDate,
+            specialPrice.endDate,
+            specialPrice.activate,
+            createdProduct.id
+          )
+          console.log('Special price created successfully:', result)
+        } catch (error) {
+          console.error('Error creating special price:', error)
+        }
+      }
+    } else {
+      console.log('No special prices to create')
+    }
 
     // Créer automatiquement les règles avec les heures converties en format string
     const formatHour = (hour: number | string): string => {

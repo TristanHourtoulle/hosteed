@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nouvelle demande de paiement</title>
+    <style>
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #f5f5f5;
+        padding: 20px;
+      }
+      .container {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: white;
+        padding: 30px 25px;
+        text-align: center;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 600;
+      }
+      .content {
+        padding: 30px 25px;
+      }
+      .urgent-badge {
+        background: #dc2626;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 500;
+        display: inline-block;
+        margin-bottom: 20px;
+      }
+      .info-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+      }
+      .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #e2e8f0;
+      }
+      .info-row:last-child {
+        border-bottom: none;
+      }
+      .info-label {
+        font-weight: 500;
+        color: #64748b;
+      }
+      .info-value {
+        font-weight: 600;
+        color: #1e293b;
+      }
+      .amount {
+        font-size: 20px;
+        color: #059669;
+      }
+      .note-section {
+        background: #fef3c7;
+        border: 1px solid #f59e0b;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 20px 0;
+      }
+      .note-section h3 {
+        margin: 0 0 10px 0;
+        color: #92400e;
+        font-size: 16px;
+      }
+      .button {
+        display: inline-block;
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: white;
+        text-decoration: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 500;
+        margin: 20px 0;
+        text-align: center;
+      }
+      .footer {
+        background: #f8fafc;
+        padding: 20px 25px;
+        text-align: center;
+        color: #64748b;
+        font-size: 14px;
+        border-top: 1px solid #e2e8f0;
+      }
+      .logo {
+        font-size: 18px;
+        font-weight: bold;
+        color: #f59e0b;
+      }
+      .contact-info {
+        background: #eff6ff;
+        border: 1px solid #3b82f6;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 20px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div class="logo">🏠 Hosteed Admin</div>
+        <h1>Nouvelle demande de paiement</h1>
+      </div>
+
+      <div class="content">
+        <div class="urgent-badge">⚡ Action requise</div>
+
+        <p><strong>Une nouvelle demande de paiement nécessite votre validation.</strong></p>
+
+        <div class="info-card">
+          <div class="info-row">
+            <span class="info-label">Type de demande</span>
+            <span class="info-value">{{paymentType}}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Montant demandé</span>
+            <span class="info-value amount">{{amount}}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Méthode de paiement</span>
+            <span class="info-value">{{paymentMethod}}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Date de demande</span>
+            <span class="info-value">{{requestDate}}</span>
+          </div>
+        </div>
+
+        <h3>📋 Détails de la réservation</h3>
+        <div class="info-card">
+          <div class="info-row">
+            <span class="info-label">Produit</span>
+            <span class="info-value">{{productTitle}}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Période</span>
+            <span class="info-value">{{startDate}} - {{endDate}}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Prix total</span>
+            <span class="info-value">{{totalPrice}}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Commission</span>
+            <span class="info-value">{{commission}}%</span>
+          </div>
+        </div>
+
+        <h3>👥 Informations des parties</h3>
+        <div class="contact-info">
+          <p><strong>Hôte :</strong> {{hostName}} ({{hostEmail}})</p>
+          <p><strong>Locataire :</strong> {{guestName}} ({{guestEmail}})</p>
+        </div>
+
+        {{#if notes}}
+        <div class="note-section">
+          <h3>📝 Notes de l'hôte</h3>
+          <p>{{notes}}</p>
+        </div>
+        {{/if}}
+
+        <a href="{{adminUrl}}" class="button"> 🔍 Traiter la demande dans l'admin </a>
+
+        <p>
+          <strong>Rappel :</strong> Vérifiez que toutes les conditions sont remplies avant de
+          valider le paiement.
+        </p>
+      </div>
+
+      <div class="footer">
+        <p><strong>Hosteed Admin Panel</strong></p>
+        <p>Cet email a été envoyé automatiquement depuis le panel d'administration Hosteed.</p>
+      </div>
+    </div>
+  </body>
+</html>

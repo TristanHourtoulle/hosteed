@@ -37,11 +37,12 @@ import { createProduct } from '@/lib/services/product.service'
 import { findAllUser } from '@/lib/services/user.service'
 import { compressImages, formatFileSize } from '@/lib/utils/imageCompression'
 import { googleSuggestionService } from '@/lib/services/GoogleSuggestion.service'
-import { ExtraPriceType } from '@prisma/client'
+import { ExtraPriceType, DayEnum } from '@prisma/client'
 import { TypeRentInterface } from '@/lib/interface/typeRentInterface'
 import CreateServiceModal from '@/components/ui/CreateServiceModal'
 import CreateExtraModal from '@/components/ui/CreateExtraModal'
 import CreateHighlightModal from '@/components/ui/CreateHighlightModal'
+import CreateSpecialPriceModal from '@/components/ui/CreateSpecialPriceModal'
 import BookingCostSummary from '@/components/ui/BookingCostSummary'
 import SortableImageGrid from '@/components/ui/SortableImageGrid'
 import ImageGalleryPreview from '@/components/ui/ImageGalleryPreview'
@@ -97,6 +98,16 @@ interface PropertyHighlight {
   description: string | null
   icon: string | null
   userId: string | null
+}
+
+interface SpecialPrice {
+  id: string
+  pricesMga: string
+  pricesEuro: string
+  day: DayEnum[]
+  startDate: Date | null
+  endDate: Date | null
+  activate: boolean
 }
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -187,6 +198,7 @@ export default function CreateProductPage() {
   const [serviceModalOpen, setServiceModalOpen] = useState(false)
   const [extraModalOpen, setExtraModalOpen] = useState(false)
   const [highlightModalOpen, setHighlightModalOpen] = useState(false)
+  const [specialPriceModalOpen, setSpecialPriceModalOpen] = useState(false)
 
   // État pour simuler une réservation de test pour l'aperçu des coûts
   const [testBooking] = useState({
@@ -239,6 +251,7 @@ export default function CreateProductPage() {
   const [includedServices, setIncludedServices] = useState<IncludedService[]>([])
   const [extras, setExtras] = useState<ProductExtra[]>([])
   const [highlights, setHighlights] = useState<PropertyHighlight[]>([])
+  const [specialPrices, setSpecialPrices] = useState<SpecialPrice[]>([])
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [users, setUsers] = useState<any[]>([])
 
@@ -353,6 +366,14 @@ export default function CreateProductPage() {
 
   const handleHighlightCreated = (newHighlight: PropertyHighlight) => {
     setHighlights(prev => [...prev, newHighlight])
+  }
+
+  const handleSpecialPriceCreated = (newSpecialPrice: Omit<SpecialPrice, 'id'>) => {
+    const specialPriceWithId: SpecialPrice = {
+      ...newSpecialPrice,
+      id: `temp-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
+    }
+    setSpecialPrices(prev => [...prev, specialPriceWithId])
   }
 
   // Calcul mémorisé pour les extras sélectionnés avec leurs données complètes
@@ -669,6 +690,11 @@ export default function CreateProductPage() {
       // Déterminer l'utilisateur final (admin peut assigner à un autre utilisateur)
       const finalUserId = assignToOtherUser && userSelected ? userSelected : session.user.id
 
+      // Debug: Vérifier les prix spéciaux
+      console.log('=== Frontend Debug ===')
+      console.log('specialPrices state:', specialPrices)
+      console.log('specialPrices length:', specialPrices.length)
+
       // Préparer les données pour le service
       const productData = {
         name: formData.name,
@@ -707,6 +733,15 @@ export default function CreateProductPage() {
           name: formData.hotelName,
           availableRooms: Number(formData.availableRooms),
         } : null,
+        // Prix spéciaux
+        specialPrices: specialPrices.map(sp => ({
+          pricesMga: sp.pricesMga,
+          pricesEuro: sp.pricesEuro,
+          day: sp.day,
+          startDate: sp.startDate,
+          endDate: sp.endDate,
+          activate: sp.activate,
+        })),
       }
 
       const result = await createProduct(productData)
@@ -1429,8 +1464,8 @@ export default function CreateProductPage() {
                 </div>
               </CardHeader>
               <CardContent className='space-y-6'>
-                {/* Grille 1x3 pour les nouvelles options */}
-                <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
+                {/* Grille 1x4 pour les nouvelles options */}
+                <div className='grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6'>
                   {/* Services inclus */}
                   <div className='border-2 border-slate-200 rounded-xl p-4 bg-white/50 backdrop-blur-sm flex flex-col h-full'>
                     <div className='flex items-center justify-between mb-4'>
@@ -1668,6 +1703,77 @@ export default function CreateProductPage() {
                           </div>
                         </label>
                       ))}
+                    </div>
+                  </div>
+
+                  {/* Prix spéciaux */}
+                  <div className='border-2 border-slate-200 rounded-xl p-4 bg-white/50 backdrop-blur-sm flex flex-col h-full'>
+                    <div className='flex items-center justify-between mb-4'>
+                      <h4 className='font-medium text-slate-700 flex items-center gap-2'>
+                        <Euro className='h-4 w-4' />
+                        Prix spéciaux
+                      </h4>
+                      <Button
+                        type='button'
+                        size='sm'
+                        variant='outline'
+                        onClick={() => setSpecialPriceModalOpen(true)}
+                        className='text-xs'
+                      >
+                        <Plus className='h-3 w-3 mr-1' />
+                        Ajouter
+                      </Button>
+                    </div>
+                    <div className='flex-1 space-y-2 content-start'>
+                      {specialPrices.map(specialPrice => (
+                        <div
+                          key={specialPrice.id}
+                          className='relative flex items-center p-2 border rounded-lg bg-orange-50 border-orange-200'
+                        >
+                          <div className='flex items-center space-x-2 w-full'>
+                            <div className='w-4 h-4 rounded-full border-2 border-orange-500 bg-orange-500 flex items-center justify-center flex-shrink-0'>
+                              <Euro className='w-2 h-2 text-white' />
+                            </div>
+                            <div className='flex-1 min-w-0'>
+                              <div className='flex items-center gap-1 mb-1'>
+                                <span className='text-xs font-medium text-slate-700 block truncate'>
+                                  {specialPrice.pricesEuro}€ / {specialPrice.pricesMga}Ar
+                                </span>
+                                <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
+                                  specialPrice.activate 
+                                    ? 'bg-green-100 text-green-700' 
+                                    : 'bg-gray-100 text-gray-700'
+                                }`}>
+                                  {specialPrice.activate ? 'Actif' : 'Inactif'}
+                                </span>
+                              </div>
+                              <div className='text-xs text-slate-500'>
+                                {specialPrice.day.length > 0 && (
+                                  <span className='block'>
+                                    {specialPrice.day.map(day => {
+                                      const dayNames: Record<DayEnum, string> = {
+                                        Monday: 'Lun', Tuesday: 'Mar', Wednesday: 'Mer',
+                                        Thursday: 'Jeu', Friday: 'Ven', Saturday: 'Sam', Sunday: 'Dim'
+                                      }
+                                      return dayNames[day]
+                                    }).join(', ')}
+                                  </span>
+                                )}
+                                {specialPrice.startDate && specialPrice.endDate && (
+                                  <span className='block'>
+                                    {new Date(specialPrice.startDate).toLocaleDateString('fr-FR')} - {new Date(specialPrice.endDate).toLocaleDateString('fr-FR')}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {specialPrices.length === 0 && (
+                        <div className='text-center py-4 text-slate-500 text-sm'>
+                          Aucun prix spécial défini
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2062,6 +2168,12 @@ export default function CreateProductPage() {
           isOpen={highlightModalOpen}
           onClose={() => setHighlightModalOpen(false)}
           onHighlightCreated={handleHighlightCreated}
+        />
+
+        <CreateSpecialPriceModal
+          isOpen={specialPriceModalOpen}
+          onClose={() => setSpecialPriceModalOpen(false)}
+          onSpecialPriceCreated={handleSpecialPriceCreated}
         />
       </motion.div>
     </div>

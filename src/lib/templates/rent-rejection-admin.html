@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nouveau refus de réservation - Admin</title>
+    <style>
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f4f4f4;
+      }
+      .container {
+        background-color: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .logo {
+        font-size: 28px;
+        font-weight: bold;
+        color: #2563eb;
+        margin-bottom: 20px;
+      }
+      .content {
+        color: #333;
+      }
+      .alert-info {
+        background-color: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 5px;
+      }
+      .rejection-details {
+        background-color: #f8fafc;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 20px 0;
+      }
+      .btn {
+        display: inline-block;
+        padding: 12px 24px;
+        background-color: #dc3545;
+        color: white;
+        text-decoration: none;
+        border-radius: 6px;
+        margin: 20px 5px;
+      }
+      .btn-secondary {
+        background-color: #6c757d;
+      }
+      .footer {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #e5e7eb;
+        text-align: center;
+        color: #6b7280;
+        font-size: 14px;
+      }
+      .message-box {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 15px 0;
+        font-style: italic;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div class="logo">🏠 Hosteed Admin</div>
+        <h1 style="color: #dc3545; margin: 0">Nouveau refus de réservation</h1>
+      </div>
+
+      <div class="content">
+        <p>Bonjour {{adminName}},</p>
+
+        <div class="alert-info">
+          <h3 style="margin-top: 0; color: #856404">⚠️ Action requise</h3>
+          <p>
+            Un hébergeur a refusé une demande de réservation et nécessite une intervention
+            administrative.
+          </p>
+        </div>
+
+        <div class="rejection-details">
+          <h3 style="margin-top: 0; color: #374151">📋 Détails du refus</h3>
+
+          <table style="width: 100%; border-collapse: collapse">
+            <tr>
+              <td style="padding: 8px; font-weight: bold; width: 30%">ID du refus :</td>
+              <td style="padding: 8px">{{rejectionId}}</td>
+            </tr>
+            <tr style="background-color: #f8f9fa">
+              <td style="padding: 8px; font-weight: bold">Hébergeur :</td>
+              <td style="padding: 8px">{{hostName}}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; font-weight: bold">Invité :</td>
+              <td style="padding: 8px">{{guestName}}</td>
+            </tr>
+            <tr style="background-color: #f8f9fa">
+              <td style="padding: 8px; font-weight: bold">Propriété :</td>
+              <td style="padding: 8px">{{propertyName}}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; font-weight: bold">Arrivée :</td>
+              <td style="padding: 8px">{{arrivingDate}}</td>
+            </tr>
+            <tr style="background-color: #f8f9fa">
+              <td style="padding: 8px; font-weight: bold">Départ :</td>
+              <td style="padding: 8px">{{leavingDate}}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; font-weight: bold">Raison :</td>
+              <td style="padding: 8px">
+                <span
+                  style="
+                    background-color: #fef2f2;
+                    color: #dc2626;
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                  "
+                  >{{reason}}</span
+                >
+              </td>
+            </tr>
+          </table>
+
+          <h4 style="margin: 20px 0 10px 0; color: #374151">💬 Message de l'hébergeur :</h4>
+          <div class="message-box">{{message}}</div>
+        </div>
+
+        <div style="text-align: center">
+          <a href="https://hosteed.com/admin/reservations/rejections/{{rejectionId}}" class="btn"
+            >🔍 Examiner le cas</a
+          >
+          <a href="https://hosteed.com/admin/reservations" class="btn btn-secondary"
+            >📊 Panel Admin</a
+          >
+        </div>
+
+        <p><strong>Actions recommandées :</strong></p>
+        <ul>
+          <li>Examiner les détails du refus</li>
+          <li>Contacter l'hébergeur si nécessaire</li>
+          <li>Vérifier la conformité aux politiques</li>
+          <li>Marquer comme résolu une fois traité</li>
+        </ul>
+
+        <p>
+          Cordialement,<br />
+          <strong>Système de notification Hosteed</strong>
+        </p>
+      </div>
+
+      <div class="footer">
+        <p>Cet email a été envoyé automatiquement depuis le panel d'administration Hosteed.</p>
+        <p>© 2025 Hosteed. Tous droits réservés.</p>
+      </div>
+    </div>
+  </body>
+</html>

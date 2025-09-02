@@ -34,6 +34,15 @@ interface Product {
   name: string
   description: string
   basePrice: string
+  originalBasePrice?: string
+  specialPriceApplied?: boolean
+  specialPriceInfo?: {
+    pricesMga: string
+    pricesEuro: string
+    day: string[]
+    startDate: Date | null
+    endDate: Date | null
+  }
   equipments: Equipment[]
   servicesList: Services[]
   mealsList: Meals[]
@@ -151,9 +160,19 @@ export default function BookingCard({
       <div className='bg-white border border-gray-200 rounded-2xl shadow-xl p-6'>
         <div className='flex flex-col gap-4 mb-6'>
           <div className='flex items-center justify-between'>
-            <div className='flex items-baseline gap-2'>
-              <span className='text-2xl font-semibold text-gray-900'>{product.basePrice}€</span>
-              <span className='text-gray-600'>par nuit</span>
+            <div className='flex flex-col gap-2'>
+              <div className='flex items-baseline gap-2'>
+                <span className='text-2xl font-semibold text-gray-900'>{product.basePrice}€</span>
+                <span className='text-gray-600'>par nuit</span>
+              </div>
+              {product.specialPriceApplied && product.originalBasePrice && (
+                <div className='bg-gradient-to-r from-orange-100 to-red-100 border border-orange-200 rounded-lg px-3 py-2'>
+                  <div className='flex items-center gap-2'>
+                    <span className='text-sm text-orange-700 font-medium'>Prix de base:</span>
+                    <span className='text-sm text-orange-800 font-semibold line-through'>{product.originalBasePrice}€</span>
+                  </div>
+                </div>
+              )}
             </div>
             {product.reviews && product.reviews.length > 0 ? (
               <div className='flex items-center gap-1'>
