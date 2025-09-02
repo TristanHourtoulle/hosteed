@@ -8,8 +8,6 @@ import { Product, RentStatus, PaymentStatus, ProductValidation } from '@prisma/c
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { getCityFromAddress } from '@/lib/utils'
-import { X, ChevronLeft, ChevronRight } from 'lucide-react'
-import ImageGallery from './components/ImageGallery'
 
 interface ProductWithRelations extends Product {
   type?: {
@@ -72,8 +70,6 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [product, setProduct] = useState<ProductWithRelations | null>(null)
   const [rents, setRents] = useState<Rent[]>([])
   const [loading, setLoading] = useState(true)
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
-  const [showFullscreen, setShowFullscreen] = useState(false)
   const router = useRouter()
   const resolvedParams = use(params)
 
@@ -120,18 +116,6 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       }
     } catch (error) {
       console.error('Erreur lors du rejet du produit:', error)
-    }
-  }
-
-  const nextImage = () => {
-    if (product?.img) {
-      setCurrentImageIndex(prev => (prev + 1) % product.img.length)
-    }
-  }
-
-  const prevImage = () => {
-    if (product?.img) {
-      setCurrentImageIndex(prev => (prev - 1 + product.img.length) % product.img.length)
     }
   }
 
@@ -317,21 +301,18 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         {/* Images */}
         <div className='bg-white rounded-lg shadow-lg p-6 border border-gray-200'>
           <h2 className='text-xl font-bold mb-4 text-gray-900'>Images</h2>
-          {product.img && product.img.length > 0 ? (
-            <ImageGallery
-              images={product.img}
-              productName={product.name}
-              currentImageIndex={currentImageIndex}
-              nextImage={nextImage}
-              prevImage={prevImage}
-              setShowFullscreen={setShowFullscreen}
-              setCurrentImageIndex={setCurrentImageIndex}
-            />
-          ) : (
-            <div className='bg-gray-200 h-[400px] flex items-center justify-center rounded-xl'>
-              <span className='text-gray-500'>Aucune image disponible</span>
-            </div>
-          )}
+          <div className='grid grid-cols-2 gap-4'>
+            {product.img?.map((image, index) => (
+              <div key={index} className='relative h-48'>
+                <Image
+                  src={image.img}
+                  alt={`Image ${index + 1} de ${product.name}`}
+                  fill
+                  className='object-cover rounded-lg'
+                />
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Réservations */}
@@ -495,63 +476,6 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           )}
         </div>
       </div>
-
-      {/* Modal d'agrandissement des images */}
-      {showFullscreen && product?.img && (
-        <div
-          className='fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-lg transition-all animate-fadein'
-          tabIndex={-1}
-          onKeyDown={e => {
-            if (e.key === 'Escape') setShowFullscreen(false)
-            if (e.key === 'ArrowLeft') prevImage()
-            if (e.key === 'ArrowRight') nextImage()
-          }}
-        >
-          <div className='relative bg-white p-0 rounded-2xl shadow-2xl flex items-center justify-center max-w-4xl w-full max-h-[80vh] animate-popin'>
-            {/* Bouton fermer */}
-            <button
-              onClick={() => setShowFullscreen(false)}
-              className='absolute top-4 right-4 bg-white hover:bg-gray-100 rounded-full p-2 shadow-lg z-10'
-              aria-label='Fermer'
-            >
-              <X className='h-6 w-6 text-gray-700' />
-            </button>
-            {/* Bouton précédent */}
-            <button
-              onClick={e => {
-                e.stopPropagation()
-                prevImage()
-              }}
-              className='absolute left-2 top-1/2 -translate-y-1/2 bg-white hover:bg-gray-100 rounded-full p-2 shadow-lg z-10'
-              aria-label='Précédent'
-            >
-              <ChevronLeft className='h-6 w-6 text-gray-700' />
-            </button>
-            {/* Bouton suivant */}
-            <button
-              onClick={e => {
-                e.stopPropagation()
-                nextImage()
-              }}
-              className='absolute right-2 top-1/2 -translate-y-1/2 bg-white hover:bg-gray-100 rounded-full p-2 shadow-lg z-10'
-              aria-label='Suivant'
-            >
-              <ChevronRight className='h-6 w-6 text-gray-700' />
-            </button>
-            {/* Image */}
-            <div className='relative max-h-[80vh] w-auto aspect-auto'>
-              <Image
-                src={product.img[currentImageIndex]?.img || ''}
-                alt={product.name}
-                width={800}
-                height={600}
-                className='max-h-[80vh] w-auto object-contain rounded-2xl transition-all'
-                draggable={false}
-              />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

@@ -17,8 +17,11 @@ import {
   Building,
   User,
   Calendar,
+  X,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
-import ImageGallery from '@/app/host/[id]/components/ImageGallery'
+import ImageGallery from './ImageGallery'
 import { ExtraPriceType } from '@prisma/client'
 
 interface Product {
@@ -89,14 +92,14 @@ export function ProductDetails({ product }: ProductDetailsProps) {
   const [showFullscreen, setShowFullscreen] = useState(false)
 
   const nextImage = () => {
-    if (product.img && currentImageIndex < product.img.length - 1) {
-      setCurrentImageIndex(currentImageIndex + 1)
+    if (product.img) {
+      setCurrentImageIndex(prev => (prev + 1) % product.img.length)
     }
   }
 
   const prevImage = () => {
-    if (currentImageIndex > 0) {
-      setCurrentImageIndex(currentImageIndex - 1)
+    if (product.img) {
+      setCurrentImageIndex(prev => (prev - 1 + product.img.length) % product.img.length)
     }
   }
 
@@ -126,24 +129,50 @@ export function ProductDetails({ product }: ProductDetailsProps) {
             if (e.key === 'ArrowLeft') prevImage()
             if (e.key === 'ArrowRight') nextImage()
           }}
-          onClick={() => setShowFullscreen(false)}
         >
-          <div className='relative max-w-4xl max-h-[90vh] w-full h-full flex items-center justify-center p-4'>
-            <Image
-              src={product.img?.[currentImageIndex]?.img || '/placeholder.jpg'}
-              alt={`Photo ${currentImageIndex + 1}`}
-              width={800}
-              height={600}
-              className='max-w-full max-h-full object-contain rounded-lg'
-              onClick={e => e.stopPropagation()}
-              unoptimized
-            />
+          <div className='relative bg-white p-0 rounded-2xl shadow-2xl flex items-center justify-center max-w-4xl w-full max-h-[80vh] animate-popin'>
+            {/* Close button */}
             <button
               onClick={() => setShowFullscreen(false)}
-              className='absolute top-4 right-4 text-white bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors'
+              className='absolute top-4 right-4 bg-white hover:bg-gray-100 rounded-full p-2 shadow-lg z-10'
+              aria-label='Fermer'
             >
-              ✕
+              <X className='h-6 w-6 text-gray-700' />
             </button>
+            {/* Prev button */}
+            <button
+              onClick={e => {
+                e.stopPropagation()
+                prevImage()
+              }}
+              className='absolute left-2 top-1/2 -translate-y-1/2 bg-white hover:bg-gray-100 rounded-full p-2 shadow-lg z-10'
+              aria-label='Précédent'
+            >
+              <ChevronLeft className='h-6 w-6 text-gray-700' />
+            </button>
+            {/* Next button */}
+            <button
+              onClick={e => {
+                e.stopPropagation()
+                nextImage()
+              }}
+              className='absolute right-2 top-1/2 -translate-y-1/2 bg-white hover:bg-gray-100 rounded-full p-2 shadow-lg z-10'
+              aria-label='Suivant'
+            >
+              <ChevronRight className='h-6 w-6 text-gray-700' />
+            </button>
+            {/* Image */}
+            <div className='relative max-h-[80vh] w-auto aspect-auto'>
+              <Image
+                src={product.img?.[currentImageIndex]?.img || '/placeholder.jpg'}
+                alt={product.name}
+                width={800}
+                height={600}
+                className='max-h-[80vh] w-auto object-contain rounded-2xl transition-all'
+                draggable={false}
+                unoptimized
+              />
+            </div>
           </div>
         </div>
       )}
