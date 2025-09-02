@@ -1,3 +1,4 @@
+'use server'
 import prisma from '@/lib/prisma'
 
 export interface CommissionCalculation {
@@ -26,11 +27,11 @@ const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
 async function getCommissionSettings() {
   const now = Date.now()
-  
+
   if (cachedCommissionSettings && (now - cacheTimestamp) < CACHE_DURATION) {
     return cachedCommissionSettings
   }
-  
+
   try {
     const settings = await prisma.commissionSettings.findFirst({
       where: { isActive: true },
@@ -52,7 +53,7 @@ async function getCommissionSettings() {
         clientCommissionFixed: Number(settings.clientCommissionFixed) || 0,
       }
     }
-    
+
     cacheTimestamp = now
     return cachedCommissionSettings
   } catch (error) {
@@ -68,19 +69,19 @@ async function getCommissionSettings() {
 
 export async function calculateCommissions(basePrice: number): Promise<CommissionCalculation> {
   const settings = await getCommissionSettings()
-  
+
   const hostCommissionRate = settings.hostCommissionRate || 0
   const hostCommissionFixed = settings.hostCommissionFixed || 0
   const clientCommissionRate = settings.clientCommissionRate || 0
   const clientCommissionFixed = settings.clientCommissionFixed || 0
-  
+
   const hostCommission = (basePrice * hostCommissionRate) + hostCommissionFixed
   const clientCommission = (basePrice * clientCommissionRate) + clientCommissionFixed
-  
+
   const hostReceives = basePrice - hostCommission
   const clientPays = basePrice + clientCommission
   const totalPrice = clientPays
-  
+
   return {
     basePrice,
     hostCommission,
@@ -106,7 +107,7 @@ export async function calculateTotalRentPrice(
   return await calculateCommissions(totalBasePrice)
 }
 
-export function formatCommissionBreakdown(calculation: CommissionCalculation) {
+export async function formatCommissionBreakdown(calculation: CommissionCalculation) {
   return {
     basePrice: `${calculation.basePrice.toFixed(2)}€`,
     hostCommission: `${calculation.hostCommission.toFixed(2)}€`,
@@ -118,7 +119,7 @@ export function formatCommissionBreakdown(calculation: CommissionCalculation) {
   }
 }
 
-export function invalidateCommissionCache() {
+export async function invalidateCommissionCache() {
   cachedCommissionSettings = null
   cacheTimestamp = 0
 }

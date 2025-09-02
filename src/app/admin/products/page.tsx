@@ -24,7 +24,7 @@ export default function ProductsPage() {
       try {
         const data = await findAllProducts()
         if (data) {
-          setProducts(data as ExtendedProduct[])
+          setProducts(data as unknown as ExtendedProduct[])
         }
       } catch (error) {
         console.error('Erreur lors du chargement des produits:', error)

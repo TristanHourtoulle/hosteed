@@ -91,7 +91,7 @@ export default function ReservationPage() {
       try {
         const productData = await findProductById(id as string)
         if (productData) {
-          setProduct(productData)
+          setProduct(productData as unknown as Product)
         } else {
           setError('Produit non trouvé')
         }

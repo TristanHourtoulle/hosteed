@@ -34,8 +34,8 @@ model IncludedService {
   id          String    @id @default(cuid())
   name        String
   description String?
-  icon        String?   // Nom de l'icône pour l'affichage
-  userId      String?   // Si null = service global, si défini = service personnel
+  icon        String? // Nom de l'icône pour l'affichage
+  userId      String? // Si null = service global, si défini = service personnel
   products    Product[] @relation("ProductToIncludedService")
   user        User?     @relation("UserIncludedServices", fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime  @default(now())
@@ -43,26 +43,26 @@ model IncludedService {
 }
 
 model ProductExtra {
-  id          String          @id @default(cuid())
+  id          String         @id @default(cuid())
   name        String
   description String?
   priceEUR    Float
   priceMGA    Float
   type        ExtraPriceType
-  userId      String?         // Si null = extra global, si défini = extra personnel
-  products    Product[]       @relation("ProductToProductExtra")
-  rentExtras  RentExtra[]     // Relation avec les réservations
-  user        User?           @relation("UserExtras", fields: [userId], references: [id], onDelete: Cascade)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  userId      String? // Si null = extra global, si défini = extra personnel
+  products    Product[]      @relation("ProductToProductExtra")
+  rentExtras  RentExtra[] // Relation avec les réservations
+  user        User?          @relation("UserExtras", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 }
 
 model PropertyHighlight {
   id          String    @id @default(cuid())
   name        String
   description String?
-  icon        String?   // Nom de l'icône pour l'affichage
-  userId      String?   // Si null = highlight global, si défini = highlight personnel
+  icon        String? // Nom de l'icône pour l'affichage
+  userId      String? // Si null = highlight global, si défini = highlight personnel
   products    Product[] @relation("ProductToPropertyHighlight")
   user        User?     @relation("UserHighlights", fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime  @default(now())
@@ -71,23 +71,23 @@ model PropertyHighlight {
 
 // Modèle pour associer les extras aux réservations
 model RentExtra {
-  id            String       @id @default(cuid())
-  rentId        String
-  extraId       String
-  quantity      Int          @default(1)
-  totalPrice    Float
-  rent          Rent         @relation(fields: [rentId], references: [id], onDelete: Cascade)
-  extra         ProductExtra @relation(fields: [extraId], references: [id], onDelete: Cascade)
-  createdAt     DateTime     @default(now())
+  id         String       @id @default(cuid())
+  rentId     String
+  extraId    String
+  quantity   Int          @default(1)
+  totalPrice Float
+  rent       Rent         @relation(fields: [rentId], references: [id], onDelete: Cascade)
+  extra      ProductExtra @relation(fields: [extraId], references: [id], onDelete: Cascade)
+  createdAt  DateTime     @default(now())
 
   @@unique([rentId, extraId])
 }
 
 enum ExtraPriceType {
-  PER_DAY        // par jour
-  PER_PERSON     // par personne
+  PER_DAY // par jour
+  PER_PERSON // par personne
   PER_DAY_PERSON // par jour et par personne
-  PER_BOOKING    // par réservation
+  PER_BOOKING // par réservation
 }
 
 model Meals {
@@ -156,7 +156,7 @@ model Product {
   certified        Boolean           @default(false)
   contract         Boolean           @default(false)
   sizeRoom         Int?
-  availableRooms   Int?              // Nombre de chambres disponibles pour les hôtels
+  availableRooms   Int? // Nombre de chambres disponibles pour les hôtels
   options          Options[]
   type             TypeRent          @relation(fields: [typeId], references: [id])
   user             User[]
@@ -184,19 +184,21 @@ model Product {
   PromotedProduct PromotedProduct[]
 
   // Nouvelles relations pour services, extras et points forts
-  includedServices   IncludedService[]    @relation("ProductToIncludedService")
-  extras             ProductExtra[]       @relation("ProductToProductExtra")
-  highlights         PropertyHighlight[]  @relation("ProductToPropertyHighlight")
+  includedServices IncludedService[]   @relation("ProductToIncludedService")
+  extras           ProductExtra[]      @relation("ProductToProductExtra")
+  highlights       PropertyHighlight[] @relation("ProductToPropertyHighlight")
 
   // Nouveaux champs pour la validation améliorée
   validationComments ValidationComment[]
   validationHistory  ValidationHistory[]
-  
+
   // Draft product support for modification workflow
-  originalProductId String?     // Reference to original product if this is a draft
-  isDraft           Boolean     @default(false)  // Flag to identify draft products
-  originalProduct   Product?    @relation("ProductDraft", fields: [originalProductId], references: [id], onDelete: Cascade)
-  draftProducts     Product[]   @relation("ProductDraft")  // Draft versions of this product
+  originalProductId String? // Reference to original product if this is a draft
+  isDraft           Boolean   @default(false) // Flag to identify draft products
+  originalProduct   Product?  @relation("ProductDraft", fields: [originalProductId], references: [id], onDelete: Cascade)
+  draftProducts     Product[] @relation("ProductDraft") // Draft versions of this product
+
+  SpecialPrices SpecialPrices[]
 }
 
 // Nouveau modèle pour les commentaires de validation
@@ -320,7 +322,7 @@ model Rent {
   Chat          Chat[]
   RentRejection RentRejection?
   UserRating    UserRating[] // Nouvelle relation pour les notes bidirectionnelles
-  extras        RentExtra[]  // Relation avec les extras sélectionnés
+  extras        RentExtra[] // Relation avec les extras sélectionnés
 }
 
 model RentRejection {
@@ -468,9 +470,9 @@ model User {
   approvedRatings UserRating[] @relation("ApprovedRatings") // Notes validées par cet admin
 
   // Relations pour les services personnalisés
-  personalIncludedServices IncludedService[]    @relation("UserIncludedServices") // Services inclus personnalisés
-  personalExtras          ProductExtra[]       @relation("UserExtras") // Extras personnalisés
-  personalHighlights      PropertyHighlight[]  @relation("UserHighlights") // Points forts personnalisés
+  personalIncludedServices IncludedService[]   @relation("UserIncludedServices") // Services inclus personnalisés
+  personalExtras           ProductExtra[]      @relation("UserExtras") // Extras personnalisés
+  personalHighlights       PropertyHighlight[] @relation("UserHighlights") // Points forts personnalisés
 }
 
 model Account {
@@ -597,7 +599,17 @@ enum ProductValidation {
   Approve
   Refused
   RecheckRequest
-  ModificationPending  // Product has a pending modification draft
+  ModificationPending // Product has a pending modification draft
+}
+
+enum DayEnum {
+  Monday
+  Tuesday
+  Wednesday
+  Thursday
+  Friday
+  Saturday
+  Sunday
 }
 
 model Favorite {
@@ -674,20 +686,32 @@ model Post {
   updatedAt       DateTime @updatedAt
 }
 
+model SpecialPrices {
+  id         String    @id @default(cuid())
+  pricesMga  String
+  pricesEuro String
+  day        DayEnum[]
+  startDate  DateTime?
+  endDate    DateTime?
+  activate   Boolean   @default(true)
+  productId  String
+  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
 // Configuration des commissions (globale pour la plateforme)
 model CommissionSettings {
   id                    String   @id @default(cuid())
   // Commission côté hébergeur
-  hostCommissionRate    Float    @default(0.0)  // Taux en pourcentage (ex: 5.0 pour 5%)
-  hostCommissionFixed   Float    @default(0.0)  // Frais fixes en euros
-  // Commission côté client  
-  clientCommissionRate  Float    @default(0.0)  // Taux en pourcentage
-  clientCommissionFixed Float    @default(0.0)  // Frais fixes en euros
+  hostCommissionRate    Float    @default(0.0) // Taux en pourcentage (ex: 5.0 pour 5%)
+  hostCommissionFixed   Float    @default(0.0) // Frais fixes en euros
+  // Commission côté client
+  clientCommissionRate  Float    @default(0.0) // Taux en pourcentage
+  clientCommissionFixed Float    @default(0.0) // Frais fixes en euros
   // Metadata
-  isActive             Boolean   @default(true)
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
-  createdBy            String?   // ID de l'admin qui a créé
-  
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  createdBy             String? // ID de l'admin qui a créé
+
   @@map("commission_settings")
 }

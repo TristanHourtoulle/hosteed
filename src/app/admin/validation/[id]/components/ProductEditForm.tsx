@@ -1,8 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -26,35 +24,32 @@ import {
   Star,
   Package,
   Highlighter,
+  Save,
+  Edit3,
 } from 'lucide-react'
-
+import { resubmitProductWithChange } from '@/lib/services/product.service'
 import { findAllTypeRent } from '@/lib/services/typeRent.service'
 import { findAllEquipments } from '@/lib/services/equipments.service'
 import { findAllMeals } from '@/lib/services/meals.service'
 import { findAllServices } from '@/lib/services/services.service'
 import { findAllSecurity } from '@/lib/services/security.services'
-import { createProduct } from '@/lib/services/product.service'
-import { findAllUser } from '@/lib/services/user.service'
-import { compressImages, formatFileSize } from '@/lib/utils/imageCompression'
-import { googleSuggestionService } from '@/lib/services/GoogleSuggestion.service'
-import { ExtraPriceType, DayEnum } from '@prisma/client'
+import { ExtraPriceType, ProductValidation } from '@prisma/client'
 import { TypeRentInterface } from '@/lib/interface/typeRentInterface'
 import CreateServiceModal from '@/components/ui/CreateServiceModal'
 import CreateExtraModal from '@/components/ui/CreateExtraModal'
 import CreateHighlightModal from '@/components/ui/CreateHighlightModal'
-import CreateSpecialPriceModal from '@/components/ui/CreateSpecialPriceModal'
 import BookingCostSummary from '@/components/ui/BookingCostSummary'
 import SortableImageGrid from '@/components/ui/SortableImageGrid'
 import ImageGalleryPreview from '@/components/ui/ImageGalleryPreview'
 import CommissionDisplay from '@/components/ui/CommissionDisplay'
 import PhoneInput from '@/components/ui/PhoneInput'
 import ErrorAlert, { ErrorDetails } from '@/components/ui/ErrorAlert'
-import { parseCreateProductError, createValidationError } from '@/lib/utils/errorHandler'
-
+import { compressImages, formatFileSize } from '@/lib/utils/imageCompression'
 
 interface Equipment {
   id: string
   name: string
+  icon: string
 }
 
 interface Meal {
@@ -100,15 +95,18 @@ interface PropertyHighlight {
   userId: string | null
 }
 
-interface SpecialPrice {
-  id: string
-  pricesMga: string
-  pricesEuro: string
-  day: DayEnum[]
-  startDate: Date | null
-  endDate: Date | null
-  activate: boolean
+interface NearbyPlace {
+  name: string
+  distance: string
+  unit: 'mètres' | 'kilomètres'
 }
+
+interface ImageFile {
+  file: File
+  preview: string
+  id: string
+}
+
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -130,23 +128,49 @@ const itemVariants = {
   },
 }
 
-interface NearbyPlace {
+interface Product {
+  id: string
   name: string
-  distance: string
-  unit: 'mètres' | 'kilomètres'
+  description: string
+  address: string
+  basePrice: string
+  priceMGA?: string
+  availableRooms?: number
+  guest: number
+  bedroom: number
+  bed: number
+  bathroom: number
+  arriving: number
+  leaving: number
+  validate: ProductValidation
+  img?: { img: string }[]
+  user: {
+    id: string
+    name?: string | null
+    lastname?: string | null
+    email: string
+  }[]
+  type?: { id: string; name: string; description: string }
+  equipments?: { id: string; name: string; icon: string }[]
+  mealsList?: { id: string; name: string }[]
+  servicesList?: { id: string; name: string }[]
+  securities?: { id: string; name: string }[]
+  includedServices?: { id: string; name: string; description: string | null; icon: string | null }[]
+  extras?: { id: string; name: string; description: string | null; priceEUR: number; priceMGA: number; type: ExtraPriceType }[]
+  highlights?: { id: string; name: string; description: string | null; icon: string | null }[]
 }
 
-interface ImageFile {
-  file: File
-  preview: string
-  id: string
+interface ProductEditFormProps {
+  product: Product
+  onSave: (updatedProduct: Product) => void
+  onCancel: () => void
 }
 
 interface FormData {
   name: string
   description: string
   address: string
-  placeId?: string // ID Google Places pour récupérer les coordonnées
+  placeId?: string
   phone: string
   phoneCountry: string
   room: string
@@ -170,35 +194,29 @@ interface FormData {
   petFriendly: boolean
   nearbyPlaces: NearbyPlace[]
   transportation: string
-  // Nouveaux champs pour les hôtels
   isHotel: boolean
   hotelName: string
   availableRooms: string
 }
 
-export default function CreateProductPage() {
-  const router = useRouter()
-  const { data: session } = useSession()
-  const fileInputRef = useRef<HTMLInputElement>(null)
+export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [isUploadingImages, setIsUploadingImages] = useState(false)
   const [error, setError] = useState<ErrorDetails | null>(null)
   const [dragActive, setDragActive] = useState(false)
   const [selectedFiles, setSelectedFiles] = useState<ImageFile[]>([])
   const [showGalleryPreview, setShowGalleryPreview] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [newPlace, setNewPlace] = useState({
     name: '',
     distance: '',
     unit: 'mètres' as 'mètres' | 'kilomètres',
   })
-  const [userSelected, setUserSelected] = useState('')
-  const [assignToOtherUser, setAssignToOtherUser] = useState(false)
 
   // États pour les modaux de création personnalisée
   const [serviceModalOpen, setServiceModalOpen] = useState(false)
   const [extraModalOpen, setExtraModalOpen] = useState(false)
   const [highlightModalOpen, setHighlightModalOpen] = useState(false)
-  const [specialPriceModalOpen, setSpecialPriceModalOpen] = useState(false)
 
   // État pour simuler une réservation de test pour l'aperçu des coûts
   const [testBooking] = useState({
@@ -207,36 +225,34 @@ export default function CreateProductPage() {
     guestCount: 2
   })
 
-  // Form data
   const [formData, setFormData] = useState<FormData>({
-    name: '',
-    description: '',
-    address: '',
+    name: product.name,
+    description: product.description,
+    address: product.address,
     placeId: '',
     phone: '',
     phoneCountry: 'MG',
-    room: '',
-    bathroom: '',
-    arriving: '',
-    leaving: '',
-    basePrice: '',
-    priceMGA: '',
+    room: product.bedroom?.toString() || '',
+    bathroom: product.bathroom?.toString() || '',
+    arriving: product.arriving?.toString() || '',
+    leaving: product.leaving?.toString() || '',
+    basePrice: product.basePrice,
+    priceMGA: product.priceMGA || '',
     autoAccept: false,
-    typeId: '',
-    equipmentIds: [],
-    mealIds: [],
-    securityIds: [],
-    serviceIds: [],
-    includedServiceIds: [],
-    extraIds: [],
-    highlightIds: [],
+    typeId: product.type?.id || '',
+    equipmentIds: product.equipments?.map(e => e.id) || [],
+    mealIds: product.mealsList?.map(m => m.id) || [],
+    securityIds: product.securities?.map(s => s.id) || [],
+    serviceIds: product.servicesList?.map(s => s.id) || [],
+    includedServiceIds: product.includedServices?.map(s => s.id) || [],
+    extraIds: product.extras?.map(e => e.id) || [],
+    highlightIds: product.highlights?.map(h => h.id) || [],
     surface: '',
     maxPeople: '',
     accessibility: false,
     petFriendly: false,
     nearbyPlaces: [],
     transportation: '',
-    // Nouveaux champs pour les hôtels
     isHotel: false,
     hotelName: '',
     availableRooms: '',
@@ -251,35 +267,16 @@ export default function CreateProductPage() {
   const [includedServices, setIncludedServices] = useState<IncludedService[]>([])
   const [extras, setExtras] = useState<ProductExtra[]>([])
   const [highlights, setHighlights] = useState<PropertyHighlight[]>([])
-  const [specialPrices, setSpecialPrices] = useState<SpecialPrice[]>([])
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [users, setUsers] = useState<any[]>([])
 
-  // Handle input changes
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
-    const { name, value, type } = e.target
+  // Calcul mémorisé pour les extras sélectionnés avec leurs données complètes
+  const selectedExtras = useMemo(() => {
+    return extras.filter(extra => formData.extraIds.includes(extra.id))
+  }, [extras, formData.extraIds])
 
-    // Si on change le type d'hébergement, vérifier si c'est un hôtel
-    if (name === 'typeId') {
-      const selectedType = types.find(t => t.id === value)
-      const isHotelType = Boolean(selectedType?.isHotelType)
-      setFormData(prev => ({
-        ...prev,
-        [name]: value,
-        isHotel: isHotelType,
-        // Réinitialiser les champs hôtel si ce n'est pas un hôtel
-        hotelName: isHotelType ? prev.hotelName : '',
-        availableRooms: isHotelType ? prev.availableRooms : '',
-      }))
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
-      }))
-    }
-  }
+  // Calcul mémorisé pour le nombre de jours de la réservation de test
+  const numberOfDays = useMemo(() => {
+    return Math.ceil((testBooking.endDate.getTime() - testBooking.startDate.getTime()) / (1000 * 60 * 60 * 24))
+  }, [testBooking.startDate, testBooking.endDate])
 
   // Functions to load new data
   const loadIncludedServices = async (): Promise<IncludedService[]> => {
@@ -306,11 +303,10 @@ export default function CreateProductPage() {
     return []
   }
 
-  // Load data on component mount
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [typesData, equipmentsData, mealsData, securitiesData, servicesData, includedServicesData, extrasData, highlightsData, usersData] =
+        const [typesData, equipmentsData, mealsData, securitiesData, servicesData, includedServicesData, extrasData, highlightsData] =
           await Promise.all([
             findAllTypeRent(),
             findAllEquipments(),
@@ -320,7 +316,6 @@ export default function CreateProductPage() {
             loadIncludedServices(),
             loadExtras(),
             loadHighlights(),
-            findAllUser(),
           ])
 
         setTypes(typesData || [])
@@ -331,13 +326,12 @@ export default function CreateProductPage() {
         setIncludedServices(includedServicesData || [])
         setExtras(extrasData || [])
         setHighlights(highlightsData || [])
-        setUsers(usersData || [])
       } catch (error) {
         console.error('Error loading data:', error)
         setError({
           type: 'network',
           title: 'Erreur de chargement',
-          message: 'Impossible de charger les données nécessaires à la création d\'annonce.',
+          message: 'Impossible de charger les données nécessaires à l\'édition.',
           details: [
             'Échec du chargement des types d\'hébergement, équipements ou services',
             'Vérifiez votre connexion internet'
@@ -368,45 +362,19 @@ export default function CreateProductPage() {
     setHighlights(prev => [...prev, newHighlight])
   }
 
-  const handleSpecialPriceCreated = (newSpecialPrice: Omit<SpecialPrice, 'id'>) => {
-    const specialPriceWithId: SpecialPrice = {
-      ...newSpecialPrice,
-      id: `temp-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
-    }
-    setSpecialPrices(prev => [...prev, specialPriceWithId])
-  }
-
-  // Calcul mémorisé pour les extras sélectionnés avec leurs données complètes
-  const selectedExtras = useMemo(() => {
-    return extras.filter(extra => formData.extraIds.includes(extra.id))
-  }, [extras, formData.extraIds])
-
-  // Calcul mémorisé pour le nombre de jours de la réservation de test
-  const numberOfDays = useMemo(() => {
-    return Math.ceil((testBooking.endDate.getTime() - testBooking.startDate.getTime()) / (1000 * 60 * 60 * 24))
-  }, [testBooking.startDate, testBooking.endDate])
-
-  // Redirection si non connecté
+  // Initialize existing images
   useEffect(() => {
-    if (!session) {
-      router.push('/auth')
+    if (product.img && product.img.length > 0) {
+      const existingImages: ImageFile[] = product.img.map((img, index) => ({
+        file: new File([], `existing-${index}.jpg`), // Placeholder file
+        preview: img.img,
+        id: `existing-${index}-${Date.now()}`
+      }))
+      setSelectedFiles(existingImages)
     }
-  }, [session, router])
+  }, [product.img])
 
-  // Handle checkbox changes for arrays
-  const handleCheckboxChange = (field: keyof FormData, id: string) => {
-    setFormData(prev => {
-      const currentArray = prev[field] as string[]
-      const isChecked = currentArray.includes(id)
-
-      return {
-        ...prev,
-        [field]: isChecked ? currentArray.filter(item => item !== id) : [...currentArray, id],
-      }
-    })
-  }
-
-  // File handling
+  // File handling functions
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -547,7 +515,7 @@ export default function CreateProductPage() {
 
   const removeFileById = (id: string) => {
     const imageFile = selectedFiles.find(img => img.id === id)
-    if (imageFile?.preview) {
+    if (imageFile?.preview && !imageFile.preview.startsWith('data:')) {
       URL.revokeObjectURL(imageFile.preview)
     }
     setSelectedFiles(prev => prev.filter(img => img.id !== id))
@@ -588,7 +556,44 @@ export default function CreateProductPage() {
     }
   }
 
-  // Note: Object URLs are cleaned up manually in removeFileById when images are removed
+  // Handle input changes
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value, type } = e.target
+
+    // Si on change le type d'hébergement, vérifier si c'est un hôtel
+    if (name === 'typeId') {
+      const selectedType = types.find(t => t.id === value)
+      const isHotelType = Boolean(selectedType?.isHotelType)
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        isHotel: isHotelType,
+        // Réinitialiser les champs hôtel si ce n'est pas un hôtel
+        hotelName: isHotelType ? prev.hotelName : '',
+        availableRooms: isHotelType ? prev.availableRooms : '',
+      }))
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
+      }))
+    }
+  }
+
+  // Handle checkbox changes for arrays
+  const handleCheckboxChange = (field: keyof FormData, id: string) => {
+    setFormData(prev => {
+      const currentArray = prev[field] as string[]
+      const isChecked = currentArray.includes(id)
+
+      return {
+        ...prev,
+        [field]: isChecked ? currentArray.filter(item => item !== id) : [...currentArray, id],
+      }
+    })
+  }
 
   // Nearby places management
   const addNearbyPlace = () => {
@@ -608,171 +613,114 @@ export default function CreateProductPage() {
     }))
   }
 
-  // Form submission avec validation basique
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError(null)
 
-    if (!session?.user?.id) {
-      setError(createValidationError('auth', 'Vous devez être connecté pour créer une annonce'))
-      setIsLoading(false)
-      return
-    }
-
     // Validation basique
     if (!formData.name.trim()) {
-      setError(createValidationError('name', "Le nom de l'hébergement est requis"))
+      setError({
+        type: 'validation',
+        title: 'Nom requis',
+        message: "Le nom de l'hébergement est requis",
+        details: ['Veuillez saisir un nom pour votre hébergement'],
+        suggestions: ['Entrez un nom descriptif pour votre hébergement'],
+        retryable: false
+      })
       setIsLoading(false)
       return
     }
 
     if (!formData.description.trim()) {
-      setError(createValidationError('description', 'La description est requise'))
+      setError({
+        type: 'validation',
+        title: 'Description requise',
+        message: 'La description est requise',
+        details: ['Veuillez saisir une description pour votre hébergement'],
+        suggestions: ['Décrivez votre hébergement en détail'],
+        retryable: false
+      })
       setIsLoading(false)
       return
     }
 
     if (!formData.typeId) {
-      setError(createValidationError('typeId', "Veuillez sélectionner un type d'hébergement"))
-      setIsLoading(false)
-      return
-    }
-
-    // Validation spécifique aux hôtels
-    if (formData.isHotel) {
-      if (!formData.hotelName.trim()) {
-        setError(createValidationError('hotelName', "Le nom de l'hôtel est requis"))
-        setIsLoading(false)
-        return
-      }
-
-      if (!formData.availableRooms || Number(formData.availableRooms) <= 0) {
-        setError(createValidationError('availableRooms', 'Le nombre de chambres disponibles doit être supérieur à 0'))
-        setIsLoading(false)
-        return
-      }
-    }
-
-    if (selectedFiles.length === 0) {
-      setError(createValidationError('images', 'Veuillez ajouter au moins une photo de votre hébergement'))
+      setError({
+        type: 'validation',
+        title: 'Type requis',
+        message: "Veuillez sélectionner un type d'hébergement",
+        details: ['Le type d\'hébergement est obligatoire'],
+        suggestions: ['Sélectionnez le type qui correspond le mieux à votre hébergement'],
+        retryable: false
+      })
       setIsLoading(false)
       return
     }
 
     try {
-      // Convert images to base64
-      setIsUploadingImages(true)
-      const base64Images = await convertFilesToBase64(selectedFiles)
-      setIsUploadingImages(false)
-
-      // Récupérer les coordonnées géographiques si un placeId est disponible
-      let latitude = 0
-      let longitude = 0
-
-      if (formData.placeId) {
-        try {
-          const placeDetails = await googleSuggestionService.getPlaceDetails({
-            placeId: formData.placeId,
-            fields: ['geometry']
-          })
-
-          if (placeDetails?.geometry?.location) {
-            latitude = placeDetails.geometry.location.lat
-            longitude = placeDetails.geometry.location.lng
-            console.log('Coordonnées récupérées:', { latitude, longitude })
-          }
-        } catch (error) {
-          console.warn('Impossible de récupérer les coordonnées:', error)
+      // Convertir les nouvelles images en base64
+      let finalImages: string[] = []
+      
+      if (selectedFiles.length > 0) {
+        // Séparer les images existantes des nouvelles
+        const existingImages = selectedFiles.filter(img => img.id.startsWith('existing-'))
+        const newImages = selectedFiles.filter(img => !img.id.startsWith('existing-'))
+        
+        // Garder les images existantes (déjà en base64)
+        const existingImageUrls = existingImages.map(img => img.preview)
+        
+        // Convertir les nouvelles images en base64
+        let newImageBase64: string[] = []
+        if (newImages.length > 0) {
+          setIsUploadingImages(true)
+          newImageBase64 = await convertFilesToBase64(newImages)
+          setIsUploadingImages(false)
         }
+        
+        // Combiner toutes les images
+        finalImages = [...existingImageUrls, ...newImageBase64]
       }
 
-      // Déterminer l'utilisateur final (admin peut assigner à un autre utilisateur)
-      const finalUserId = assignToOtherUser && userSelected ? userSelected : session.user.id
+      const updatedProduct = await resubmitProductWithChange(
+        product.id,
+        {
+          name: formData.name,
+          description: formData.description,
+          address: formData.address,
+          longitude: 0, // TODO: Récupérer les coordonnées réelles
+          latitude: 0, // TODO: Récupérer les coordonnées réelles
+          basePrice: formData.basePrice,
+          room: formData.room ? parseInt(formData.room) : null,
+          bathroom: formData.bathroom ? parseInt(formData.bathroom) : null,
+          arriving: parseInt(formData.arriving),
+          leaving: parseInt(formData.leaving),
+          typeId: formData.typeId,
+          securities: formData.securityIds,
+          equipments: formData.equipmentIds,
+          services: formData.serviceIds,
+          meals: formData.mealIds,
+          images: finalImages,
+        },
+        product.user[0]?.id // Utiliser l'ID du premier utilisateur comme hostId
+      )
 
-      // Debug: Vérifier les prix spéciaux
-      console.log('=== Frontend Debug ===')
-      console.log('specialPrices state:', specialPrices)
-      console.log('specialPrices length:', specialPrices.length)
-
-      // Préparer les données pour le service
-      const productData = {
-        name: formData.name,
-        description: formData.description,
-        address: formData.address,
-        longitude: longitude,
-        latitude: latitude,
-        basePrice: formData.basePrice,
-        priceMGA: formData.priceMGA,
-        room: formData.room ? Number(formData.room) : null,
-        bathroom: formData.bathroom ? Number(formData.bathroom) : null,
-        arriving: Number(formData.arriving),
-        leaving: Number(formData.leaving),
-        phone: formData.phone,
-        phoneCountry: formData.phoneCountry || 'MG',
-        maxPeople: formData.maxPeople ? Number(formData.maxPeople) : null,
-        typeId: formData.typeId,
-        userId: [finalUserId],
-        equipments: formData.equipmentIds,
-        services: formData.serviceIds,
-        meals: formData.mealIds,
-        securities: formData.securityIds,
-        includedServices: formData.includedServiceIds,
-        extras: formData.extraIds,
-        highlights: formData.highlightIds,
-        images: base64Images, // Utiliser les images converties en base64
-        nearbyPlaces: formData.nearbyPlaces.map(place => ({
-          name: place.name,
-          distance: place.distance ? Number(place.distance) : 0,
-          duration: 0, // TODO: Calculer la durée si nécessaire
-          transport: place.unit === 'kilomètres' ? 'voiture' : 'à pied',
-        })),
-        // Données spécifiques aux hôtels
-        isHotel: formData.isHotel,
-        hotelInfo: formData.isHotel ? {
-          name: formData.hotelName,
-          availableRooms: Number(formData.availableRooms),
-        } : null,
-        // Prix spéciaux
-        specialPrices: specialPrices.map(sp => ({
-          pricesMga: sp.pricesMga,
-          pricesEuro: sp.pricesEuro,
-          day: sp.day,
-          startDate: sp.startDate,
-          endDate: sp.endDate,
-          activate: sp.activate,
-        })),
-      }
-
-      const result = await createProduct(productData)
-
-      if (result) {
-        router.push('/dashboard')
-      } else {
-        throw new Error("Erreur lors de la création de l'annonce")
+      if (updatedProduct) {
+        onSave(updatedProduct as unknown as Product)
       }
     } catch (error) {
-      console.error('Error creating product:', error)
-      setError(parseCreateProductError(error))
+      console.error('Erreur lors de la mise à jour du produit:', error)
+      setError({
+        type: 'general',
+        title: 'Erreur de sauvegarde',
+        message: 'Une erreur est survenue lors de la sauvegarde',
+        details: ['Impossible de sauvegarder les modifications'],
+        suggestions: ['Vérifiez votre connexion internet', 'Réessayez dans quelques instants'],
+        retryable: true
+      })
     } finally {
       setIsLoading(false)
-      setIsUploadingImages(false)
     }
-  }
-
-  // Ne pas afficher le formulaire si l'utilisateur n'est pas connecté
-  if (!session) {
-    return (
-      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center'>
-        <div className='text-center'>
-          <h2 className='text-2xl font-bold text-slate-800 mb-4'>Connexion requise</h2>
-          <p className='text-slate-600 mb-6'>Vous devez être connecté pour créer une annonce.</p>
-          <Button onClick={() => router.push('/auth')} className='bg-blue-600 hover:bg-blue-700'>
-            Se connecter
-          </Button>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -785,7 +733,7 @@ export default function CreateProductPage() {
       >
         {/* Header with breadcrumb */}
         <motion.div className='flex items-center gap-4' variants={itemVariants}>
-          <Button variant='ghost' size='sm' className='text-slate-600 hover:text-slate-800'>
+          <Button variant='ghost' size='sm' className='text-slate-600 hover:text-slate-800' onClick={onCancel}>
             <ArrowLeft className='h-4 w-4 mr-2' />
             Retour
           </Button>
@@ -794,14 +742,14 @@ export default function CreateProductPage() {
         {/* Page Header */}
         <motion.div className='text-center space-y-4' variants={itemVariants}>
           <div className='inline-flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-medium'>
-            <Home className='h-4 w-4' />
-            Créer une annonce
+            <Edit3 className='h-4 w-4' />
+            Modifier l'annonce
           </div>
           <h1 className='text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 via-blue-700 to-indigo-700'>
-            Créer une nouvelle annonce
+            Modifier l'annonce
           </h1>
           <p className='text-slate-600 max-w-2xl mx-auto text-lg'>
-            Remplissez les informations ci-dessous pour créer votre annonce
+            Modifiez les informations de votre hébergement
           </p>
         </motion.div>
 
@@ -891,68 +839,6 @@ export default function CreateProductPage() {
                         required
                         className='w-full px-3 py-2 border border-slate-200 rounded-md focus:border-blue-300 focus:ring-blue-200 focus:ring-2 focus:ring-opacity-50'
                       />
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              {/* Localisation et Contact */}
-              <motion.div variants={itemVariants} className="relative z-50">
-                <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm relative z-50'>
-                  <CardHeader className='space-y-2'>
-                    <div className='flex items-center gap-2'>
-                      <div className='p-2 bg-green-50 rounded-lg'>
-                        <MapPin className='h-5 w-5 text-green-600' />
-                      </div>
-                      <div>
-                        <CardTitle className='text-xl'>Localisation et Contact</CardTitle>
-                        <p className='text-slate-600 text-sm mt-1'>
-                          Où se trouve votre hébergement et comment vous joindre
-                        </p>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className='space-y-6'>
-                    <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-                      <div className='space-y-2'>
-                        <label htmlFor='address' className='text-sm font-medium text-slate-700'>
-                          Adresse complète
-                        </label>
-                        <AddressAutocomplete
-                          value={formData.address}
-                          onChange={(value) => setFormData(prev => ({ ...prev, address: value }))}
-                          placeholder='Numéro, rue, code postal, ville'
-                          className='border-slate-200 focus:border-green-300 focus:ring-green-200'
-                          countryFilter='MG'
-                          onAddressSelect={(address, placeId) => {
-                            setFormData(prev => ({
-                              ...prev,
-                              address: address,
-                              placeId: placeId || ''
-                            }))
-                          }}
-                        />
-                      </div>
-
-                      <div className='space-y-2'>
-                        <label htmlFor='phone' className='text-sm font-medium text-slate-700'>
-                          Téléphone de contact
-                        </label>
-                        <PhoneInput
-                          value={formData.phone}
-                          defaultCountry={formData.phoneCountry}
-                          onChange={(phoneNumber, countryCode) => {
-                            setFormData(prev => ({
-                              ...prev,
-                              phone: phoneNumber,
-                              phoneCountry: countryCode
-                            }))
-                          }}
-                          placeholder="XX XX XX XX"
-                          required
-                          className="border-slate-200 focus:border-green-300 focus:ring-green-200"
-                        />
-                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -1050,86 +936,6 @@ export default function CreateProductPage() {
                   </CardContent>
                 </Card>
               </motion.div>
-
-              {/* Configuration Hôtel - Affiché uniquement si c'est un hôtel */}
-              {formData.isHotel && (
-                <motion.div variants={itemVariants}>
-                  <Card className='border-0 shadow-lg bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50'>
-                    <CardHeader className='space-y-2'>
-                      <div className='flex items-center gap-2'>
-                        <div className='p-2 bg-amber-100 rounded-lg'>
-                          <Users className='h-5 w-5 text-amber-700' />
-                        </div>
-                        <div>
-                          <CardTitle className='text-xl text-amber-900'>Configuration Hôtel</CardTitle>
-                          <p className='text-amber-700 text-sm mt-1'>
-                            Configuration spécifique pour la gestion hôtelière
-                          </p>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className='space-y-6'>
-                      <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-                        <div className='space-y-2'>
-                          <label htmlFor='hotelName' className='text-sm font-medium text-amber-800'>
-                            Nom de l&apos;hôtel
-                          </label>
-                          <Input
-                            id='hotelName'
-                            name='hotelName'
-                            type='text'
-                            placeholder='Ex: Hôtel des Jardins'
-                            value={formData.hotelName}
-                            onChange={handleInputChange}
-                            className='border-amber-200 focus:border-amber-400 focus:ring-amber-200 bg-white/80'
-                          />
-                          <p className='text-xs text-amber-600'>
-                            Nom officiel de l&apos;établissement hôtelier
-                          </p>
-                        </div>
-
-                        <div className='space-y-2'>
-                          <label htmlFor='availableRooms' className='text-sm font-medium text-amber-800'>
-                            Nombre de chambres disponibles
-                          </label>
-                          <Input
-                            id='availableRooms'
-                            name='availableRooms'
-                            type='number'
-                            min='1'
-                            placeholder='Ex: 5'
-                            value={formData.availableRooms}
-                            onChange={handleInputChange}
-                            className='border-amber-200 focus:border-amber-400 focus:ring-amber-200 bg-white/80'
-                          />
-                          <p className='text-xs text-amber-600'>
-                            Nombre de chambres de ce type disponibles
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className='bg-amber-100 border border-amber-200 rounded-lg p-4'>
-                        <div className='flex items-start gap-3'>
-                          <div className='p-1.5 bg-amber-200 rounded-full'>
-                            <Home className='h-4 w-4 text-amber-700' />
-                          </div>
-                          <div className='flex-1'>
-                            <h4 className='text-sm font-semibold text-amber-800 mb-1'>
-                              Fonctionnement Hôtelier
-                            </h4>
-                            <p className='text-xs text-amber-700 leading-relaxed'>
-                              Cette chambre représente un type de chambre dans votre hôtel.
-                              Si vous avez <span className='font-semibold'>{formData.availableRooms || 'X'}</span> chambres
-                              de ce type, plusieurs clients pourront réserver en même temps sur les mêmes dates,
-                              tant que le nombre de chambres disponibles le permet.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )}
 
               {/* Tarification */}
               <motion.div variants={itemVariants}>
@@ -1464,8 +1270,8 @@ export default function CreateProductPage() {
                 </div>
               </CardHeader>
               <CardContent className='space-y-6'>
-                {/* Grille 1x4 pour les nouvelles options */}
-                <div className='grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6'>
+                {/* Grille 1x3 pour les nouvelles options */}
+                <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
                   {/* Services inclus */}
                   <div className='border-2 border-slate-200 rounded-xl p-4 bg-white/50 backdrop-blur-sm flex flex-col h-full'>
                     <div className='flex items-center justify-between mb-4'>
@@ -1705,77 +1511,6 @@ export default function CreateProductPage() {
                       ))}
                     </div>
                   </div>
-
-                  {/* Prix spéciaux */}
-                  <div className='border-2 border-slate-200 rounded-xl p-4 bg-white/50 backdrop-blur-sm flex flex-col h-full'>
-                    <div className='flex items-center justify-between mb-4'>
-                      <h4 className='font-medium text-slate-700 flex items-center gap-2'>
-                        <Euro className='h-4 w-4' />
-                        Prix spéciaux
-                      </h4>
-                      <Button
-                        type='button'
-                        size='sm'
-                        variant='outline'
-                        onClick={() => setSpecialPriceModalOpen(true)}
-                        className='text-xs'
-                      >
-                        <Plus className='h-3 w-3 mr-1' />
-                        Ajouter
-                      </Button>
-                    </div>
-                    <div className='flex-1 space-y-2 content-start'>
-                      {specialPrices.map(specialPrice => (
-                        <div
-                          key={specialPrice.id}
-                          className='relative flex items-center p-2 border rounded-lg bg-orange-50 border-orange-200'
-                        >
-                          <div className='flex items-center space-x-2 w-full'>
-                            <div className='w-4 h-4 rounded-full border-2 border-orange-500 bg-orange-500 flex items-center justify-center flex-shrink-0'>
-                              <Euro className='w-2 h-2 text-white' />
-                            </div>
-                            <div className='flex-1 min-w-0'>
-                              <div className='flex items-center gap-1 mb-1'>
-                                <span className='text-xs font-medium text-slate-700 block truncate'>
-                                  {specialPrice.pricesEuro}€ / {specialPrice.pricesMga}Ar
-                                </span>
-                                <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
-                                  specialPrice.activate 
-                                    ? 'bg-green-100 text-green-700' 
-                                    : 'bg-gray-100 text-gray-700'
-                                }`}>
-                                  {specialPrice.activate ? 'Actif' : 'Inactif'}
-                                </span>
-                              </div>
-                              <div className='text-xs text-slate-500'>
-                                {specialPrice.day.length > 0 && (
-                                  <span className='block'>
-                                    {specialPrice.day.map(day => {
-                                      const dayNames: Record<DayEnum, string> = {
-                                        Monday: 'Lun', Tuesday: 'Mar', Wednesday: 'Mer',
-                                        Thursday: 'Jeu', Friday: 'Ven', Saturday: 'Sam', Sunday: 'Dim'
-                                      }
-                                      return dayNames[day]
-                                    }).join(', ')}
-                                  </span>
-                                )}
-                                {specialPrice.startDate && specialPrice.endDate && (
-                                  <span className='block'>
-                                    {new Date(specialPrice.startDate).toLocaleDateString('fr-FR')} - {new Date(specialPrice.endDate).toLocaleDateString('fr-FR')}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      {specialPrices.length === 0 && (
-                        <div className='text-center py-4 text-slate-500 text-sm'>
-                          Aucun prix spécial défini
-                        </div>
-                      )}
-                    </div>
-                  </div>
                 </div>
 
                 {/* Aperçu des coûts */}
@@ -1813,7 +1548,7 @@ export default function CreateProductPage() {
                   <div>
                     <CardTitle className='text-xl'>Photos de l&apos;hébergement</CardTitle>
                     <p className='text-slate-600 text-sm mt-1'>
-                      Ajoutez des photos attrayantes de votre hébergement (maximum 35)
+                      Modifiez les photos de votre hébergement (maximum 35)
                       {selectedFiles.length > 0 && (
                         <span className='ml-2 font-medium text-blue-600'>
                           {selectedFiles.length} photo{selectedFiles.length > 1 ? 's' : ''}{' '}
@@ -2065,69 +1800,22 @@ export default function CreateProductPage() {
             </Card>
           </motion.div>
 
-          {/* Section Admin - Assigner à un autre utilisateur */}
-          {session?.user?.roles === 'ADMIN' && (
-            <motion.div variants={itemVariants}>
-              <Card className='border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50'>
-                <CardHeader>
-                  <CardTitle className='flex items-center gap-3 text-orange-800'>
-                    <Users className='h-5 w-5 text-orange-600' />
-                    Administration - Assigner l&apos;annonce
-                  </CardTitle>
-                  <p className='text-sm text-orange-600'>
-                    En tant qu&apos;administrateur, vous pouvez créer cette annonce pour un autre
-                    utilisateur
-                  </p>
-                </CardHeader>
-                <CardContent className='space-y-4'>
-                  <div className='flex items-center space-x-2'>
-                    <input
-                      type='checkbox'
-                      id='assignToOtherUser'
-                      checked={assignToOtherUser}
-                      onChange={e => setAssignToOtherUser(e.target.checked)}
-                      className='rounded border-orange-300 focus:ring-orange-200'
-                    />
-                    <label
-                      htmlFor='assignToOtherUser'
-                      className='text-sm font-medium text-orange-700'
-                    >
-                      Assigner cette annonce à un autre utilisateur
-                    </label>
-                  </div>
-
-                  {assignToOtherUser && (
-                    <div className='space-y-2'>
-                      <label htmlFor='userSelect' className='text-sm font-medium text-orange-700'>
-                        Sélectionner l&apos;utilisateur
-                      </label>
-                      <select
-                        id='userSelect'
-                        value={userSelected}
-                        onChange={e => setUserSelected(e.target.value)}
-                        className='w-full p-2 border border-orange-200 rounded-md focus:ring-orange-200 focus:border-orange-300'
-                        required={assignToOtherUser}
-                      >
-                        <option value=''>Choisir un utilisateur...</option>
-                        {users.map(user => (
-                          <option key={user.id} value={user.id}>
-                            {user.firstname} {user.lastname} ({user.email})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-
           {/* Bouton de soumission */}
-          <motion.div className='flex justify-center pt-8' variants={itemVariants}>
+          <motion.div className='flex justify-center gap-4 pt-8' variants={itemVariants}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              disabled={isLoading}
+              className='px-8 py-3'
+            >
+              <X className="h-4 w-4 mr-2" />
+              Annuler
+            </Button>
             <Button
               type='submit'
               disabled={isLoading || isUploadingImages}
-              className='w-full max-w-md h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium text-lg shadow-lg hover:shadow-xl transition-all duration-200'
+              className='px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200'
             >
               {isUploadingImages ? (
                 <div className='flex items-center gap-2'>
@@ -2137,12 +1825,12 @@ export default function CreateProductPage() {
               ) : isLoading ? (
                 <div className='flex items-center gap-2'>
                   <div className='w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin' />
-                  Création en cours...
+                  Sauvegarde en cours...
                 </div>
               ) : (
                 <div className='flex items-center gap-2'>
-                  <Plus className='h-5 w-5' />
-                  Créer l&apos;annonce
+                  <Save className='h-5 w-5' />
+                  Sauvegarder les modifications
                 </div>
               )}
             </Button>
@@ -2168,12 +1856,6 @@ export default function CreateProductPage() {
           isOpen={highlightModalOpen}
           onClose={() => setHighlightModalOpen(false)}
           onHighlightCreated={handleHighlightCreated}
-        />
-
-        <CreateSpecialPriceModal
-          isOpen={specialPriceModalOpen}
-          onClose={() => setSpecialPriceModalOpen(false)}
-          onSpecialPriceCreated={handleSpecialPriceCreated}
         />
       </motion.div>
     </div>

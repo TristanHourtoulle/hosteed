@@ -175,7 +175,7 @@ export function useProductSearchOptimized() {
   const filteredProducts = useMemo(() => {
     if (!allProducts || allProducts.length === 0) return []
 
-    let filtered = allProducts.filter((product: Product) => {
+    let filtered = (allProducts as unknown as Product[]).filter((product: Product) => {
       const matchesTypeRent = !selectedType || product.typeRentId === selectedType
       const matchesSearch =
         !location ||

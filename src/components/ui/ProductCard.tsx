@@ -22,6 +22,15 @@ interface Product {
   address: string
   img?: { img: string }[] | null
   basePrice: string
+  originalBasePrice?: string
+  specialPriceApplied?: boolean
+  specialPriceInfo?: {
+    pricesMga: string
+    pricesEuro: string
+    day: string[]
+    startDate: Date | null
+    endDate: Date | null
+  }
   certified?: boolean
   reviews?: Review[]
   PromotedProduct?: Array<{
@@ -253,9 +262,23 @@ export default function ProductCard({ product, index = 0 }: { product: Product; 
             </div>
 
             <div className='flex items-center justify-between pt-1'>
-              <div className='flex items-baseline gap-1'>
-                <span className='font-bold text-gray-900 text-lg'>{product.basePrice}€</span>
-                <span className='text-gray-400 text-sm font-light'>/ nuit</span>
+              <div className='flex flex-col gap-1'>
+                <div className='flex items-baseline gap-1'>
+                  <span className='font-bold text-gray-900 text-lg'>{product.basePrice}€</span>
+                  <span className='text-gray-400 text-sm font-light'>/ nuit</span>
+                </div>
+                {product.specialPriceApplied && product.originalBasePrice && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className='bg-gradient-to-r from-orange-100 to-red-100 border border-orange-200 rounded-lg px-2 py-1'
+                  >
+                    <div className='flex items-center gap-1'>
+                      <span className='text-xs text-orange-700 font-medium'>Prix de base:</span>
+                      <span className='text-xs text-orange-800 font-semibold line-through'>{product.originalBasePrice}€</span>
+                    </div>
+                  </motion.div>
+                )}
               </div>
               {product.certified && (
                 <motion.div

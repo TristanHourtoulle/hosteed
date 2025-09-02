@@ -9,6 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/shadcn
 import { Badge } from '@/components/ui/shadcnui/badge'
 import { findProductById } from '@/lib/services/product.service'
 import { findAllRentByProductId } from '@/lib/services/rents.service'
+import { findSpecialsPricesByProduct, createSpecialPrices, updateSpecialPrices, toggleSpecialPriceStatus, deleteSpecialsPricesByProduct } from '@/lib/services/specialPrices.service'
+import { DayEnum } from '@prisma/client'
+import CreateSpecialPriceModal from '@/components/ui/CreateSpecialPriceModal'
 import { 
   ArrowLeft, 
   Home, 
@@ -24,11 +27,34 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  Eye
+  Eye,
+  Tag,
+  Power,
+  PowerOff
 } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
+
+interface SpecialPrice {
+  id: string
+  pricesMga: string
+  pricesEuro: string
+  day: DayEnum[]
+  startDate: Date | null
+  endDate: Date | null
+  activate: boolean
+  productId: string
+}
+
+interface SpecialPriceData {
+  pricesMga: string
+  pricesEuro: string
+  day: DayEnum[]
+  startDate: Date | null
+  endDate: Date | null
+  activate: boolean
+}
 
 interface Product {
   id: string
@@ -68,8 +94,11 @@ export default function PropertyDashboard() {
 
   const [product, setProduct] = useState<Product | null>(null)
   const [reservations, setReservations] = useState<Rent[]>([])
+  const [specialPrices, setSpecialPrices] = useState<SpecialPrice[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [specialPriceModalOpen, setSpecialPriceModalOpen] = useState(false)
+  const [editingSpecialPrice, setEditingSpecialPrice] = useState<SpecialPrice | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -77,9 +106,10 @@ export default function PropertyDashboard() {
       
       try {
         setLoading(true)
-        const [productData, reservationsData] = await Promise.all([
+        const [productData, reservationsData, specialPricesData] = await Promise.all([
           findProductById(productId),
-          findAllRentByProductId(productId)
+          findAllRentByProductId(productId),
+          findSpecialsPricesByProduct(productId)
         ])
 
         if (productData) {
@@ -88,6 +118,10 @@ export default function PropertyDashboard() {
 
         if (Array.isArray(reservationsData)) {
           setReservations(reservationsData as unknown as Rent[])
+        }
+
+        if (Array.isArray(specialPricesData)) {
+          setSpecialPrices(specialPricesData as unknown as SpecialPrice[])
         }
       } catch (err) {
         console.error('Erreur lors du chargement des données:', err)
@@ -99,6 +133,98 @@ export default function PropertyDashboard() {
 
     fetchData()
   }, [productId, session])
+
+  const handleSpecialPriceCreated = async (specialPriceData: SpecialPriceData) => {
+    try {
+      let result
+      
+      if (editingSpecialPrice) {
+        // Mode modification
+        result = await updateSpecialPrices(
+          editingSpecialPrice.id,
+          specialPriceData.pricesMga,
+          specialPriceData.pricesEuro,
+          specialPriceData.day,
+          specialPriceData.startDate,
+          specialPriceData.endDate,
+          specialPriceData.activate
+        )
+      } else {
+        // Mode création
+        result = await createSpecialPrices(
+          specialPriceData.pricesMga,
+          specialPriceData.pricesEuro,
+          specialPriceData.day,
+          specialPriceData.startDate,
+          specialPriceData.endDate,
+          specialPriceData.activate,
+          productId
+        )
+      }
+
+      if (result) {
+        // Si l'opération a réussi, recharger la liste des prix spéciaux
+        const updatedSpecialPrices = await findSpecialsPricesByProduct(productId)
+        if (Array.isArray(updatedSpecialPrices)) {
+          setSpecialPrices(updatedSpecialPrices as unknown as SpecialPrice[])
+        }
+        setSpecialPriceModalOpen(false)
+        setEditingSpecialPrice(null)
+      } else {
+        console.error('Erreur lors de l\'opération sur le prix spécial')
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'opération sur le prix spécial:', error)
+    }
+  }
+
+  const handleEditSpecialPrice = (price: SpecialPrice) => {
+    setEditingSpecialPrice(price)
+    setSpecialPriceModalOpen(true)
+  }
+
+  const handleToggleSpecialPriceStatus = async (priceId: string, currentStatus: boolean) => {
+    try {
+      const newStatus = !currentStatus
+      const result = await toggleSpecialPriceStatus(priceId, newStatus)
+
+      if (result) {
+        // Si la mise à jour a réussi, recharger la liste des prix spéciaux
+        const updatedSpecialPrices = await findSpecialsPricesByProduct(productId)
+        if (Array.isArray(updatedSpecialPrices)) {
+          setSpecialPrices(updatedSpecialPrices as unknown as SpecialPrice[])
+        }
+      } else {
+        console.error('Erreur lors de la mise à jour du statut du prix spécial')
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut du prix spécial:', error)
+    }
+  }
+
+  const handleDeleteSpecialPrice = async (priceId: string) => {
+    try {
+      // Demander confirmation avant suppression
+      if (!confirm('Êtes-vous sûr de vouloir supprimer ce prix spécial ?')) {
+        return
+      }
+
+      // Appeler le service pour supprimer le prix spécial
+      const result = await deleteSpecialsPricesByProduct(priceId)
+
+      if (result) {
+        // Si la suppression a réussi, recharger la liste des prix spéciaux
+        const updatedSpecialPrices = await findSpecialsPricesByProduct(productId)
+        if (Array.isArray(updatedSpecialPrices)) {
+          setSpecialPrices(updatedSpecialPrices as unknown as SpecialPrice[])
+        }
+      } else {
+        console.error('Erreur lors de la suppression du prix spécial')
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression du prix spécial:', error)
+    }
+  }
 
   if (!session) {
     return (
@@ -292,7 +418,7 @@ export default function PropertyDashboard() {
 
         {/* Contenu principal avec onglets */}
         <Tabs defaultValue='reservations' className='space-y-6'>
-          <TabsList className='grid w-full grid-cols-3'>
+          <TabsList className='grid w-full grid-cols-4'>
             <TabsTrigger value='reservations' className='flex items-center gap-2'>
               <Calendar className='h-4 w-4' />
               Réservations
@@ -300,6 +426,10 @@ export default function PropertyDashboard() {
             <TabsTrigger value='reviews' className='flex items-center gap-2'>
               <Star className='h-4 w-4' />
               Avis ({totalReviews})
+            </TabsTrigger>
+            <TabsTrigger value='special-prices' className='flex items-center gap-2'>
+              <Tag className='h-4 w-4' />
+              Prix spéciaux ({specialPrices.length})
             </TabsTrigger>
             <TabsTrigger value='analytics' className='flex items-center gap-2'>
               <TrendingUp className='h-4 w-4' />
@@ -419,6 +549,124 @@ export default function PropertyDashboard() {
             </Card>
           </TabsContent>
 
+          <TabsContent value='special-prices' className='space-y-6'>
+            <Card>
+              <CardHeader>
+                <div className='flex items-center justify-between'>
+                  <CardTitle>Prix spéciaux</CardTitle>
+                  <Button size='sm' onClick={() => setSpecialPriceModalOpen(true)}>
+                    <Tag className='h-4 w-4 mr-2' />
+                    Ajouter un prix spécial
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {specialPrices.length === 0 ? (
+                  <div className='text-center py-8'>
+                    <Tag className='h-12 w-12 text-gray-300 mx-auto mb-4' />
+                    <p className='text-gray-500 mb-4'>Aucun prix spécial configuré</p>
+                    <Button onClick={() => setSpecialPriceModalOpen(true)}>
+                      <Tag className='h-4 w-4 mr-2' />
+                      Créer un prix spécial
+                    </Button>
+                  </div>
+                ) : (
+                  <div className='space-y-4'>
+                    {specialPrices.map(price => (
+                      <div key={price.id} className='border rounded-lg p-4'>
+                        <div className='flex items-center justify-between mb-3'>
+                          <div className='flex items-center gap-3'>
+                            <div className='w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center'>
+                              <Tag className='h-5 w-5 text-orange-600' />
+                            </div>
+                            <div>
+                              <p className='font-medium text-gray-900'>
+                                {price.pricesEuro}€ / nuit
+                              </p>
+                              <p className='text-sm text-gray-500'>
+                                Prix MGA: {price.pricesMga}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge className={price.activate ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                            {price.activate ? 'Actif' : 'Inactif'}
+                          </Badge>
+                        </div>
+                        
+                        <div className='grid grid-cols-1 md:grid-cols-3 gap-4 text-sm'>
+                          <div>
+                            <p className='text-gray-600 mb-1'>Jours applicables</p>
+                            <div className='flex flex-wrap gap-1'>
+                              {price.day.map(day => (
+                                <Badge key={day} variant='outline' className='text-xs'>
+                                  {day}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <p className='text-gray-600 mb-1'>Période</p>
+                            <p className='text-gray-900'>
+                              {price.startDate && price.endDate ? (
+                                <>
+                                  {format(new Date(price.startDate), 'dd MMM', { locale: fr })} - {' '}
+                                  {format(new Date(price.endDate), 'dd MMM yyyy', { locale: fr })}
+                                </>
+                              ) : price.startDate ? (
+                                `À partir du ${format(new Date(price.startDate), 'dd MMM yyyy', { locale: fr })}`
+                              ) : price.endDate ? (
+                                `Jusqu'au ${format(new Date(price.endDate), 'dd MMM yyyy', { locale: fr })}`
+                              ) : (
+                                'Toute l\'année'
+                              )}
+                            </p>
+                          </div>
+                          
+                          <div className='flex items-end justify-end gap-2'>
+                            <Button 
+                              size='sm' 
+                              variant='outline'
+                              onClick={() => handleEditSpecialPrice(price)}
+                            >
+                              Modifier
+                            </Button>
+                            <Button 
+                              size='sm' 
+                              variant='outline'
+                              className={price.activate ? 'text-orange-600 hover:text-orange-700' : 'text-green-600 hover:text-green-700'}
+                              onClick={() => handleToggleSpecialPriceStatus(price.id, price.activate)}
+                            >
+                              {price.activate ? (
+                                <>
+                                  <PowerOff className='h-4 w-4 mr-1' />
+                                  Désactiver
+                                </>
+                              ) : (
+                                <>
+                                  <Power className='h-4 w-4 mr-1' />
+                                  Activer
+                                </>
+                              )}
+                            </Button>
+                            <Button 
+                              size='sm' 
+                              variant='outline' 
+                              className='text-red-600 hover:text-red-700'
+                              onClick={() => handleDeleteSpecialPrice(price.id)}
+                            >
+                              Supprimer
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value='analytics' className='space-y-6'>
             <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
               <Card>
@@ -474,6 +722,17 @@ export default function PropertyDashboard() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Modal de création/modification de prix spécial */}
+      <CreateSpecialPriceModal
+        isOpen={specialPriceModalOpen}
+        onClose={() => {
+          setSpecialPriceModalOpen(false)
+          setEditingSpecialPrice(null)
+        }}
+        onSpecialPriceCreated={handleSpecialPriceCreated}
+        editingSpecialPrice={editingSpecialPrice}
+      />
     </div>
   )
 }

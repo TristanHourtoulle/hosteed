@@ -61,6 +61,15 @@ interface Product {
   name: string
   description: string
   basePrice: string
+  originalBasePrice?: string
+  specialPriceApplied?: boolean
+  specialPriceInfo?: {
+    pricesMga: string
+    pricesEuro: string
+    day: string[]
+    startDate: Date | null
+    endDate: Date | null
+  }
   equipments: Equipment[]
   servicesList: Services[]
   mealsList: Meals[]
@@ -185,6 +194,7 @@ export default function ProductDetails() {
       try {
         const productData = await findProductById(id as string)
         if (productData) {
+          console.log(productData)
           setProduct(productData as unknown as Product)
         } else {
           setError('Produit non trouvé')
