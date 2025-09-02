@@ -4,10 +4,13 @@
 import { useEffect, useState, use } from 'react'
 import { findProductById, validateProduct, rejectProduct } from '@/lib/services/product.service'
 import { findAllRentByProductId } from '@/lib/services/rents.service'
+import { findSpecialsPricesByProduct, createSpecialPrices, updateSpecialPrices, toggleSpecialPriceStatus, deleteSpecialsPricesByProduct } from '@/lib/services/specialPrices.service'
 import { Product, RentStatus, PaymentStatus, ProductValidation } from '@prisma/client'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { getCityFromAddress } from '@/lib/utils'
+import { Tag, Power, PowerOff } from 'lucide-react'
+import CreateSpecialPriceModal from '@/components/ui/CreateSpecialPriceModal'
 
 interface ProductWithRelations extends Product {
   type?: {
@@ -66,19 +69,34 @@ interface Rent {
   }[]
 }
 
+interface SpecialPrice {
+  id: string
+  pricesMga: string
+  pricesEuro: string
+  day: string[]
+  startDate: Date | null
+  endDate: Date | null
+  activate: boolean
+  productId: string
+}
+
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const [product, setProduct] = useState<ProductWithRelations | null>(null)
   const [rents, setRents] = useState<Rent[]>([])
   const [loading, setLoading] = useState(true)
+  const [specialPrices, setSpecialPrices] = useState<SpecialPrice[]>([])
+  const [specialPriceModalOpen, setSpecialPriceModalOpen] = useState(false)
+  const [editingSpecialPrice, setEditingSpecialPrice] = useState<SpecialPrice | null>(null)
   const router = useRouter()
   const resolvedParams = use(params)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [productData, rentsData] = await Promise.all([
+        const [productData, rentsData, specialPricesData] = await Promise.all([
           findProductById(resolvedParams.id),
           findAllRentByProductId(resolvedParams.id),
+          findSpecialsPricesByProduct(resolvedParams.id),
         ])
 
         if (productData) {
@@ -86,6 +104,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         }
         if (rentsData) {
           setRents(rentsData)
+        }
+        if (Array.isArray(specialPricesData)) {
+          setSpecialPrices(specialPricesData as unknown as SpecialPrice[])
         }
       } catch (error) {
         console.error('Erreur lors du chargement des données:', error)
@@ -116,6 +137,99 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       }
     } catch (error) {
       console.error('Erreur lors du rejet du produit:', error)
+    }
+  }
+
+  // Fonctions pour gérer les prix spéciaux
+  const handleSpecialPriceCreated = async (specialPriceData: any) => {
+    try {
+      let result
+      
+      if (editingSpecialPrice) {
+        // Mode modification
+        result = await updateSpecialPrices(
+          editingSpecialPrice.id,
+          specialPriceData.pricesMga,
+          specialPriceData.pricesEuro,
+          specialPriceData.day,
+          specialPriceData.startDate,
+          specialPriceData.endDate,
+          specialPriceData.activate
+        )
+      } else {
+        // Mode création
+        result = await createSpecialPrices(
+          specialPriceData.pricesMga,
+          specialPriceData.pricesEuro,
+          specialPriceData.day,
+          specialPriceData.startDate,
+          specialPriceData.endDate,
+          specialPriceData.activate,
+          resolvedParams.id
+        )
+      }
+
+      if (result) {
+        // Si l'opération a réussi, recharger la liste des prix spéciaux
+        const updatedSpecialPrices = await findSpecialsPricesByProduct(resolvedParams.id)
+        if (Array.isArray(updatedSpecialPrices)) {
+          setSpecialPrices(updatedSpecialPrices as unknown as SpecialPrice[])
+        }
+        setSpecialPriceModalOpen(false)
+        setEditingSpecialPrice(null)
+      } else {
+        console.error('Erreur lors de l\'opération sur le prix spécial')
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'opération sur le prix spécial:', error)
+    }
+  }
+
+  const handleEditSpecialPrice = (price: SpecialPrice) => {
+    setEditingSpecialPrice(price)
+    setSpecialPriceModalOpen(true)
+  }
+
+  const handleToggleSpecialPriceStatus = async (priceId: string, currentStatus: boolean) => {
+    try {
+      const newStatus = !currentStatus
+      const result = await toggleSpecialPriceStatus(priceId, newStatus)
+
+      if (result) {
+        // Si la mise à jour a réussi, recharger la liste des prix spéciaux
+        const updatedSpecialPrices = await findSpecialsPricesByProduct(resolvedParams.id)
+        if (Array.isArray(updatedSpecialPrices)) {
+          setSpecialPrices(updatedSpecialPrices as unknown as SpecialPrice[])
+        }
+      } else {
+        console.error('Erreur lors de la mise à jour du statut du prix spécial')
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut du prix spécial:', error)
+    }
+  }
+
+  const handleDeleteSpecialPrice = async (priceId: string) => {
+    try {
+      // Demander confirmation avant suppression
+      if (!confirm('Êtes-vous sûr de vouloir supprimer ce prix spécial ?')) {
+        return
+      }
+
+      // Appeler le service pour supprimer le prix spécial
+      const result = await deleteSpecialsPricesByProduct(priceId)
+
+      if (result) {
+        // Si la suppression a réussi, recharger la liste des prix spéciaux
+        const updatedSpecialPrices = await findSpecialsPricesByProduct(resolvedParams.id)
+        if (Array.isArray(updatedSpecialPrices)) {
+          setSpecialPrices(updatedSpecialPrices as unknown as SpecialPrice[])
+        }
+      } else {
+        console.error('Erreur lors de la suppression du prix spécial')
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression du prix spécial:', error)
     }
   }
 
@@ -475,7 +589,149 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             <p className='text-gray-600'>Aucun avis pour le moment</p>
           )}
         </div>
+
+        {/* Prix spéciaux */}
+        <div className='bg-white rounded-lg shadow-lg p-6 border border-gray-200'>
+          <div className='flex items-center justify-between mb-6'>
+            <div className='flex items-center gap-3'>
+              <div className='p-2 bg-orange-100 rounded-lg'>
+                <Tag className='h-5 w-5 text-orange-600' />
+              </div>
+              <div>
+                <h2 className='text-xl font-bold text-gray-900'>Gestion des prix spéciaux</h2>
+                <p className='text-sm text-gray-500'>
+                  {specialPrices.length} prix spécial{specialPrices.length > 1 ? 'aux' : ''} configuré{specialPrices.length > 1 ? 's' : ''}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setSpecialPriceModalOpen(true)}
+              className='px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center gap-2'
+            >
+              <Tag className='h-4 w-4' />
+              Créer un prix spécial
+            </button>
+          </div>
+
+          {specialPrices.length === 0 ? (
+            <div className='text-center py-8'>
+              <Tag className='h-12 w-12 text-gray-300 mx-auto mb-4' />
+              <p className='text-gray-500 mb-4'>Aucun prix spécial configuré</p>
+              <button
+                onClick={() => setSpecialPriceModalOpen(true)}
+                className='px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center gap-2 mx-auto'
+              >
+                <Tag className='h-4 w-4' />
+                Créer un prix spécial
+              </button>
+            </div>
+          ) : (
+            <div className='space-y-4'>
+              {specialPrices.map(price => (
+                <div key={price.id} className='border rounded-lg p-4'>
+                  <div className='flex items-center justify-between mb-3'>
+                    <div className='flex items-center gap-3'>
+                      <div className='w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center'>
+                        <Tag className='h-5 w-5 text-orange-600' />
+                      </div>
+                      <div>
+                        <p className='font-medium text-gray-900'>
+                          {price.pricesEuro}€ / nuit
+                        </p>
+                        <p className='text-sm text-gray-500'>
+                          Prix MGA: {price.pricesMga}
+                        </p>
+                      </div>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      price.activate ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {price.activate ? 'Actif' : 'Inactif'}
+                    </span>
+                  </div>
+                  
+                  <div className='grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-4'>
+                    <div>
+                      <p className='text-gray-600 mb-1'>Jours applicables</p>
+                      <div className='flex flex-wrap gap-1'>
+                        {price.day.map(day => (
+                          <span key={day} className='bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs border border-gray-200'>
+                            {day}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <p className='text-gray-600 mb-1'>Période</p>
+                      <p className='text-gray-900'>
+                        {price.startDate && price.endDate ? (
+                          <>
+                            {new Date(price.startDate).toLocaleDateString('fr-FR')} - {' '}
+                            {new Date(price.endDate).toLocaleDateString('fr-FR')}
+                          </>
+                        ) : price.startDate ? (
+                          `À partir du ${new Date(price.startDate).toLocaleDateString('fr-FR')}`
+                        ) : price.endDate ? (
+                          `Jusqu'au ${new Date(price.endDate).toLocaleDateString('fr-FR')}`
+                        ) : (
+                          'Toute l\'année'
+                        )}
+                      </p>
+                    </div>
+                    
+                    <div className='flex items-end justify-end gap-2'>
+                      <button
+                        onClick={() => handleEditSpecialPrice(price)}
+                        className='px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 transition-colors'
+                      >
+                        Modifier
+                      </button>
+                      <button
+                        onClick={() => handleToggleSpecialPriceStatus(price.id, price.activate)}
+                        className={`px-3 py-1 text-sm border rounded transition-colors flex items-center gap-1 ${
+                          price.activate 
+                            ? 'border-orange-300 text-orange-600 hover:bg-orange-50' 
+                            : 'border-green-300 text-green-600 hover:bg-green-50'
+                        }`}
+                      >
+                        {price.activate ? (
+                          <>
+                            <PowerOff className='h-3 w-3' />
+                            Désactiver
+                          </>
+                        ) : (
+                          <>
+                            <Power className='h-3 w-3' />
+                            Activer
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteSpecialPrice(price.id)}
+                        className='px-3 py-1 text-sm border border-red-300 text-red-600 rounded hover:bg-red-50 transition-colors'
+                      >
+                        Supprimer
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Modal de création/modification de prix spécial */}
+      <CreateSpecialPriceModal
+        isOpen={specialPriceModalOpen}
+        onClose={() => {
+          setSpecialPriceModalOpen(false)
+          setEditingSpecialPrice(null)
+        }}
+        onSpecialPriceCreated={handleSpecialPriceCreated}
+        editingSpecialPrice={editingSpecialPrice}
+      />
     </div>
   )
 }

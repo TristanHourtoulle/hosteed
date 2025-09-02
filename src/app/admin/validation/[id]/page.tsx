@@ -6,8 +6,10 @@ import { ProductValidation, ExtraPriceType } from '@prisma/client'
 import { motion } from 'framer-motion'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, XCircle } from 'lucide-react'
+import { Loader2, XCircle, Tag, Power, PowerOff } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { findSpecialsPricesByProduct, createSpecialPrices, updateSpecialPrices, toggleSpecialPriceStatus, deleteSpecialsPricesByProduct } from '@/lib/services/specialPrices.service'
+import CreateSpecialPriceModal from '@/components/ui/CreateSpecialPriceModal'
 import {
   getProductForValidation,
   approveProduct,
@@ -33,6 +35,17 @@ interface ValidationHistoryEntry {
     lastname?: string | null
     email: string
   } | null
+}
+
+interface SpecialPrice {
+  id: string
+  pricesMga: string
+  pricesEuro: string
+  day: string[]
+  startDate: Date | null
+  endDate: Date | null
+  activate: boolean
+  productId: string
 }
 
 interface Product {
@@ -116,6 +129,9 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
   const [validationHistory, setValidationHistory] = useState<ValidationHistoryEntry[]>([])
   const [activeTab, setActiveTab] = useState<'details' | 'comparison' | 'edit'>('details')
   const [isEditing, setIsEditing] = useState(false)
+  const [specialPrices, setSpecialPrices] = useState<SpecialPrice[]>([])
+  const [specialPriceModalOpen, setSpecialPriceModalOpen] = useState(false)
+  const [editingSpecialPrice, setEditingSpecialPrice] = useState<SpecialPrice | null>(null)
 
   useEffect(() => {
     const getParams = async () => {
@@ -145,12 +161,19 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
       setLoading(true)
       setError(null)
 
-      const result = await getProductForValidation(productId)
+      const [result, specialPricesResult] = await Promise.all([
+        getProductForValidation(productId),
+        findSpecialsPricesByProduct(productId)
+      ])
 
       if (result.success && result.data) {
         setProduct(result.data as unknown as Product)
       } else {
         setError(result.error || 'Erreur lors du chargement du produit')
+      }
+
+      if (Array.isArray(specialPricesResult)) {
+        setSpecialPrices(specialPricesResult as unknown as SpecialPrice[])
       }
     } catch (err) {
       console.error('Error fetching product:', err)
@@ -251,6 +274,99 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
     setActiveTab('details')
   }
 
+  // Fonctions pour gérer les prix spéciaux
+  const handleSpecialPriceCreated = async (specialPriceData: any) => {
+    try {
+      let result
+      
+      if (editingSpecialPrice) {
+        // Mode modification
+        result = await updateSpecialPrices(
+          editingSpecialPrice.id,
+          specialPriceData.pricesMga,
+          specialPriceData.pricesEuro,
+          specialPriceData.day,
+          specialPriceData.startDate,
+          specialPriceData.endDate,
+          specialPriceData.activate
+        )
+      } else {
+        // Mode création
+        result = await createSpecialPrices(
+          specialPriceData.pricesMga,
+          specialPriceData.pricesEuro,
+          specialPriceData.day,
+          specialPriceData.startDate,
+          specialPriceData.endDate,
+          specialPriceData.activate,
+          productId!
+        )
+      }
+
+      if (result) {
+        // Si l'opération a réussi, recharger la liste des prix spéciaux
+        const updatedSpecialPrices = await findSpecialsPricesByProduct(productId!)
+        if (Array.isArray(updatedSpecialPrices)) {
+          setSpecialPrices(updatedSpecialPrices as unknown as SpecialPrice[])
+        }
+        setSpecialPriceModalOpen(false)
+        setEditingSpecialPrice(null)
+      } else {
+        console.error('Erreur lors de l\'opération sur le prix spécial')
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'opération sur le prix spécial:', error)
+    }
+  }
+
+  const handleEditSpecialPrice = (price: SpecialPrice) => {
+    setEditingSpecialPrice(price)
+    setSpecialPriceModalOpen(true)
+  }
+
+  const handleToggleSpecialPriceStatus = async (priceId: string, currentStatus: boolean) => {
+    try {
+      const newStatus = !currentStatus
+      const result = await toggleSpecialPriceStatus(priceId, newStatus)
+
+      if (result) {
+        // Si la mise à jour a réussi, recharger la liste des prix spéciaux
+        const updatedSpecialPrices = await findSpecialsPricesByProduct(productId!)
+        if (Array.isArray(updatedSpecialPrices)) {
+          setSpecialPrices(updatedSpecialPrices as unknown as SpecialPrice[])
+        }
+      } else {
+        console.error('Erreur lors de la mise à jour du statut du prix spécial')
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut du prix spécial:', error)
+    }
+  }
+
+  const handleDeleteSpecialPrice = async (priceId: string) => {
+    try {
+      // Demander confirmation avant suppression
+      if (!confirm('Êtes-vous sûr de vouloir supprimer ce prix spécial ?')) {
+        return
+      }
+
+      // Appeler le service pour supprimer le prix spécial
+      const result = await deleteSpecialsPricesByProduct(priceId)
+
+      if (result) {
+        // Si la suppression a réussi, recharger la liste des prix spéciaux
+        const updatedSpecialPrices = await findSpecialsPricesByProduct(productId!)
+        if (Array.isArray(updatedSpecialPrices)) {
+          setSpecialPrices(updatedSpecialPrices as unknown as SpecialPrice[])
+        }
+      } else {
+        console.error('Erreur lors de la suppression du prix spécial')
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression du prix spécial:', error)
+    }
+  }
+
   if (loading) {
     return (
       <div className='flex items-center justify-center min-h-screen'>
@@ -331,18 +447,107 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
         </div>
 
         {activeTab === 'details' && (
-          <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
-            <ProductDetails product={product} />
-            <ProductSidebar
-              product={product}
-              reason={reason}
-              setReason={setReason}
-              actionLoading={actionLoading}
-              handleApprove={handleApprove}
-              handleReject={handleReject}
-              handleRequestRecheck={handleRequestRecheck}
-            />
-          </div>
+          <>
+            <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
+              <ProductDetails product={product} />
+              <ProductSidebar
+                product={product}
+                reason={reason}
+                setReason={setReason}
+                actionLoading={actionLoading}
+                handleApprove={handleApprove}
+                handleReject={handleReject}
+                handleRequestRecheck={handleRequestRecheck}
+              />
+            </div>
+
+            {/* Section Prix spéciaux */}
+            <motion.div
+              className='mt-8'
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <div className='bg-white rounded-lg border border-gray-200 p-6'>
+                <div className='flex items-center justify-between mb-6'>
+                  <div className='flex items-center gap-3'>
+                    <div className='p-2 bg-orange-100 rounded-lg'>
+                      <Tag className='h-5 w-5 text-orange-600' />
+                    </div>
+                    <div>
+                      <h3 className='text-lg font-semibold text-gray-900'>Prix spéciaux</h3>
+                      <p className='text-sm text-gray-500'>
+                        {specialPrices.length} prix spécial{specialPrices.length > 1 ? 'aux' : ''} configuré{specialPrices.length > 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {specialPrices.length === 0 ? (
+                  <div className='text-center py-8'>
+                    <Tag className='h-12 w-12 text-gray-300 mx-auto mb-4' />
+                    <p className='text-gray-500'>Aucun prix spécial configuré pour ce produit</p>
+                  </div>
+                ) : (
+                  <div className='space-y-4'>
+                    {specialPrices.map(price => (
+                      <div key={price.id} className='border rounded-lg p-4'>
+                        <div className='flex items-center justify-between mb-3'>
+                          <div className='flex items-center gap-3'>
+                            <div className='w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center'>
+                              <Tag className='h-5 w-5 text-orange-600' />
+                            </div>
+                            <div>
+                              <p className='font-medium text-gray-900'>
+                                {price.pricesEuro}€ / nuit
+                              </p>
+                              <p className='text-sm text-gray-500'>
+                                Prix MGA: {price.pricesMga}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge className={price.activate ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                            {price.activate ? 'Actif' : 'Inactif'}
+                          </Badge>
+                        </div>
+                        
+                        <div className='grid grid-cols-1 md:grid-cols-3 gap-4 text-sm'>
+                          <div>
+                            <p className='text-gray-600 mb-1'>Jours applicables</p>
+                            <div className='flex flex-wrap gap-1'>
+                              {price.day.map(day => (
+                                <Badge key={day} variant='outline' className='text-xs'>
+                                  {day}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <p className='text-gray-600 mb-1'>Période</p>
+                            <p className='text-gray-900'>
+                              {price.startDate && price.endDate ? (
+                                <>
+                                  {new Date(price.startDate).toLocaleDateString('fr-FR')} - {' '}
+                                  {new Date(price.endDate).toLocaleDateString('fr-FR')}
+                                </>
+                              ) : price.startDate ? (
+                                `À partir du ${new Date(price.startDate).toLocaleDateString('fr-FR')}`
+                              ) : price.endDate ? (
+                                `Jusqu'au ${new Date(price.endDate).toLocaleDateString('fr-FR')}`
+                              ) : (
+                                'Toute l\'année'
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </>
         )}
 
         {activeTab === 'comparison' && product.isDraft && product.originalProduct && (
@@ -350,11 +555,149 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
         )}
 
         {activeTab === 'edit' && (
-          <ProductEditForm
-            product={product}
-            onSave={handleSaveProduct}
-            onCancel={handleCancelEdit}
-          />
+          <>
+            <ProductEditForm
+              product={product}
+              onSave={handleSaveProduct}
+              onCancel={handleCancelEdit}
+            />
+
+            {/* Section Prix spéciaux - Édition */}
+            <motion.div
+              className='mt-8'
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <div className='bg-white rounded-lg border border-gray-200 p-6'>
+                <div className='flex items-center justify-between mb-6'>
+                  <div className='flex items-center gap-3'>
+                    <div className='p-2 bg-orange-100 rounded-lg'>
+                      <Tag className='h-5 w-5 text-orange-600' />
+                    </div>
+                    <div>
+                      <h3 className='text-lg font-semibold text-gray-900'>Gestion des prix spéciaux</h3>
+                      <p className='text-sm text-gray-500'>
+                        {specialPrices.length} prix spécial{specialPrices.length > 1 ? 'aux' : ''} configuré{specialPrices.length > 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setSpecialPriceModalOpen(true)}
+                    className='px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center gap-2'
+                  >
+                    <Tag className='h-4 w-4' />
+                    Créer un prix spécial
+                  </button>
+                </div>
+
+                {specialPrices.length === 0 ? (
+                  <div className='text-center py-8'>
+                    <Tag className='h-12 w-12 text-gray-300 mx-auto mb-4' />
+                    <p className='text-gray-500 mb-4'>Aucun prix spécial configuré</p>
+                    <button
+                      onClick={() => setSpecialPriceModalOpen(true)}
+                      className='px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center gap-2 mx-auto'
+                    >
+                      <Tag className='h-4 w-4' />
+                      Créer un prix spécial
+                    </button>
+                  </div>
+                ) : (
+                  <div className='space-y-4'>
+                    {specialPrices.map(price => (
+                      <div key={price.id} className='border rounded-lg p-4'>
+                        <div className='flex items-center justify-between mb-3'>
+                          <div className='flex items-center gap-3'>
+                            <div className='w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center'>
+                              <Tag className='h-5 w-5 text-orange-600' />
+                            </div>
+                            <div>
+                              <p className='font-medium text-gray-900'>
+                                {price.pricesEuro}€ / nuit
+                              </p>
+                              <p className='text-sm text-gray-500'>
+                                Prix MGA: {price.pricesMga}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge className={price.activate ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                            {price.activate ? 'Actif' : 'Inactif'}
+                          </Badge>
+                        </div>
+                        
+                        <div className='grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-4'>
+                          <div>
+                            <p className='text-gray-600 mb-1'>Jours applicables</p>
+                            <div className='flex flex-wrap gap-1'>
+                              {price.day.map(day => (
+                                <Badge key={day} variant='outline' className='text-xs'>
+                                  {day}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <p className='text-gray-600 mb-1'>Période</p>
+                            <p className='text-gray-900'>
+                              {price.startDate && price.endDate ? (
+                                <>
+                                  {new Date(price.startDate).toLocaleDateString('fr-FR')} - {' '}
+                                  {new Date(price.endDate).toLocaleDateString('fr-FR')}
+                                </>
+                              ) : price.startDate ? (
+                                `À partir du ${new Date(price.startDate).toLocaleDateString('fr-FR')}`
+                              ) : price.endDate ? (
+                                `Jusqu'au ${new Date(price.endDate).toLocaleDateString('fr-FR')}`
+                              ) : (
+                                'Toute l\'année'
+                              )}
+                            </p>
+                          </div>
+                          
+                          <div className='flex items-end justify-end gap-2'>
+                            <button
+                              onClick={() => handleEditSpecialPrice(price)}
+                              className='px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 transition-colors'
+                            >
+                              Modifier
+                            </button>
+                            <button
+                              onClick={() => handleToggleSpecialPriceStatus(price.id, price.activate)}
+                              className={`px-3 py-1 text-sm border rounded transition-colors flex items-center gap-1 ${
+                                price.activate 
+                                  ? 'border-orange-300 text-orange-600 hover:bg-orange-50' 
+                                  : 'border-green-300 text-green-600 hover:bg-green-50'
+                              }`}
+                            >
+                              {price.activate ? (
+                                <>
+                                  <PowerOff className='h-3 w-3' />
+                                  Désactiver
+                                </>
+                              ) : (
+                                <>
+                                  <Power className='h-3 w-3' />
+                                  Activer
+                                </>
+                              )}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteSpecialPrice(price.id)}
+                              className='px-3 py-1 text-sm border border-red-300 text-red-600 rounded hover:bg-red-50 transition-colors'
+                            >
+                              Supprimer
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </>
         )}
 
         {/* Historique des validations */}
@@ -369,6 +712,17 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
           </motion.div>
         )}
       </motion.div>
+
+      {/* Modal de création/modification de prix spécial */}
+      <CreateSpecialPriceModal
+        isOpen={specialPriceModalOpen}
+        onClose={() => {
+          setSpecialPriceModalOpen(false)
+          setEditingSpecialPrice(null)
+        }}
+        onSpecialPriceCreated={handleSpecialPriceCreated}
+        editingSpecialPrice={editingSpecialPrice}
+      />
     </div>
   )
 }
