@@ -100,8 +100,6 @@ export default function AddressAutocomplete({
       clearTimeout(timeoutRef.current)
     }
 
-
-
     if (value.length < 3) {
       setSuggestions([])
       setShowSuggestions(false)
