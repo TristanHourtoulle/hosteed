@@ -20,6 +20,7 @@ import { ProductHeader } from './components/ProductHeader'
 import { ProductDetails } from './components/ProductDetails'
 import { ProductSidebar } from './components/ProductSidebar'
 import { ComparisonView } from './components/ComparisonView'
+import { ProductEditForm } from './components/ProductEditForm'
 
 interface ValidationHistoryEntry {
   id: string
@@ -113,7 +114,8 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
   const [reason, setReason] = useState('')
   const [productId, setProductId] = useState<string | null>(null)
   const [validationHistory, setValidationHistory] = useState<ValidationHistoryEntry[]>([])
-  const [activeTab, setActiveTab] = useState<'details' | 'comparison'>('details')
+  const [activeTab, setActiveTab] = useState<'details' | 'comparison' | 'edit'>('details')
+  const [isEditing, setIsEditing] = useState(false)
 
   useEffect(() => {
     const getParams = async () => {
@@ -231,6 +233,24 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
     }
   }
 
+  const handleEditProduct = () => {
+    setIsEditing(true)
+    setActiveTab('edit')
+  }
+
+  const handleSaveProduct = (updatedProduct: Product) => {
+    setProduct(updatedProduct)
+    setIsEditing(false)
+    setActiveTab('details')
+    // Rafraîchir les données
+    fetchProduct()
+  }
+
+  const handleCancelEdit = () => {
+    setIsEditing(false)
+    setActiveTab('details')
+  }
+
   if (loading) {
     return (
       <div className='flex items-center justify-center min-h-screen'>
@@ -272,19 +292,19 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
         <ProductHeader product={product} />
 
         {/* Tabs */}
-        {product.isDraft && product.originalProduct && (
-          <div className='border-b border-gray-200'>
-            <nav className='flex space-x-8'>
-              <button
-                onClick={() => setActiveTab('details')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'details'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Détails
-              </button>
+        <div className='border-b border-gray-200'>
+          <nav className='flex space-x-8'>
+            <button
+              onClick={() => setActiveTab('details')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'details'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Détails
+            </button>
+            {product.isDraft && product.originalProduct && (
               <button
                 onClick={() => setActiveTab('comparison')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
@@ -296,9 +316,19 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
                 Comparaison
                 <Badge variant="secondary" className="ml-2">Modifications</Badge>
               </button>
-            </nav>
-          </div>
-        )}
+            )}
+            <button
+              onClick={handleEditProduct}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'edit'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Édition
+            </button>
+          </nav>
+        </div>
 
         {activeTab === 'details' && (
           <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
@@ -317,6 +347,14 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
 
         {activeTab === 'comparison' && product.isDraft && product.originalProduct && (
           <ComparisonView draft={product} original={product.originalProduct} />
+        )}
+
+        {activeTab === 'edit' && (
+          <ProductEditForm
+            product={product}
+            onSave={handleSaveProduct}
+            onCancel={handleCancelEdit}
+          />
         )}
 
         {/* Historique des validations */}
