@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,6 +22,7 @@ interface CreateSpecialPriceModalProps {
   isOpen: boolean
   onClose: () => void
   onSpecialPriceCreated: (specialPrice: Omit<SpecialPrice, 'id'>) => void
+  editingSpecialPrice?: SpecialPrice | null
 }
 
 const DAYS: { value: DayEnum; label: string }[] = [
@@ -38,6 +39,7 @@ export default function CreateSpecialPriceModal({
   isOpen,
   onClose,
   onSpecialPriceCreated,
+  editingSpecialPrice,
 }: CreateSpecialPriceModalProps) {
   const [formData, setFormData] = useState({
     pricesMga: '',
@@ -48,6 +50,34 @@ export default function CreateSpecialPriceModal({
     activate: true,
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Pré-remplir le formulaire en mode édition
+  useEffect(() => {
+    if (editingSpecialPrice) {
+      setFormData({
+        pricesMga: editingSpecialPrice.pricesMga,
+        pricesEuro: editingSpecialPrice.pricesEuro,
+        day: editingSpecialPrice.day,
+        startDate: editingSpecialPrice.startDate 
+          ? new Date(editingSpecialPrice.startDate).toISOString().split('T')[0]
+          : '',
+        endDate: editingSpecialPrice.endDate 
+          ? new Date(editingSpecialPrice.endDate).toISOString().split('T')[0]
+          : '',
+        activate: editingSpecialPrice.activate,
+      })
+    } else {
+      // Réinitialiser le formulaire en mode création
+      setFormData({
+        pricesMga: '',
+        pricesEuro: '',
+        day: [],
+        startDate: '',
+        endDate: '',
+        activate: true,
+      })
+    }
+  }, [editingSpecialPrice])
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -133,7 +163,7 @@ export default function CreateSpecialPriceModal({
                     </div>
                     <div>
                       <CardTitle className='text-xl text-slate-800'>
-                        Ajouter un prix spécial
+                        {editingSpecialPrice ? 'Modifier le prix spécial' : 'Ajouter un prix spécial'}
                       </CardTitle>
                       <p className='text-slate-600 text-sm mt-1'>
                         Définissez des tarifs spécifiques pour certaines périodes
@@ -314,7 +344,7 @@ export default function CreateSpecialPriceModal({
                       ) : (
                         <div className='flex items-center gap-2'>
                           <CheckCircle className='h-4 w-4' />
-                          Créer le prix spécial
+                          {editingSpecialPrice ? 'Modifier le prix spécial' : 'Créer le prix spécial'}
                         </div>
                       )}
                     </Button>

@@ -694,7 +694,7 @@ model SpecialPrices {
   startDate  DateTime?
   endDate    DateTime?
   activate   Boolean   @default(true)
-  productId  String    @unique
+  productId  String
   product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
