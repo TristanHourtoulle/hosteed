@@ -107,9 +107,14 @@ export default function ModernSearchBar({
     }
   }
 
-  // Gérer la sélection d'une ville depuis les suggestions
+  // Gérer la sélection d'une ville depuis les suggestions (optionnel)
   const handleCitySelect = (city: GooglePlacePrediction) => {
     setLocation(city.description);
+  }
+
+  // Gérer la saisie libre de localisation
+  const handleLocationChange = (value: string) => {
+    setLocation(value);
   }
 
   return (
@@ -128,10 +133,12 @@ export default function ModernSearchBar({
               </div>
               <CityAutocomplete
                 onCitySelect={handleCitySelect}
+                onInputChange={handleLocationChange}
                 placeholder='Où souhaitez-vous aller ?'
                 defaultValue={location}
                 className='w-full'
-                countryFilter='MG' // Filtrer par défaut sur Madagascar
+                allowFreeInput={true} // Permet la saisie libre
+                // Pas de countryFilter pour permettre toutes les suggestions
               />
             </div>
           </div>

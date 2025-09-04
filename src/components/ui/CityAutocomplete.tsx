@@ -9,20 +9,24 @@ import { MapPin, Loader2 } from 'lucide-react';
 
 interface CityAutocompleteProps {
   onCitySelect?: (city: GooglePlacePrediction) => void;
+  onInputChange?: (value: string) => void; // Nouvelle prop pour la saisie libre
   placeholder?: string;
   className?: string;
   disabled?: boolean;
   defaultValue?: string;
   countryFilter?: string;
+  allowFreeInput?: boolean; // Nouvelle prop pour permettre la saisie libre
 }
 
 export function CityAutocomplete({
   onCitySelect,
+  onInputChange,
   placeholder = "Rechercher une ville...",
   className = "",
   disabled = false,
   defaultValue = "",
-  countryFilter
+  countryFilter,
+  allowFreeInput = false
 }: CityAutocompleteProps) {
   const [inputValue, setInputValue] = useState(defaultValue);
   const [suggestions, setSuggestions] = useState<GooglePlacePrediction[]>([]);
@@ -49,13 +53,34 @@ export function CityAutocomplete({
 
     setLoading(true);
     try {
-      const results = await getCitySuggestions({
+      let results = await getCitySuggestions({
         input,
         types: ['(cities)'],
         language: 'fr',
         country: countryFilter,
         sessionToken: sessionTokenRef.current
       });
+
+      // Si on a un filtre pays et peu de résultats, faire une recherche mondiale
+      if (countryFilter && results.length < 3) {
+        const globalResults = await getCitySuggestions({
+          input,
+          types: ['(cities)'],
+          language: 'fr',
+          // Pas de filtre pays pour la recherche mondiale
+          sessionToken: sessionTokenRef.current
+        });
+        
+        // Combiner les résultats en priorisant le pays filtré
+        const combinedResults = [...results];
+        globalResults.forEach(globalResult => {
+          if (!combinedResults.some(result => result.place_id === globalResult.place_id)) {
+            combinedResults.push(globalResult);
+          }
+        });
+        results = combinedResults;
+      }
+
       setSuggestions(results);
       setShowSuggestions(results.length > 0);
       setSelectedIndex(-1);
@@ -71,6 +96,12 @@ export function CityAutocomplete({
   // Debounce la recherche
   const handleInputChange = useCallback((value: string) => {
     setInputValue(value);
+    
+    // Si on permet la saisie libre, notifier le parent immédiatement
+    if (allowFreeInput && onInputChange) {
+      onInputChange(value);
+    }
+    
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
     }
@@ -78,7 +109,7 @@ export function CityAutocomplete({
     debounceTimeoutRef.current = setTimeout(() => {
       searchCities(value);
     }, 300);
-  }, [searchCities]);
+  }, [searchCities, allowFreeInput, onInputChange]);
 
   // Gérer la sélection d'une ville
   const handleCitySelect = useCallback((city: GooglePlacePrediction) => {
@@ -89,9 +120,13 @@ export function CityAutocomplete({
     if (onCitySelect) {
       onCitySelect(city);
     }
+    // Si on permet la saisie libre, notifier aussi le parent
+    if (allowFreeInput && onInputChange) {
+      onInputChange(city.description);
+    }
     // Générer un nouveau token de session pour la prochaine recherche
     sessionTokenRef.current = googleSuggestionService.generateSessionToken();
-  }, [onCitySelect]);
+  }, [onCitySelect, allowFreeInput, onInputChange]);
 
   // Gérer la navigation au clavier
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
