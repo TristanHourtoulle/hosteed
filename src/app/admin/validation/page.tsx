@@ -3,7 +3,8 @@
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { ProductValidation, UserRole } from '@prisma/client'
+import { ProductValidation } from '@prisma/client'
+import { isAdmin } from '@/hooks/useAdminAuth'
 import { motion, Variants } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -88,7 +89,7 @@ export default function ValidationPage() {
       return
     }
 
-    if (session.user.roles !== UserRole.ADMIN) {
+    if (!isAdmin(session.user.roles)) {
       router.push('/')
       return
     }

@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
-import { getPostBySlug, getSuggestedPosts } from '@/lib/services/post.service'
+import { getPostBySlugOrId, getSuggestedPosts } from '@/lib/services/post.service'
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer'
 import ShareButton from '@/components/ui/ShareButton'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
@@ -23,7 +23,7 @@ interface PageProps {
 // Generate metadata for SEO
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params
-  const post = await getPostBySlug(slug)
+  const post = await getPostBySlugOrId(slug)
 
   if (!post) {
     return {
@@ -58,14 +58,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       images: post.image ? [post.image] : [],
     },
     alternates: {
-      canonical: `/posts/article/${post.slug}`
+      canonical: `/posts/article/${post.slug || post.id}`
     }
   }
 }
 
 export default async function PostPage({ params }: PageProps) {
   const { slug } = await params
-  const post = await getPostBySlug(slug)
+  const post = await getPostBySlugOrId(slug)
 
   if (!post) {
     notFound()
@@ -89,7 +89,7 @@ export default async function PostPage({ params }: PageProps) {
     return readingTime
   }
 
-  const shareUrl = `https://hosteed.com/posts/article/${post.slug}`
+  const shareUrl = `https://hosteed.com/posts/article/${post.slug || post.id}`
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
@@ -188,7 +188,7 @@ export default async function PostPage({ params }: PageProps) {
               <CardContent>
                 <div className="grid md:grid-cols-3 gap-4">
                   {suggestedPosts.map((suggestedPost) => (
-                    <Link key={suggestedPost.id} href={`/posts/article/${suggestedPost.slug}`}>
+                    <Link key={suggestedPost.id} href={`/posts/article/${suggestedPost.slug || suggestedPost.id}`}>
                       <Card className="h-full hover:shadow-md transition-shadow cursor-pointer group">
                         {suggestedPost.image && (
                           <div className="relative aspect-video">
@@ -244,7 +244,7 @@ export default async function PostPage({ params }: PageProps) {
               "dateModified": post.updatedAt.toISOString(),
               "mainEntityOfPage": {
                 "@type": "WebPage",
-                "@id": `https://hosteed.com/posts/article/${post.slug}`
+                "@id": `https://hosteed.com/posts/article/${post.slug || post.id}`
               }
             })
           }}

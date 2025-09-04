@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
+import { isFullAdmin } from '@/hooks/useAdminAuth'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Input } from '@/components/ui/input'
 import { 
@@ -27,6 +30,8 @@ interface CommissionSettings {
 }
 
 export default function CommissionSettingsPage() {
+  const { data: session } = useSession()
+  const router = useRouter()
   const [settings, setSettings] = useState<CommissionSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -36,6 +41,13 @@ export default function CommissionSettingsPage() {
     clientCommissionRate: 0,
     clientCommissionFixed: 0,
   })
+
+  // Security check - Only ADMIN can access commission settings
+  useEffect(() => {
+    if (!session?.user?.roles || !isFullAdmin(session.user.roles)) {
+      router.push('/')
+    }
+  }, [session, router])
 
   useEffect(() => {
     fetchSettings()

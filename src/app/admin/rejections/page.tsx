@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { isAdmin } from '@/hooks/useAdminAuth'
 import { getAllRentRejections, resolveRentRejection } from '@/lib/services/rents.service'
 import { motion } from 'framer-motion'
 import {
@@ -64,7 +65,7 @@ export default function RentRejectionsPage() {
   const [activeFilter, setActiveFilter] = useState<'all' | 'pending' | 'resolved'>('pending')
 
   useEffect(() => {
-    if (!session?.user?.roles || session.user.roles !== 'ADMIN') {
+    if (!session?.user?.roles || !isAdmin(session.user.roles)) {
       router.push('/')
     }
   }, [session, router])

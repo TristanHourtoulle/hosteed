@@ -35,7 +35,7 @@ export default function PostsPage() {
   const [sortBy, setSortBy] = useState<SortOption>('recent')
   const { data: session } = useSession()
 
-  const canCreatePost = session?.user?.roles === 'ADMIN' || session?.user?.roles === 'BLOGWRITTER'
+  const canCreatePost = session?.user?.roles === 'ADMIN' || session?.user?.roles === 'BLOGWRITER'
 
   useEffect(() => {
     async function fetchPosts() {

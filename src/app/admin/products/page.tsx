@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
+import { isAdmin } from '@/hooks/useAdminAuth'
 import { Input } from '@/components/ui/shadcnui/input'
 import { motion } from 'framer-motion'
 import { Search, Plus } from 'lucide-react'
@@ -15,9 +18,18 @@ interface ExtendedProduct extends Product {
 }
 
 export default function ProductsPage() {
+  const { data: session } = useSession()
+  const router = useRouter()
   const [searchTerm, setSearchTerm] = useState('')
   const [products, setProducts] = useState<ExtendedProduct[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Security check - Only ADMIN and HOST_MANAGER can access products management
+  useEffect(() => {
+    if (!session?.user?.roles || !isAdmin(session.user.roles)) {
+      router.push('/')
+    }
+  }, [session, router])
 
   useEffect(() => {
     const fetchProducts = async () => {

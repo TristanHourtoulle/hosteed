@@ -26,7 +26,12 @@ export async function findAllUser() {
 export async function findUserById(id: string) {
   try {
     console.log('findUserById', id)
-    return await prisma.user.findUnique({
+    
+    if (!id || typeof id !== 'string') {
+      throw new Error('ID utilisateur invalide')
+    }
+
+    const user = await prisma.user.findUnique({
       where: { id },
       include: {
         Rent: {
@@ -48,9 +53,22 @@ export async function findUserById(id: string) {
         stripeCustomerId: true,
       },
     })
+
+    if (!user) {
+      console.warn(`User not found with ID: ${id}`)
+      return null
+    }
+
+    return user
   } catch (e) {
-    console.error(e)
-    return null
+    console.error('Error in findUserById:', e)
+    
+    // Re-throw the error with more context for the client to handle
+    if (e instanceof Error) {
+      throw new Error(`Erreur lors de la récupération des données utilisateur: ${e.message}`)
+    }
+    
+    throw new Error('Erreur de base de données')
   }
 }
 

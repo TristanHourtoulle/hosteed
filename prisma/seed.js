@@ -15,6 +15,20 @@ async function main() {
   await prisma.services.deleteMany()
   await prisma.meals.deleteMany()
 
+  // Create default admin user for blog posts
+  const adminUser = await prisma.user.upsert({
+    where: { email: 'admin@hosteed.com' },
+    update: {},
+    create: {
+      email: 'admin@hosteed.com',
+      name: 'Admin Hosteed',
+      password: await bcrypt.hash('password123', 12),
+      roles: 'ADMIN',
+      isAccountConfirmed: true,
+    },
+  })
+  console.log('Admin user created:', adminUser.email)
+
   // Créer des articles de blog
   const posts = [
     {
@@ -505,8 +519,14 @@ Meilleurs spots :
   for (const post of posts) {
     await prisma.post.upsert({
       where: { title: post.title },
-      update: post,
-      create: post,
+      update: {
+        ...post,
+        authorId: adminUser.id,
+      },
+      create: {
+        ...post,
+        authorId: adminUser.id,
+      },
     })
   }
 

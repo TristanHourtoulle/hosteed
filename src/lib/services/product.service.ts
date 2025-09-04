@@ -70,23 +70,15 @@ function filterActiveSpecialPrices(specialPrices: SpecialPrice[], currentDate: D
   })
 }
 
-// Fonction pour récupérer les prix spéciaux d'un produit avec requête SQL brute
+// Fonction pour récupérer les prix spéciaux d'un produit avec Prisma ORM
 async function getSpecialPricesForProduct(productId: string) {
   try {
-    const specialPrices = await prisma.$queryRaw`
-      SELECT 
-        "id",
-        "pricesMga",
-        "pricesEuro",
-        "day",
-        "startDate",
-        "endDate",
-        "activate",
-        "productId"
-      FROM "SpecialPrices"
-      WHERE "productId" = ${productId}
-    `
-    return specialPrices as SpecialPrice[]
+    const specialPrices = await prisma.specialPrices.findMany({
+      where: {
+        productId: productId
+      }
+    })
+    return specialPrices
   } catch (error) {
     console.error('Erreur lors de la récupération des prix spéciaux:', error)
     return []

@@ -9,8 +9,8 @@ export async function GET(
   try {
     const session = await auth()
     
-    if (!session || session.user.roles !== 'ADMIN') {
-      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+    if (!session?.user?.roles || !['ADMIN', 'HOST_MANAGER'].includes(session.user.roles)) {
+      return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })
     }
 
     const { id } = await params

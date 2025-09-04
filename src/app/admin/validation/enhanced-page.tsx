@@ -3,6 +3,7 @@
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { isAdmin } from '@/hooks/useAdminAuth'
 import { ProductValidation } from '@prisma/client'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -77,7 +78,7 @@ export default function EnhancedValidationPage() {
   const [selectedTab, setSelectedTab] = useState('pending')
 
   useEffect(() => {
-    if (!session?.user?.roles || session.user.roles !== 'ADMIN') {
+    if (!session?.user?.roles || !isAdmin(session.user.roles)) {
       router.push('/')
     }
   }, [session, router])

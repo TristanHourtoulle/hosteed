@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { motion } from 'framer-motion'
 import { useState } from 'react'
+import { useSession } from 'next-auth/react'
+import { UserRole } from '@prisma/client'
 import {
   BarChart2,
   ClipboardCheck,
@@ -24,6 +26,8 @@ import {
   Package,
   Plus,
   Highlighter,
+  BookOpen,
+  Edit3,
 } from 'lucide-react'
 import { Button } from '@/components/ui/shadcnui/button'
 import {
@@ -39,12 +43,14 @@ interface NavItem {
   title: string
   href: string
   icon: React.ComponentType<{ className?: string }>
+  requiredRoles?: UserRole[]
 }
 
 interface NavGroup {
   title: string
   icon: React.ComponentType<{ className?: string }>
   items: NavItem[]
+  requiredRoles?: UserRole[]
 }
 
 const navGroups: NavGroup[] = [
@@ -91,39 +97,65 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
+    title: 'Blog',
+    icon: BookOpen,
+    requiredRoles: ['ADMIN', 'BLOGWRITER'],
+    items: [
+      {
+        title: 'Gestion des articles',
+        href: '/admin/blog',
+        icon: Edit3,
+        requiredRoles: ['ADMIN', 'BLOGWRITER'],
+      },
+      {
+        title: 'Créer un article',
+        href: '/createPost',
+        icon: Plus,
+        requiredRoles: ['ADMIN', 'BLOGWRITER'],
+      },
+    ],
+  },
+  {
     title: 'Utilisateurs',
     icon: Users,
+    requiredRoles: ['ADMIN'],
     items: [
       {
         title: 'Comptes',
         href: '/admin/users',
         icon: Users,
+        requiredRoles: ['ADMIN'],
       },
       {
         title: 'Réservations',
         href: '/admin/reservations',
         icon: Calendar,
+        requiredRoles: ['ADMIN'],
       },
     ],
   },
   {
     title: 'Business',
     icon: TrendingUp,
+    requiredRoles: ['ADMIN'],
     items: [
       {
         title: 'Statistiques',
         href: '/admin/stats',
         icon: BarChart2,
+        requiredRoles: ['ADMIN'],
       },
       {
         title: 'Paiements',
         href: '/admin/payment',
         icon: CreditCard,
+        requiredRoles: ['ADMIN'],
       },
       {
         title: 'Sponsorisés',
         href: '/admin/promoted',
         icon: Star,
+        requiredRoles: ['ADMIN'],
       },
     ],
   },
@@ -146,6 +178,32 @@ const navGroups: NavGroup[] = [
         href: '/admin/highlights',
         icon: Highlighter,
       },
+      {
+        title: 'Équipements',
+        href: '/admin/equipments',
+        icon: Settings,
+      },
+      {
+        title: 'Repas',
+        href: '/admin/meals',
+        icon: Settings,
+      },
+      {
+        title: 'Sécurité',
+        href: '/admin/security',
+        icon: Shield,
+      },
+      {
+        title: 'Types de location',
+        href: '/admin/typeRent',
+        icon: Home,
+      },
+      {
+        title: 'Commissions',
+        href: '/admin/commission-settings',
+        icon: CreditCard,
+        requiredRoles: ['ADMIN'],
+      },
     ],
   },
 ]
@@ -153,6 +211,27 @@ const navGroups: NavGroup[] = [
 export function AdminNav() {
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { data: session } = useSession()
+
+  const userRole = session?.user?.roles
+
+  // Filter function to check if user has required role
+  const hasRequiredRole = (requiredRoles?: UserRole[]): boolean => {
+    if (!requiredRoles || requiredRoles.length === 0) {
+      // No specific roles required, allow ADMIN and HOST_MANAGER
+      return userRole === 'ADMIN' || userRole === 'HOST_MANAGER'
+    }
+    return userRole ? requiredRoles.includes(userRole) : false
+  }
+
+  // Filter nav groups and items based on user role
+  const filteredNavGroups = navGroups
+    .filter(group => hasRequiredRole(group.requiredRoles))
+    .map(group => ({
+      ...group,
+      items: group.items.filter(item => hasRequiredRole(item.requiredRoles))
+    }))
+    .filter(group => group.items.length > 0) // Remove groups with no visible items
 
   const isActiveGroup = (group: NavGroup) => {
     return group.items.some(item => pathname === item.href)
@@ -176,7 +255,7 @@ export function AdminNav() {
 
         {/* Desktop Navigation */}
         <div className='hidden lg:flex items-center space-x-1'>
-          {navGroups.map(group => {
+          {filteredNavGroups.map(group => {
             const isGroupActive = isActiveGroup(group)
 
             return (
@@ -241,7 +320,7 @@ export function AdminNav() {
           className='lg:hidden border-t bg-white'
         >
           <div className='px-4 py-4 space-y-4'>
-            {navGroups.map(group => (
+            {filteredNavGroups.map(group => (
               <div key={group.title} className='space-y-2'>
                 <div className='flex items-center gap-2 text-sm font-medium text-slate-800 px-2 py-1'>
                   <group.icon className='h-4 w-4' />

@@ -159,7 +159,7 @@ const Navbar = () => {
             </Link>
           )}
 
-          {/* {(session.user.roles === 'BLOGWRITTER' || session.user.roles === 'ADMIN') && (
+          {/* {(session.user.roles === 'BLOGWRITER' || session.user.roles === 'ADMIN') && (
             <Link
               href='/host_manager'
               className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer'
@@ -169,13 +169,13 @@ const Navbar = () => {
             </Link>
           )} */}
 
-          {session.user.roles === 'ADMIN' && (
+          {(session.user.roles === 'ADMIN' || session.user.roles === 'HOST_MANAGER') && (
             <Link
               href='/admin'
               className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer'
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              Gestion Administrateur
+              {session.user.roles === 'HOST_MANAGER' ? 'Gestion Hébergements' : 'Gestion Administrateur'}
             </Link>
           )}
         </div>
@@ -404,7 +404,7 @@ const Navbar = () => {
                 )}
 
                 {/* {session &&
-                  (session.user.roles === 'BLOGWRITTER' || session.user.roles === 'ADMIN') && (
+                  (session.user.roles === 'BLOGWRITER' || session.user.roles === 'ADMIN') && (
                     <NavigationMenuItem>
                       <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
                         <Link
@@ -417,14 +417,14 @@ const Navbar = () => {
                     </NavigationMenuItem>
                   )} */}
 
-                {session && session.user.roles === 'ADMIN' && (
+                {session && (session.user.roles === 'ADMIN' || session.user.roles === 'HOST_MANAGER') && (
                   <NavigationMenuItem>
                     <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
                       <Link
                         href='/admin'
                         className={isActive('/admin') ? 'text-indigo-600 font-medium' : ''}
                       >
-                        Gestion Administrateur
+                        {session.user.roles === 'HOST_MANAGER' ? 'Gestion Hébergements' : 'Gestion Administrateur'}
                       </Link>
                     </NavigationMenuLink>
                   </NavigationMenuItem>

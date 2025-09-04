@@ -3,6 +3,7 @@
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { isFullAdmin } from '@/hooks/useAdminAuth'
 import { createUser, findAllUser } from '@/lib/services/user.service'
 import { User } from '@prisma/client'
 import Link from 'next/link'
@@ -193,7 +194,7 @@ export default function UsersPage() {
   const getRoleDisplayName = (role: string) => {
     const roleNames: { [key: string]: string } = {
       ADMIN: 'Administrateur',
-      BLOGWRITTER: 'Rédacteur Blog',
+      BLOGWRITER: 'Rédacteur Blog',
       HOST: 'Hôte',
       HOST_VERIFIED: 'Hôte Vérifié',
       USER: 'Utilisateur',
@@ -202,7 +203,7 @@ export default function UsersPage() {
   }
 
   useEffect(() => {
-    if (!session?.user?.roles || session.user.roles !== 'ADMIN') {
+    if (!session?.user?.roles || !isFullAdmin(session.user.roles)) {
       router.push('/')
     }
   }, [session, router])
@@ -600,7 +601,7 @@ export default function UsersPage() {
                     <SelectItem value='USER'>👤 Utilisateur</SelectItem>
                     <SelectItem value='HOST'>🏠 Hôte</SelectItem>
                     <SelectItem value='HOST_VERIFIED'>✅ Hôte Vérifié</SelectItem>
-                    <SelectItem value='BLOGWRITTER'>✍️ Rédacteur Blog</SelectItem>
+                    <SelectItem value='BLOGWRITER'>✍️ Rédacteur Blog</SelectItem>
                     <SelectItem value='ADMIN'>👑 Administrateur</SelectItem>
                   </SelectContent>
                 </Select>

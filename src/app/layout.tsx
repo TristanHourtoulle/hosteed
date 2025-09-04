@@ -16,6 +16,7 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://hosteed.com'),
   title: 'Hosteed',
   description: 'Le meilleur de Madagascar, rien que pour vous.',
 }

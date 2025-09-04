@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
+import { isFullAdmin } from '@/hooks/useAdminAuth'
 import { getAllPaymentRequest } from '@/lib/services/payment.service'
 import { PaymentStatus, PaymentMethod, PaymentReqStatus } from '@prisma/client'
 
@@ -25,11 +27,19 @@ interface PayRequest {
 }
 
 export default function PaymentAdminPage() {
+  const { data: session } = useSession()
   const router = useRouter()
   const [payRequests, setPayRequests] = useState<PayRequest[]>([])
   const [filteredRequests, setFilteredRequests] = useState<PayRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<PaymentReqStatus | 'ALL'>('ALL')
+
+  // Security check - Only ADMIN can access payment management
+  useEffect(() => {
+    if (!session?.user?.roles || !isFullAdmin(session.user.roles)) {
+      router.push('/')
+    }
+  }, [session, router])
 
   useEffect(() => {
     fetchPayRequests()

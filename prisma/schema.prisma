@@ -473,6 +473,9 @@ model User {
   personalIncludedServices IncludedService[]   @relation("UserIncludedServices") // Services inclus personnalisés
   personalExtras           ProductExtra[]      @relation("UserExtras") // Extras personnalisés
   personalHighlights       PropertyHighlight[] @relation("UserHighlights") // Points forts personnalisés
+  
+  // Relation pour les articles de blog
+  authoredPosts            Post[]              @relation("AuthoredPosts") // Articles de blog créés par cet utilisateur
 }
 
 model Account {
@@ -566,7 +569,7 @@ enum PaymentMethod {
 
 enum UserRole {
   ADMIN
-  BLOGWRITTER
+  BLOGWRITER
   HOST
   HOST_VERIFIED
   HOST_MANAGER
@@ -682,6 +685,9 @@ model Post {
   metaDescription String?
   keywords        String?
   slug            String?  @unique
+  // Author relationship
+  authorId        String
+  author          User     @relation("AuthoredPosts", fields: [authorId], references: [id], onDelete: Cascade)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }

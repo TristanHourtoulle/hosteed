@@ -34,6 +34,7 @@ import {
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useSession } from 'next-auth/react'
 import RichEditorGuide from '@/components/ui/RichEditorGuide'
 import SEOFieldsCard from '@/components/ui/SEOFieldsCard'
 
@@ -74,6 +75,7 @@ export default function CreatePostPage() {
     slug: ''
   })
   const router = useRouter()
+  const { data: session } = useSession()
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -94,6 +96,11 @@ export default function CreatePostPage() {
       return
     }
 
+    if (!session?.user?.id) {
+      toast.error('Vous devez être connecté pour créer un article')
+      return
+    }
+
     setIsSubmitting(true)
     try {
       const reader = new FileReader()
@@ -101,7 +108,7 @@ export default function CreatePostPage() {
       reader.onload = async () => {
         const base64Image = reader.result as string
         
-        const newPost = await createPost(title, content, base64Image, seoData)
+        const newPost = await createPost(title, content, base64Image, session.user.id, seoData)
         
         if (newPost) {
           toast.success('Article créé avec succès !', {
@@ -120,7 +127,7 @@ export default function CreatePostPage() {
           })
           
           // Redirect to the newly created article
-          router.push(`/posts/article/${newPost.slug}`)
+          router.push(`/posts/article/${newPost.slug || newPost.id}`)
         } else {
           toast.error("Erreur lors de la création de l&apos;article")
         }
