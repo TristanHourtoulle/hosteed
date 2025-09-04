@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import { ClientProviders } from '@/components/providers/ClientProviders'
 import Navbar from '@/components/ui/header/Navbar'
+import Footer from '@/components/ui/Footer'
 import { Toaster } from '@/components/ui/shadcnui/sonner'
 
 const geistSans = Geist({
@@ -32,6 +33,7 @@ export default function RootLayout({
         <ClientProviders>
           <Navbar />
           <main className='min-h-screen'>{children}</main>
+          <Footer />
           <Toaster />
         </ClientProviders>
       </body>
