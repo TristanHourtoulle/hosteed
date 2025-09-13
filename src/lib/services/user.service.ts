@@ -172,7 +172,7 @@ export async function sendEmailVerification(userId: string) {
     })
     await sendTemplatedMail(user.email, 'Verifier votre email !', 'checkEmail.html', {
       verificationUrl: process.env.NEXTAUTH_URL + '/checkEmail/' + token,
-    })
+    }, true)
   } catch (e) {
     console.error(e)
     return
@@ -239,7 +239,8 @@ export async function sendResetEmail(userEmail: string) {
       'resetPassword.html',
       {
         resetUrl: process.env.NEXTAUTH_URL + '/forgetPassword/' + token,
-      }
+      },
+      true
     )
   } catch (e) {
     console.error(e)
