@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { motion, Variants } from 'framer-motion'
+import { isAdmin, isFullAdmin } from '@/hooks/useAdminAuth'
 import { Separator } from '@/components/ui/shadcnui/separator'
 import {
   ClipboardCheck,
@@ -22,6 +23,7 @@ import {
   Cctv,
   Soup,
   BrushCleaning,
+  Calculator,
 } from 'lucide-react'
 import { StatsOverview } from './components/StatsOverview'
 import { ActionCardGroup } from './components/ActionCardGroup'
@@ -64,7 +66,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!session?.user?.roles || session.user.roles !== 'ADMIN') {
+    if (!session?.user?.roles || !isAdmin(session.user.roles)) {
       router.push('/')
     }
   }, [session, router])
@@ -84,14 +86,15 @@ export default function AdminDashboard() {
     fetchStats()
   }, [])
 
-  // Quick stats cards for dashboard overview
-  const quickStats = [
+  // Quick stats cards for dashboard overview - filtered by role
+  const allQuickStats = [
     {
       title: 'Utilisateurs',
       value: stats?.users || 0,
       icon: Users,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
+      adminOnly: true, // Hide from HOST_MANAGER
     },
     {
       title: 'Produits actifs',
@@ -99,6 +102,7 @@ export default function AdminDashboard() {
       icon: CheckCircle2,
       color: 'text-green-600',
       bgColor: 'bg-green-50',
+      adminOnly: false,
     },
     {
       title: 'En attente',
@@ -106,6 +110,7 @@ export default function AdminDashboard() {
       icon: Clock,
       color: 'text-orange-600',
       bgColor: 'bg-orange-50',
+      adminOnly: false,
     },
     {
       title: 'Locations',
@@ -113,11 +118,20 @@ export default function AdminDashboard() {
       icon: Calendar,
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
+      adminOnly: true, // Hide business metrics from HOST_MANAGER
     },
   ]
 
-  // Grouped navigation cards
-  const cardGroups = [
+  // Filter stats based on user role
+  const quickStats = allQuickStats.filter(stat => {
+    if (stat.adminOnly) {
+      return isFullAdmin(session?.user?.roles)
+    }
+    return true
+  })
+
+  // Grouped navigation cards - filtered by role
+  const allCardGroups = [
     {
       title: 'Gestion des Contenus',
       description: 'Gérez les annonces, validations et modérations',
@@ -160,6 +174,7 @@ export default function AdminDashboard() {
       title: 'Gestion des Utilisateurs',
       description: 'Administration des comptes et rôles',
       icon: Users,
+      adminOnly: true, // Hide from HOST_MANAGER
       cards: [
         {
           title: 'Utilisateurs',
@@ -183,6 +198,7 @@ export default function AdminDashboard() {
       title: 'Business & Analytics',
       description: 'Statistiques, paiements et promotions',
       icon: TrendingUp,
+      adminOnly: true, // Hide from HOST_MANAGER
       cards: [
         {
           title: 'Statistiques',
@@ -201,6 +217,12 @@ export default function AdminDashboard() {
           description: 'Gérer les mises en avant',
           icon: Star,
           href: '/admin/promoted',
+        },
+        {
+          title: 'Configuration des commissions',
+          description: 'Gérer les taux de commission et frais',
+          icon: Calculator,
+          href: '/admin/commission-settings',
         },
       ],
     },
@@ -236,6 +258,14 @@ export default function AdminDashboard() {
       ],
     },
   ]
+
+  // Filter card groups based on user role
+  const cardGroups = allCardGroups.filter(group => {
+    if (group.adminOnly) {
+      return isFullAdmin(session?.user?.roles)
+    }
+    return true
+  })
 
   return (
     <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50'>

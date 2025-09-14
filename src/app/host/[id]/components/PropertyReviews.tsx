@@ -5,7 +5,6 @@ import { Star, Calendar, ChevronDown, ChevronUp, Grid3X3 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ReviewStatistics from './ReviewStatistics'
 import ReviewsModal from './ReviewsModal'
-import ReviewHighlights from './ReviewHighlights'
 
 interface Reviews {
   id: string
@@ -51,46 +50,6 @@ function StarRating({ rating, size = 'sm' }: { rating: number; size?: 'sm' | 'md
   )
 }
 
-// Composant pour la barre de progression des notes
-function RatingBar({
-  label,
-  value,
-  color = 'blue',
-}: {
-  label: string
-  value: number
-  color?: string
-}) {
-  const colorClasses = {
-    blue: 'bg-blue-500',
-    green: 'bg-green-500',
-    purple: 'bg-purple-500',
-    orange: 'bg-orange-500',
-    pink: 'bg-pink-500',
-  }
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.5 }}
-      className='space-y-2'
-    >
-      <div className='flex justify-between items-center'>
-        <span className='text-sm font-medium text-gray-700'>{label}</span>
-        <span className='text-sm font-bold text-gray-900'>{value.toFixed(1)}</span>
-      </div>
-      <div className='w-full bg-gray-200 rounded-full h-2.5 overflow-hidden'>
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${(value / 5) * 100}%` }}
-          transition={{ duration: 1, delay: 0.2 }}
-          className={`h-2.5 rounded-full ${colorClasses[color as keyof typeof colorClasses] || colorClasses.blue} shadow-sm`}
-        />
-      </div>
-    </motion.div>
-  )
-}
 
 // Composant pour un avis individuel
 function ReviewCard({ review, index }: { review: Reviews; index: number }) {
@@ -181,22 +140,6 @@ function ReviewCard({ review, index }: { review: Reviews; index: number }) {
             )}
           </div>
 
-          {/* Notes détaillées */}
-          <div className='grid grid-cols-2 sm:grid-cols-5 gap-3 pt-3 border-t border-gray-100'>
-            {[
-              { label: 'Accueil', value: review.welcomeGrade, icon: '👋' },
-              { label: 'Personnel', value: review.staff, icon: '👥' },
-              { label: 'Confort', value: review.comfort, icon: '🛏️' },
-              { label: 'Équipement', value: review.equipment, icon: '🔧' },
-              { label: 'Nettoyage', value: review.cleaning, icon: '✨' },
-            ].map(item => (
-              <div key={item.label} className='text-center'>
-                <div className='text-lg mb-1'>{item.icon}</div>
-                <div className='text-sm font-semibold text-gray-900'>{item.value}.0</div>
-                <div className='text-xs text-gray-600'>{item.label}</div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </motion.div>
@@ -229,13 +172,6 @@ export default function PropertyReviews({ reviews, globalGrade }: PropertyReview
     )
   }
 
-  const averageRatings = {
-    welcome: reviews.reduce((acc, r) => acc + r.welcomeGrade, 0) / reviews.length,
-    staff: reviews.reduce((acc, r) => acc + r.staff, 0) / reviews.length,
-    comfort: reviews.reduce((acc, r) => acc + r.comfort, 0) / reviews.length,
-    equipment: reviews.reduce((acc, r) => acc + r.equipment, 0) / reviews.length,
-    cleaning: reviews.reduce((acc, r) => acc + r.cleaning, 0) / reviews.length,
-  }
 
   const displayedReviews = showAllReviews ? reviews : reviews.slice(0, 3)
 
@@ -245,8 +181,6 @@ export default function PropertyReviews({ reviews, globalGrade }: PropertyReview
       animate={{ opacity: 1, y: 0 }}
       className='border-b border-gray-200 pb-12'
     >
-      {/* Highlights des avis les plus positifs */}
-      <ReviewHighlights reviews={reviews} />
 
       {/* En-tête avec note globale */}
       <div className='mb-8'>
@@ -267,17 +201,6 @@ export default function PropertyReviews({ reviews, globalGrade }: PropertyReview
         {/* Statistiques avancées */}
         <ReviewStatistics reviews={reviews} globalGrade={globalGrade} />
 
-        {/* Breakdown des notes avec barres de progression */}
-        <div className='bg-gradient-to-br from-gray-50 to-white rounded-xl p-6 border border-gray-100'>
-          <h4 className='text-lg font-semibold text-gray-900 mb-4'>Détail des notes</h4>
-          <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-            <RatingBar label='👋 Accueil' value={averageRatings.welcome} color='blue' />
-            <RatingBar label='👥 Personnel' value={averageRatings.staff} color='green' />
-            <RatingBar label='🛏️ Confort' value={averageRatings.comfort} color='purple' />
-            <RatingBar label='🔧 Équipement' value={averageRatings.equipment} color='orange' />
-            <RatingBar label='✨ Nettoyage' value={averageRatings.cleaning} color='pink' />
-          </div>
-        </div>
       </div>
 
       {/* Filtres des avis */}

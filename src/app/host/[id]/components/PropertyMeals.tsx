@@ -6,6 +6,8 @@ interface PropertyMealsProps {
 }
 
 export default function PropertyMeals({ meals }: PropertyMealsProps) {
+  if (!meals || meals.length === 0) return null
+
   return (
     <div className='border-b border-gray-200 pb-8'>
       <h3 className='text-lg font-semibold text-gray-900 mb-6'>Repas disponibles</h3>

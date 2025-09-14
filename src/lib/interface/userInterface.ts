@@ -1,4 +1,4 @@
-import { UserRole } from '@prisma/client'
+import { UserRole, DayEnum } from '@prisma/client'
 
 export interface UserInterface {
   id: string
@@ -38,6 +38,20 @@ export interface CancellationPolicy {
   additionalTerms?: string
 }
 
+export interface HotelInfo {
+  name: string
+  availableRooms: number
+}
+
+export interface SpecialPriceInput {
+  pricesMga: string
+  pricesEuro: string
+  day: DayEnum[]
+  startDate: Date | null
+  endDate: Date | null
+  activate: boolean
+}
+
 export interface CreateProductInput {
   name: string
   description: string
@@ -51,17 +65,27 @@ export interface CreateProductInput {
   arriving: number | string
   leaving: number | string
   phone?: string
+  phoneCountry?: string
+  maxPeople?: number | null
   typeId: string
   userId: string[]
   equipments: string[]
   services: string[]
   meals: string[]
   securities: string[]
+  includedServices?: string[]
+  extras?: string[]
+  highlights?: string[]
   images: string[]
   nearbyPlaces?: NearbyPlace[]
   transportOptions?: TransportOption[]
   propertyInfo?: PropertyInfo
   cancellationPolicy?: CancellationPolicy
+  // Nouveaux champs pour les hôtels
+  isHotel?: boolean
+  hotelInfo?: HotelInfo | null
+  // Prix spéciaux
+  specialPrices?: SpecialPriceInput[]
 }
 
 export interface Product {

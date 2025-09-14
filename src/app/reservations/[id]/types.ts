@@ -40,7 +40,7 @@ export interface Host {
   name: string | null
   email: string
   image: string | null
-  roles: 'ADMIN' | 'BLOGWRITTER' | 'HOST' | 'HOST_VERIFIED' | 'USER'
+  roles: 'ADMIN' | 'BLOGWRITER' | 'HOST' | 'HOST_VERIFIED' | 'USER'
 }
 
 export interface Product {

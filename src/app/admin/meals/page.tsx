@@ -3,6 +3,7 @@
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { isAdmin } from '@/hooks/useAdminAuth'
 import Link from 'next/link'
 import { motion, Variants } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
@@ -79,7 +80,7 @@ export default function MealsPage() {
   const [deletingOption, setDeletingOption] = useState<MealsInterface | null>(null)
 
   useEffect(() => {
-    if (!session?.user?.roles || session.user.roles !== 'ADMIN') {
+    if (!session?.user?.roles || !isAdmin(session.user.roles)) {
       router.push('/')
     }
   }, [session, router])

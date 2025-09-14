@@ -1,4 +1,4 @@
-import { Crown, PenTool, Home, CheckCircle, User } from 'lucide-react'
+import { Crown, PenTool, Home, CheckCircle, User, Shield } from 'lucide-react'
 
 interface RoleBadgeProps {
   role: string
@@ -19,7 +19,7 @@ export function RoleBadge({ role, size = 'md', showIcon = true }: RoleBadgeProps
           glowColor: 'shadow-red-500/25',
           emoji: '👑',
         }
-      case 'BLOGWRITTER':
+      case 'BLOGWRITER':
         return {
           label: 'Rédacteur Blog',
           icon: PenTool,
@@ -28,6 +28,16 @@ export function RoleBadge({ role, size = 'md', showIcon = true }: RoleBadgeProps
           borderColor: 'border-purple-200',
           glowColor: 'shadow-purple-500/25',
           emoji: '✍️',
+        }
+      case 'HOST_MANAGER':
+        return {
+          label: 'Gestionnaire Hôte',
+          icon: Shield,
+          bgColor: 'bg-gradient-to-r from-orange-500 to-red-500',
+          textColor: 'text-white',
+          borderColor: 'border-orange-200',
+          glowColor: 'shadow-orange-500/25',
+          emoji: '🛡️',
         }
       case 'HOST_VERIFIED':
         return {
@@ -129,12 +139,19 @@ function getRoleConfig(role: string) {
         glowColor: 'shadow-red-500/25',
         emoji: '👑',
       }
-    case 'BLOGWRITTER':
+    case 'BLOGWRITER':
       return {
         bgColor: 'bg-gradient-to-r from-purple-500 to-purple-600',
         borderColor: 'border-purple-200',
         glowColor: 'shadow-purple-500/25',
         emoji: '✍️',
+      }
+    case 'HOST_MANAGER':
+      return {
+        bgColor: 'bg-gradient-to-r from-orange-500 to-red-500',
+        borderColor: 'border-orange-200',
+        glowColor: 'shadow-orange-500/25',
+        emoji: '🛡️',
       }
     case 'HOST_VERIFIED':
       return {

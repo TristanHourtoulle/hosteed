@@ -91,11 +91,11 @@ export async function POST(req: Request) {
           })
 
           if (newRent) {
-            // Update payment status
+            // Update payment status - RESERVED seulement si le paiement est capturé
             await prisma.rent.update({
               where: { id: newRent.id },
               data: {
-                status: 'RESERVED' as RentStatus,
+                status: paymentIntentObj.status === 'succeeded' ? 'RESERVED' as RentStatus : 'WAITING' as RentStatus,
                 payment: paymentIntentObj.status === 'succeeded' ? 'CLIENT_PAID' : 'NOT_PAID',
               },
             })

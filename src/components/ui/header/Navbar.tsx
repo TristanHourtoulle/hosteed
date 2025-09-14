@@ -159,7 +159,7 @@ const Navbar = () => {
             </Link>
           )}
 
-          {/* {(session.user.roles === 'BLOGWRITTER' || session.user.roles === 'ADMIN') && (
+          {/* {(session.user.roles === 'BLOGWRITER' || session.user.roles === 'ADMIN') && (
             <Link
               href='/host_manager'
               className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer'
@@ -169,13 +169,13 @@ const Navbar = () => {
             </Link>
           )} */}
 
-          {session.user.roles === 'ADMIN' && (
+          {(session.user.roles === 'ADMIN' || session.user.roles === 'HOST_MANAGER') && (
             <Link
               href='/admin'
               className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer'
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              Gestion Administrateur
+              {session.user.roles === 'HOST_MANAGER' ? 'Gestion Hébergements' : 'Gestion Administrateur'}
             </Link>
           )}
         </div>
@@ -202,16 +202,16 @@ const Navbar = () => {
   return (
     <nav className='bg-white shadow-md sticky top-0 z-50'>
       <div className='container mx-auto px-4 sm:px-6 lg:px-8'>
-        <div className='flex justify-between items-center h-16'>
+        <div className='flex justify-between items-center h-20'>
           {/* Logo */}
           <div className='flex items-center'>
             <Link href='/' className='flex items-center cursor-pointer'>
               <Image
                 src='/logo-hosteed.png'
                 alt='Hosteed'
-                width={80}
-                height={80}
-                className='h-8 w-auto'
+                width={120}
+                height={120}
+                className='h-14 w-auto'
               />
             </Link>
           </div>
@@ -404,7 +404,7 @@ const Navbar = () => {
                 )}
 
                 {/* {session &&
-                  (session.user.roles === 'BLOGWRITTER' || session.user.roles === 'ADMIN') && (
+                  (session.user.roles === 'BLOGWRITER' || session.user.roles === 'ADMIN') && (
                     <NavigationMenuItem>
                       <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
                         <Link
@@ -417,14 +417,14 @@ const Navbar = () => {
                     </NavigationMenuItem>
                   )} */}
 
-                {session && session.user.roles === 'ADMIN' && (
+                {session && (session.user.roles === 'ADMIN' || session.user.roles === 'HOST_MANAGER') && (
                   <NavigationMenuItem>
                     <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
                       <Link
                         href='/admin'
                         className={isActive('/admin') ? 'text-indigo-600 font-medium' : ''}
                       >
-                        Gestion Administrateur
+                        {session.user.roles === 'HOST_MANAGER' ? 'Gestion Hébergements' : 'Gestion Administrateur'}
                       </Link>
                     </NavigationMenuLink>
                   </NavigationMenuItem>

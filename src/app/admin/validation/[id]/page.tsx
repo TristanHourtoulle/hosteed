@@ -1,37 +1,15 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
 import { useEffect, useState, useCallback } from 'react'
-import { ProductValidation } from '@prisma/client'
-import Image from 'next/image'
-import Link from 'next/link'
+import { ProductValidation, ExtraPriceType, DayEnum } from '@prisma/client'
 import { motion } from 'framer-motion'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
-import {
-  Loader2,
-  ArrowLeft,
-  CheckCircle,
-  XCircle,
-  AlertTriangle,
-  MapPin,
-  User,
-  Euro,
-  Home,
-  Users,
-  Bath,
-  Bed,
-  Car,
-  Utensils,
-  Shield,
-  CheckSquare,
-  X,
-} from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Loader2, XCircle, Tag, Power, PowerOff } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { findSpecialsPricesByProduct, createSpecialPrices, updateSpecialPrices, toggleSpecialPriceStatus, deleteSpecialsPricesByProduct } from '@/lib/services/specialPrices.service'
+import CreateSpecialPriceModal from '@/components/ui/CreateSpecialPriceModal'
 import {
   getProductForValidation,
   approveProduct,
@@ -40,25 +18,43 @@ import {
   getValidationHistory,
 } from '../actions'
 import { ValidationHistoryCard } from '../components/ValidationHistoryCard'
+import { ProductHeader } from './components/ProductHeader'
+import { ProductDetails } from './components/ProductDetails'
+import { ProductSidebar } from './components/ProductSidebar'
+import { ComparisonView } from './components/ComparisonView'
+import { ProductEditForm } from './components/ProductEditForm'
 
 interface ValidationHistoryEntry {
   id: string
   previousStatus: ProductValidation
   newStatus: ProductValidation
   reason?: string | null
-  createdAt: Date
-  admin?: {
-    id: string
+  createdAt: string | Date
+  admin: {
     name?: string | null
     lastname?: string | null
     email: string
   } | null
-  host?: {
-    id: string
-    name?: string | null
-    lastname?: string | null
-    email: string
-  } | null
+}
+
+interface SpecialPrice {
+  id: string
+  pricesMga: string
+  pricesEuro: string
+  day: DayEnum[]
+  startDate: Date | null
+  endDate: Date | null
+  activate: boolean
+  productId: string
+}
+
+interface SpecialPriceData {
+  pricesMga: string
+  pricesEuro: string
+  day: DayEnum[]
+  startDate: Date | null
+  endDate: Date | null
+  activate: boolean
 }
 
 interface Product {
@@ -67,91 +63,61 @@ interface Product {
   description: string
   address: string
   basePrice: string
-  priceMGA: string
-  room: bigint | null
-  bathroom: bigint | null
+  priceMGA?: string
+  availableRooms?: number
+  guest: number
+  bedroom: number
+  bed: number
+  bathroom: number
   arriving: number
   leaving: number
-  autoAccept: boolean
-  minRent: bigint | null
-  maxRent: bigint | null
-  advanceRent: bigint | null
-  delayTime: bigint | null
-  minPeople: bigint | null
-  maxPeople: bigint | null
-  commission: number
   validate: ProductValidation
-  phone: string
-  latitude: number
-  longitude: number
-  certified: boolean
-  contract: boolean
-  sizeRoom: number | null
+  isDraft?: boolean
+  originalProductId?: string
+  originalProduct?: Product
   img?: { img: string }[]
   user: {
     id: string
+    name?: string | null
+    lastname?: string | null
     email: string
-    name: string | null
-    lastname: string | null
-    image: string | null
+    image?: string | null
+    profilePicture?: string | null
+    profilePictureBase64?: string | null
   }[]
-  type: {
-    id: string
-    name: string
-    description: string
-  }
-  equipments: {
-    id: string
-    name: string
-    icon: string
-  }[]
-  mealsList: {
-    id: string
-    name: string
-  }[]
-  servicesList: {
-    id: string
-    name: string
-  }[]
-  securities: {
-    id: string
-    name: string
-  }[]
-  typeRoom: {
-    id: string
-    name: string
-    description: string
-  }[]
-  rules: {
-    id: string
+  type?: { id: string; name: string; description: string }
+  equipments?: { id: string; name: string; icon: string }[]
+  mealsList?: { id: string; name: string }[]
+  servicesList?: { id: string; name: string }[]
+  securities?: { id: string; name: string }[]
+  typeRoom?: { name: string; description: string }
+  rules?: {
     smokingAllowed: boolean
     petsAllowed: boolean
     eventsAllowed: boolean
     checkInTime: string
     checkOutTime: string
     selfCheckIn: boolean
-    selfCheckInType: string | null
-  }[]
-  nearbyPlaces: {
-    id: string
+    selfCheckInType?: string
+  }
+  nearbyPlaces?: {
     name: string
-    distance: number
-    duration: number
+    distance: string
+    duration: string
     transport: string
   }[]
-  transportOptions: {
-    id: string
-    name: string
-    description: string | null
-  }[]
-  propertyInfo: {
-    id: string
+  transportOptions?: { name: string; description: string }[]
+  propertyInfo?: {
     hasStairs: boolean
     hasElevator: boolean
     hasHandicapAccess: boolean
     hasPetsOnProperty: boolean
-    additionalNotes: string | null
-  } | null
+    additionalNotes?: string
+  }
+  hotel?: { id: string; userId: string }
+  includedServices?: { id: string; name: string; description: string | null; icon: string | null }[]
+  extras?: { id: string; name: string; description: string | null; priceEUR: number; priceMGA: number; type: ExtraPriceType }[]
+  highlights?: { id: string; name: string; description: string | null; icon: string | null }[]
 }
 
 interface ValidationDetailPageProps {
@@ -170,12 +136,10 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
   const [reason, setReason] = useState('')
   const [productId, setProductId] = useState<string | null>(null)
   const [validationHistory, setValidationHistory] = useState<ValidationHistoryEntry[]>([])
-
-  useEffect(() => {
-    if (!session?.user?.roles || session.user.roles !== 'ADMIN') {
-      router.push('/')
-    }
-  }, [session, router])
+  const [activeTab, setActiveTab] = useState<'details' | 'comparison' | 'edit'>('details')
+  const [specialPrices, setSpecialPrices] = useState<SpecialPrice[]>([])
+  const [specialPriceModalOpen, setSpecialPriceModalOpen] = useState(false)
+  const [editingSpecialPrice, setEditingSpecialPrice] = useState<SpecialPrice | null>(null)
 
   useEffect(() => {
     const getParams = async () => {
@@ -190,12 +154,11 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
 
     try {
       const historyResult = await getValidationHistory(productId)
-
       if (historyResult.success && historyResult.data) {
         setValidationHistory(historyResult.data)
       }
-    } catch (err) {
-      console.error("Erreur lors du chargement de l'historique:", err)
+    } catch (error) {
+      console.error('Error fetching validation history:', error)
     }
   }, [productId])
 
@@ -206,130 +169,206 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
       setLoading(true)
       setError(null)
 
-      const result = await getProductForValidation(productId)
+      const [result, specialPricesResult] = await Promise.all([
+        getProductForValidation(productId),
+        findSpecialsPricesByProduct(productId)
+      ])
 
       if (result.success && result.data) {
-        setProduct(result.data)
-        // Charger l'historique en parallèle
-        fetchValidationHistory()
+        setProduct(result.data as unknown as Product)
       } else {
         setError(result.error || 'Erreur lors du chargement du produit')
       }
+
+      if (Array.isArray(specialPricesResult)) {
+        setSpecialPrices(specialPricesResult as unknown as SpecialPrice[])
+      }
     } catch (err) {
-      setError("Erreur lors du chargement de l'annonce")
-      console.error(err)
+      console.error('Error fetching product:', err)
+      setError('Erreur lors du chargement du produit')
     } finally {
       setLoading(false)
     }
-  }, [productId, fetchValidationHistory])
+  }, [productId])
 
   useEffect(() => {
     if (productId) {
       fetchProduct()
+      fetchValidationHistory()
     }
-  }, [productId, fetchProduct])
+  }, [productId, fetchProduct, fetchValidationHistory])
 
   const handleApprove = async () => {
     if (!product || !session?.user?.id) return
 
-    setActionLoading(true)
     try {
-      const result = await approveProduct(
-        product.id,
-        session.user.id,
-        reason || 'Approuvé par admin'
-      )
+      setActionLoading(true)
+      const result = await approveProduct(product.id, session.user.id, reason.trim() || undefined)
+
       if (result.success) {
-        // Rafraîchir les données
-        await fetchProduct()
-        setReason('')
+        // Rediriger vers la liste des validations après approbation
+        router.push('/admin/validation')
+        return
       } else {
-        setError(result.error || "Erreur lors de l'approbation")
+        setError(result.error || 'Erreur lors de la validation')
       }
     } catch (err) {
-      console.error("Erreur lors de l'approbation:", err)
-      setError("Erreur lors de l'approbation de l'annonce")
+      console.error('Error approving product:', err)
+      setError('Erreur lors de la validation')
     } finally {
       setActionLoading(false)
     }
   }
 
   const handleReject = async () => {
-    if (!product || !session?.user?.id || !reason.trim()) {
-      setError('Une raison est requise pour refuser une annonce')
-      return
-    }
+    if (!product || !session?.user?.id || !reason.trim()) return
 
-    setActionLoading(true)
     try {
-      const result = await rejectProduct(product.id, session.user.id, reason)
+      setActionLoading(true)
+      const result = await rejectProduct(product.id, session.user.id, reason.trim())
+
       if (result.success) {
-        // Rafraîchir les données
-        await fetchProduct()
-        setReason('')
+        // Rediriger vers la liste des validations après refus
+        router.push('/admin/validation')
+        return
       } else {
         setError(result.error || 'Erreur lors du refus')
       }
     } catch (err) {
-      console.error('Erreur lors du refus:', err)
-      setError("Erreur lors du refus de l'annonce")
+      console.error('Error rejecting product:', err)
+      setError('Erreur lors du refus')
     } finally {
       setActionLoading(false)
     }
   }
 
   const handleRequestRecheck = async () => {
-    if (!product || !session?.user?.id || !reason.trim()) {
-      setError('Une raison est requise pour demander une révision')
-      return
-    }
+    if (!product || !session?.user?.id || !reason.trim()) return
 
-    setActionLoading(true)
     try {
-      const result = await requestRecheck(product.id, session.user.id, reason)
+      setActionLoading(true)
+      const result = await requestRecheck(product.id, session.user.id, reason.trim())
+
       if (result.success) {
-        // Rafraîchir les données
-        await fetchProduct()
-        setReason('')
+        // Rediriger vers la liste des validations après demande de révision
+        router.push('/admin/validation')
+        return
       } else {
         setError(result.error || 'Erreur lors de la demande de révision')
       }
     } catch (err) {
-      console.error('Erreur lors de la demande de révision:', err)
+      console.error('Error requesting recheck:', err)
       setError('Erreur lors de la demande de révision')
     } finally {
       setActionLoading(false)
     }
   }
 
-  const getStatusBadge = (status: ProductValidation) => {
-    switch (status) {
-      case ProductValidation.NotVerified:
-        return (
-          <Badge variant='secondary' className='bg-yellow-100 text-yellow-800'>
-            En attente
-          </Badge>
+  const handleEditProduct = () => {
+    setActiveTab('edit')
+  }
+
+  const handleSaveProduct = (updatedProduct: Product) => {
+    setProduct(updatedProduct)
+    setActiveTab('details')
+    // Rafraîchir les données
+    fetchProduct()
+  }
+
+  const handleCancelEdit = () => {
+    setActiveTab('details')
+  }
+
+  // Fonctions pour gérer les prix spéciaux
+  const handleSpecialPriceCreated = async (specialPriceData: SpecialPriceData) => {
+    try {
+      let result
+      
+      if (editingSpecialPrice) {
+        // Mode modification
+        result = await updateSpecialPrices(
+          editingSpecialPrice.id,
+          specialPriceData.pricesMga,
+          specialPriceData.pricesEuro,
+          specialPriceData.day,
+          specialPriceData.startDate,
+          specialPriceData.endDate,
+          specialPriceData.activate
         )
-      case ProductValidation.Approve:
-        return (
-          <Badge variant='secondary' className='bg-green-100 text-green-800'>
-            Approuvé
-          </Badge>
+      } else {
+        // Mode création
+        result = await createSpecialPrices(
+          specialPriceData.pricesMga,
+          specialPriceData.pricesEuro,
+          specialPriceData.day,
+          specialPriceData.startDate,
+          specialPriceData.endDate,
+          specialPriceData.activate,
+          productId!
         )
-      case ProductValidation.Refused:
-        return (
-          <Badge variant='secondary' className='bg-red-100 text-red-800'>
-            Refusé
-          </Badge>
-        )
-      case ProductValidation.RecheckRequest:
-        return (
-          <Badge variant='secondary' className='bg-blue-100 text-blue-800'>
-            Révision demandée
-          </Badge>
-        )
-      default:
-        return <Badge variant='secondary'>Inconnu</Badge>
+      }
+
+      if (result) {
+        // Si l'opération a réussi, recharger la liste des prix spéciaux
+        const updatedSpecialPrices = await findSpecialsPricesByProduct(productId!)
+        if (Array.isArray(updatedSpecialPrices)) {
+          setSpecialPrices(updatedSpecialPrices as unknown as SpecialPrice[])
+        }
+        setSpecialPriceModalOpen(false)
+        setEditingSpecialPrice(null)
+      } else {
+        console.error('Erreur lors de l\'opération sur le prix spécial')
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'opération sur le prix spécial:', error)
+    }
+  }
+
+  const handleEditSpecialPrice = (price: SpecialPrice) => {
+    setEditingSpecialPrice(price)
+    setSpecialPriceModalOpen(true)
+  }
+
+  const handleToggleSpecialPriceStatus = async (priceId: string, currentStatus: boolean) => {
+    try {
+      const newStatus = !currentStatus
+      const result = await toggleSpecialPriceStatus(priceId, newStatus)
+
+      if (result) {
+        // Si la mise à jour a réussi, recharger la liste des prix spéciaux
+        const updatedSpecialPrices = await findSpecialsPricesByProduct(productId!)
+        if (Array.isArray(updatedSpecialPrices)) {
+          setSpecialPrices(updatedSpecialPrices as unknown as SpecialPrice[])
+        }
+      } else {
+        console.error('Erreur lors de la mise à jour du statut du prix spécial')
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut du prix spécial:', error)
+    }
+  }
+
+  const handleDeleteSpecialPrice = async (priceId: string) => {
+    try {
+      // Demander confirmation avant suppression
+      if (!confirm('Êtes-vous sûr de vouloir supprimer ce prix spécial ?')) {
+        return
+      }
+
+      // Appeler le service pour supprimer le prix spécial
+      const result = await deleteSpecialsPricesByProduct(priceId)
+
+      if (result) {
+        // Si la suppression a réussi, recharger la liste des prix spéciaux
+        const updatedSpecialPrices = await findSpecialsPricesByProduct(productId!)
+        if (Array.isArray(updatedSpecialPrices)) {
+          setSpecialPrices(updatedSpecialPrices as unknown as SpecialPrice[])
+        }
+      } else {
+        console.error('Erreur lors de la suppression du prix spécial')
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression du prix spécial:', error)
     }
   }
 
@@ -371,559 +410,324 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
         className='space-y-8'
       >
         {/* Header */}
-        <div className='flex items-center justify-between'>
-          <div>
-            <Button variant='outline' asChild className='mb-4'>
-              <Link href='/admin/validation'>
-                <ArrowLeft className='h-4 w-4 mr-2' />
-                Retour à la liste
-              </Link>
-            </Button>
-            <h1 className='text-3xl font-bold text-gray-900'>{product.name}</h1>
-            <div className='flex items-center gap-4 mt-2'>
-              {getStatusBadge(product.validate)}
-              <span className='text-sm text-gray-500'>ID: {product.id}</span>
-            </div>
-          </div>
-          <Button variant='outline' asChild>
-            <Link href={`/host/${product.id}?preview=true`} target='_blank'>
-              Prévisualiser
-            </Link>
-          </Button>
+        <ProductHeader product={product} />
+
+        {/* Tabs */}
+        <div className='border-b border-gray-200'>
+          <nav className='flex space-x-8'>
+            <button
+              onClick={() => setActiveTab('details')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'details'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Détails
+            </button>
+            {product.isDraft && product.originalProduct && (
+              <button
+                onClick={() => setActiveTab('comparison')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'comparison'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Comparaison
+                <Badge variant="secondary" className="ml-2">Modifications</Badge>
+              </button>
+            )}
+            <button
+              onClick={handleEditProduct}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'edit'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Édition
+            </button>
+          </nav>
         </div>
 
-        <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
-          {/* Contenu principal */}
-          <div className='lg:col-span-2 space-y-6'>
-            {/* Images */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Photos de l&apos;annonce</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {product.img && product.img.length > 0 ? (
-                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                    {product.img.slice(0, 4).map((image, index) => (
-                      <div key={index} className='relative h-48 rounded-lg overflow-hidden'>
-                        <Image
-                          src={image.img}
-                          alt={`Photo ${index + 1}`}
-                          fill
-                          className='object-cover'
-                        />
-                      </div>
-                    ))}
-                    {product.img.length > 4 && (
-                      <div className='relative h-48 rounded-lg bg-gray-100 flex items-center justify-center'>
-                        <span className='text-gray-500'>
-                          +{product.img.length - 4} autres photos
-                        </span>
-                      </div>
-                    )}
+        {activeTab === 'details' && (
+          <>
+            <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
+              <ProductDetails product={product} />
+              <ProductSidebar
+                product={product}
+                reason={reason}
+                setReason={setReason}
+                actionLoading={actionLoading}
+                handleApprove={handleApprove}
+                handleReject={handleReject}
+                handleRequestRecheck={handleRequestRecheck}
+              />
+            </div>
+
+            {/* Section Prix spéciaux */}
+            <motion.div
+              className='mt-8'
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <div className='bg-white rounded-lg border border-gray-200 p-6'>
+                <div className='flex items-center justify-between mb-6'>
+                  <div className='flex items-center gap-3'>
+                    <div className='p-2 bg-orange-100 rounded-lg'>
+                      <Tag className='h-5 w-5 text-orange-600' />
+                    </div>
+                    <div>
+                      <h3 className='text-lg font-semibold text-gray-900'>Prix spéciaux</h3>
+                      <p className='text-sm text-gray-500'>
+                        {specialPrices.length} prix spécial{specialPrices.length > 1 ? 'aux' : ''} configuré{specialPrices.length > 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {specialPrices.length === 0 ? (
+                  <div className='text-center py-8'>
+                    <Tag className='h-12 w-12 text-gray-300 mx-auto mb-4' />
+                    <p className='text-gray-500'>Aucun prix spécial configuré pour ce produit</p>
                   </div>
                 ) : (
-                  <div className='h-48 bg-gray-100 rounded-lg flex items-center justify-center'>
-                    <div className='text-center'>
-                      <Home className='h-12 w-12 text-gray-400 mx-auto mb-2' />
-                      <p className='text-gray-500'>Aucune photo disponible</p>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Description */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Description</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className='text-gray-700 whitespace-pre-wrap'>{product.description}</p>
-              </CardContent>
-            </Card>
-
-            {/* Informations générales */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Informations générales</CardTitle>
-              </CardHeader>
-              <CardContent className='space-y-4'>
-                <div className='grid grid-cols-2 gap-4'>
-                  <div className='flex items-center'>
-                    <MapPin className='h-4 w-4 text-gray-400 mr-2' />
-                    <span className='text-sm'>{product.address}</span>
-                  </div>
-                  <div className='flex items-center'>
-                    <Euro className='h-4 w-4 text-gray-400 mr-2' />
-                    <span className='text-sm'>{product.basePrice}€ / nuit</span>
-                  </div>
-                  <div className='flex items-center'>
-                    <Home className='h-4 w-4 text-gray-400 mr-2' />
-                    <span className='text-sm'>{product.type.name}</span>
-                  </div>
-                  <div className='flex items-center'>
-                    <Users className='h-4 w-4 text-gray-400 mr-2' />
-                    <span className='text-sm'>
-                      {Number(product.minPeople || 0)} - {Number(product.maxPeople || 0)} personnes
-                    </span>
-                  </div>
-                  {product.room && (
-                    <div className='flex items-center'>
-                      <Bed className='h-4 w-4 text-gray-400 mr-2' />
-                      <span className='text-sm'>{Number(product.room)} chambre(s)</span>
-                    </div>
-                  )}
-                  {product.bathroom && (
-                    <div className='flex items-center'>
-                      <Bath className='h-4 w-4 text-gray-400 mr-2' />
-                      <span className='text-sm'>{Number(product.bathroom)} salle(s) de bain</span>
-                    </div>
-                  )}
-                  {product.sizeRoom && (
-                    <div className='flex items-center'>
-                      <Home className='h-4 w-4 text-gray-400 mr-2' />
-                      <span className='text-sm'>{product.sizeRoom} m²</span>
-                    </div>
-                  )}
-                  <div className='flex items-center'>
-                    <CheckSquare className='h-4 w-4 text-gray-400 mr-2' />
-                    <span className='text-sm'>
-                      Acceptation {product.autoAccept ? 'automatique' : 'manuelle'}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Conditions de location */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Conditions de location</CardTitle>
-              </CardHeader>
-              <CardContent className='space-y-3'>
-                <div className='grid grid-cols-2 gap-4 text-sm'>
-                  {product.minRent && (
-                    <div>
-                      <span className='font-medium'>Durée min :</span> {Number(product.minRent)}{' '}
-                      jour(s)
-                    </div>
-                  )}
-                  {product.maxRent && (
-                    <div>
-                      <span className='font-medium'>Durée max :</span> {Number(product.maxRent)}{' '}
-                      jour(s)
-                    </div>
-                  )}
-                  {product.advanceRent && (
-                    <div>
-                      <span className='font-medium'>Préavis :</span> {Number(product.advanceRent)}{' '}
-                      jour(s)
-                    </div>
-                  )}
-                  <div>
-                    <span className='font-medium'>Commission :</span> {product.commission}%
-                  </div>
-                  <div>
-                    <span className='font-medium'>Certifié :</span>{' '}
-                    {product.certified ? 'Oui' : 'Non'}
-                  </div>
-                  <div>
-                    <span className='font-medium'>Contrat :</span>{' '}
-                    {product.contract ? 'Oui' : 'Non'}
-                  </div>
-                </div>
-                <div className='pt-2 border-t'>
-                  <span className='font-medium text-sm'>Téléphone de contact :</span>
-                  <p className='text-sm text-gray-600'>{product.phone}</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Équipements */}
-            {product.equipments.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Équipements</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='grid grid-cols-2 gap-3'>
-                    {product.equipments.map(equipment => (
-                      <div key={equipment.id} className='flex items-center text-sm'>
-                        <CheckCircle className='h-4 w-4 text-green-500 mr-2' />
-                        <span>{equipment.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Services */}
-            {product.servicesList.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Services</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='grid grid-cols-1 gap-2'>
-                    {product.servicesList.map(service => (
-                      <div key={service.id} className='flex items-center text-sm'>
-                        <CheckCircle className='h-4 w-4 text-blue-500 mr-2' />
-                        <span>{service.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Repas */}
-            {product.mealsList.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Options de repas</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='grid grid-cols-1 gap-2'>
-                    {product.mealsList.map(meal => (
-                      <div key={meal.id} className='flex items-center text-sm'>
-                        <Utensils className='h-4 w-4 text-orange-500 mr-2' />
-                        <span>{meal.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Sécurité */}
-            {product.securities.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Mesures de sécurité</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='grid grid-cols-1 gap-2'>
-                    {product.securities.map(security => (
-                      <div key={security.id} className='flex items-center text-sm'>
-                        <Shield className='h-4 w-4 text-red-500 mr-2' />
-                        <span>{security.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Types de chambres */}
-            {product.typeRoom.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Types de chambres</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='space-y-3'>
-                    {product.typeRoom.map(room => (
-                      <div key={room.id} className='border-l-4 border-blue-500 pl-3'>
-                        <h4 className='font-medium text-sm'>{room.name}</h4>
-                        <p className='text-xs text-gray-600'>{room.description}</p>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Règles de la maison */}
-            {product.rules.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Règles de la maison</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {product.rules.map(rule => (
-                    <div key={rule.id} className='space-y-3'>
-                      <div className='grid grid-cols-2 gap-4 text-sm'>
-                        <div className='flex items-center'>
-                          <span className='font-medium mr-2'>Fumeur :</span>
-                          {rule.smokingAllowed ? (
-                            <CheckCircle className='h-4 w-4 text-green-500' />
-                          ) : (
-                            <X className='h-4 w-4 text-red-500' />
-                          )}
-                        </div>
-                        <div className='flex items-center'>
-                          <span className='font-medium mr-2'>Animaux :</span>
-                          {rule.petsAllowed ? (
-                            <CheckCircle className='h-4 w-4 text-green-500' />
-                          ) : (
-                            <X className='h-4 w-4 text-red-500' />
-                          )}
-                        </div>
-                        <div className='flex items-center'>
-                          <span className='font-medium mr-2'>Événements :</span>
-                          {rule.eventsAllowed ? (
-                            <CheckCircle className='h-4 w-4 text-green-500' />
-                          ) : (
-                            <X className='h-4 w-4 text-red-500' />
-                          )}
-                        </div>
-                        <div className='flex items-center'>
-                          <span className='font-medium mr-2'>Check-in auto :</span>
-                          {rule.selfCheckIn ? (
-                            <CheckCircle className='h-4 w-4 text-green-500' />
-                          ) : (
-                            <X className='h-4 w-4 text-red-500' />
-                          )}
-                        </div>
-                      </div>
-                      <div className='grid grid-cols-2 gap-4 text-sm pt-2 border-t'>
-                        <div>
-                          <span className='font-medium'>Check-in :</span> {rule.checkInTime}
-                        </div>
-                        <div>
-                          <span className='font-medium'>Check-out :</span> {rule.checkOutTime}
-                        </div>
-                        {rule.selfCheckInType && (
-                          <div className='col-span-2'>
-                            <span className='font-medium'>Type check-in auto :</span>{' '}
-                            {rule.selfCheckInType}
+                  <div className='space-y-4'>
+                    {specialPrices.map(price => (
+                      <div key={price.id} className='border rounded-lg p-4'>
+                        <div className='flex items-center justify-between mb-3'>
+                          <div className='flex items-center gap-3'>
+                            <div className='w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center'>
+                              <Tag className='h-5 w-5 text-orange-600' />
+                            </div>
+                            <div>
+                              <p className='font-medium text-gray-900'>
+                                {price.pricesEuro}€ / nuit
+                              </p>
+                              <p className='text-sm text-gray-500'>
+                                Prix MGA: {price.pricesMga}
+                              </p>
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Lieux à proximité */}
-            {product.nearbyPlaces.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Lieux à proximité</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='space-y-3'>
-                    {product.nearbyPlaces.map(place => (
-                      <div key={place.id} className='flex justify-between items-center text-sm'>
-                        <div>
-                          <span className='font-medium'>{place.name}</span>
-                          <p className='text-xs text-gray-600'>{place.transport}</p>
+                          <Badge className={price.activate ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                            {price.activate ? 'Actif' : 'Inactif'}
+                          </Badge>
                         </div>
-                        <div className='text-right'>
-                          <div>{place.distance}m</div>
-                          <div className='text-xs text-gray-600'>{place.duration} min</div>
+                        
+                        <div className='grid grid-cols-1 md:grid-cols-3 gap-4 text-sm'>
+                          <div>
+                            <p className='text-gray-600 mb-1'>Jours applicables</p>
+                            <div className='flex flex-wrap gap-1'>
+                              {price.day.map(day => (
+                                <Badge key={day} variant='outline' className='text-xs'>
+                                  {day}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <p className='text-gray-600 mb-1'>Période</p>
+                            <p className='text-gray-900'>
+                              {price.startDate && price.endDate ? (
+                                <>
+                                  {new Date(price.startDate).toLocaleDateString('fr-FR')} - {' '}
+                                  {new Date(price.endDate).toLocaleDateString('fr-FR')}
+                                </>
+                              ) : price.startDate ? (
+                                `À partir du ${new Date(price.startDate).toLocaleDateString('fr-FR')}`
+                              ) : price.endDate ? (
+                                `Jusqu'au ${new Date(price.endDate).toLocaleDateString('fr-FR')}`
+                              ) : (
+                                'Toute l\'année'
+                              )}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Options de transport */}
-            {product.transportOptions.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Options de transport</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='space-y-2'>
-                    {product.transportOptions.map(transport => (
-                      <div key={transport.id}>
-                        <div className='flex items-center text-sm'>
-                          <Car className='h-4 w-4 text-blue-500 mr-2' />
-                          <span className='font-medium'>{transport.name}</span>
-                        </div>
-                        {transport.description && (
-                          <p className='text-xs text-gray-600 ml-6'>{transport.description}</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Informations sur la propriété */}
-            {product.propertyInfo && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Accessibilité et informations supplémentaires</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='space-y-2'>
-                    <div className='grid grid-cols-2 gap-3 text-sm'>
-                      <div className='flex items-center'>
-                        <span className='font-medium mr-2'>Escaliers :</span>
-                        {product.propertyInfo.hasStairs ? (
-                          <CheckCircle className='h-4 w-4 text-yellow-500' />
-                        ) : (
-                          <X className='h-4 w-4 text-green-500' />
-                        )}
-                      </div>
-                      <div className='flex items-center'>
-                        <span className='font-medium mr-2'>Ascenseur :</span>
-                        {product.propertyInfo.hasElevator ? (
-                          <CheckCircle className='h-4 w-4 text-green-500' />
-                        ) : (
-                          <X className='h-4 w-4 text-red-500' />
-                        )}
-                      </div>
-                      <div className='flex items-center'>
-                        <span className='font-medium mr-2'>Accès handicapé :</span>
-                        {product.propertyInfo.hasHandicapAccess ? (
-                          <CheckCircle className='h-4 w-4 text-green-500' />
-                        ) : (
-                          <X className='h-4 w-4 text-red-500' />
-                        )}
-                      </div>
-                      <div className='flex items-center'>
-                        <span className='font-medium mr-2'>Animaux sur place :</span>
-                        {product.propertyInfo.hasPetsOnProperty ? (
-                          <CheckCircle className='h-4 w-4 text-yellow-500' />
-                        ) : (
-                          <X className='h-4 w-4 text-green-500' />
-                        )}
-                      </div>
-                    </div>
-                    {product.propertyInfo.additionalNotes && (
-                      <div className='pt-3 border-t'>
-                        <span className='font-medium text-sm'>Notes supplémentaires :</span>
-                        <p className='text-sm text-gray-600 mt-1'>
-                          {product.propertyInfo.additionalNotes}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {/* Sidebar */}
-          <div className='space-y-6'>
-            {/* Informations hôte */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Hôte</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className='flex items-center space-x-3'>
-                  {product.user[0]?.image ? (
-                    <Image
-                      src={product.user[0].image}
-                      alt='Photo de profil'
-                      width={48}
-                      height={48}
-                      className='rounded-full'
-                    />
-                  ) : (
-                    <div className='w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center'>
-                      <User className='h-6 w-6 text-gray-400' />
-                    </div>
-                  )}
-                  <div>
-                    <p className='font-medium'>
-                      {product.user[0]?.name && product.user[0]?.lastname
-                        ? `${product.user[0].name} ${product.user[0].lastname}`
-                        : product.user[0]?.name || product.user[0]?.lastname || 'Nom non défini'}
-                    </p>
-                    <p className='text-sm text-gray-500'>{product.user[0]?.email}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Actions de validation */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Actions de validation</CardTitle>
-              </CardHeader>
-              <CardContent className='space-y-4'>
-                <div>
-                  <Label htmlFor='reason'>Commentaire/Raison (optionnel pour approbation)</Label>
-                  <Textarea
-                    id='reason'
-                    placeholder='Ajoutez un commentaire ou une raison...'
-                    value={reason}
-                    onChange={e => setReason(e.target.value)}
-                    className='mt-1'
-                    rows={3}
-                  />
-                </div>
-
-                <div className='space-y-2'>
-                  {product.validate !== ProductValidation.Approve && (
-                    <Button
-                      onClick={handleApprove}
-                      disabled={actionLoading}
-                      className='w-full bg-green-600 hover:bg-green-700'
-                    >
-                      {actionLoading ? (
-                        <Loader2 className='h-4 w-4 animate-spin mr-2' />
-                      ) : (
-                        <CheckCircle className='h-4 w-4 mr-2' />
-                      )}
-                      Approuver l&apos;annonce
-                    </Button>
-                  )}
-
-                  {product.validate !== ProductValidation.RecheckRequest && (
-                    <Button
-                      onClick={handleRequestRecheck}
-                      disabled={actionLoading || !reason.trim()}
-                      variant='outline'
-                      className='w-full border-yellow-300 text-yellow-700 hover:bg-yellow-50'
-                    >
-                      {actionLoading ? (
-                        <Loader2 className='h-4 w-4 animate-spin mr-2' />
-                      ) : (
-                        <AlertTriangle className='h-4 w-4 mr-2' />
-                      )}
-                      Demander une révision
-                    </Button>
-                  )}
-
-                  {product.validate !== ProductValidation.Refused && (
-                    <Button
-                      onClick={handleReject}
-                      disabled={actionLoading || !reason.trim()}
-                      variant='destructive'
-                      className='w-full'
-                    >
-                      {actionLoading ? (
-                        <Loader2 className='h-4 w-4 animate-spin mr-2' />
-                      ) : (
-                        <XCircle className='h-4 w-4 mr-2' />
-                      )}
-                      Refuser l&apos;annonce
-                    </Button>
-                  )}
-                </div>
-
-                {!reason.trim() && (
-                  <p className='text-sm text-amber-600 bg-amber-50 p-2 rounded'>
-                    <strong>Info:</strong> Une raison est requise pour refuser ou demander une
-                    révision
-                  </p>
                 )}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+
+        {activeTab === 'comparison' && product.isDraft && product.originalProduct && (
+          <ComparisonView draft={product} original={product.originalProduct} />
+        )}
+
+        {activeTab === 'edit' && (
+          <>
+            <ProductEditForm
+              product={product}
+              onSave={handleSaveProduct}
+              onCancel={handleCancelEdit}
+            />
+
+            {/* Section Prix spéciaux - Édition */}
+            <motion.div
+              className='mt-8'
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <div className='bg-white rounded-lg border border-gray-200 p-6'>
+                <div className='flex items-center justify-between mb-6'>
+                  <div className='flex items-center gap-3'>
+                    <div className='p-2 bg-orange-100 rounded-lg'>
+                      <Tag className='h-5 w-5 text-orange-600' />
+                    </div>
+                    <div>
+                      <h3 className='text-lg font-semibold text-gray-900'>Gestion des prix spéciaux</h3>
+                      <p className='text-sm text-gray-500'>
+                        {specialPrices.length} prix spécial{specialPrices.length > 1 ? 'aux' : ''} configuré{specialPrices.length > 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setSpecialPriceModalOpen(true)}
+                    className='px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center gap-2'
+                  >
+                    <Tag className='h-4 w-4' />
+                    Créer un prix spécial
+                  </button>
+                </div>
+
+                {specialPrices.length === 0 ? (
+                  <div className='text-center py-8'>
+                    <Tag className='h-12 w-12 text-gray-300 mx-auto mb-4' />
+                    <p className='text-gray-500 mb-4'>Aucun prix spécial configuré</p>
+                    <button
+                      onClick={() => setSpecialPriceModalOpen(true)}
+                      className='px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center gap-2 mx-auto'
+                    >
+                      <Tag className='h-4 w-4' />
+                      Créer un prix spécial
+                    </button>
+                  </div>
+                ) : (
+                  <div className='space-y-4'>
+                    {specialPrices.map(price => (
+                      <div key={price.id} className='border rounded-lg p-4'>
+                        <div className='flex items-center justify-between mb-3'>
+                          <div className='flex items-center gap-3'>
+                            <div className='w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center'>
+                              <Tag className='h-5 w-5 text-orange-600' />
+                            </div>
+                            <div>
+                              <p className='font-medium text-gray-900'>
+                                {price.pricesEuro}€ / nuit
+                              </p>
+                              <p className='text-sm text-gray-500'>
+                                Prix MGA: {price.pricesMga}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge className={price.activate ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                            {price.activate ? 'Actif' : 'Inactif'}
+                          </Badge>
+                        </div>
+                        
+                        <div className='grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-4'>
+                          <div>
+                            <p className='text-gray-600 mb-1'>Jours applicables</p>
+                            <div className='flex flex-wrap gap-1'>
+                              {price.day.map(day => (
+                                <Badge key={day} variant='outline' className='text-xs'>
+                                  {day}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <p className='text-gray-600 mb-1'>Période</p>
+                            <p className='text-gray-900'>
+                              {price.startDate && price.endDate ? (
+                                <>
+                                  {new Date(price.startDate).toLocaleDateString('fr-FR')} - {' '}
+                                  {new Date(price.endDate).toLocaleDateString('fr-FR')}
+                                </>
+                              ) : price.startDate ? (
+                                `À partir du ${new Date(price.startDate).toLocaleDateString('fr-FR')}`
+                              ) : price.endDate ? (
+                                `Jusqu'au ${new Date(price.endDate).toLocaleDateString('fr-FR')}`
+                              ) : (
+                                'Toute l\'année'
+                              )}
+                            </p>
+                          </div>
+                          
+                          <div className='flex items-end justify-end gap-2'>
+                            <button
+                              onClick={() => handleEditSpecialPrice(price)}
+                              className='px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 transition-colors'
+                            >
+                              Modifier
+                            </button>
+                            <button
+                              onClick={() => handleToggleSpecialPriceStatus(price.id, price.activate)}
+                              className={`px-3 py-1 text-sm border rounded transition-colors flex items-center gap-1 ${
+                                price.activate 
+                                  ? 'border-orange-300 text-orange-600 hover:bg-orange-50' 
+                                  : 'border-green-300 text-green-600 hover:bg-green-50'
+                              }`}
+                            >
+                              {price.activate ? (
+                                <>
+                                  <PowerOff className='h-3 w-3' />
+                                  Désactiver
+                                </>
+                              ) : (
+                                <>
+                                  <Power className='h-3 w-3' />
+                                  Activer
+                                </>
+                              )}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteSpecialPrice(price.id)}
+                              className='px-3 py-1 text-sm border border-red-300 text-red-600 rounded hover:bg-red-50 transition-colors'
+                            >
+                              Supprimer
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
 
         {/* Historique des validations */}
-        <motion.div
-          className='mt-8'
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-        >
-          <ValidationHistoryCard history={validationHistory} />
-        </motion.div>
+        {activeTab === 'details' && (
+          <motion.div
+            className='mt-8'
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+          >
+            <ValidationHistoryCard history={validationHistory as unknown as Parameters<typeof ValidationHistoryCard>[0]['history']} />
+          </motion.div>
+        )}
       </motion.div>
+
+      {/* Modal de création/modification de prix spécial */}
+      <CreateSpecialPriceModal
+        isOpen={specialPriceModalOpen}
+        onClose={() => {
+          setSpecialPriceModalOpen(false)
+          setEditingSpecialPrice(null)
+        }}
+        onSpecialPriceCreated={handleSpecialPriceCreated}
+        editingSpecialPrice={editingSpecialPrice}
+      />
     </div>
   )
 }

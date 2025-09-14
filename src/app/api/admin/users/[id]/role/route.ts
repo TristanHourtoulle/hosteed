@@ -18,7 +18,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const { role } = await request.json()
 
     // Vérifier que le rôle est valide
-    const validRoles = ['ADMIN', 'BLOGWRITTER', 'HOST', 'HOST_VERIFIED', 'USER']
+    const validRoles = ['ADMIN', 'BLOGWRITER', 'HOST', 'HOST_VERIFIED', 'USER']
     if (!validRoles.includes(role)) {
       return NextResponse.json({ error: 'Rôle invalide' }, { status: 400 })
     }

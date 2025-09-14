@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Demande de paiement refusée</title>
+    <style>
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #f5f5f5;
+        padding: 20px;
+      }
+      .container {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        background: linear-gradient(135deg, #dc2626, #b91c1c);
+        color: white;
+        padding: 30px 25px;
+        text-align: center;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 600;
+      }
+      .content {
+        padding: 30px 25px;
+      }
+      .reject-badge {
+        background: #dc2626;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 500;
+        display: inline-block;
+        margin-bottom: 20px;
+      }
+      .reason-card {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+      }
+      .reason-card h3 {
+        margin: 0 0 10px 0;
+        color: #dc2626;
+        font-size: 16px;
+      }
+      .reason-card p {
+        margin: 5px 0;
+        color: #7f1d1d;
+        font-style: italic;
+        font-weight: 500;
+      }
+      .request-details {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+      }
+      .request-details h3 {
+        margin: 0 0 15px 0;
+        color: #1f2937;
+        font-size: 16px;
+      }
+      .detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      .detail-row:last-child {
+        border-bottom: none;
+      }
+      .detail-label {
+        font-weight: 500;
+        color: #6b7280;
+      }
+      .detail-value {
+        font-weight: 600;
+        color: #1f2937;
+      }
+      .amount {
+        color: #059669;
+        font-size: 18px;
+      }
+      .cta-button {
+        display: inline-block;
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        color: white;
+        padding: 14px 28px;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 600;
+        text-align: center;
+        margin: 20px 0;
+        transition: all 0.3s ease;
+      }
+      .cta-button:hover {
+        background: linear-gradient(135deg, #1d4ed8, #1e40af);
+        transform: translateY(-2px);
+      }
+      .footer {
+        background: #f9fafb;
+        padding: 25px;
+        text-align: center;
+        border-top: 1px solid #e5e7eb;
+      }
+      .footer p {
+        margin: 0 0 10px 0;
+        color: #6b7280;
+        font-size: 14px;
+      }
+      .logo {
+        font-size: 20px;
+        font-weight: bold;
+        color: #3b82f6;
+      }
+      .info-box {
+        background: #eff6ff;
+        border: 1px solid #dbeafe;
+        border-radius: 6px;
+        padding: 15px;
+        margin: 20px 0;
+        color: #1e40af;
+        font-size: 14px;
+      }
+      @media (max-width: 600px) {
+        body {
+          padding: 10px;
+        }
+        .header,
+        .content,
+        .footer {
+          padding: 20px 15px;
+        }
+        .detail-row {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 5px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>❌ Demande de paiement refusée</h1>
+        <p style="margin: 10px 0 0 0; opacity: 0.9">Hosteed - Plateforme de location</p>
+      </div>
+
+      <div class="content">
+        <div class="reject-badge">🚫 Demande refusée</div>
+
+        <p>Bonjour <strong>{{hostName}}</strong>,</p>
+
+        <p>
+          Nous regrettons de vous informer que votre demande de paiement a été refusée par notre
+          équipe après examen.
+        </p>
+
+        <div class="request-details">
+          <h3>📋 Détails de votre demande</h3>
+          <div class="detail-row">
+            <span class="detail-label">Propriété :</span>
+            <span class="detail-value">{{productTitle}}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Montant demandé :</span>
+            <span class="detail-value amount">{{amount}}</span>
+          </div>
+        </div>
+
+        <div class="reason-card">
+          <h3>📝 Raison du refus :</h3>
+          <p>"{{rejectionReason}}"</p>
+        </div>
+
+        <div class="info-box">
+          <strong>💡 Que faire maintenant ?</strong><br />
+          Si vous pensez qu'il y a une erreur ou si vous souhaitez contester cette décision, vous
+          pouvez nous contacter via votre espace hôte ou directement par email.
+        </div>
+
+        <p>
+          Pour consulter vos demandes de paiement et éventuellement soumettre une nouvelle demande,
+          accédez à votre espace hôte :
+        </p>
+
+        <center>
+          <a href="{{dashboardUrl}}" class="cta-button"> 🏠 Accéder à mon espace hôte </a>
+        </center>
+
+        <p style="margin-top: 25px; color: #6b7280; font-size: 14px">
+          Si vous avez des questions concernant ce refus, n'hésitez pas à contacter notre équipe
+          support qui se fera un plaisir de vous aider.
+        </p>
+
+        <p>
+          Cordialement,<br />
+          <strong>L'équipe Hosteed</strong>
+        </p>
+      </div>
+
+      <div class="footer">
+        <p class="logo">Hosteed</p>
+        <p>
+          Cet email a été envoyé automatiquement. Si vous avez des questions, contactez notre
+          support.
+        </p>
+        <p style="font-size: 12px; color: #9ca3af">© 2024 Hosteed. Tous droits réservés.</p>
+      </div>
+    </div>
+  </body>
+</html>

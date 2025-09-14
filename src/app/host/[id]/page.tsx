@@ -12,14 +12,17 @@ import PropertyHeader from './components/PropertyHeader'
 import ImageGallery from './components/ImageGallery'
 import PropertyOverview from './components/PropertyOverview'
 import PropertyHighlights from './components/PropertyHighlights'
+import PropertyCustomHighlights from './components/PropertyCustomHighlights'
 import PropertyDescription from './components/PropertyDescription'
 import PropertyAmenities from './components/PropertyAmenities'
 import PropertyServices from './components/PropertyServices'
+import PropertyIncludedServices from './components/PropertyIncludedServices'
+import PropertyExtras from './components/PropertyExtras'
 import PropertyMeals from './components/PropertyMeals'
 import PropertyLocation from './components/PropertyLocation'
 import PropertyRules from './components/PropertyRules'
 import PropertyInfo from './components/PropertyInfo'
-import PropertySafety from './components/PropertySafety'
+import PropertySecurities from './components/PropertySecurities'
 import CancellationPolicy from './components/CancellationPolicy'
 import PropertyReviews from './components/PropertyReviews'
 import HostInformation from './components/HostInformation'
@@ -58,6 +61,15 @@ interface Product {
   name: string
   description: string
   basePrice: string
+  originalBasePrice?: string
+  specialPriceApplied?: boolean
+  specialPriceInfo?: {
+    pricesMga: string
+    pricesEuro: string
+    day: string[]
+    startDate: Date | null
+    endDate: Date | null
+  }
   equipments: Equipment[]
   servicesList: Services[]
   mealsList: Meals[]
@@ -98,6 +110,29 @@ interface Product {
     partialRefundPercent: number
     additionalTerms?: string
   }
+  includedServices?: {
+    id: string
+    name: string
+    description?: string
+    icon?: string
+  }[]
+  extras?: {
+    id: string
+    name: string
+    description?: string
+    priceEUR: number
+    priceMGA: number
+  }[]
+  highlights?: {
+    id: string
+    name: string
+    description?: string
+    icon?: string
+  }[]
+  securities?: {
+    id: string
+    name: string
+  }[]
 }
 
 export default function ProductDetails() {
@@ -159,6 +194,7 @@ export default function ProductDetails() {
       try {
         const productData = await findProductById(id as string)
         if (productData) {
+          console.log(productData)
           setProduct(productData as unknown as Product)
         } else {
           setError('Produit non trouvé')
@@ -260,6 +296,7 @@ export default function ProductDetails() {
           prevImage={prevImage}
           setShowAllPhotos={setShowAllPhotos}
           setShowFullscreen={setShowFullscreen}
+          setCurrentImageIndex={setCurrentImageIndex}
         />
 
         {showFullscreen && (
@@ -306,7 +343,7 @@ export default function ProductDetails() {
               {/* Image */}
               <div className='relative max-h-[80vh] w-auto aspect-auto'>
                 <Image
-                  src={product.img[currentImageIndex]?.img || product.img[0].img}
+                  src={product.img[currentImageIndex]?.img || ''}
                   alt={product.name}
                   width={800}
                   height={600}
@@ -326,11 +363,17 @@ export default function ProductDetails() {
               product={{ certified: product.certified, autoAccept: product.autoAccept }}
             />
 
+            <PropertyCustomHighlights highlights={product.highlights || []} />
+
             <PropertyDescription description={product.description} />
 
             <PropertyAmenities equipments={product.equipments} />
 
             <PropertyServices services={product.servicesList} />
+
+            <PropertyIncludedServices services={product.includedServices || []} />
+
+            <PropertyExtras extras={product.extras || []} />
 
             <PropertyMeals meals={product.mealsList} />
 
@@ -356,7 +399,7 @@ export default function ProductDetails() {
 
             <PropertyInfo propertyInfo={product.propertyInfo} />
 
-            <PropertySafety />
+            <PropertySecurities securities={product.securities || []} />
 
             <CancellationPolicy policy={product.cancellationPolicy} />
 

@@ -3,7 +3,8 @@
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { ProductValidation, UserRole } from '@prisma/client'
+import { ProductValidation } from '@prisma/client'
+import { isAdmin } from '@/hooks/useAdminAuth'
 import { motion, Variants } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -42,6 +43,8 @@ interface Product {
   address: string
   basePrice: string
   validate: ProductValidation
+  isDraft?: boolean
+  originalProductId?: string | null
   img?: { img: string }[]
   user: {
     id: string
@@ -57,6 +60,8 @@ interface ValidationStats {
   approved: number
   rejected: number
   recheckRequest: number
+  modificationPending: number
+  drafts: number
   total: number
 }
 
@@ -71,6 +76,8 @@ export default function ValidationPage() {
     approved: 0,
     rejected: 0,
     recheckRequest: 0,
+    modificationPending: 0,
+    drafts: 0,
     total: 0,
   })
 
@@ -82,7 +89,7 @@ export default function ValidationPage() {
       return
     }
 
-    if (session.user.roles !== UserRole.ADMIN) {
+    if (!isAdmin(session.user.roles)) {
       router.push('/')
       return
     }

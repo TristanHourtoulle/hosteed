@@ -7,11 +7,12 @@ import { Button } from '@/components/ui/shadcnui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
 import { Calendar } from '@/components/ui/shadcnui/calendar'
 import { toast } from 'sonner'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import type { DateRange } from 'react-day-picker'
 import { getProfileImageUrl } from '@/lib/utils'
+import { calculateTotalRentPrice, type CommissionCalculation } from '@/lib/services/commission.service'
 
 interface Reviews {
   id: string
@@ -33,6 +34,15 @@ interface Product {
   name: string
   description: string
   basePrice: string
+  originalBasePrice?: string
+  specialPriceApplied?: boolean
+  specialPriceInfo?: {
+    pricesMga: string
+    pricesEuro: string
+    day: string[]
+    startDate: Date | null
+    endDate: Date | null
+  }
   equipments: Equipment[]
   servicesList: Services[]
   mealsList: Meals[]
@@ -79,6 +89,7 @@ export default function BookingCard({
     from: formData.arrivingDate ? new Date(formData.arrivingDate) : undefined,
     to: formData.leavingDate ? new Date(formData.leavingDate) : undefined,
   })
+  const [priceCalculation, setPriceCalculation] = useState<CommissionCalculation | null>(null)
 
   // Update parent component when date range changes
   const handleDateRangeChange = (range: DateRange | undefined) => {
@@ -114,11 +125,33 @@ export default function BookingCard({
   }
 
   const nights = calculateNights()
+
+  // Effect to calculate prices when dates change
+  useEffect(() => {
+    const updatePrices = async () => {
+      if (nights > 0) {
+        try {
+          const calculation = await calculateTotalRentPrice(
+            parseFloat(product.basePrice),
+            nights,
+            25 // cleaning fee
+          )
+          setPriceCalculation(calculation)
+        } catch (error) {
+          console.error('Error calculating prices:', error)
+          setPriceCalculation(null)
+        }
+      } else {
+        setPriceCalculation(null)
+      }
+    }
+
+    updatePrices()
+  }, [nights, product.basePrice])
+
   const subtotal = parseFloat(product.basePrice) * nights
-  const cleaningFee = 25
-  const serviceFee = 0
-  const taxes = Math.round(parseFloat(product.basePrice) * 0.1)
-  const total = subtotal + cleaningFee + serviceFee + taxes
+  const serviceFee = priceCalculation ? Math.round(priceCalculation.clientCommission) : 0
+  const total = priceCalculation ? Math.round(priceCalculation.clientPays) : subtotal + serviceFee
 
   const hasValidDates = dateRange?.from && dateRange?.to
 
@@ -127,9 +160,19 @@ export default function BookingCard({
       <div className='bg-white border border-gray-200 rounded-2xl shadow-xl p-6'>
         <div className='flex flex-col gap-4 mb-6'>
           <div className='flex items-center justify-between'>
-            <div className='flex items-baseline gap-2'>
-              <span className='text-2xl font-semibold text-gray-900'>{product.basePrice}€</span>
-              <span className='text-gray-600'>par nuit</span>
+            <div className='flex flex-col gap-2'>
+              <div className='flex items-baseline gap-2'>
+                <span className='text-2xl font-semibold text-gray-900'>{product.basePrice}€</span>
+                <span className='text-gray-600'>par nuit</span>
+              </div>
+              {product.specialPriceApplied && product.originalBasePrice && (
+                <div className='bg-gradient-to-r from-orange-100 to-red-100 border border-orange-200 rounded-lg px-3 py-2'>
+                  <div className='flex items-center gap-2'>
+                    <span className='text-sm text-orange-700 font-medium'>Prix de base:</span>
+                    <span className='text-sm text-orange-800 font-semibold line-through'>{product.originalBasePrice}€</span>
+                  </div>
+                </div>
+              )}
             </div>
             {product.reviews && product.reviews.length > 0 ? (
               <div className='flex items-center gap-1'>
@@ -140,7 +183,7 @@ export default function BookingCard({
             ) : (
               <div className='flex items-center gap-1'>
                 <Star className='h-4 w-4 text-gray-300' />
-                <span className='text-sm text-gray-500'>(aucune note)</span>
+                <span className='text-sm text-gray-500'>(aucun avis)</span>
               </div>
             )}
           </div>
@@ -261,9 +304,11 @@ export default function BookingCard({
                         {guests} {guests === 1 ? 'voyageur' : 'voyageurs'}
                       </span>
                     </div>
-                    <div className='text-xs text-gray-500'>
-                      Max {product.maxPeople || 8} voyageurs
-                    </div>
+                    {product.maxPeople && (
+                      <div className='text-xs text-gray-500'>
+                        Max {product.maxPeople} voyageur{product.maxPeople > 1 ? 's' : ''}
+                      </div>
+                    )}
                   </div>
                 </button>
               </PopoverTrigger>
@@ -294,10 +339,11 @@ export default function BookingCard({
                         size='icon'
                         className='rounded-full flex items-center justify-center h-8 w-8'
                         onClick={() => {
-                          if (guests < (product.maxPeople || 8)) {
+                          const maxGuests = product.maxPeople || 1
+                          if (guests < maxGuests) {
                             setGuests(guests + 1)
                           } else {
-                            toast.error(`Nombre maximum de voyageurs: ${product.maxPeople || 8}`)
+                            toast.error(`Nombre maximum de voyageurs: ${maxGuests}`)
                           }
                         }}
                       >
@@ -339,9 +385,11 @@ export default function BookingCard({
           {!hasValidDates ? 'Sélectionnez des dates' : !isAvailable ? 'Non disponible' : 'Réserver'}
         </Link>
 
-        <p className='text-center text-gray-600 text-sm mt-4'>
-          Vous ne serez pas débité pour le moment
-        </p>
+        <div className='mt-4 p-3 bg-green-50 border border-green-200 rounded-lg'>
+          <p className='text-center text-green-800 text-base font-medium'>
+            Vous ne serez pas débité pour le moment
+          </p>
+        </div>
 
         {hasValidDates && isAvailable && (
           <div className='mt-6 pt-6 border-t border-gray-200'>
@@ -354,19 +402,9 @@ export default function BookingCard({
               </div>
               <div className='flex justify-between items-center'>
                 <span className='text-gray-600 underline decoration-dotted cursor-help'>
-                  Frais de nettoyage
-                </span>
-                <span className='text-gray-900 font-medium'>{cleaningFee}€</span>
-              </div>
-              <div className='flex justify-between items-center'>
-                <span className='text-gray-600 underline decoration-dotted cursor-help'>
                   Frais de service Hosteed
                 </span>
                 <span className='text-gray-900 font-medium'>{serviceFee}€</span>
-              </div>
-              <div className='flex justify-between items-center'>
-                <span className='text-gray-600'>Taxes et frais</span>
-                <span className='text-gray-900 font-medium'>{taxes}€</span>
               </div>
               <div className='border-t border-gray-200 pt-3 flex justify-between items-center font-semibold text-base'>
                 <span>Total</span>

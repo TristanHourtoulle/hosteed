@@ -66,7 +66,6 @@ export const LoginForm = () => {
         }
         return
       }
-
       router.push('/host')
     } catch (error) {
       console.error(error)

@@ -3,6 +3,7 @@
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { isAdmin } from '@/hooks/useAdminAuth'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
@@ -54,7 +55,7 @@ export default function AdminOverview() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!session?.user?.roles || session.user.roles !== 'ADMIN') {
+    if (!session?.user?.roles || !isAdmin(session.user.roles)) {
       router.push('/')
     }
   }, [session, router])

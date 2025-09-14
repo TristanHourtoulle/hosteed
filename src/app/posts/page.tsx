@@ -35,7 +35,7 @@ export default function PostsPage() {
   const [sortBy, setSortBy] = useState<SortOption>('recent')
   const { data: session } = useSession()
 
-  const canCreatePost = session?.user?.roles === 'ADMIN' || session?.user?.roles === 'BLOGWRITTER'
+  const canCreatePost = session?.user?.roles === 'ADMIN' || session?.user?.roles === 'BLOGWRITER'
 
   useEffect(() => {
     async function fetchPosts() {
@@ -130,7 +130,7 @@ export default function PostsPage() {
                   <p className='text-lg text-gray-600 mb-8 line-clamp-3'>
                     {truncateText(featuredPost.content, 200)}
                   </p>
-                  <Link href={`/posts/${featuredPost.id}`}>
+                  <Link href={`/posts/article/${featuredPost.slug || featuredPost.id}`}>
                     <Button size='lg' className='group'>
                       Lire l&apos;article
                       <ChevronRight className='ml-2 h-4 w-4 transition-transform group-hover:translate-x-1' />
@@ -221,7 +221,7 @@ export default function PostsPage() {
                       </div>
                     </div>
                   </div>
-                  <Link href={`/posts/${post.id}`} className='absolute inset-0'>
+                  <Link href={`/posts/article/${post.slug || post.id}`} className='absolute inset-0'>
                     <span className='sr-only'>Lire l&apos;article</span>
                   </Link>
                 </article>

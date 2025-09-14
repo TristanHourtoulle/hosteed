@@ -9,14 +9,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
 
-    const { imageBase64 }: { imageBase64: string } = await request.json()
+    const { photo }: { photo: string } = await request.json()
 
-    if (!imageBase64) {
+    if (!photo) {
       return NextResponse.json({ error: 'Image requise' }, { status: 400 })
     }
 
     // Validation simple du format base64
-    if (!imageBase64.startsWith('data:image/')) {
+    if (!photo.startsWith('data:image/')) {
       return NextResponse.json({ error: "Format d'image invalide" }, { status: 400 })
     }
 
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     const updatedUser = await prisma.user.update({
       where: { email: session.user.email },
       data: {
-        profilePicture: imageBase64,
+        profilePicture: photo,
       },
       select: {
         id: true,

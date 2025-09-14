@@ -3,6 +3,7 @@
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { isFullAdmin } from '@/hooks/useAdminAuth'
 import { createUser, findAllUser } from '@/lib/services/user.service'
 import { User } from '@prisma/client'
 import Link from 'next/link'
@@ -53,6 +54,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/shadcnui/dropdown-menu'
 import { RoleBadge, RoleIcon } from '@/components/ui/RoleBadge'
+import { EmailVerificationPanel } from './components/EmailVerificationPanel'
 import { toast } from 'sonner'
 
 const containerVariants: Variants = {
@@ -192,7 +194,7 @@ export default function UsersPage() {
   const getRoleDisplayName = (role: string) => {
     const roleNames: { [key: string]: string } = {
       ADMIN: 'Administrateur',
-      BLOGWRITTER: 'Rédacteur Blog',
+      BLOGWRITER: 'Rédacteur Blog',
       HOST: 'Hôte',
       HOST_VERIFIED: 'Hôte Vérifié',
       USER: 'Utilisateur',
@@ -201,25 +203,27 @@ export default function UsersPage() {
   }
 
   useEffect(() => {
-    if (!session?.user?.roles || session.user.roles !== 'ADMIN') {
+    if (!session?.user?.roles || !isFullAdmin(session.user.roles)) {
       router.push('/')
     }
   }, [session, router])
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const usersData = await findAllUser()
-        if (usersData) {
-          setUsers(usersData as unknown as User[])
-        }
-      } catch (err) {
-        setError('Erreur lors du chargement des utilisateurs')
-        console.error(err)
-      } finally {
-        setLoading(false)
+  const fetchUsers = async () => {
+    try {
+      setLoading(true)
+      const usersData = await findAllUser()
+      if (usersData) {
+        setUsers(usersData as unknown as User[])
       }
+    } catch (err) {
+      setError('Erreur lors du chargement des utilisateurs')
+      console.error(err)
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
     fetchUsers()
   }, [])
 
@@ -354,6 +358,7 @@ export default function UsersPage() {
               <Filter className='h-4 w-4 mr-2' />
               Filtrer
             </Button>
+            <EmailVerificationPanel users={users} refreshUsers={fetchUsers} />
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
                 <Button className='bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl shadow-lg'>
@@ -596,7 +601,7 @@ export default function UsersPage() {
                     <SelectItem value='USER'>👤 Utilisateur</SelectItem>
                     <SelectItem value='HOST'>🏠 Hôte</SelectItem>
                     <SelectItem value='HOST_VERIFIED'>✅ Hôte Vérifié</SelectItem>
-                    <SelectItem value='BLOGWRITTER'>✍️ Rédacteur Blog</SelectItem>
+                    <SelectItem value='BLOGWRITER'>✍️ Rédacteur Blog</SelectItem>
                     <SelectItem value='ADMIN'>👑 Administrateur</SelectItem>
                   </SelectContent>
                 </Select>

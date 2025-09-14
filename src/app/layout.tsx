@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
-import { SessionProvider } from 'next-auth/react'
+import { ClientProviders } from '@/components/providers/ClientProviders'
 import Navbar from '@/components/ui/header/Navbar'
+import Footer from '@/components/ui/Footer'
 import { Toaster } from '@/components/ui/shadcnui/sonner'
 
 const geistSans = Geist({
@@ -16,6 +17,7 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://hosteed.com'),
   title: 'Hosteed',
   description: 'Le meilleur de Madagascar, rien que pour vous.',
 }
@@ -26,13 +28,14 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang='en'>
+    <html lang='fr'>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <SessionProvider>
+        <ClientProviders>
           <Navbar />
           <main className='min-h-screen'>{children}</main>
+          <Footer />
           <Toaster />
-        </SessionProvider>
+        </ClientProviders>
       </body>
     </html>
   )

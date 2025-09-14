@@ -207,13 +207,17 @@ export function useProductSearch() {
         (!filters.minPrice || price >= parseFloat(filters.minPrice)) &&
         (!filters.maxPrice || price <= parseFloat(filters.maxPrice))
 
+      // Vérification du nombre de personnes : le logement doit pouvoir accueillir au moins le nombre d'invités demandé
       const matchesPeople =
+        // Si des invités sont spécifiés dans la recherche (barre de recherche moderne)
+        (guests <= 1 || (product.maxPeople && Number(product.maxPeople) >= guests)) &&
+        // Filtres avancés pour min/max people
         (!filters.minPeople ||
           !product.minPeople ||
           Number(product.minPeople) >= parseInt(filters.minPeople)) &&
         (!filters.maxPeople ||
           !product.maxPeople ||
-          Number(product.maxPeople) <= parseInt(filters.maxPeople))
+          Number(product.maxPeople) >= parseInt(filters.maxPeople))
 
       const matchesRooms =
         (!filters.minRooms ||
@@ -296,7 +300,7 @@ export function useProductSearch() {
         setLoading(true)
         const allProducts = await findAllProducts()
         if (allProducts) {
-          let filteredProducts = filterProducts(allProducts)
+          let filteredProducts = filterProducts(allProducts as unknown as Product[])
           filteredProducts = applySpecialFilters(filteredProducts)
           setProducts(filteredProducts)
         }
@@ -310,7 +314,7 @@ export function useProductSearch() {
 
     fetchProducts()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedType, location, filters, featured, popular, recent, promo])
+  }, [selectedType, location, filters, featured, popular, recent, promo, guests])
 
   // Location suggestions
   useEffect(() => {
@@ -351,7 +355,7 @@ export function useProductSearch() {
     if (data.checkOut) {
       setFilters(prev => ({ ...prev, leavingDate: data.checkOut }))
     }
-    if (data.guests) {
+    if (data.guests !== undefined && data.guests >= 0) {
       setGuests(data.guests)
     }
     setShowSuggestions(false)

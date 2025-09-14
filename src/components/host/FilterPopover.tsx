@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { Filter, Users, Home, Euro, CheckCircle } from 'lucide-react'
+import { Filter, Users, Home, Euro, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@/shadcnui'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/shadcnui/popover'
@@ -49,12 +49,18 @@ export default function FilterPopover({
   services: _services,
   typeRooms: _typeRooms,
 }: FilterPopoverProps) {
-  // Suppress unused variable warnings for props that are passed but not used in current implementation
-  void _securities
-  void _meals
+  // Suppress unused variable warnings for props that are passed but not used in current implementation  
   void _typeRooms
   const [localFilters, setLocalFilters] = useState<FilterState>(filters)
   const [isOpen, setIsOpen] = useState(false)
+  
+  // States pour contrôler l'affichage des sections déroulables
+  const [expandedSections, setExpandedSections] = useState({
+    equipments: false,
+    services: false,
+    meals: false,
+    securities: false,
+  })
 
   const handleCheckboxChange = (filterType: keyof FilterState, value: string, checked: boolean) => {
     setLocalFilters(prev => ({
@@ -69,6 +75,13 @@ export default function FilterPopover({
     setLocalFilters(prev => ({
       ...prev,
       [field]: value,
+    }))
+  }
+
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section],
     }))
   }
 
@@ -179,6 +192,7 @@ export default function FilterPopover({
                   </label>
                   <input
                     type='number'
+                    min="0"
                     placeholder='0 €'
                     value={localFilters.minPrice}
                     onChange={e => handleInputChange('minPrice', e.target.value)}
@@ -191,6 +205,7 @@ export default function FilterPopover({
                   </label>
                   <input
                     type='number'
+                    min="0"
                     placeholder='1000 €'
                     value={localFilters.maxPrice}
                     onChange={e => handleInputChange('maxPrice', e.target.value)}
@@ -217,6 +232,7 @@ export default function FilterPopover({
                   </label>
                   <input
                     type='number'
+                    min="1"
                     placeholder='1'
                     value={localFilters.minPeople}
                     onChange={e => handleInputChange('minPeople', e.target.value)}
@@ -229,6 +245,7 @@ export default function FilterPopover({
                   </label>
                   <input
                     type='number'
+                    min="1"
                     placeholder='10'
                     value={localFilters.maxPeople}
                     onChange={e => handleInputChange('maxPeople', e.target.value)}
@@ -255,6 +272,7 @@ export default function FilterPopover({
                   </label>
                   <input
                     type='number'
+                    min="0"
                     placeholder='1'
                     value={localFilters.minRooms}
                     onChange={e => handleInputChange('minRooms', e.target.value)}
@@ -267,6 +285,7 @@ export default function FilterPopover({
                   </label>
                   <input
                     type='number'
+                    min="0"
                     placeholder='5'
                     value={localFilters.maxRooms}
                     onChange={e => handleInputChange('maxRooms', e.target.value)}
@@ -282,6 +301,7 @@ export default function FilterPopover({
                   </label>
                   <input
                     type='number'
+                    min="0"
                     placeholder='1'
                     value={localFilters.minBathrooms}
                     onChange={e => handleInputChange('minBathrooms', e.target.value)}
@@ -294,6 +314,7 @@ export default function FilterPopover({
                   </label>
                   <input
                     type='number'
+                    min="0"
                     placeholder='3'
                     value={localFilters.maxBathrooms}
                     onChange={e => handleInputChange('maxBathrooms', e.target.value)}
@@ -309,6 +330,7 @@ export default function FilterPopover({
                   </label>
                   <input
                     type='number'
+                    min="0"
                     placeholder='20'
                     value={localFilters.sizeMin}
                     onChange={e => handleInputChange('sizeMin', e.target.value)}
@@ -321,10 +343,11 @@ export default function FilterPopover({
                   </label>
                   <input
                     type='number'
+                    min="0"
                     placeholder='200'
                     value={localFilters.sizeMax}
                     onChange={e => handleInputChange('sizeMax', e.target.value)}
-                    className='w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                    className='w-full p-2 text-sm border border-gray-300 rounded-md focus:border-transparent'
                   />
                 </div>
               </div>
@@ -377,65 +400,191 @@ export default function FilterPopover({
           {/* Équipements */}
           {_equipments.length > 0 && (
             <Card>
-              <CardHeader className='pb-3'>
-                <CardTitle className='text-base'>Équipements</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className='grid grid-cols-1 sm:grid-cols-2 gap-2'>
-                  {_equipments.slice(0, 6).map((equipment: { id: string; name: string }) => (
-                    <label
-                      key={equipment.id}
-                      className='flex items-center space-x-2 cursor-pointer'
-                    >
-                      <input
-                        type='checkbox'
-                        checked={localFilters.selectedEquipments.includes(equipment.id)}
-                        onChange={e =>
-                          handleCheckboxChange('selectedEquipments', equipment.id, e.target.checked)
-                        }
-                        className='w-4 h-4 text-blue-600 rounded focus:ring-blue-500'
-                      />
-                      <span className='text-sm text-gray-700'>{equipment.name}</span>
-                    </label>
-                  ))}
-                </div>
-                {_equipments.length > 6 && (
-                  <p className='text-xs text-gray-500 mt-2'>
-                    +{_equipments.length - 6} autres équipements
-                  </p>
-                )}
-              </CardContent>
+              <div 
+                className='pb-3 cursor-pointer' 
+                onClick={() => toggleSection('equipments')}
+              >
+                <CardHeader className='pb-3'>
+                  <CardTitle className='text-base flex items-center justify-between'>
+                    <span>Équipements</span>
+                    <div className='flex items-center space-x-2'>
+                      {localFilters.selectedEquipments.length > 0 && (
+                        <span className='text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full'>
+                          {localFilters.selectedEquipments.length}
+                        </span>
+                      )}
+                      {expandedSections.equipments ? (
+                        <ChevronUp className='h-4 w-4 text-gray-500' />
+                      ) : (
+                        <ChevronDown className='h-4 w-4 text-gray-500' />
+                      )}
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+              </div>
+              {expandedSections.equipments && (
+                <CardContent>
+                  <div className='grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto'>
+                    {_equipments.map((equipment: { id: string; name: string }) => (
+                      <label
+                        key={equipment.id}
+                        className='flex items-center space-x-2 cursor-pointer p-2 hover:bg-gray-50 rounded'
+                      >
+                        <input
+                          type='checkbox'
+                          checked={localFilters.selectedEquipments.includes(equipment.id)}
+                          onChange={e =>
+                            handleCheckboxChange('selectedEquipments', equipment.id, e.target.checked)
+                          }
+                          className='w-4 h-4 text-blue-600 rounded focus:ring-blue-500 flex-shrink-0'
+                        />
+                        <span className='text-sm text-gray-700'>{equipment.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </CardContent>
+              )}
             </Card>
           )}
 
           {/* Services */}
           {_services.length > 0 && (
             <Card>
-              <CardHeader className='pb-3'>
-                <CardTitle className='text-base'>Services</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className='grid grid-cols-1 sm:grid-cols-2 gap-2'>
-                  {_services.slice(0, 6).map((service: { id: string; name: string }) => (
-                    <label key={service.id} className='flex items-center space-x-2 cursor-pointer'>
-                      <input
-                        type='checkbox'
-                        checked={localFilters.selectedServices.includes(service.id)}
-                        onChange={e =>
-                          handleCheckboxChange('selectedServices', service.id, e.target.checked)
-                        }
-                        className='w-4 h-4 text-blue-600 rounded focus:ring-blue-500'
-                      />
-                      <span className='text-sm text-gray-700'>{service.name}</span>
-                    </label>
-                  ))}
-                </div>
-                {_services.length > 6 && (
-                  <p className='text-xs text-gray-500 mt-2'>
-                    +{_services.length - 6} autres services
-                  </p>
-                )}
-              </CardContent>
+              <div 
+                className='pb-3 cursor-pointer' 
+                onClick={() => toggleSection('services')}
+              >
+                <CardHeader className='pb-3'>
+                  <CardTitle className='text-base flex items-center justify-between'>
+                    <span>Services</span>
+                    <div className='flex items-center space-x-2'>
+                      {localFilters.selectedServices.length > 0 && (
+                        <span className='text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full'>
+                          {localFilters.selectedServices.length}
+                        </span>
+                      )}
+                      {expandedSections.services ? (
+                        <ChevronUp className='h-4 w-4 text-gray-500' />
+                      ) : (
+                        <ChevronDown className='h-4 w-4 text-gray-500' />
+                      )}
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+              </div>
+              {expandedSections.services && (
+                <CardContent>
+                  <div className='grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto'>
+                    {_services.map((service: { id: string; name: string }) => (
+                      <label key={service.id} className='flex items-center space-x-2 cursor-pointer p-2 hover:bg-gray-50 rounded'>
+                        <input
+                          type='checkbox'
+                          checked={localFilters.selectedServices.includes(service.id)}
+                          onChange={e =>
+                            handleCheckboxChange('selectedServices', service.id, e.target.checked)
+                          }
+                          className='w-4 h-4 text-blue-600 rounded focus:ring-blue-500 flex-shrink-0'
+                        />
+                        <span className='text-sm text-gray-700'>{service.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+          )}
+
+          {/* Repas */}
+          {_meals.length > 0 && (
+            <Card>
+              <div 
+                className='pb-3 cursor-pointer' 
+                onClick={() => toggleSection('meals')}
+              >
+                <CardHeader className='pb-3'>
+                  <CardTitle className='text-base flex items-center justify-between'>
+                    <span>Repas</span>
+                    <div className='flex items-center space-x-2'>
+                      {localFilters.selectedMeals.length > 0 && (
+                        <span className='text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full'>
+                          {localFilters.selectedMeals.length}
+                        </span>
+                      )}
+                      {expandedSections.meals ? (
+                        <ChevronUp className='h-4 w-4 text-gray-500' />
+                      ) : (
+                        <ChevronDown className='h-4 w-4 text-gray-500' />
+                      )}
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+              </div>
+              {expandedSections.meals && (
+                <CardContent>
+                  <div className='grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto'>
+                    {_meals.map((meal: { id: string; name: string }) => (
+                      <label key={meal.id} className='flex items-center space-x-2 cursor-pointer p-2 hover:bg-gray-50 rounded'>
+                        <input
+                          type='checkbox'
+                          checked={localFilters.selectedMeals.includes(meal.id)}
+                          onChange={e =>
+                            handleCheckboxChange('selectedMeals', meal.id, e.target.checked)
+                          }
+                          className='w-4 h-4 text-blue-600 rounded focus:ring-blue-500 flex-shrink-0'
+                        />
+                        <span className='text-sm text-gray-700'>{meal.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+          )}
+
+          {/* Sécurité */}
+          {_securities.length > 0 && (
+            <Card>
+              <div 
+                className='pb-3 cursor-pointer' 
+                onClick={() => toggleSection('securities')}
+              >
+                <CardHeader className='pb-3'>
+                  <CardTitle className='text-base flex items-center justify-between'>
+                    <span>Sécurité</span>
+                    <div className='flex items-center space-x-2'>
+                      {localFilters.selectedSecurities.length > 0 && (
+                        <span className='text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full'>
+                          {localFilters.selectedSecurities.length}
+                        </span>
+                      )}
+                      {expandedSections.securities ? (
+                        <ChevronUp className='h-4 w-4 text-gray-500' />
+                      ) : (
+                        <ChevronDown className='h-4 w-4 text-gray-500' />
+                      )}
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+              </div>
+              {expandedSections.securities && (
+                <CardContent>
+                  <div className='grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto'>
+                    {_securities.map((security: { id: string; name: string }) => (
+                      <label key={security.id} className='flex items-center space-x-2 cursor-pointer p-2 hover:bg-gray-50 rounded'>
+                        <input
+                          type='checkbox'
+                          checked={localFilters.selectedSecurities.includes(security.id)}
+                          onChange={e =>
+                            handleCheckboxChange('selectedSecurities', security.id, e.target.checked)
+                          }
+                          className='w-4 h-4 text-blue-600 rounded focus:ring-blue-500 flex-shrink-0'
+                        />
+                        <span className='text-sm text-gray-700'>{security.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </CardContent>
+              )}
             </Card>
           )}
         </div>

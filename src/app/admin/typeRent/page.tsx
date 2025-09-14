@@ -3,6 +3,7 @@
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { isAdmin } from '@/hooks/useAdminAuth'
 import Link from 'next/link'
 import { motion, Variants } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
@@ -20,6 +21,7 @@ import {
 } from '@/components/ui/shadcnui/dialog'
 import { Label } from '@/components/ui/shadcnui/label'
 import { Badge } from '@/components/ui/shadcnui/badge'
+import { Checkbox } from '@/components/ui/shadcnui/checkbox'
 import {
   Loader2,
   Search,
@@ -30,14 +32,15 @@ import {
   CheckCircle,
   Edit3,
   Trash2,
+  Hotel,
 } from 'lucide-react'
 import {
   findAllTypeRent,
   createTypeRent,
   updateTypeRent,
-  deleteTypeRent,
 } from '@/lib/services/typeRent.service'
 import { TypeRentInterface } from '@/lib/interface/typeRentInterface'
+import DeleteTypeModal from './components/DeleteTypeModal'
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -72,6 +75,7 @@ export default function TypeRentPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [newTypeName, setNewTypeName] = useState('')
   const [newTypeDescription, setNewTypeDescription] = useState('')
+  const [newIsHotelType, setNewIsHotelType] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // États pour l'édition
@@ -79,13 +83,14 @@ export default function TypeRentPage() {
   const [editingType, setEditingType] = useState<TypeRentInterface | null>(null)
   const [editTypeName, setEditTypeName] = useState('')
   const [editTypeDescription, setEditTypeDescription] = useState('')
+  const [editIsHotelType, setEditIsHotelType] = useState(false)
 
   // États pour la suppression
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [deletingType, setDeletingType] = useState<TypeRentInterface | null>(null)
 
   useEffect(() => {
-    if (!session?.user?.roles || session.user.roles !== 'ADMIN') {
+    if (!session?.user?.roles || !isAdmin(session.user.roles)) {
       router.push('/')
     }
   }, [session, router])
@@ -118,12 +123,13 @@ export default function TypeRentPage() {
 
     setIsSubmitting(true)
     try {
-      const newType = await createTypeRent(newTypeName, newTypeDescription)
+      const newType = await createTypeRent(newTypeName, newTypeDescription, newIsHotelType)
 
       if (newType) {
         setTypeRents([...typeRents, newType])
         setNewTypeName('')
         setNewTypeDescription('')
+        setNewIsHotelType(false)
         setIsAddDialogOpen(false)
       } else {
         setError('Erreur lors de la création du type de logement')
@@ -140,6 +146,7 @@ export default function TypeRentPage() {
     setEditingType(type)
     setEditTypeName(type.name || '')
     setEditTypeDescription(type.description || '')
+    setEditIsHotelType(type.isHotelType || false)
     setIsEditDialogOpen(true)
   }
 
@@ -148,12 +155,13 @@ export default function TypeRentPage() {
 
     setIsSubmitting(true)
     try {
-      const updatedType = await updateTypeRent(editingType.id, editTypeName, editTypeDescription)
+      const updatedType = await updateTypeRent(editingType.id, editTypeName, editTypeDescription, editIsHotelType)
 
       if (updatedType) {
         setTypeRents(typeRents.map(type => (type.id === editingType.id ? updatedType : type)))
         setEditTypeName('')
         setEditTypeDescription('')
+        setEditIsHotelType(false)
         setEditingType(null)
         setIsEditDialogOpen(false)
       } else {
@@ -169,29 +177,18 @@ export default function TypeRentPage() {
 
   const handleDeleteType = (type: TypeRentInterface) => {
     setDeletingType(type)
-    setIsDeleteDialogOpen(true)
+    setIsDeleteModalOpen(true)
   }
 
-  const handleConfirmDelete = async () => {
-    if (!deletingType) return
+  const handleDeleteSuccess = (typeId: string) => {
+    setTypeRents(typeRents.filter(type => type.id !== typeId))
+    setDeletingType(null)
+    setIsDeleteModalOpen(false)
+  }
 
-    setIsSubmitting(true)
-    try {
-      const success = await deleteTypeRent(deletingType.id)
-
-      if (success) {
-        setTypeRents(typeRents.filter(type => type.id !== deletingType.id))
-        setDeletingType(null)
-        setIsDeleteDialogOpen(false)
-      } else {
-        setError('Erreur lors de la suppression du type de logement')
-      }
-    } catch (err) {
-      console.error('Erreur lors de la suppression:', err)
-      setError('Erreur lors de la suppression du type de logement')
-    } finally {
-      setIsSubmitting(false)
-    }
+  const handleDeleteError = (message: string) => {
+    setError(message)
+    setTimeout(() => setError(null), 5000)
   }
 
   if (loading) {
@@ -301,6 +298,22 @@ export default function TypeRentPage() {
                         }
                       />
                     </div>
+                    <div className='flex items-center space-x-2 pt-2'>
+                      <Checkbox
+                        id='isHotelType'
+                        checked={newIsHotelType}
+                        onCheckedChange={(checked) => setNewIsHotelType(checked as boolean)}
+                      />
+                      <Label 
+                        htmlFor='isHotelType' 
+                        className='text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer'
+                      >
+                        <div className='flex items-center gap-2'>
+                          <Hotel className='h-4 w-4 text-purple-600' />
+                          <span>Fonctionne comme un hôtel (gestion multi-chambres)</span>
+                        </div>
+                      </Label>
+                    </div>
                   </div>
                   <DialogFooter>
                     <Button
@@ -364,6 +377,22 @@ export default function TypeRentPage() {
                         }
                       />
                     </div>
+                    <div className='flex items-center space-x-2 pt-2'>
+                      <Checkbox
+                        id='editIsHotelType'
+                        checked={editIsHotelType}
+                        onCheckedChange={(checked) => setEditIsHotelType(checked as boolean)}
+                      />
+                      <Label 
+                        htmlFor='editIsHotelType' 
+                        className='text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer'
+                      >
+                        <div className='flex items-center gap-2'>
+                          <Hotel className='h-4 w-4 text-orange-600' />
+                          <span>Fonctionne comme un hôtel (gestion multi-chambres)</span>
+                        </div>
+                      </Label>
+                    </div>
                   </div>
                   <DialogFooter>
                     <Button
@@ -394,47 +423,17 @@ export default function TypeRentPage() {
                 </DialogContent>
               </Dialog>
 
-              {/* Dialog de suppression */}
-              <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <DialogContent className='sm:max-w-[425px]'>
-                  <DialogHeader>
-                    <DialogTitle className='flex items-center gap-2'>
-                      <Trash2 className='h-5 w-5 text-red-600' />
-                      Supprimer le type de logement
-                    </DialogTitle>
-                    <DialogDescription>
-                      Êtes-vous sûr de vouloir supprimer le type &quot;{deletingType?.name}&quot; ?
-                      Cette action est irréversible et peut affecter les produits existants.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <DialogFooter>
-                    <Button
-                      variant='outline'
-                      onClick={() => setIsDeleteDialogOpen(false)}
-                      disabled={isSubmitting}
-                    >
-                      Annuler
-                    </Button>
-                    <Button
-                      onClick={handleConfirmDelete}
-                      disabled={isSubmitting}
-                      variant='destructive'
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                          Suppression...
-                        </>
-                      ) : (
-                        <>
-                          <Trash2 className='h-4 w-4 mr-2' />
-                          Supprimer
-                        </>
-                      )}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              {/* Modal de suppression améliorée */}
+              <DeleteTypeModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => {
+                  setIsDeleteModalOpen(false)
+                  setDeletingType(null)
+                }}
+                typeToDelete={deletingType}
+                onDeleteSuccess={handleDeleteSuccess}
+                onError={handleDeleteError}
+              />
             </div>
           </div>
         </motion.div>
@@ -486,12 +485,23 @@ export default function TypeRentPage() {
                             </CardTitle>
                           </div>
                         </div>
-                        <Badge
-                          variant='secondary'
-                          className='bg-green-50 text-green-700 border-green-200'
-                        >
-                          Actif
-                        </Badge>
+                        <div className='flex gap-1'>
+                          {type.isHotelType && (
+                            <Badge
+                              variant='secondary'
+                              className='bg-purple-50 text-purple-700 border-purple-200 flex items-center gap-1'
+                            >
+                              <Hotel className='h-3 w-3' />
+                              Hôtel
+                            </Badge>
+                          )}
+                          <Badge
+                            variant='secondary'
+                            className='bg-green-50 text-green-700 border-green-200'
+                          >
+                            Actif
+                          </Badge>
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent className='pt-0'>
@@ -507,7 +517,7 @@ export default function TypeRentPage() {
                         >
                           <Link href={`/admin/typeRent/${type.id}`}>
                             <Eye className='h-4 w-4 mr-2' />
-                            Voir détails
+                            Voir logements
                           </Link>
                         </Button>
                         <Button
