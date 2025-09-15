@@ -53,6 +53,8 @@ interface Product {
     email: string
     image?: string | null
   }[]
+  isRecentlyModified?: boolean
+  wasRecheckRequested?: boolean
 }
 
 interface ValidationStats {

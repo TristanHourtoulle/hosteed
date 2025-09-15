@@ -7,8 +7,12 @@ import prisma from '@/lib/prisma'
 
 export async function getProductsForValidation() {
   try {
-    const products = await validationService.getProductsForValidation()
-    return { success: true, data: products }
+    const result = await validationService.getProductsForValidationPaginated({ 
+      page: 1, 
+      limit: 100,
+      includeLightweight: false 
+    })
+    return { success: true, data: result.products }
   } catch (error) {
     console.error('Error fetching products for validation:', error)
     return { success: false, error: 'Impossible de charger les produits' }
