@@ -110,7 +110,8 @@ class RedisCache {
   /**
    * Set with TTL
    */
-  async set(_key: string, _value: unknown): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async set(key: string, value: unknown): Promise<void> {
     try {
       // Redis is disabled
       return
@@ -119,7 +120,7 @@ class RedisCache {
 
       await this.client.setex(key, ttlSeconds, JSON.stringify(value)) */
     } catch (error) {
-      console.error(`Cache set error for key ${_key}:`, error)
+      console.error(`Cache set error for key ${key}:`, error)
     }
   }
 
@@ -199,7 +200,8 @@ class RedisCache {
     }
   }
 
-  async hset(_key: string, _field: string, _value: unknown, _ttl?: number): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async hset(key: string, field: string, value: unknown, ttl?: number): Promise<void> {
     try {
       // Redis is disabled
       return
@@ -211,7 +213,7 @@ class RedisCache {
         await this.client.expire(key, ttl)
       } */
     } catch (error) {
-      console.error(`Cache hset error for key ${_key}, field ${_field}:`, error)
+      console.error(`Cache hset error for key ${key}, field ${field}:`, error)
     }
   }
 
@@ -416,9 +418,11 @@ export class UserSessionCacheService {
    */
   async cacheUserActivity(
     userId: string,
-    activity: { type: string; data: Record<string, unknown>; timestamp: number }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _activity: { type: string; data: Record<string, unknown>; timestamp: number }
   ): Promise<void> {
-    const cacheKey = `user:${userId}:activity`
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _cacheKey = `user:${userId}:activity`
     
     // Keep last 50 activities - Redis is disabled
     // await this.cache.client.lpush(cacheKey, JSON.stringify(activity))

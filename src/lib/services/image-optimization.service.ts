@@ -4,8 +4,16 @@
  * Provides migration path from base64 to CDN + WebP/AVIF optimization
  */
 
-import sharp from 'sharp'
 import prisma from '@/lib/prisma'
+
+// Dynamic import for sharp to handle environments where it's not available
+let sharp: typeof import('sharp') | null = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  sharp = require('sharp');
+} catch {
+  console.warn('Sharp not available, falling back to browser-based optimization');
+}
 
 // ================================
 // OPTIMIZED IMAGE INTERFACES
@@ -88,6 +96,10 @@ export class ImageOptimizer {
       const imageBuffer = this.extractImageBuffer(base64Data)
       
       // Get image metadata
+      if (!sharp) {
+        throw new Error('Sharp not available for image processing');
+      }
+      
       const metadata = await sharp(imageBuffer).metadata()
       
       if (!metadata.width || !metadata.height) {
@@ -161,8 +173,19 @@ export class ImageOptimizer {
     original: Buffer
     thumbnail?: Buffer
     webp: Buffer
-    avif: Buffer
+    avif?: Buffer
   }> {
+    if (!sharp) {
+      // Fallback: return original image without processing
+      console.warn('Sharp not available, returning original image');
+      return {
+        original: imageBuffer,
+        thumbnail: options.generateThumbnail ? imageBuffer : undefined,
+        webp: imageBuffer,
+        avif: undefined
+      };
+    }
+
     const baseProcessor = sharp(imageBuffer)
 
     // Original optimized version
@@ -180,6 +203,7 @@ export class ImageOptimizer {
     // Thumbnail version
     const thumbnail = options.generateThumbnail ? 
       await baseProcessor
+        .clone()
         .resize(options.thumbnailSize, options.thumbnailSize, { 
           fit: 'cover',
           position: 'center' 
@@ -189,6 +213,7 @@ export class ImageOptimizer {
 
     // WebP version (better compression)
     const webp = await baseProcessor
+      .clone()
       .resize(options.width, options.height, { 
         fit: 'inside',
         withoutEnlargement: true 
@@ -197,13 +222,20 @@ export class ImageOptimizer {
       .toBuffer()
 
     // AVIF version (best compression for modern browsers)
-    const avif = await baseProcessor
-      .resize(options.width, options.height, { 
-        fit: 'inside',
-        withoutEnlargement: true 
-      })
-      .avif({ quality: options.quality })
-      .toBuffer()
+    let avif: Buffer | undefined;
+    try {
+      avif = await baseProcessor
+        .clone()
+        .resize(options.width, options.height, { 
+          fit: 'inside',
+          withoutEnlargement: true 
+        })
+        .avif({ quality: options.quality })
+        .toBuffer()
+    } catch (error) {
+      console.warn('AVIF generation failed, skipping:', error);
+      avif = undefined;
+    }
 
     return { original, thumbnail, webp, avif }
   }
@@ -225,6 +257,11 @@ export class ImageOptimizer {
    */
   private async generateBlurhash(imageBuffer: Buffer): Promise<string> {
     try {
+      if (!sharp) {
+        // Fallback: return a default blurhash
+        return 'LEHV6nWB2yk8pyo0adR*.7kCMdnj';
+      }
+
       // Using a small version for blurhash
       await sharp(imageBuffer)
         .resize(32, 32, { fit: 'inside' })
@@ -249,6 +286,10 @@ export class ImageOptimizer {
    */
   private async extractDominantColor(imageBuffer: Buffer): Promise<string> {
     try {
+      if (!sharp) {
+        return '#CCCCCC'; // Default gray color
+      }
+      
       const { data } = await sharp(imageBuffer)
         .resize(1, 1)
         .raw()
@@ -266,9 +307,9 @@ export class ImageOptimizer {
    * Upload variants to CDN (implementation depends on provider)
    */
   private async uploadToCDN(
-    variants: { original: Buffer; thumbnail?: Buffer; webp: Buffer; avif: Buffer },
+    variants: { original: Buffer; thumbnail?: Buffer; webp: Buffer; avif?: Buffer },
     productId: string
-  ): Promise<{ original: string; thumbnail?: string; webp: string; avif: string }> {
+  ): Promise<{ original: string; thumbnail?: string; webp: string; avif?: string }> {
     // This is a placeholder implementation
     // In production, implement actual CDN upload (AWS S3, Cloudinary, etc.)
     
@@ -280,7 +321,7 @@ export class ImageOptimizer {
       original: `${baseUrl}/${productId}/original_${timestamp}.jpg`,
       thumbnail: variants.thumbnail ? `${baseUrl}/${productId}/thumb_${timestamp}.jpg` : undefined,
       webp: `${baseUrl}/${productId}/optimized_${timestamp}.webp`,
-      avif: `${baseUrl}/${productId}/optimized_${timestamp}.avif`
+      avif: variants.avif ? `${baseUrl}/${productId}/optimized_${timestamp}.avif` : undefined
     }
   }
 }
@@ -334,7 +375,8 @@ export class ImageMigrationService {
               }
 
               // Process and optimize image
-              const optimizedResult = await this.imageOptimizer.processBase64Image(
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              const _optimizedResult = await this.imageOptimizer.processBase64Image(
                 image.img,
                 productId,
                 { generateThumbnail: true, generateBlurhash: true }
@@ -346,7 +388,7 @@ export class ImageMigrationService {
               await prisma.images.update({
                 where: { id: image.id },
                 data: {
-                  img: optimizedResult.original.originalUrl || image.img
+                  img: _optimizedResult.original.originalUrl || image.img
                 }
               })
               */
@@ -461,6 +503,49 @@ export function generatePictureSources(imageData: OptimizedImageData): Array<{
   }
 
   return sources
+}
+
+// ================================
+// MIGRATION HELPER FUNCTIONS
+// ================================
+
+/**
+ * Simple optimization function for database migration
+ * Converts base64 images to WebP format with compression
+ */
+export async function optimizeImageForDatabase(base64Image: string): Promise<string> {
+  try {
+    // If sharp is not available, just return the original
+    if (!sharp) {
+      console.warn('Sharp not available, returning original image for:', base64Image.substring(0, 50) + '...');
+      return base64Image;
+    }
+
+    // Extract the image data
+    const matches = base64Image.match(/^data:image\/([a-zA-Z]*);base64,(.*)$/);
+    if (!matches) {
+      throw new Error('Invalid base64 image format');
+    }
+
+    const imageBuffer = Buffer.from(matches[2], 'base64');
+    
+    // Convert to WebP with good compression
+    const optimizedBuffer = await sharp(imageBuffer)
+      .webp({ 
+        quality: parseInt(process.env.WEBP_QUALITY || '80'),
+        effort: 4  // Good balance of compression vs speed
+      })
+      .toBuffer();
+
+    // Return as base64 data URL
+    const optimizedBase64 = optimizedBuffer.toString('base64');
+    return `data:image/webp;base64,${optimizedBase64}`;
+
+  } catch (error) {
+    console.error('Image optimization failed:', error);
+    // Return original on error
+    return base64Image;
+  }
 }
 
 // Export singleton instance
