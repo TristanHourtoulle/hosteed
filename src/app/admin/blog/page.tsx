@@ -358,7 +358,7 @@ export default function BlogManagementPage() {
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Êtes-vous sûr de vouloir supprimer l'article "{post.title}" ? 
+                                    Êtes-vous sûr de vouloir supprimer l&apos;article &quot;{post.title}&quot; ? 
                                     Cette action est irréversible.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>

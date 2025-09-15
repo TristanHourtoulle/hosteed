@@ -18,9 +18,14 @@ interface EmailConfig {
 // Configuration adaptative selon les providers email
 const getOptimalConfig = (email: string): EmailConfig => {
   const domain = email.split('@')[1]?.toLowerCase()
-  
+
   // Configuration spécifique pour Outlook/Office365
-  if (domain?.includes('outlook') || domain?.includes('epitech') || domain?.includes('microsoft') || domain?.includes('hotmail')) {
+  if (
+    domain?.includes('outlook') ||
+    domain?.includes('epitech') ||
+    domain?.includes('microsoft') ||
+    domain?.includes('hotmail')
+  ) {
     return {
       port: 587,
       secure: false,
@@ -34,10 +39,10 @@ const getOptimalConfig = (email: string): EmailConfig => {
         'List-Unsubscribe': '<mailto:hello@hosteed.com?subject=unsubscribe>',
         'Return-Path': process.env.EMAIL_LOGIN,
         'Reply-To': process.env.EMAIL_LOGIN,
-      }
+      },
     }
   }
-  
+
   // Configuration optimisée pour Gmail
   if (domain?.includes('gmail') || domain?.includes('googlemail')) {
     return {
@@ -50,10 +55,10 @@ const getOptimalConfig = (email: string): EmailConfig => {
         'X-Priority': '3',
         'Return-Path': process.env.EMAIL_LOGIN,
         'Reply-To': process.env.EMAIL_LOGIN,
-      }
+      },
     }
   }
-  
+
   // Configuration pour iCloud et autres providers
   return {
     port: 587,
@@ -66,18 +71,18 @@ const getOptimalConfig = (email: string): EmailConfig => {
       'X-Priority': '3',
       'Return-Path': process.env.EMAIL_LOGIN,
       'Reply-To': process.env.EMAIL_LOGIN,
-    }
+    },
   }
 }
 
-// Fonction de retry intelligent  
+// Fonction de retry intelligent
 async function retryEmailSend(
   transportOptions: Record<string, unknown>,
   mailOptions: Mail.Options,
   maxRetries: number = 3
 ): Promise<nodemailer.SentMessageInfo> {
   let lastError: Error | null = null
-  
+
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const transport = nodemailer.createTransport(transportOptions)
@@ -88,16 +93,16 @@ async function retryEmailSend(
     } catch (error) {
       lastError = error as Error
       console.warn(`⚠️ Tentative ${attempt}/${maxRetries} échouée:`, error)
-      
+
       // Attendre avant de réessayer (backoff exponentiel)
       if (attempt < maxRetries) {
         const waitTime = Math.pow(2, attempt) * 1000 // 2s, 4s, 8s
-        console.log(`⏳ Retry dans ${waitTime/1000}s...`)
+        console.log(`⏳ Retry dans ${waitTime / 1000}s...`)
         await new Promise(resolve => setTimeout(resolve, waitTime))
       }
     }
   }
-  
+
   throw lastError
 }
 
@@ -114,7 +119,7 @@ export async function SendMail(
     return NextResponse.json({ message: 'Email sending disabled', skipped: true })
   }
 
-  const config = getOptimalConfig(email);
+  const config = getOptimalConfig(email)
 
   const transportConfig = {
     host: 'ssl0.ovh.net',
@@ -146,7 +151,7 @@ export async function SendMail(
     pool: true,
     maxConnections: 5,
     maxMessages: 100,
-  };
+  }
 
   const mailOptions: Mail.Options = {
     from: `"Hosteed Platform" <${process.env.EMAIL_LOGIN}>`,
@@ -157,7 +162,7 @@ export async function SendMail(
     headers: {
       ...config.headers,
       'Message-ID': `<${Date.now()}-${Math.random().toString(36)}@hosteed.com>`,
-      'Date': new Date().toUTCString(),
+      Date: new Date().toUTCString(),
       'X-Entity-Ref-ID': `hosteed-${Date.now()}`,
     } as Record<string, string>,
     ...(isHtml ? { html: message } : { text: message }),
@@ -167,11 +172,11 @@ export async function SendMail(
     console.log(`📧 Envoi email vers ${email} (provider: ${email.split('@')[1]})`)
     const result = await retryEmailSend(transportConfig, mailOptions)
     console.log('EMAIL ENVOYÉ AVEC SUCCÈS')
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: 'Email sent',
       messageId: result.messageId,
       provider: email.split('@')[1],
-      config: config.port
+      config: config.port,
     })
   } catch (err) {
     console.error("ERREUR D'ENVOI D'EMAIL:", err)
@@ -180,7 +185,7 @@ export async function SendMail(
         error: err instanceof Error ? err.message : 'Erreur inconnue',
         details: err,
         email: email,
-        provider: email.split('@')[1]
+        provider: email.split('@')[1],
       },
       { status: 500 }
     )
@@ -202,7 +207,7 @@ export async function sendEmailFromTemplate(
 
   try {
     console.log(`📧 Préparation email template ${templateName} vers ${email}`)
-    
+
     // Lire le template
     const templatePath = path.join(process.cwd(), 'public/templates/emails', `${templateName}.html`)
     let htmlContent = fs.readFileSync(templatePath, 'utf8')
@@ -223,7 +228,7 @@ export async function sendEmailFromTemplate(
 
     // Configuration adaptative selon le provider
     const config = getOptimalConfig(email)
-    
+
     const transportConfig = {
       host: 'ssl0.ovh.net',
       port: config.port,
@@ -265,24 +270,26 @@ export async function sendEmailFromTemplate(
       headers: {
         ...config.headers,
         'Message-ID': `<${Date.now()}-${Math.random().toString(36)}@hosteed.com>`,
-        'Date': new Date().toUTCString(),
+        Date: new Date().toUTCString(),
         'X-Entity-Ref-ID': `hosteed-template-${templateName}-${Date.now()}`,
         'X-Template-Name': templateName,
       } as Record<string, string>,
       html: htmlContent,
     }
 
-    console.log(`📧 Envoi template ${templateName} vers ${email} (provider: ${email.split('@')[1]})`)
+    console.log(
+      `📧 Envoi template ${templateName} vers ${email} (provider: ${email.split('@')[1]})`
+    )
     const result = await retryEmailSend(transportConfig, mailOptions)
     console.log(`EMAIL TEMPLATE ${templateName} ENVOYÉ AVEC SUCCÈS À ${email}`)
-    
-    return { 
-      success: true, 
+
+    return {
+      success: true,
       message: 'Email sent',
       messageId: result.messageId,
       template: templateName,
       provider: email.split('@')[1],
-      config: config.port
+      config: config.port,
     }
   } catch (err) {
     console.error(`ERREUR D'ENVOI D'EMAIL TEMPLATE ${templateName}:`, err)
@@ -291,7 +298,7 @@ export async function sendEmailFromTemplate(
       error: err instanceof Error ? err.message : 'Erreur inconnue',
       template: templateName,
       email: email,
-      provider: email.split('@')[1]
+      provider: email.split('@')[1],
     }
   }
 }
