@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { X, Calendar, Euro, DollarSign, Clock, CheckCircle } from 'lucide-react'
+import { X, Calendar, Euro, DollarSign, CheckCircle } from 'lucide-react'
 import { DayEnum } from '@prisma/client'
 
 interface SpecialPrice {

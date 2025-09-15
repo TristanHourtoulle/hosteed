@@ -70,9 +70,9 @@ const getOptimalConfig = (email: string): EmailConfig => {
   }
 }
 
-// Fonction de retry intelligent
+// Fonction de retry intelligent  
 async function retryEmailSend(
-  transportConfig: nodemailer.TransportOptions,
+  transportOptions: Record<string, unknown>,
   mailOptions: Mail.Options,
   maxRetries: number = 3
 ): Promise<nodemailer.SentMessageInfo> {
@@ -80,7 +80,7 @@ async function retryEmailSend(
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const transport = nodemailer.createTransport(transportConfig)
+      const transport = nodemailer.createTransport(transportOptions)
       const result = await transport.sendMail(mailOptions)
       transport.close()
       console.log(`✅ Email envoyé avec succès (tentative ${attempt})`)
@@ -114,7 +114,9 @@ export async function SendMail(
     return NextResponse.json({ message: 'Email sending disabled', skipped: true })
   }
 
-  const transport = nodemailer.createTransport({
+  const config = getOptimalConfig(email);
+
+  const transportConfig = {
     host: 'ssl0.ovh.net',
     port: config.port,
     secure: config.secure,
@@ -144,7 +146,7 @@ export async function SendMail(
     pool: true,
     maxConnections: 5,
     maxMessages: 100,
-  } as nodemailer.TransportOptions
+  };
 
   const mailOptions: Mail.Options = {
     from: `"Hosteed Platform" <${process.env.EMAIL_LOGIN}>`,
@@ -252,7 +254,7 @@ export async function sendEmailFromTemplate(
       pool: true,
       maxConnections: 5,
       maxMessages: 100,
-    } as nodemailer.TransportOptions
+    }
 
     const mailOptions: Mail.Options = {
       from: `"Hosteed Platform" <${process.env.EMAIL_LOGIN}>`,

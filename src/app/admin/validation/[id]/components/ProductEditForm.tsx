@@ -5,10 +5,8 @@ import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import {
   Home,
-  MapPin,
   Users,
   Euro,
   Wifi,
@@ -42,7 +40,6 @@ import BookingCostSummary from '@/components/ui/BookingCostSummary'
 import SortableImageGrid from '@/components/ui/SortableImageGrid'
 import ImageGalleryPreview from '@/components/ui/ImageGalleryPreview'
 import CommissionDisplay from '@/components/ui/CommissionDisplay'
-import PhoneInput from '@/components/ui/PhoneInput'
 import ErrorAlert, { ErrorDetails } from '@/components/ui/ErrorAlert'
 import { compressImages, formatFileSize } from '@/lib/utils/imageCompression'
 
