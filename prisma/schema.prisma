@@ -199,6 +199,17 @@ model Product {
   draftProducts     Product[] @relation("ProductDraft") // Draft versions of this product
 
   SpecialPrices SpecialPrices[]
+
+  // Performance indexes
+  @@index([validate])
+  @@index([userManager])
+  @@index([typeId])
+  @@index([latitude, longitude])
+  @@index([certified])
+  @@index([validate, certified])
+  @@index([userManager, validate])
+  @@index([isDraft])
+  @@index([originalProductId])
 }
 
 // Nouveau modèle pour les commentaires de validation
@@ -217,6 +228,12 @@ model ValidationComment {
   product  Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   admin    User    @relation("AdminComments", fields: [adminId], references: [id])
   resolver User?   @relation("CommentResolver", fields: [resolvedBy], references: [id])
+
+  // Performance indexes
+  @@index([productId])
+  @@index([adminId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 // Nouveau modèle pour l'historique des validations
@@ -234,6 +251,11 @@ model ValidationHistory {
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   admin   User?   @relation("ValidationAdmin", fields: [adminId], references: [id])
   host    User?   @relation("ValidationHost", fields: [hostId], references: [id])
+
+  // Performance indexes
+  @@index([productId])
+  @@index([adminId])
+  @@index([createdAt])
 }
 
 // Énumérations pour les commentaires de validation
@@ -323,6 +345,18 @@ model Rent {
   RentRejection RentRejection?
   UserRating    UserRating[] // Nouvelle relation pour les notes bidirectionnelles
   extras        RentExtra[] // Relation avec les extras sélectionnés
+
+  // Performance indexes
+  @@index([userId])
+  @@index([productId])
+  @@index([status])
+  @@index([payment])
+  @@index([arrivingDate])
+  @@index([leavingDate])
+  @@index([arrivingDate, leavingDate])
+  @@index([productId, arrivingDate, leavingDate])
+  @@index([userId, status])
+  @@index([confirmed])
 }
 
 model RentRejection {
@@ -350,6 +384,10 @@ model UnAvailableProduct {
   endDate   DateTime
   productId String
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Performance indexes
+  @@index([productId])
+  @@index([startDate, endDate])
 }
 
 model DisableRent {
@@ -381,6 +419,12 @@ model Review {
   isAdminCreated Boolean  @default(false) // Si c'est un faux avis créé par un admin
   adminId        String? // ID de l'admin qui a créé le faux avis
   adminUser      User?    @relation("AdminReviews", fields: [adminId], references: [id])
+
+  // Performance indexes
+  @@index([productId])
+  @@index([approved])
+  @@index([publishDate])
+  @@index([rentId])
 }
 
 // Nouveau modèle pour les notes bidirectionnelles (hôte <-> locataire)
@@ -476,6 +520,13 @@ model User {
 
   // Relation pour les articles de blog
   authoredPosts Post[] @relation("AuthoredPosts") // Articles de blog créés par cet utilisateur
+
+  // Performance indexes
+  @@index([roles])
+  @@index([isVerifiedTraveler])
+  @@index([isAccountConfirmed])
+  @@index([stripeCustomerId])
+  @@index([createdAt])
 }
 
 model Account {
@@ -702,6 +753,11 @@ model SpecialPrices {
   activate   Boolean   @default(true)
   productId  String
   product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Performance indexes
+  @@index([productId])
+  @@index([activate])
+  @@index([startDate, endDate])
 }
 
 // Configuration des commissions (globale pour la plateforme)
