@@ -9,6 +9,9 @@ export async function findProductById(id: string) {
         const product = await prisma.product.findUnique({
             where: {id},
             include: {
+                isCertificated: true,
+                certificatedDate: true,
+                certificatedBy: true,
                 img: true,
                 type: true,
                 equipments: true,
@@ -62,6 +65,9 @@ export async function findAllProducts() {
               validate: ProductValidation.Approve
             },
             include: {
+                isCertificated: true,
+                certificatedDate: true,
+                certificatedBy: true,
                 img: true,
                 type: true,
                 equipments: true,
@@ -92,6 +98,9 @@ export async function findAllProductByHostId(id: string) {
                 }
             },
             include: {
+                isCertificated: true,
+                certificatedDate: true,
+                certificatedBy: true,
                 img: true,
                 type: true,
                 equipments: true,
@@ -133,7 +142,9 @@ export async function createProduct(params: {
     services: string[],
     meals: string[],
     images: string[],
-    userId: string[]
+    userId: string[],
+    isCertificated?: boolean,
+    certificatedBy?: string,
 }) {
     try {
         const type = await prisma.typeRent.findFirst({
@@ -143,9 +154,18 @@ export async function createProduct(params: {
         });
         if (!type) return null;
 
+        if (params.isCertificated && !params.certificatedBy) {
+            return null;
+        }
+
         const createdProduct = await prisma.product.create({
             data: {
                 name: params.name,
+                isCertificated: params.isCertificated,
+                certificatedDate: params.isCertificated ? new Date() : undefined,
+                certificatedUserRelation: params.isCertificated && params.certificatedBy
+                    ? { connect: { id: params.certificatedBy } }
+                    : undefined,
                 description: params.description,
                 address: params.address,
                 longitude: params.longitude,

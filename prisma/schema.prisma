@@ -46,52 +46,56 @@ model Security {
 }
 
 model Product {
-  id               String            @id @default(cuid())
-  name             String
-  description      String
-  address          String
-  basePrice        String
-  room             BigInt?
-  bathroom         BigInt?
-  arriving         Int
-  leaving          Int
-  autoAccept       Boolean
-  equipement       BigInt?
-  meal             BigInt?
-  services         BigInt?
-  security         BigInt?
-  minRent          BigInt?
-  maxRent          BigInt?
-  advanceRent      BigInt?
-  delayTime        BigInt?
-  categories       BigInt
-  minPeople        BigInt?
-  maxPeople        BigInt?
-  commission       Int               @default(0)
-  validate         ProductValidation @default(NotVerified)
-  userManager      BigInt
-  typeId           String
-  phone            String
-  latitude         Float
-  longitude        Float
-  certified        Boolean           @default(false)
-  contract         Boolean           @default(false)
-  sizeRoom         Int?
-  options          Options[]
-  type             TypeRent          @relation(fields: [typeId], references: [id])
-  user             User[]
-  rents            Rent[]
-  reviews          Review[]
-  specificPrices   SpecificPrices[]
-  specificRequests SpecificRequest[]
-  equipments       Equipment[]       @relation("EquipmentToProduct")
-  img              Images[]          @relation("ImagesToProduct")
-  mealsList        Meals[]           @relation("MealsToProduct")
-  securities       Security[]        @relation("ProductToSecurity")
-  servicesList     Services[]        @relation("ProductToServices")
-  typeRoom         TypeRoom[]        @relation("ProductToTypeRoom")
-  discount         Discount[]
-  Chat             Chat[]
+  id                       String            @id @default(cuid())
+  name                     String
+  description              String
+  address                  String
+  basePrice                String
+  room                     BigInt?
+  bathroom                 BigInt?
+  arriving                 Int
+  leaving                  Int
+  autoAccept               Boolean
+  equipement               BigInt?
+  meal                     BigInt?
+  services                 BigInt?
+  security                 BigInt?
+  minRent                  BigInt?
+  maxRent                  BigInt?
+  advanceRent              BigInt?
+  delayTime                BigInt?
+  categories               BigInt
+  minPeople                BigInt?
+  maxPeople                BigInt?
+  commission               Int               @default(0)
+  validate                 ProductValidation @default(NotVerified)
+  userManager              BigInt
+  typeId                   String
+  phone                    String
+  latitude                 Float
+  longitude                Float
+  certified                Boolean           @default(false)
+  contract                 Boolean           @default(false)
+  sizeRoom                 Int?
+  isCertificated           Boolean           @default(false)
+  certificatedDate         DateTime?
+  certificatedBy           String?
+  certificatedUserRelation User?             @relation(fields: [certificatedBy], references: [id], onDelete: Cascade, name: "CertificationUserBy")
+  options                  Options[]
+  type                     TypeRent          @relation(fields: [typeId], references: [id])
+  user                     User[]
+  rents                    Rent[]
+  reviews                  Review[]
+  specificPrices           SpecificPrices[]
+  specificRequests         SpecificRequest[]
+  equipments               Equipment[]       @relation("EquipmentToProduct")
+  img                      Images[]          @relation("ImagesToProduct")
+  mealsList                Meals[]           @relation("MealsToProduct")
+  securities               Security[]        @relation("ProductToSecurity")
+  servicesList             Services[]        @relation("ProductToServices")
+  typeRoom                 TypeRoom[]        @relation("ProductToTypeRoom")
+  discount                 Discount[]
+  Chat                     Chat[]
 
   UnAvailableProduct UnAvailableProduct[]
 }
@@ -197,29 +201,29 @@ model Review {
 }
 
 model User {
-  id               String          @id @default(cuid())
-  name             String?
-  email            String          @unique
-  emailVerified    DateTime?
-  emailToken       String?
-  resetToken       String?
-  image            String?
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-  info             String?
-  lastname         String?
-  password         String?
-  profilePicture   String?
-  stripeCustomerId String?
-  roles            UserRole        @default(USER)
-  accounts         Account[]
-  Authenticator    Authenticator[]
-  Rent             Rent[]
-  sessions         Session[]
-  Product          Product[]
-  Chat             Chat[]
-
-  PayRequest PayRequest[]
+  id                       String          @id @default(cuid())
+  name                     String?
+  email                    String          @unique
+  emailVerified            DateTime?
+  emailToken               String?
+  resetToken               String?
+  image                    String?
+  createdAt                DateTime        @default(now())
+  updatedAt                DateTime        @updatedAt
+  info                     String?
+  lastname                 String?
+  password                 String?
+  profilePicture           String?
+  stripeCustomerId         String?
+  roles                    UserRole        @default(USER)
+  accounts                 Account[]
+  Authenticator            Authenticator[]
+  Rent                     Rent[]
+  sessions                 Session[]
+  Product                  Product[]
+  Chat                     Chat[]
+  PayRequest               PayRequest[]
+  CertificationProductUser Product[]       @relation(name: "CertificationUserBy")
 }
 
 model Account {
