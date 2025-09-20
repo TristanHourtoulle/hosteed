@@ -626,7 +626,7 @@ export async function createProduct(data: CreateProductInput) {
       // Champs de certification
       isCertificated: data.isCertificated,
       certificationDate: data.isCertificated && data.certificationDate ? new Date(data.certificationDate) : null,
-      certificatedBy: data.isCertificated && data.certificatedBy ? data.certificatedBy : '',
+      certificatedBy: data.isCertificated && data.certificatedBy ? data.certificatedBy : null,
       typeId: data.typeId,
       user: {
         connect: data.userId.map(id => ({ id })),
@@ -1194,7 +1194,7 @@ export async function resubmitProductWithChange(
           id: params.certificatedBy
           }}
       } else {
-        updateData.certificatedRelation = { disconnect: true}
+        updateData.certificatedRelation = { disconnect: {}}
       }
     }
 
@@ -1381,7 +1381,7 @@ export async function createDraftProduct(originalProductId: string) {
       // Copy certification fields avec logique conditionnelle
       isCertificated: originalProduct.isCertificated,
       certificationDate: originalProduct.isCertificated ? originalProduct.certificationDate : null,
-      certificatedBy: originalProduct.isCertificated ? originalProduct.certificatedBy : '',
+      certificatedBy: originalProduct.isCertificated ? originalProduct.certificatedBy : null,
 
       // Mark as draft and link to original
       isDraft: true,
@@ -1542,7 +1542,7 @@ export async function applyDraftChanges(draftId: string) {
       // Update certification fields avec logique conditionnelle
       isCertificated: draft.isCertificated,
       certificationDate: draft.isCertificated ? draft.certificationDate : null,
-      certificatedBy: draft.isCertificated ? draft.certificatedBy : '',
+      certificatedBy: draft.isCertificated ? draft.certificatedBy : null,
 
       // Update relationships
       img: {
@@ -1752,7 +1752,7 @@ export async function updateProduct(
       if (params.isCertificated && params.certificatedBy) {
         updateData.certificatedBy = params.certificatedBy
       } else {
-        updateData.certificatedBy = undefined
+        updateData.certificatedBy = null
       }
     }
 
