@@ -395,7 +395,7 @@ export async function createProduct(data: CreateProductInput) {
       // Champs de certification
       isCertificated: data.isCertificated,
       certificationDate: data.isCertificated && data.certificationDate ? new Date(data.certificationDate) : null,
-      certificatedBy: data.isCertificated && data.certificatedBy ? data.certificatedBy : '',
+      certificatedBy: data.isCertificated && data.certificatedBy ? data.certificatedBy : null,
       typeId: data.typeId,
       user: {
         connect: data.userId.map(id => ({ id })),
