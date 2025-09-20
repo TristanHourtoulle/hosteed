@@ -963,7 +963,7 @@ export async function resubmitProductWithChange(
           id: params.certificatedBy
           }}
       } else {
-        updateData.certificatedRelation = { disconnect: true}
+        updateData.certificatedRelation = { disconnect: {}}
       }
     }
 
