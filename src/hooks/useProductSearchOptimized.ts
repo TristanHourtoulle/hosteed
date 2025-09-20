@@ -28,6 +28,7 @@ interface Product {
   leaving: number
   typeRentId?: string
   certified?: boolean
+  isCertificated?: boolean
   validate?: string
   room?: bigint | null
   bathroom?: bigint | null
@@ -69,9 +70,7 @@ interface FilterState {
   maxBathrooms: string
   sizeMin: string
   sizeMax: string
-  autoAcceptOnly: boolean
   certifiedOnly: boolean
-  contractRequired: boolean
 }
 
 export function useProductSearchOptimized() {
@@ -250,9 +249,7 @@ export function useProductSearchOptimized() {
         (!filters.sizeMax || !product.sizeRoom || product.sizeRoom <= parseInt(filters.sizeMax))
 
       const matchesSpecialOptions =
-        (!filters.autoAcceptOnly || product.autoAccept) &&
-        (!filters.certifiedOnly || product.certified) &&
-        (!filters.contractRequired || product.contract)
+        (!filters.certifiedOnly || product.isCertificated)
 
       return (
         matchesTypeRent &&
@@ -273,7 +270,7 @@ export function useProductSearchOptimized() {
 
     // Apply special filters
     if (featured) {
-      filtered = filtered.filter(product => product.certified || product.validate === 'Approve')
+      filtered = filtered.filter(product => product.isCertificated || product.validate === 'Approve')
     }
 
     if (popular) {
