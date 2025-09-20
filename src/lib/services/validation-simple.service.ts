@@ -21,57 +21,110 @@ export enum ValidationCommentStatus {
 }
 
 export const validationService = {
-  // Récupérer tous les produits pour la validation (tous les statuts)
+  // Legacy function - use getProductsForValidationPaginated instead
   async getProductsForValidation() {
-    const products = await prisma.product.findMany({
-      where: {},
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            lastname: true,
-            email: true,
-            image: true,
-          },
+    const result = await validationService.getProductsForValidationPaginated({ 
+      page: 1, 
+      limit: 100 
+    })
+    return result?.products || []
+  },
+
+  // Optimized paginated version
+  async getProductsForValidationPaginated({
+    page = 1,
+    limit = 20,
+    status,
+    includeLightweight = false
+  }: {
+    page?: number
+    limit?: number
+    status?: ProductValidation
+    includeLightweight?: boolean
+  } = {}) {
+    const skip = (page - 1) * limit
+
+    // Build where clause based on status filter
+    const whereClause = status ? { validate: status } : {}
+
+    // Use the same pattern as getProductForValidation which works
+    const baseUserInclude = {
+      select: {
+        id: true,
+        name: true,
+        lastname: true,
+        email: true,
+        image: true,
+      },
+    }
+
+    const lightweightIncludes = {
+      user: baseUserInclude,
+      img: {
+        take: 1, // CRITICAL: Only 1 image for admin validation lists
+        select: {
+          id: true,
+          img: true,
         },
-        img: {
-          select: {
-            img: true,
-          },
+      },
+    }
+
+    const fullIncludes = {
+      user: baseUserInclude,
+      img: {
+        take: 5, // Maximum 5 images for validation detail view
+        select: {
+          id: true,
+          img: true,
         },
-        validationHistory: {
-          orderBy: { createdAt: 'desc' },
-          take: 2, // Les 2 dernières entrées pour déterminer le contexte
-          include: {
-            host: {
-              select: {
-                id: true,
-                name: true,
-                lastname: true,
-              },
+      },
+      validationHistory: {
+        orderBy: { createdAt: 'desc' },
+        take: 2,
+        include: {
+          host: {
+            select: {
+              id: true,
+              name: true,
+              lastname: true,
             },
-            admin: {
-              select: {
-                id: true,
-                name: true,
-                lastname: true,
-              },
+          },
+          admin: {
+            select: {
+              id: true,
+              name: true,
+              lastname: true,
             },
           },
         },
       },
-    })
+    }
 
-    return products.map(product => {
-      // Enrichir chaque produit avec des métadonnées de statut
-      const lastTwoEntries = product.validationHistory
+    const [products, totalCount] = await Promise.all([
+      prisma.product.findMany({
+        where: whereClause,
+        include: includeLightweight ? lightweightIncludes : fullIncludes,
+        skip,
+        take: limit,
+        orderBy: [
+          { validate: 'asc' }, // Pending validation first
+          { id: 'desc' }
+        ]
+      }),
+      prisma.product.count({
+        where: whereClause
+      })
+    ])
+
+    // Only process metadata for non-lightweight requests
+    const processedProducts = includeLightweight ? products : products.map(product => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const lastTwoEntries = (product as any).validationHistory || []
       let isRecentlyModified = false
       let wasRecheckRequested = false
 
       if (lastTwoEntries.length >= 2) {
         const [latest, previous] = lastTwoEntries
-        // Si le statut précédent était RecheckRequest et maintenant NotVerified avec un hostId
         wasRecheckRequested =
           previous.newStatus === ProductValidation.RecheckRequest &&
           latest.newStatus === ProductValidation.NotVerified &&
@@ -82,13 +135,23 @@ export const validationService = {
 
       return {
         ...product,
-        // Retirer l'historique du résultat final pour éviter la surcharge
-        validationHistory: undefined,
-        // Ajouter les métadonnées
+        validationHistory: undefined, // Remove from response
         isRecentlyModified,
         wasRecheckRequested,
       }
     })
+
+    return {
+      products: processedProducts,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        hasNext: page < Math.ceil(totalCount / limit),
+        hasPrev: page > 1
+      }
+    }
   },
 
   // Mettre à jour le statut d'un produit

@@ -1,6 +1,6 @@
 'use client'
 import { Suspense } from 'react'
-import { useProductSearch } from '@/hooks/useProductSearch'
+import { useProductSearchOptimized } from '@/hooks/useProductSearchOptimized'
 import ModernSearchBar from '@/components/ui/modernSearchBar'
 import SearchHeader from '@/components/host/SearchHeader'
 import SearchResults from '@/components/host/SearchResults'
@@ -28,7 +28,7 @@ function HostPageContent() {
     handleModernSearch,
     resetFilters,
     setFilters,
-  } = useProductSearch()
+  } = useProductSearchOptimized()
 
   if (loading) {
     return <LoadingState />

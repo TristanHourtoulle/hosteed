@@ -69,7 +69,7 @@ const DefaultAuthErrorFallback = ({ error, resetErrorBoundary }: AuthErrorFallba
         
         {process.env.NODE_ENV === 'development' && error && (
           <details className="mt-4 text-xs text-gray-500 bg-gray-100 p-3 rounded text-left">
-            <summary className="cursor-pointer font-medium">Détails de l'erreur (dev)</summary>
+            <summary className="cursor-pointer font-medium">Détails de l&apos;erreur (dev)</summary>
             <pre className="mt-2 whitespace-pre-wrap overflow-auto max-h-32">
               {error.stack || error.message}
             </pre>

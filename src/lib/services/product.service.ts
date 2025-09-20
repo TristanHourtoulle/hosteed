@@ -203,126 +203,346 @@ export async function findProductById(id: string) {
   }
 }
 
+// Legacy function - use findAllProductsPaginated instead
 export async function findAllProducts() {
+  return findAllProductsPaginated({
+    page: 1,
+    limit: 50,
+    imageMode: 'medium' // Max 5 images for better performance
+  })
+}
+
+// Optimized function for public API endpoints (homepage, search, etc.)
+export async function findAllProductsForPublic({
+  page = 1,
+  limit = 20,
+  includeSpecialPrices = false
+}: {
+  page?: number
+  limit?: number
+  includeSpecialPrices?: boolean
+} = {}) {
+  return findAllProductsPaginated({
+    page,
+    limit,
+    includeSpecialPrices,
+    imageMode: 'medium', // CRITICAL: Only 5 images per product for public views
+    includeLightweight: false
+  })
+}
+
+export async function findAllProductsPaginated({
+  page = 1,
+  limit = 20,
+  includeSpecialPrices = false,
+  includeLightweight = false,
+  imageMode = 'medium' // 'lightweight' (1 image), 'medium' (5 images), 'full' (all images)
+}: {
+  page?: number
+  limit?: number
+  includeSpecialPrices?: boolean
+  includeLightweight?: boolean
+  imageMode?: 'lightweight' | 'medium' | 'full'
+} = {}) {
   try {
-    const products = await prisma.product.findMany({
-      where: {
-        validate: {
-          in: [ProductValidation.Approve, ProductValidation.ModificationPending]
-        },
-        // Only show original products, not drafts
-        isDraft: false,
+    const skip = (page - 1) * limit
+
+    // Lightweight includes for admin lists - CRITICAL: Only 1 image for performance
+    const lightweightIncludes = {
+      img: {
+        take: 1, // Only first image for list views
+        select: {
+          id: true,
+          img: true
+        }
       },
-      include: {
-        img: true,
-        type: true,
-        equipments: true,
-        securities: true,
-        servicesList: true,
-        mealsList: true,
-        options: true,
+      type: {
+        select: { name: true, id: true }
+      },
+      equipments: false,
+      securities: false,
+      servicesList: false,
+      mealsList: false,
+      options: false,
+      reviews: false,
+      PromotedProduct: false,
+    }
+
+    // Medium includes for public lists - Max 5 images
+    const mediumIncludes = {
+      img: {
+        take: 5, // Maximum 5 images for public product lists
+        select: {
+          id: true,
+          img: true
+        }
+      },
+      type: {
+        select: { name: true, id: true }
+      },
+      equipments: false,
+      securities: false,
+      servicesList: false,
+      mealsList: false,
+      options: false,
+      reviews: false,
+      PromotedProduct: false,
+    }
+
+    // Full includes for detailed views
+    const fullIncludes = {
+      img: true,
+      type: true,
+      equipments: true,
+      securities: true,
         certificatedRelation: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        reviews: {
-          where: {
-            approved: true,
-          },
-          select: {
-            grade: true,
-            welcomeGrade: true,
-            staff: true,
-            comfort: true,
-            equipment: true,
-            cleaning: true,
-          },
-        },
-        PromotedProduct: {
-          where: {
-            active: true,
-            start: {
-              lte: new Date(),
+            select: {
+                id: true,
+                name: true,
+                email: true,
             },
-            end: {
-              gte: new Date(),
-            },
-          },
         },
-        // specialPrices: true, // Temporairement désactivé car le modèle n'est pas généré
+      servicesList: true,
+      mealsList: true,
+      options: true,
+      reviews: {
+        where: {
+          approved: true,
+        },
+        select: {
+          grade: true,
+          welcomeGrade: true,
+          staff: true,
+          comfort: true,
+          equipment: true,
+          cleaning: true,
+        },
       },
-    })
+      PromotedProduct: {
+        where: {
+          active: true,
+          start: {
+            lte: new Date(),
+          },
+          end: {
+            gte: new Date(),
+          },
+        },
+      },
+    }
 
-    // Récupérer et filtrer les prix spéciaux pour chaque produit
-    const productsWithFilteredSpecialPrices = await Promise.all(
-      products.map(async (product) => {
-        const specialPrices = await getSpecialPricesForProduct(product.id)
+    // Choose includes based on imageMode and lightweightFlag
+    let selectedIncludes
+    if (includeLightweight || imageMode === 'lightweight') {
+      selectedIncludes = lightweightIncludes
+    } else if (imageMode === 'medium') {
+      selectedIncludes = mediumIncludes
+    } else {
+      selectedIncludes = fullIncludes
+    }
+
+    const [products, totalCount] = await Promise.all([
+      prisma.product.findMany({
+        where: {
+          validate: {
+            in: [ProductValidation.Approve, ProductValidation.ModificationPending]
+          },
+          isDraft: false,
+        },
+        include: selectedIncludes,
+        skip,
+        take: limit,
+        orderBy: { id: 'desc' } // Latest first
+      }),
+      prisma.product.count({
+        where: {
+          validate: {
+            in: [ProductValidation.Approve, ProductValidation.ModificationPending]
+          },
+          isDraft: false,
+        }
+      })
+    ])
+
+    // Only process special prices if requested and not lightweight
+    let productsWithSpecialPrices = products
+    if (includeSpecialPrices && !includeLightweight) {
+      // Optimize: Get all special prices in one query
+      const productIds = products.map(p => p.id)
+      const allSpecialPrices = await prisma.specialPrices.findMany({
+        where: {
+          productId: { in: productIds },
+          activate: true
+        }
+      })
+
+      // Group by productId for efficient lookup
+      const specialPricesByProduct = allSpecialPrices.reduce((acc, sp) => {
+        if (!acc[sp.productId]) acc[sp.productId] = []
+        acc[sp.productId].push(sp)
+        return acc
+      }, {} as Record<string, typeof allSpecialPrices>)
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      productsWithSpecialPrices = (products as any[]).map((product: any) => {
+        const specialPrices = specialPricesByProduct[product.id] || []
         const filteredSpecialPrices = filterActiveSpecialPrices(specialPrices)
-
-        // Appliquer le prix spécial au produit si applicable
         const productWithSpecialPrice = applySpecialPriceToProduct(product, filteredSpecialPrices)
 
         return {
           ...productWithSpecialPrice,
           specialPrices: filteredSpecialPrices
         }
-      })
-    )
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      }) as any
+    }
 
-    return productsWithFilteredSpecialPrices
+    return {
+      products: productsWithSpecialPrices,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        hasNext: page < Math.ceil(totalCount / limit),
+        hasPrev: page > 1
+      }
+    }
   } catch (error) {
     console.error('Erreur lors de la recherche des produits:', error)
     return null
   }
 }
 
+// Legacy function - use findAllProductByHostIdPaginated instead
 export async function findAllProductByHostId(id: string) {
+  const result = await findAllProductByHostIdPaginated(id, { page: 1, limit: 100 })
+  return result?.products || null
+}
+
+export async function findAllProductByHostIdPaginated(
+  hostId: string,
+  {
+    page = 1,
+    limit = 20,
+    includeSpecialPrices = false,
+    includeLightweight = false,
+    imageMode = 'medium'
+  }: {
+    page?: number
+    limit?: number
+    includeSpecialPrices?: boolean
+    includeLightweight?: boolean
+    imageMode?: 'lightweight' | 'medium' | 'full'
+  } = {}
+) {
   try {
-    const products = await prisma.product.findMany({
-      where: {
-        user: {
-          some: {
-            id: {
-              equals: id,
+    const skip = (page - 1) * limit
+
+    const lightweightIncludes = {
+      img: {
+        take: 1, // Only 1 image for lightweight mode
+        select: { id: true, img: true }
+      },
+      type: {
+        select: { name: true, id: true }
+      },
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    }
+
+    const mediumIncludes = {
+      img: {
+        take: 5, // Max 5 images for host dashboard
+        select: { id: true, img: true }
+      },
+      type: {
+        select: { name: true, id: true }
+      },
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    }
+
+    const fullIncludes = {
+      img: true, // All images only for individual product views
+      type: true,
+      equipments: true,
+      securities: true,
+      servicesList: true,
+      mealsList: true,
+      options: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    }
+
+    const [products, totalCount] = await Promise.all([
+      prisma.product.findMany({
+        where: {
+          user: {
+            some: {
+              id: {
+                equals: hostId,
+              },
             },
           },
+          isDraft: false,
         },
-        // Exclude draft products from host dashboard - only show original products
-        isDraft: false,
-      },
-      include: {
-        img: true,
-        type: true,
-        equipments: true,
-        securities: true,
-        servicesList: true,
-        mealsList: true,
-        options: true,
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
+        include: includeLightweight || imageMode === 'lightweight' ? lightweightIncludes
+                : imageMode === 'medium' ? mediumIncludes
+                : fullIncludes,
+        skip,
+        take: limit,
+        orderBy: { id: 'desc' }
+      }),
+      prisma.product.count({
+        where: {
+          user: {
+            some: {
+              id: {
+                equals: hostId,
+              },
+            },
           },
-        },
-        certificatedRelation: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        // specialPrices: true, // Temporairement désactivé car le modèle n'est pas généré
-      },
-    })
+          isDraft: false,
+        }
+      })
+    ])
 
-    // Récupérer et filtrer les prix spéciaux pour chaque produit
-    const productsWithFilteredSpecialPrices = await Promise.all(
-      products.map(async (product) => {
-        const specialPrices = await getSpecialPricesForProduct(product.id)
+    let productsWithSpecialPrices = products
+    if (includeSpecialPrices && !includeLightweight) {
+      // Optimize special prices fetching
+      const productIds = products.map(p => p.id)
+      const allSpecialPrices = await prisma.specialPrices.findMany({
+        where: {
+          productId: { in: productIds },
+          activate: true
+        }
+      })
+
+      const specialPricesByProduct = allSpecialPrices.reduce((acc, sp) => {
+        if (!acc[sp.productId]) acc[sp.productId] = []
+        acc[sp.productId].push(sp)
+        return acc
+      }, {} as Record<string, typeof allSpecialPrices>)
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      productsWithSpecialPrices = (products as any[]).map((product: any) => {
+        const specialPrices = specialPricesByProduct[product.id] || []
         const filteredSpecialPrices = filterActiveSpecialPrices(specialPrices)
 
         // Appliquer le prix spécial au produit si applicable
@@ -332,10 +552,21 @@ export async function findAllProductByHostId(id: string) {
           ...productWithSpecialPrice,
           specialPrices: filteredSpecialPrices
         }
-      })
-    )
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      }) as any
+    }
 
-    return productsWithFilteredSpecialPrices
+    return {
+      products: productsWithSpecialPrices,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        hasNext: page < Math.ceil(totalCount / limit),
+        hasPrev: page > 1
+      }
+    }
   } catch (error) {
     console.error("Erreur lors de la recherche des produits de l'hôte:", error)
     return null
@@ -884,8 +1115,8 @@ export async function resubmitProductWithChange(
     // 1. isCertificated est fourni (modification de certification)
     // 2. certificatedBy est fourni (admin qui fait la modification)
     // 3. La certification change réellement
-    const isCertificationOnlyChange = params.isCertificated !== undefined && 
-                                     params.certificatedBy && 
+    const isCertificationOnlyChange = params.isCertificated !== undefined &&
+                                     params.certificatedBy &&
                                      currentProduct?.isCertificated !== params.isCertificated
 
     console.log('Debug certification:', {
@@ -953,7 +1184,7 @@ export async function resubmitProductWithChange(
     if (shouldChangeValidationStatus) {
       updateData.validate = newValidationStatus
     }
-    
+
     if (params.isCertificated !== undefined) {
       updateData.isCertificated = params.isCertificated
       updateData.certificationDate = params.isCertificated && params.certificationDate ? new Date(params.certificationDate) : null
@@ -992,7 +1223,7 @@ export async function resubmitProductWithChange(
         willCreateHistory: !!(hostId && shouldChangeValidationStatus && currentProduct.validate !== newValidationStatus),
         isCertificationOnlyChange: isCertificationOnlyChange
       })
-      
+
       // Ne pas créer d'historique de validation si c'est uniquement une modification de certification
       if (hostId && shouldChangeValidationStatus && currentProduct.validate !== newValidationStatus && !isCertificationOnlyChange) {
         const reason =

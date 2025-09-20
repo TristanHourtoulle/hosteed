@@ -2,7 +2,7 @@
 
 import { Star, Heart, MapPin, Award } from 'lucide-react'
 import { getCityFromAddress } from '@/lib/utils'
-import { useFavorites } from '@/hooks/useFavorites'
+import { useFavoritesOptimized } from '@/hooks/useFavoritesOptimized'
 import { ShareButton } from './ShareButton'
 
 interface Reviews {
@@ -39,7 +39,7 @@ export default function PropertyHeader({
   isCertificated,
   certified,
 }: PropertyHeaderProps) {
-  const { isFavorite, isLoading, toggleFavorite } = useFavorites(productId)
+  const { isFavorite, isLoading, toggleFavorite } = useFavoritesOptimized(productId)
   return (
     <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6'>
       <div className='flex-1'>
@@ -69,7 +69,7 @@ export default function PropertyHeader({
       <div className='flex items-center gap-3 mt-4 sm:mt-0'>
         <ShareButton />
         <button
-          onClick={toggleFavorite}
+          onClick={() => toggleFavorite()}
           disabled={isLoading}
           className='flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
         >

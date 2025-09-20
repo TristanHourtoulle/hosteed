@@ -172,9 +172,16 @@ export function useProductSearchOptimized() {
 
   // Filter products using useMemo for optimization
   const filteredProducts = useMemo(() => {
-    if (!allProducts || allProducts.length === 0) return []
+    if (!allProducts) return []
+    
+    // Handle both array and paginated response formats
+    const productsArray = Array.isArray(allProducts) 
+      ? allProducts 
+      : allProducts.products || []
+    
+    if (productsArray.length === 0) return []
 
-    let filtered = (allProducts as unknown as Product[]).filter((product: Product) => {
+    let filtered = (productsArray as unknown as Product[]).filter((product: Product) => {
       const matchesTypeRent = !selectedType || product.typeRentId === selectedType
       const matchesSearch =
         !location ||

@@ -11,9 +11,9 @@ export default function ConditionsHebergeursPage() {
               <div className="space-y-3 text-gray-700">
                 <p>Dans le cadre de ces conditions spécifiques :</p>
                 <ul className="list-disc list-inside space-y-2 ml-4">
-                  <li><strong>"Hébergeur"</strong> désigne le propriétaire ou gestionnaire proposant un hébergement</li>
-                  <li><strong>"Plateforme"</strong> désigne les services Hosteed</li>
-                  <li><strong>"Client"</strong> désigne la personne effectuant une réservation</li>
+                  <li><strong>&quot;Hébergeur&quot;</strong> désigne le propriétaire ou gestionnaire proposant un hébergement</li>
+                  <li><strong>&quot;Plateforme&quot;</strong> désigne les services Hosteed</li>
+                  <li><strong>&quot;Client&quot;</strong> désigne la personne effectuant une réservation</li>
                 </ul>
               </div>
             </section>
@@ -31,14 +31,14 @@ export default function ConditionsHebergeursPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">3. Obligations de l'Hébergeur</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">3. Obligations de l&apos;Hébergeur</h2>
               <div className="space-y-3 text-gray-700">
-                <p>L'hébergeur s'engage à :</p>
+                <p>L&apos;hébergeur s&apos;engage à :</p>
                 <ul className="list-disc list-inside space-y-2 ml-4">
                   <li>Fournir des descriptions précises et à jour de ses propriétés</li>
                   <li>Maintenir les informations de disponibilité actualisées</li>
                   <li>Assurer la qualité des services annoncés</li>
-                  <li>Respecter toutes les exigences légales relatives à l'hébergement</li>
+                  <li>Respecter toutes les exigences légales relatives à l&apos;hébergement</li>
                   <li>Répondre aux demandes des clients dans les délais raisonnables</li>
                 </ul>
               </div>
@@ -74,11 +74,11 @@ export default function ConditionsHebergeursPage() {
             <section>
               <h2 className="text-xl font-semibold text-gray-900 mb-4">5. Annulation et Non-Présentation</h2>
               <div className="space-y-3 text-gray-700">
-                <p>Politique d'annulation :</p>
+                <p>Politique d&apos;annulation :</p>
                 <ul className="list-disc list-inside space-y-2 ml-4">
-                  <li>Les hébergeurs doivent spécifier leur politique d'annulation</li>
+                  <li>Les hébergeurs doivent spécifier leur politique d&apos;annulation</li>
                   <li>Possibilité de conserver le paiement en cas de non-présentation du client</li>
-                  <li>Les conditions d'annulation doivent être clairement communiquées aux clients</li>
+                  <li>Les conditions d&apos;annulation doivent être clairement communiquées aux clients</li>
                 </ul>
               </div>
             </section>
