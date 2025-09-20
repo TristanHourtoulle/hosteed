@@ -1311,7 +1311,7 @@ export async function applyDraftChanges(draftId: string) {
       // Update certification fields avec logique conditionnelle
       isCertificated: draft.isCertificated,
       certificationDate: draft.isCertificated ? draft.certificationDate : null,
-      certificatedBy: draft.isCertificated ? draft.certificatedBy : '',
+      certificatedBy: draft.isCertificated ? draft.certificatedBy : null,
 
       // Update relationships
       img: {
