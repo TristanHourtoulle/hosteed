@@ -26,6 +26,7 @@ import {
   Highlighter,
   Save,
   Edit3,
+  Award,
 } from 'lucide-react'
 import { resubmitProductWithChange } from '@/lib/services/product.service'
 import { findAllTypeRent } from '@/lib/services/typeRent.service'
@@ -45,6 +46,7 @@ import CommissionDisplay from '@/components/ui/CommissionDisplay'
 import PhoneInput from '@/components/ui/PhoneInput'
 import ErrorAlert, { ErrorDetails } from '@/components/ui/ErrorAlert'
 import { compressImages, formatFileSize } from '@/lib/utils/imageCompression'
+import { useSession } from 'next-auth/react'
 
 interface Equipment {
   id: string
@@ -143,6 +145,15 @@ interface Product {
   arriving: number
   leaving: number
   validate: ProductValidation
+  isCertificated?: boolean
+  certificationDate?: Date | null
+  certificatedBy?: string | null
+  certificatedRelation?: {
+    id: string
+    name?: string | null
+    lastname?: string | null
+    email: string
+  } | null
   img?: { img: string }[]
   user: {
     id: string
@@ -197,9 +208,12 @@ interface FormData {
   isHotel: boolean
   hotelName: string
   availableRooms: string
+  // Champs de certification
+  isCertificated: boolean
 }
 
 export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormProps) {
+  const { data: session } = useSession()
   const [isLoading, setIsLoading] = useState(false)
   const [isUploadingImages, setIsUploadingImages] = useState(false)
   const [error, setError] = useState<ErrorDetails | null>(null)
@@ -256,6 +270,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
     isHotel: false,
     hotelName: '',
     availableRooms: '',
+    isCertificated: product.isCertificated || false,
   })
 
   // Data from services
@@ -701,6 +716,10 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
           services: formData.serviceIds,
           meals: formData.mealIds,
           images: finalImages,
+          // Champs de certification
+          isCertificated: formData.isCertificated,
+          certificationDate: formData.isCertificated ? new Date() : null,
+          certificatedBy: formData.isCertificated && session?.user?.id ? session.user.id : null,
         },
         product.user[0]?.id // Utiliser l'ID du premier utilisateur comme hostId
       )
@@ -1796,6 +1815,62 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
                     className='border-slate-200 focus:border-cyan-300 focus:ring-cyan-200'
                   />
                 </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Certification */}
+          <motion.div variants={itemVariants}>
+            <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm'>
+              <CardHeader className='space-y-2'>
+                <div className='flex items-center gap-2'>
+                  <div className='p-2 bg-yellow-50 rounded-lg'>
+                    <Award className='h-5 w-5 text-yellow-600' />
+                  </div>
+                  <div>
+                    <CardTitle className='text-xl'>Certification</CardTitle>
+                    <p className='text-slate-600 text-sm mt-1'>
+                      Certifiez cette annonce pour la mettre en avant
+                    </p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className='space-y-6'>
+                <div className='flex items-center space-x-3'>
+                  <input
+                    id='isCertificated'
+                    name='isCertificated'
+                    type='checkbox'
+                    checked={formData.isCertificated}
+                    onChange={handleInputChange}
+                    className='w-5 h-5 text-yellow-600 bg-gray-100 border-gray-300 rounded focus:ring-yellow-500'
+                  />
+                  <label htmlFor='isCertificated' className='text-sm font-medium text-slate-700'>
+                    Certifier cette annonce
+                  </label>
+                </div>
+
+                {formData.isCertificated && (
+                  <div className='mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg'>
+                    <div className='space-y-3'>
+                      <div className='flex items-center gap-2 text-sm text-yellow-800'>
+                        <Award className='h-4 w-4' />
+                        <span className='font-medium'>Cette annonce sera certifiée</span>
+                      </div>
+                      
+                      <div className='text-sm text-slate-600'>
+                        <p><strong>Date de certification :</strong> {new Date().toLocaleDateString('fr-FR')}</p>
+                        <p><strong>Certifié par :</strong> {session?.user?.name || session?.user?.email || 'Administrateur'}</p>
+                      </div>
+
+                      <div className='text-xs text-slate-500 bg-white p-2 rounded border'>
+                        <p>✓ L'annonce sera mise en avant dans les résultats de recherche</p>
+                        <p>✓ Badge de certification visible pour les utilisateurs</p>
+                        <p>✓ Augmentation de la visibilité et de la crédibilité</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>

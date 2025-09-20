@@ -26,6 +26,7 @@ import {
   Star,
   Package,
   Highlighter,
+  Award,
 } from 'lucide-react'
 
 import { findAllTypeRent } from '@/lib/services/typeRent.service'
@@ -174,6 +175,8 @@ interface FormData {
   isHotel: boolean
   hotelName: string
   availableRooms: string
+  // Champs de certification
+  isCertificated: boolean
 }
 
 export default function CreateProductPage() {
@@ -240,6 +243,8 @@ export default function CreateProductPage() {
     isHotel: false,
     hotelName: '',
     availableRooms: '',
+    // Champs de certification
+    isCertificated: false,
   })
 
   // Data from services
@@ -742,6 +747,10 @@ export default function CreateProductPage() {
           endDate: sp.endDate,
           activate: sp.activate,
         })),
+        // Champs de certification
+        isCertificated: formData.isCertificated,
+        certificationDate: formData.isCertificated ? new Date() : null,
+        certificatedBy: formData.isCertificated ? session.user.id : null,
       }
 
       const result = await createProduct(productData)
@@ -2117,6 +2126,93 @@ export default function CreateProductPage() {
                       </select>
                     </div>
                   )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* Section Admin - Certification */}
+          {session?.user?.roles === 'ADMIN' && (
+            <motion.div variants={itemVariants}>
+              <Card className='border-purple-200 bg-gradient-to-br from-purple-50 to-indigo-50'>
+                <CardHeader>
+                  <CardTitle className='flex items-center gap-3 text-purple-800'>
+                    <Award className='h-5 w-5 text-purple-600' />
+                    Administration - Certification de l&apos;annonce
+                  </CardTitle>
+                  <p className='text-sm text-purple-600'>
+                    En tant qu&apos;administrateur, vous pouvez certifier cette annonce
+                  </p>
+                </CardHeader>
+                <CardContent className='space-y-6'>
+                  <div className='flex items-center space-x-2'>
+                    <input
+                      type='checkbox'
+                      id='isCertificated'
+                      checked={formData.isCertificated}
+                      onChange={e => setFormData(prev => ({ ...prev, isCertificated: e.target.checked }))}
+                      className='rounded border-purple-300 focus:ring-purple-200'
+                    />
+                    <label
+                      htmlFor='isCertificated'
+                      className='text-sm font-medium text-purple-700'
+                    >
+                      Certifier cette annonce
+                    </label>
+                  </div>
+
+                  {formData.isCertificated && (
+                    <div className='p-4 bg-purple-100 rounded-lg border border-purple-200'>
+                      <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+                        <div className='space-y-2'>
+                          <label className='text-sm font-medium text-purple-800'>
+                            Date de certification
+                          </label>
+                          <div className='p-3 bg-white rounded-md border border-purple-200 text-sm text-purple-700'>
+                            {new Date().toLocaleDateString('fr-FR')}
+                          </div>
+                          <p className='text-xs text-purple-600'>
+                            Date actuelle (automatique)
+                          </p>
+                        </div>
+
+                        <div className='space-y-2'>
+                          <label className='text-sm font-medium text-purple-800'>
+                            Certifié par
+                          </label>
+                          <div className='p-3 bg-white rounded-md border border-purple-200 text-sm text-purple-700'>
+                            {session?.user?.name || session?.user?.email}
+                          </div>
+                          <p className='text-xs text-purple-600'>
+                            Administrateur actuel (automatique)
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className='mt-4 p-3 bg-purple-50 rounded-md border border-purple-200'>
+                        <p className='text-xs text-purple-700'>
+                          <strong>Note :</strong> La certification sera automatiquement attribuée à la date actuelle et à l'administrateur connecté.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className='bg-purple-100 border border-purple-200 rounded-lg p-4'>
+                    <div className='flex items-start gap-3'>
+                      <div className='p-1.5 bg-purple-200 rounded-full'>
+                        <Award className='h-4 w-4 text-purple-700' />
+                      </div>
+                      <div className='flex-1'>
+                        <h4 className='text-sm font-semibold text-purple-800 mb-1'>
+                          Certification des annonces
+                        </h4>
+                        <p className='text-xs text-purple-700 leading-relaxed'>
+                          Les annonces certifiées bénéficient d&apos;un badge de qualité visible pour les utilisateurs.
+                          La certification indique que l&apos;hébergement a été vérifié et répond aux standards de qualité de la plateforme.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>

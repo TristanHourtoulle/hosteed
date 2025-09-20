@@ -123,59 +123,63 @@ model Rules {
 }
 
 model Product {
-  id               String            @id @default(cuid())
-  name             String
-  description      String
-  address          String
-  basePrice        String
-  priceMGA         String
-  room             BigInt?
-  bathroom         BigInt?
-  arriving         Int
-  leaving          Int
-  autoAccept       Boolean
-  equipement       BigInt?
-  meal             BigInt?
-  services         BigInt?
-  security         BigInt?
-  minRent          BigInt?
-  maxRent          BigInt?
-  advanceRent      BigInt?
-  delayTime        BigInt?
-  categories       BigInt
-  minPeople        BigInt?
-  maxPeople        BigInt?
-  commission       Int               @default(0)
-  validate         ProductValidation @default(NotVerified)
-  userManager      BigInt
-  typeId           String
-  phone            String
-  phoneCountry     String            @default("MG")
-  latitude         Float
-  longitude        Float
-  certified        Boolean           @default(false)
-  contract         Boolean           @default(false)
-  sizeRoom         Int?
-  availableRooms   Int? // Nombre de chambres disponibles pour les hôtels
-  options          Options[]
-  type             TypeRent          @relation(fields: [typeId], references: [id])
-  user             User[]
-  rents            Rent[]
-  reviews          Review[]
-  specificPrices   SpecificPrices[]
-  specificRequests SpecificRequest[]
-  equipments       Equipment[]       @relation("EquipmentToProduct")
-  img              Images[]          @relation("ImagesToProduct")
-  mealsList        Meals[]           @relation("MealsToProduct")
-  securities       Security[]        @relation("ProductToSecurity")
-  servicesList     Services[]        @relation("ProductToServices")
-  typeRoom         TypeRoom[]        @relation("ProductToTypeRoom")
-  discount         Discount[]
-  favorites        Favorite[]
-  rules            Rules[]
-  nearbyPlaces     NearbyPlace[]
-  transportOptions TransportOption[]
-  propertyInfo     PropertyInfo?
+  id                   String            @id @default(cuid())
+  name                 String
+  description          String
+  address              String
+  basePrice            String
+  priceMGA             String
+  room                 BigInt?
+  bathroom             BigInt?
+  arriving             Int
+  leaving              Int
+  autoAccept           Boolean
+  equipement           BigInt?
+  meal                 BigInt?
+  services             BigInt?
+  security             BigInt?
+  minRent              BigInt?
+  maxRent              BigInt?
+  advanceRent          BigInt?
+  delayTime            BigInt?
+  categories           BigInt
+  minPeople            BigInt?
+  maxPeople            BigInt?
+  commission           Int               @default(0)
+  validate             ProductValidation @default(NotVerified)
+  userManager          BigInt
+  typeId               String
+  phone                String
+  phoneCountry         String            @default("MG")
+  latitude             Float
+  longitude            Float
+  certified            Boolean           @default(false)
+  contract             Boolean           @default(false)
+  sizeRoom             Int?
+  availableRooms       Int? // Nombre de chambres disponibles pour les hôtels
+  isCertificated       Boolean           @default(false)
+  certificationDate    DateTime?
+  certificatedBy       String?
+  certificatedRelation User?             @relation(fields: [certificatedBy], references: [id], onDelete: Cascade, name: "CertificationRelation")
+  options              Options[]
+  type                 TypeRent          @relation(fields: [typeId], references: [id])
+  user                 User[]
+  rents                Rent[]
+  reviews              Review[]
+  specificPrices       SpecificPrices[]
+  specificRequests     SpecificRequest[]
+  equipments           Equipment[]       @relation("EquipmentToProduct")
+  img                  Images[]          @relation("ImagesToProduct")
+  mealsList            Meals[]           @relation("MealsToProduct")
+  securities           Security[]        @relation("ProductToSecurity")
+  servicesList         Services[]        @relation("ProductToServices")
+  typeRoom             TypeRoom[]        @relation("ProductToTypeRoom")
+  discount             Discount[]
+  favorites            Favorite[]
+  rules                Rules[]
+  nearbyPlaces         NearbyPlace[]
+  transportOptions     TransportOption[]
+  propertyInfo         PropertyInfo?
 
   UnAvailableProduct UnAvailableProduct[]
 
@@ -476,6 +480,8 @@ model User {
 
   // Relation pour les articles de blog
   authoredPosts Post[] @relation("AuthoredPosts") // Articles de blog créés par cet utilisateur
+
+  CertificationRelationProduct Product[] @relation(name: "CertificationRelation")
 }
 
 model Account {
