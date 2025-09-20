@@ -1150,7 +1150,7 @@ export async function createDraftProduct(originalProductId: string) {
       // Copy certification fields avec logique conditionnelle
       isCertificated: originalProduct.isCertificated,
       certificationDate: originalProduct.isCertificated ? originalProduct.certificationDate : null,
-      certificatedBy: originalProduct.isCertificated ? originalProduct.certificatedBy : '',
+      certificatedBy: originalProduct.isCertificated ? originalProduct.certificatedBy : null,
 
       // Mark as draft and link to original
       isDraft: true,
