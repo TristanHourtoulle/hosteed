@@ -872,18 +872,50 @@ export async function resubmitProductWithChange(
     // Récupérer le statut actuel avant la mise à jour
     const currentProduct = await prisma.product.findUnique({
       where: { id },
-      select: { validate: true },
+      select: { validate: true, isCertificated: true },
     })
 
-    // Déterminer le nouveau statut
+    // Déterminer le nouveau statut seulement si ce ne sont pas uniquement les champs de certification qui changent
     let newValidationStatus: ProductValidation
-    if (currentProduct?.validate === ProductValidation.RecheckRequest) {
-      // Si une révision était demandée et que l'hôte fait des modifications,
-      // le statut passe à "En attente" pour signaler à l'admin qu'il y a du nouveau travail
-      newValidationStatus = ProductValidation.NotVerified
+    let shouldChangeValidationStatus = true
+
+    // Vérifier si seuls les champs de certification sont modifiés
+    // On considère que c'est une modification de certification uniquement si :
+    // 1. isCertificated est fourni (modification de certification)
+    // 2. certificatedBy est fourni (admin qui fait la modification)
+    // 3. La certification change réellement
+    const isCertificationOnlyChange = params.isCertificated !== undefined && 
+                                     params.certificatedBy && 
+                                     currentProduct?.isCertificated !== params.isCertificated
+
+    console.log('Debug certification:', {
+      isCertificatedProvided: params.isCertificated !== undefined,
+      certificatedByProvided: !!params.certificatedBy,
+      currentCertificated: currentProduct?.isCertificated,
+      newCertificated: params.isCertificated,
+      certificationChanged: currentProduct?.isCertificated !== params.isCertificated,
+      isCertificationOnlyChange,
+      shouldChangeValidationStatus: !isCertificationOnlyChange,
+      hostId: !!hostId
+    })
+
+    if (isCertificationOnlyChange) {
+      // C'est uniquement une modification de certification, ne pas changer le statut de validation
+      shouldChangeValidationStatus = false
+      newValidationStatus = currentProduct?.validate || ProductValidation.NotVerified
+      console.log('Certification uniquement détectée - statut préservé:', newValidationStatus)
     } else {
-      // Pour les autres cas, garder la logique actuelle
-      newValidationStatus = ProductValidation.RecheckRequest
+      // Logique normale pour les autres modifications
+      shouldChangeValidationStatus = true
+      if (currentProduct?.validate === ProductValidation.RecheckRequest) {
+        // Si une révision était demandée et que l'hôte fait des modifications,
+        // le statut passe à "En attente" pour signaler à l'admin qu'il y a du nouveau travail
+        newValidationStatus = ProductValidation.NotVerified
+      } else {
+        // Pour les autres cas, garder la logique actuelle
+        newValidationStatus = ProductValidation.RecheckRequest
+      }
+      console.log('Modification normale détectée - statut changé vers:', newValidationStatus)
     }
 
     // Construire l'objet de données de manière conditionnelle
@@ -898,7 +930,6 @@ export async function resubmitProductWithChange(
       bathroom: params.bathroom ? BigInt(params.bathroom) : null,
       arriving: params.arriving,
       leaving: params.leaving,
-      validate: newValidationStatus,
       type: { connect: { id: params.typeId } },
       equipments: {
         set: params.equipments.map(equipmentId => ({ id: equipmentId })),
@@ -916,6 +947,11 @@ export async function resubmitProductWithChange(
         deleteMany: {},
         create: params.images.map(img => ({ img })),
       },
+    }
+
+    // Ajouter le statut de validation seulement si ce n'est pas une modification de certification uniquement
+    if (shouldChangeValidationStatus) {
+      updateData.validate = newValidationStatus
     }
     
     if (params.isCertificated !== undefined) {
@@ -946,8 +982,19 @@ export async function resubmitProductWithChange(
     })
 
     if (updatedProduct && currentProduct) {
-      // Créer un historique de validation
-      if (hostId) {
+      // Créer un historique de validation pour les modifications seulement si le statut change
+      console.log('Debug historique validation:', {
+        hostId: !!hostId,
+        shouldChangeValidationStatus,
+        currentStatus: currentProduct.validate,
+        newStatus: newValidationStatus,
+        statusChanged: currentProduct.validate !== newValidationStatus,
+        willCreateHistory: !!(hostId && shouldChangeValidationStatus && currentProduct.validate !== newValidationStatus),
+        isCertificationOnlyChange: isCertificationOnlyChange
+      })
+      
+      // Ne pas créer d'historique de validation si c'est uniquement une modification de certification
+      if (hostId && shouldChangeValidationStatus && currentProduct.validate !== newValidationStatus && !isCertificationOnlyChange) {
         const reason =
           currentProduct.validate === ProductValidation.RecheckRequest
             ? "Modifications apportées par l'hôte suite à une demande de révision"
@@ -969,30 +1016,60 @@ export async function resubmitProductWithChange(
         })
       }
 
-      // Notifier les administrateurs
-      const admin = await findAllUserByRoles('ADMIN')
-      if (admin && admin.length > 0) {
-        const emailPromises = admin.map(async user => {
-          try {
-            await sendTemplatedMail(
-              user.email,
-              'Une annonce a été modifiée et nécessite une nouvelle validation',
-              'annonce-modifiee.html',
-              {
-                name: user.name || 'Administrateur',
-                productName: params.name,
-                annonceUrl: process.env.NEXTAUTH_URL + '/admin/validation/' + updatedProduct.id,
-              }
-            )
-          } catch (emailError) {
-            console.error('Erreur envoi email admin modification:', emailError)
-          }
-        })
+      // Créer un historique spécifique pour les changements de certification
+      if (params.isCertificated !== undefined && params.certificatedBy) {
+        // Comparer l'état de certification avant et après
+        if (currentProduct && currentProduct.isCertificated !== params.isCertificated) {
+          const certificationReason = params.isCertificated
+            ? "Produit certifié par un administrateur"
+            : "Certification du produit retirée par un administrateur"
 
-        // Envoi asynchrone sans attendre
-        Promise.allSettled(emailPromises).catch(error => {
-          console.error("Erreur lors de l'envoi des emails de modification:", error)
-        })
+          await createValidationHistory({
+            productId: id,
+            previousStatus: currentProduct.validate,
+            newStatus: currentProduct.validate, // Le statut de validation ne change pas pour la certification
+            adminId: params.certificatedBy,
+            hostId: hostId,
+            reason: certificationReason,
+            changes: {
+              certification: {
+                previous: currentProduct.isCertificated,
+                new: params.isCertificated,
+                certificatedBy: params.certificatedBy,
+                certificationDate: params.certificationDate,
+                modifiedAt: new Date().toISOString(),
+              },
+            },
+          })
+        }
+      }
+
+      // Notifier les administrateurs seulement si le statut de validation change
+      if (shouldChangeValidationStatus) {
+        const admin = await findAllUserByRoles('ADMIN')
+        if (admin && admin.length > 0) {
+          const emailPromises = admin.map(async user => {
+            try {
+              await sendTemplatedMail(
+                user.email,
+                'Une annonce a été modifiée et nécessite une nouvelle validation',
+                'annonce-modifiee.html',
+                {
+                  name: user.name || 'Administrateur',
+                  productName: params.name,
+                  annonceUrl: process.env.NEXTAUTH_URL + '/admin/validation/' + updatedProduct.id,
+                }
+              )
+            } catch (emailError) {
+              console.error('Erreur envoi email admin modification:', emailError)
+            }
+          })
+
+          // Envoi asynchrone sans attendre
+          Promise.allSettled(emailPromises).catch(error => {
+            console.error("Erreur lors de l'envoi des emails de modification:", error)
+          })
+        }
       }
     }
 

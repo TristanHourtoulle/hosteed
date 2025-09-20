@@ -719,7 +719,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
           // Champs de certification
           isCertificated: formData.isCertificated,
           certificationDate: formData.isCertificated ? new Date() : null,
-          certificatedBy: formData.isCertificated && session?.user?.id ? session.user.id : null,
+          certificatedBy: session?.user?.id || null, // Toujours fournir l'ID de l'admin pour la logique de détection
         },
         product.user[0]?.id // Utiliser l'ID du premier utilisateur comme hostId
       )
