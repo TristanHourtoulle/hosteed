@@ -1521,7 +1521,7 @@ export async function updateProduct(
       if (params.isCertificated && params.certificatedBy) {
         updateData.certificatedBy = params.certificatedBy
       } else {
-        updateData.certificatedBy = undefined
+        updateData.certificatedBy = null
       }
     }
 
