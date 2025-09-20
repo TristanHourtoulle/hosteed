@@ -602,7 +602,40 @@ export async function createProduct(data: CreateProductInput) {
     }
 
     // Préparer les données de base
-    const productData: any = {
+    const productData: {
+      name: string
+      description: string
+      address: string
+      longitude: number
+      latitude: number
+      basePrice: string
+      priceMGA: string
+      room: number | null
+      bathroom: number | null
+      arriving: number
+      leaving: number
+      autoAccept: boolean
+      phone: string
+      phoneCountry: string
+      maxPeople: number | null
+      categories: number
+      validate: ProductValidation
+      userManager: number
+      availableRooms: number | null
+      isCertificated: boolean | undefined
+      certificationDate: Date | undefined
+      certificatedBy?: string
+      typeId: string
+      user: { connect: { id: string }[] }
+      equipments: { connect: { id: string }[] }
+      servicesList: { connect: { id: string }[] }
+      mealsList: { connect: { id: string }[] }
+      securities: { connect: { id: string }[] }
+      includedServices: { connect: { id: string }[] }
+      extras: { connect: { id: string }[] }
+      highlights: { connect: { id: string }[] }
+      img: { create: { img: string }[] }
+    } = {
       name: data.name,
       description: data.description,
       address: data.address,
@@ -610,23 +643,23 @@ export async function createProduct(data: CreateProductInput) {
       latitude: Number(data.latitude),
       basePrice: data.basePrice,
       priceMGA: data.priceMGA,
-      room: data.room ? BigInt(data.room) : null,
-      bathroom: data.bathroom ? BigInt(data.bathroom) : null,
+      room: data.room ? Number(data.room) : null,
+      bathroom: data.bathroom ? Number(data.bathroom) : null,
       arriving: Number(data.arriving),
       leaving: Number(data.leaving),
       autoAccept: false,
       phone: data.phone || '',
       phoneCountry: data.phoneCountry || 'MG',
-      maxPeople: data.maxPeople ? BigInt(data.maxPeople) : null,
-      categories: BigInt(0),
+      maxPeople: data.maxPeople ? Number(data.maxPeople) : null,
+      categories: 0,
       validate: ProductValidation.NotVerified,
-      userManager: BigInt(0),
+      userManager: 0,
       // Gestion du nombre de chambres disponibles pour les hôtels
       availableRooms: data.hotelInfo ? data.hotelInfo.availableRooms : null,
       // Champs de certification
       isCertificated: data.isCertificated,
-      certificationDate: data.isCertificated && data.certificationDate ? new Date(data.certificationDate) : null,
-      certificatedBy: data.isCertificated && data.certificatedBy ? data.certificatedBy : null,
+      certificationDate: data.isCertificated && data.certificationDate ? new Date(data.certificationDate) : undefined,
+      certificatedBy: data.isCertificated && data.certificatedBy ? data.certificatedBy : undefined,
       typeId: data.typeId,
       user: {
         connect: data.userId.map(id => ({ id })),
@@ -883,10 +916,8 @@ export async function createProduct(data: CreateProductInput) {
       }
     } catch (adminError) {
       console.error('Erreur lors de la récupération des admins:', adminError)
-      // Ne pas faire échouer la création du produit
     }
 
-    // Invalider le cache après création
     await invalidateProductCache()
 
     return finalProduct
@@ -1090,7 +1121,7 @@ export async function resubmitProductWithChange(
     // Champs de certification
     isCertificated?: boolean
     certificationDate?: Date | string | null
-    certificatedBy?: string | null
+    certificatedBy?: string
   },
   hostId?: string
 ) {
@@ -1150,15 +1181,36 @@ export async function resubmitProductWithChange(
     }
 
     // Construire l'objet de données de manière conditionnelle
-    const updateData: any = {
+    const updateData: {
+      name: string
+      description: string
+      address: string
+      longitude: number
+      latitude: number
+      basePrice: string
+      room: number | null
+      bathroom: number | null
+      arriving: number
+      leaving: number
+      type: { connect: { id: string } }
+      equipments: { set: { id: string }[] }
+      servicesList: { set: { id: string }[] }
+      mealsList: { set: { id: string }[] }
+      securities: { set: { id: string }[] }
+      img: { deleteMany: Record<string, never>; create: { img: string }[] }
+      validate?: ProductValidation
+      isCertificated?: boolean
+      certificationDate?: Date | null
+      certificatedRelation?: { connect: { id: string } } | { disconnect: true }
+    } = {
       name: params.name,
       description: params.description,
       address: params.address,
       longitude: params.longitude,
       latitude: params.latitude,
       basePrice: params.basePrice,
-      room: params.room ? BigInt(params.room) : null,
-      bathroom: params.bathroom ? BigInt(params.bathroom) : null,
+      room: params.room ? Number(params.room) : null,
+      bathroom: params.bathroom ? Number(params.bathroom) : null,
       arriving: params.arriving,
       leaving: params.leaving,
       type: { connect: { id: params.typeId } },
@@ -1194,7 +1246,7 @@ export async function resubmitProductWithChange(
           id: params.certificatedBy
           }}
       } else {
-        updateData.certificatedRelation = { disconnect: {}}
+        updateData.certificatedRelation = { disconnect: true,}
       }
     }
 
@@ -1342,32 +1394,82 @@ export async function createDraftProduct(originalProductId: string) {
     }
 
     // Préparer les données de base pour le draft
-    const draftData: any = {
+    const draftData: {
+      name: string
+      description: string
+      address: string
+      basePrice: string
+      priceMGA: string
+      room: number | null
+      bathroom: number | null
+      arriving: number
+      leaving: number
+      autoAccept: boolean
+      equipement: number | null
+      meal: number | null
+      services: number | null
+      security: number | null
+      minRent: number | null
+      maxRent: number | null
+      advanceRent: number | null
+      delayTime: number | null
+      categories: number
+      minPeople: number | null
+      maxPeople: number | null
+      commission: number
+      validate: ProductValidation
+      userManager: number
+      typeId: string
+      phone: string
+      phoneCountry: string
+      latitude: number
+      longitude: number
+      certified: boolean
+      contract: boolean
+      sizeRoom: number | null
+      availableRooms: number | null
+      isCertificated: boolean
+      certificationDate: Date | undefined
+      certificatedBy?: string
+      isDraft: boolean
+      originalProductId: string
+      img: { create: { img: string }[] }
+      equipments: { connect: { id: string }[] }
+      servicesList: { connect: { id: string }[] }
+      mealsList: { connect: { id: string }[] }
+      securities: { connect: { id: string }[] }
+      includedServices: { connect: { id: string }[] }
+      extras: { connect: { id: string }[] }
+      highlights: { connect: { id: string }[] }
+      user: { connect: { id: string }[] }
+      nearbyPlaces: { create: { name: string; distance: number; duration: number; transport: string }[] }
+      transportOptions: { create: { name: string; description?: string }[] }
+    } = {
       // Copy all basic fields
       name: originalProduct.name,
       description: originalProduct.description,
       address: originalProduct.address,
       basePrice: originalProduct.basePrice,
       priceMGA: originalProduct.priceMGA,
-      room: originalProduct.room,
-      bathroom: originalProduct.bathroom,
+      room: originalProduct.room ? Number(originalProduct.room) : null,
+      bathroom: originalProduct.bathroom ? Number(originalProduct.bathroom) : null,
       arriving: originalProduct.arriving,
       leaving: originalProduct.leaving,
       autoAccept: originalProduct.autoAccept,
-      equipement: originalProduct.equipement,
-      meal: originalProduct.meal,
-      services: originalProduct.services,
-      security: originalProduct.security,
-      minRent: originalProduct.minRent,
-      maxRent: originalProduct.maxRent,
-      advanceRent: originalProduct.advanceRent,
-      delayTime: originalProduct.delayTime,
-      categories: originalProduct.categories,
-      minPeople: originalProduct.minPeople,
-      maxPeople: originalProduct.maxPeople,
+      equipement: originalProduct.equipement ? Number(originalProduct.equipement) : null,
+      meal: originalProduct.meal ? Number(originalProduct.meal) : null,
+      services: originalProduct.services ? Number(originalProduct.services) : null,
+      security: originalProduct.security ? Number(originalProduct.security) : null,
+      minRent: originalProduct.minRent ? Number(originalProduct.minRent) : null,
+      maxRent: originalProduct.maxRent ? Number(originalProduct.maxRent) : null,
+      advanceRent: originalProduct.advanceRent ? Number(originalProduct.advanceRent) : null,
+      delayTime: originalProduct.delayTime ? Number(originalProduct.delayTime) : null,
+      categories: Number(originalProduct.categories),
+      minPeople: originalProduct.minPeople ? Number(originalProduct.minPeople) : null,
+      maxPeople: originalProduct.maxPeople ? Number(originalProduct.maxPeople) : null,
       commission: originalProduct.commission,
       validate: ProductValidation.NotVerified,
-      userManager: originalProduct.userManager,
+      userManager: Number(originalProduct.userManager),
       typeId: originalProduct.typeId,
       phone: originalProduct.phone,
       phoneCountry: originalProduct.phoneCountry,
@@ -1380,8 +1482,8 @@ export async function createDraftProduct(originalProductId: string) {
 
       // Copy certification fields avec logique conditionnelle
       isCertificated: originalProduct.isCertificated,
-      certificationDate: originalProduct.isCertificated ? originalProduct.certificationDate : null,
-      certificatedBy: originalProduct.isCertificated ? originalProduct.certificatedBy : null,
+      certificationDate: originalProduct.isCertificated ? originalProduct.certificationDate || undefined : undefined,
+      certificatedBy: originalProduct.isCertificated ? originalProduct.certificatedBy || undefined : undefined,
 
       // Mark as draft and link to original
       isDraft: true,
@@ -1426,7 +1528,7 @@ export async function createDraftProduct(originalProductId: string) {
       transportOptions: {
         create: originalProduct.transportOptions.map(transport => ({
           name: transport.name,
-          description: transport.description,
+          description: transport.description || undefined,
         })),
       },
     }
@@ -1505,29 +1607,74 @@ export async function applyDraftChanges(draftId: string) {
     }
 
     // Préparer les données de mise à jour
-    const updateData: any = {
+    const updateData: {
+      name: string
+      description: string
+      address: string
+      basePrice: string
+      priceMGA: string
+      room: number | null
+      bathroom: number | null
+      arriving: number
+      leaving: number
+      autoAccept: boolean
+      equipement: number | null
+      meal: number | null
+      services: number | null
+      security: number | null
+      minRent: number | null
+      maxRent: number | null
+      advanceRent: number | null
+      delayTime: number | null
+      categories: number
+      minPeople: number | null
+      maxPeople: number | null
+      commission: number
+      validate: ProductValidation
+      phone: string
+      phoneCountry: string
+      latitude: number
+      longitude: number
+      certified: boolean
+      contract: boolean
+      sizeRoom: number | null
+      availableRooms: number | null
+      isCertificated: boolean
+      certificationDate: Date | undefined
+      certificatedBy?: string
+      img: { deleteMany: Record<string, never>; create: { img: string }[] }
+      equipments: { set: { id: string }[] }
+      servicesList: { set: { id: string }[] }
+      mealsList: { set: { id: string }[] }
+      securities: { set: { id: string }[] }
+      includedServices: { set: { id: string }[] }
+      extras: { set: { id: string }[] }
+      highlights: { set: { id: string }[] }
+      nearbyPlaces: { deleteMany: Record<string, never>; create: { name: string; distance: number; duration: number; transport: string }[] }
+      transportOptions: { deleteMany: Record<string, never>; create: { name: string; description?: string }[] }
+    } = {
       // Update all basic fields
       name: draft.name,
       description: draft.description,
       address: draft.address,
       basePrice: draft.basePrice,
       priceMGA: draft.priceMGA,
-      room: draft.room,
-      bathroom: draft.bathroom,
+      room: draft.room ? Number(draft.room) : null,
+      bathroom: draft.bathroom ? Number(draft.bathroom) : null,
       arriving: draft.arriving,
       leaving: draft.leaving,
       autoAccept: draft.autoAccept,
-      equipement: draft.equipement,
-      meal: draft.meal,
-      services: draft.services,
-      security: draft.security,
-      minRent: draft.minRent,
-      maxRent: draft.maxRent,
-      advanceRent: draft.advanceRent,
-      delayTime: draft.delayTime,
-      categories: draft.categories,
-      minPeople: draft.minPeople,
-      maxPeople: draft.maxPeople,
+      equipement: draft.equipement ? Number(draft.equipement) : null,
+      meal: draft.meal ? Number(draft.meal) : null,
+      services: draft.services ? Number(draft.services) : null,
+      security: draft.security ? Number(draft.security) : null,
+      minRent: draft.minRent ? Number(draft.minRent) : null,
+      maxRent: draft.maxRent ? Number(draft.maxRent) : null,
+      advanceRent: draft.advanceRent ? Number(draft.advanceRent) : null,
+      delayTime: draft.delayTime ? Number(draft.delayTime) : null,
+      categories: Number(draft.categories),
+      minPeople: draft.minPeople ? Number(draft.minPeople) : null,
+      maxPeople: draft.maxPeople ? Number(draft.maxPeople) : null,
       commission: draft.commission,
       validate: ProductValidation.Approve,
       phone: draft.phone,
@@ -1541,8 +1688,8 @@ export async function applyDraftChanges(draftId: string) {
 
       // Update certification fields avec logique conditionnelle
       isCertificated: draft.isCertificated,
-      certificationDate: draft.isCertificated ? draft.certificationDate : null,
-      certificatedBy: draft.isCertificated ? draft.certificatedBy : null,
+      certificationDate: draft.isCertificated ? draft.certificationDate || undefined : undefined,
+      certificatedBy: draft.isCertificated ? draft.certificatedBy || undefined : undefined,
 
       // Update relationships
       img: {
@@ -1583,7 +1730,7 @@ export async function applyDraftChanges(draftId: string) {
         deleteMany: {},
         create: draft.transportOptions.map(transport => ({
           name: transport.name,
-          description: transport.description,
+          description: transport.description || undefined,
         })),
       },
     }
@@ -1708,20 +1855,39 @@ export async function updateProduct(
     // Champs de certification
     isCertificated?: boolean
     certificationDate?: Date | string | null
-    certificatedBy?: string | null
+    certificatedBy?: string
   }
 ) {
   try {
     // Construire l'objet de données de manière conditionnelle
-    const updateData: any = {
+    const updateData: {
+      name: string
+      description: string
+      address: string
+      longitude: number
+      latitude: number
+      basePrice: string
+      room: number | null
+      bathroom: number | null
+      arriving: number
+      leaving: number
+      type: { connect: { id: string } }
+      equipments: { set: { id: string }[] }
+      servicesList: { set: { id: string }[] }
+      mealsList: { set: { id: string }[] }
+      securities: { set: { id: string }[] }
+      img: { deleteMany: Record<string, never>; create: { img: string }[] }
+      isCertificated?: boolean
+      certificationDate?: Date | null
+    } = {
       name: params.name,
       description: params.description,
       address: params.address,
       longitude: params.longitude,
       latitude: params.latitude,
       basePrice: params.basePrice,
-      room: params.room ? BigInt(params.room) : null,
-      bathroom: params.bathroom ? BigInt(params.bathroom) : null,
+      room: params.room ? Number(params.room) : null,
+      bathroom: params.bathroom ? Number(params.bathroom) : null,
       arriving: params.arriving,
       leaving: params.leaving,
       // Ne pas modifier le statut de validation - garder le statut existant
@@ -1750,9 +1916,9 @@ export async function updateProduct(
       updateData.certificationDate = params.isCertificated && params.certificationDate ? new Date(params.certificationDate) : null
 
       if (params.isCertificated && params.certificatedBy) {
-        updateData.certificatedBy = params.certificatedBy
+        (updateData as Record<string, unknown>).certificatedBy = params.certificatedBy
       } else {
-        updateData.certificatedBy = null
+        (updateData as Record<string, unknown>).certificatedBy = undefined
       }
     }
 

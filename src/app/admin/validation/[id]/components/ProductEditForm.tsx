@@ -673,15 +673,15 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
     try {
       // Convertir les nouvelles images en base64
       let finalImages: string[] = []
-      
+
       if (selectedFiles.length > 0) {
         // Séparer les images existantes des nouvelles
         const existingImages = selectedFiles.filter(img => img.id.startsWith('existing-'))
         const newImages = selectedFiles.filter(img => !img.id.startsWith('existing-'))
-        
+
         // Garder les images existantes (déjà en base64)
         const existingImageUrls = existingImages.map(img => img.preview)
-        
+
         // Convertir les nouvelles images en base64
         let newImageBase64: string[] = []
         if (newImages.length > 0) {
@@ -689,7 +689,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
           newImageBase64 = await convertFilesToBase64(newImages)
           setIsUploadingImages(false)
         }
-        
+
         // Combiner toutes les images
         finalImages = [...existingImageUrls, ...newImageBase64]
       }
@@ -716,7 +716,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
           // Champs de certification
           isCertificated: formData.isCertificated,
           certificationDate: formData.isCertificated ? new Date() : null,
-          certificatedBy: session?.user?.id || null, // Toujours fournir l'ID de l'admin pour la logique de détection
+          certificatedBy: session?.user?.id || undefined, // Toujours fournir l'ID de l'admin pour la logique de détection
         },
         product.user[0]?.id // Utiliser l'ID du premier utilisateur comme hostId
       )
@@ -771,7 +771,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
 
         {error && (
           <motion.div variants={itemVariants}>
-            <ErrorAlert 
+            <ErrorAlert
               error={error}
               onClose={() => setError(null)}
               onRetry={error.retryable ? () => {
@@ -1023,7 +1023,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
 
                     {/* Calcul des commissions */}
                     {formData.basePrice && (
-                      <CommissionDisplay 
+                      <CommissionDisplay
                         basePrice={parseFloat(formData.basePrice) || 0}
                         className="border-orange-200 bg-orange-50/30"
                       />
@@ -1854,7 +1854,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
                         <Award className='h-4 w-4' />
                         <span className='font-medium'>Cette annonce sera certifiée</span>
                       </div>
-                      
+
                       <div className='text-sm text-slate-600'>
                         <p><strong>Date de certification :</strong> {new Date().toLocaleDateString('fr-FR')}</p>
                         <p><strong>Certifié par :</strong> {session?.user?.name || session?.user?.email || 'Administrateur'}</p>

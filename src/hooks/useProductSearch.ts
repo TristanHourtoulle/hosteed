@@ -388,9 +388,7 @@ export function useProductSearch() {
       maxBathrooms: '',
       sizeMin: '',
       sizeMax: '',
-      autoAcceptOnly: false,
       certifiedOnly: false,
-      contractRequired: false,
     })
   }
 
