@@ -2,6 +2,7 @@ import ProductCard from '@/components/ui/ProductCard'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/shadcnui'
 import { motion } from 'framer-motion'
+import Pagination, { PaginationInfo } from '@/components/ui/Pagination'
 
 interface Product {
   id: string
@@ -23,10 +24,21 @@ interface Product {
   validate?: string
 }
 
+interface PaginationData {
+  page: number
+  limit: number
+  total: number
+  totalPages: number
+  hasNext: boolean
+  hasPrev: boolean
+}
+
 interface SearchResultsProps {
   products: Product[]
   hasActiveFilters: boolean
   onResetFilters: () => void
+  pagination?: PaginationData
+  onPageChange?: (page: number) => void
 }
 
 const container = {
@@ -43,6 +55,8 @@ export default function SearchResults({
   products,
   hasActiveFilters,
   onResetFilters,
+  pagination,
+  onPageChange,
 }: SearchResultsProps) {
   if (products.length === 0) {
     return (
@@ -68,15 +82,44 @@ export default function SearchResults({
   }
 
   return (
-    <motion.div
-      variants={container}
-      initial='hidden'
-      animate='show'
-      className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6'
-    >
-      {products.map((product, index) => (
-        <ProductCard key={product.id} product={product} index={index} />
-      ))}
-    </motion.div>
+    <div className="space-y-6">
+      {/* Pagination Info */}
+      {pagination && (
+        <div className="flex justify-between items-center">
+          <PaginationInfo
+            currentPage={pagination.page}
+            itemsPerPage={pagination.limit}
+            totalItems={pagination.total}
+          />
+          <div className="text-sm text-gray-500">
+            {pagination.totalPages} page{pagination.totalPages > 1 ? 's' : ''}
+          </div>
+        </div>
+      )}
+
+      {/* Products Grid */}
+      <motion.div
+        variants={container}
+        initial='hidden'
+        animate='show'
+        className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6'
+      >
+        {products.map((product, index) => (
+          <ProductCard key={product.id} product={product} index={index} />
+        ))}
+      </motion.div>
+
+      {/* Pagination Controls */}
+      {pagination && pagination.totalPages > 1 && onPageChange && (
+        <div className="flex justify-center pt-6">
+          <Pagination
+            currentPage={pagination.page}
+            totalPages={pagination.totalPages}
+            onPageChange={onPageChange}
+            className="bg-white p-4 rounded-lg shadow-sm border"
+          />
+        </div>
+      )}
+    </div>
   )
 }
