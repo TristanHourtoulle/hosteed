@@ -13,12 +13,13 @@ export async function findTypeById(id: string): Promise<TypeRent | null> {
   }
 }
 
-export async function findAllTypeRent(): Promise<TypeRent[] | null> {
+export async function findAllTypeRent(): Promise<TypeRent[]> {
   try {
-    return await prisma.typeRent.findMany()
+    const result = await prisma.typeRent.findMany()
+    return result || []
   } catch (error) {
     console.error('Erreur lors de la recherche des types de location:', error)
-    return null
+    return []
   }
 }
 

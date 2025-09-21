@@ -4,10 +4,11 @@ import { invalidateStaticDataCache } from '@/lib/cache/invalidation'
 
 export async function findAllEquipments() {
   try {
-    return await prisma.equipment.findMany()
+    const result = await prisma.equipment.findMany()
+    return result || []
   } catch (error) {
     console.error('Erreur lors de la recherche des équipements:', error)
-    return null
+    return []
   }
 }
 export async function findEquipmentById(id: string) {

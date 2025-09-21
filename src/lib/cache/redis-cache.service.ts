@@ -5,7 +5,30 @@
  */
 
 // import Redis from 'ioredis'
-import { OptimizedProductFilters, OptimizedProduct } from '@/lib/services/optimized-product.service'
+
+// Types moved here since the service was removed
+interface OptimizedProductFilters {
+  query?: string
+  location?: string
+  typeId?: string
+  minPrice?: number
+  maxPrice?: number
+  guests?: number
+  page?: number
+  limit?: number
+  sortBy?: 'price' | 'rating' | 'distance' | 'created' | 'updated'
+  sortOrder?: 'asc' | 'desc'
+}
+
+interface OptimizedProduct {
+  id: string
+  name: string
+  description: string
+  address: string
+  basePrice: string
+  certified: boolean
+  [key: string]: unknown
+}
 
 // ================================
 // REDIS CLIENT CONFIGURATION

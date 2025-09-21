@@ -2,7 +2,6 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { findAllTypeRent } from '@/lib/services/typeRent.service'
 import { TypeRent } from '@prisma/client'
 
 interface Suggestion {
@@ -35,9 +34,14 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
 
   useEffect(() => {
     const fetchTypeRent = async () => {
-      const types = await findAllTypeRent()
-      if (types) {
-        setTypeRent(types)
+      try {
+        const response = await fetch('/api/types')
+        if (response.ok) {
+          const types = await response.json()
+          setTypeRent(types)
+        }
+      } catch (error) {
+        console.error('Error fetching types:', error)
       }
     }
     fetchTypeRent()

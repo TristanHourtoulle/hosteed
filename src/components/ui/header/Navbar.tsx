@@ -24,7 +24,6 @@ import {
 } from '@/components/ui/shadcnui/sheet'
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
-import { findAllTypeRent } from '@/lib/services/typeRent.service'
 import { TypeRent } from '@prisma/client'
 import { NavUser } from './nav-user'
 import { Menu } from 'lucide-react'
@@ -37,9 +36,14 @@ const Navbar = () => {
 
   useEffect(() => {
     const fetchTypeRent = async () => {
-      const types = await findAllTypeRent()
-      if (types) {
-        setTypeRent(types)
+      try {
+        const response = await fetch('/api/types')
+        if (response.ok) {
+          const types = await response.json()
+          setTypeRent(types)
+        }
+      } catch (error) {
+        console.error('Error fetching types:', error)
       }
     }
     fetchTypeRent()
@@ -211,6 +215,7 @@ const Navbar = () => {
                 alt='Hosteed'
                 width={120}
                 height={120}
+                priority
                 className='h-14 w-auto'
               />
             </Link>
