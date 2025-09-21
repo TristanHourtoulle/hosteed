@@ -4,8 +4,10 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { isFullAdmin } from '@/hooks/useAdminAuth'
-import { createUser, findAllUser } from '@/lib/services/user.service'
+import { createUser } from '@/lib/services/user.service'
 import { User } from '@prisma/client'
+import { useAdminUsersPaginated } from '@/hooks/useAdminPaginated'
+import Pagination from '@/components/ui/Pagination'
 import Link from 'next/link'
 import { motion, Variants } from 'framer-motion'
 import { Card, CardContent, CardHeader } from '@/components/ui/shadcnui/card'
@@ -81,10 +83,22 @@ const itemVariants: Variants = {
 export default function UsersPage() {
   const { data: session } = useSession()
   const router = useRouter()
-  const [users, setUsers] = useState<User[]>([])
-  const [loading, setLoading] = useState(true)
+  
+  // Use optimized pagination hook
+  const {
+    users,
+    pagination,
+    loading,
+    error: hookError,
+    searchTerm,
+    roleFilter,
+    handleSearch,
+    handleRoleFilter,
+    goToPage,
+    refetch,
+  } = useAdminUsersPaginated()
+
   const [error, setError] = useState<string | null>(null)
-  const [searchTerm, setSearchTerm] = useState('')
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
@@ -121,7 +135,8 @@ export default function UsersPage() {
       )
 
       if (newOption) {
-        setUsers([...users, newOption as User])
+        // Refresh the paginated data instead of manually updating state
+        await refetch()
         setNewUserName('')
         setnewUserEmail('')
         setnewUserSurname('')
@@ -158,12 +173,8 @@ export default function UsersPage() {
       })
 
       if (response.ok) {
-        // Mettre à jour la liste des utilisateurs
-        setUsers(
-          users.map(user =>
-            user.id === editingUser.id ? { ...user, roles: newRole as User['roles'] } : user
-          )
-        )
+        // Refresh the paginated data instead of manually updating state
+        await refetch()
         setIsEditRoleDialogOpen(false)
         setEditingUser(null)
         setNewRole('')
@@ -208,30 +219,7 @@ export default function UsersPage() {
     }
   }, [session, router])
 
-  const fetchUsers = async () => {
-    try {
-      setLoading(true)
-      const usersData = await findAllUser()
-      if (usersData) {
-        setUsers(usersData as unknown as User[])
-      }
-    } catch (err) {
-      setError('Erreur lors du chargement des utilisateurs')
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchUsers()
-  }, [])
-
-  const filteredUsers = users.filter(
-    user =>
-      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  // Remove manual data fetching - handled by hook now
 
   if (loading) {
     return (
@@ -244,12 +232,12 @@ export default function UsersPage() {
     )
   }
 
-  if (error) {
+  if (error || hookError) {
     return (
       <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-8'>
         <div className='max-w-7xl mx-auto'>
           <Alert variant='destructive' className='rounded-2xl'>
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>{error || hookError?.message || 'Erreur lors du chargement'}</AlertDescription>
           </Alert>
         </div>
       </div>
@@ -297,7 +285,7 @@ export default function UsersPage() {
                 <div className='flex items-center justify-between'>
                   <div>
                     <p className='text-blue-100 text-sm font-medium'>Total Utilisateurs</p>
-                    <p className='text-3xl font-bold'>{users.length}</p>
+                    <p className='text-3xl font-bold'>{pagination.totalItems}</p>
                   </div>
                   <Users className='h-8 w-8 text-blue-200' />
                 </div>
@@ -309,7 +297,10 @@ export default function UsersPage() {
             const count = users.filter(user => user.roles === role).length
             return (
               <motion.div key={role} variants={itemVariants}>
-                <Card className='border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 backdrop-blur-sm'>
+                <Card 
+                  className='border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 backdrop-blur-sm cursor-pointer'
+                  onClick={() => handleRoleFilter(roleFilter === role ? '' : role)}
+                >
                   <CardContent className='p-6'>
                     <div className='flex items-center justify-between'>
                       <div>
@@ -321,8 +312,9 @@ export default function UsersPage() {
                               : role === 'HOST'
                                 ? 'Hôtes'
                                 : 'Utilisateurs'}
+                          {roleFilter === role && ' (Filtré)'}
                         </p>
-                        <p className='text-2xl font-bold text-gray-900'>{count}</p>
+                        <p className='text-2xl font-bold text-gray-900'>{roleFilter === role ? pagination.totalItems : count}</p>
                       </div>
                       <RoleIcon role={role} size='md' />
                     </div>
@@ -347,7 +339,7 @@ export default function UsersPage() {
                 type='text'
                 placeholder='Rechercher par nom, email...'
                 value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
+                onChange={e => handleSearch(e.target.value)}
                 className='pl-10 py-3 border-0 bg-gray-50 focus:bg-white transition-colors rounded-xl'
               />
             </div>
@@ -358,7 +350,7 @@ export default function UsersPage() {
               <Filter className='h-4 w-4 mr-2' />
               Filtrer
             </Button>
-            <EmailVerificationPanel users={users} refreshUsers={fetchUsers} />
+            <EmailVerificationPanel users={users} refreshUsers={refetch} />
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
                 <Button className='bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl shadow-lg'>
@@ -461,7 +453,7 @@ export default function UsersPage() {
           animate='visible'
           className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
         >
-          {filteredUsers.map((user, index) => (
+          {users.map((user, index) => (
             <motion.div key={user.id} variants={itemVariants} transition={{ delay: index * 0.1 }}>
               <Card className='group hover:shadow-2xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm rounded-2xl overflow-hidden'>
                 <CardHeader className='pb-4'>
@@ -549,7 +541,7 @@ export default function UsersPage() {
           ))}
         </motion.div>
 
-        {filteredUsers.length === 0 && (
+        {users.length === 0 && !loading && (
           <motion.div variants={itemVariants} className='text-center py-12'>
             <UserIcon className='h-12 w-12 text-gray-400 mx-auto mb-4' />
             <h3 className='text-lg font-medium text-gray-900 mb-2'>Aucun utilisateur trouvé</h3>
@@ -557,6 +549,29 @@ export default function UsersPage() {
               Essayez de modifier votre recherche ou ajoutez un nouvel utilisateur.
             </p>
           </motion.div>
+        )}
+
+        {/* Pagination */}
+        {pagination.totalPages > 1 && (
+          <div className='mt-8 flex justify-center'>
+            <Pagination
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              onPageChange={goToPage}
+              showPrevNext={true}
+              showNumbers={true}
+              maxVisiblePages={5}
+            />
+          </div>
+        )}
+
+        {/* Results summary */}
+        {users.length > 0 && (
+          <div className='mt-4 text-center text-sm text-gray-500'>
+            Affichage de {((pagination.currentPage - 1) * pagination.itemsPerPage) + 1} à{' '}
+            {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} sur{' '}
+            {pagination.totalItems} utilisateurs
+          </div>
         )}
 
         {/* Modal de modification des rôles */}

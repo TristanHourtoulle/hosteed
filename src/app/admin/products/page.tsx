@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { isAdmin } from '@/hooks/useAdminAuth'
@@ -10,19 +10,23 @@ import { Search, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/shadcnui/button'
 import Link from 'next/link'
 import { ProductCard } from './components/ProductCard'
-import { Product } from '@prisma/client'
-import { findAllProducts } from '@/lib/services/product.service'
-
-interface ExtendedProduct extends Product {
-  img: { img: string }[]
-}
+import { useAdminProductsPaginated } from '@/hooks/useAdminPaginated'
+import Pagination from '@/components/ui/Pagination'
 
 export default function ProductsPage() {
   const { data: session } = useSession()
   const router = useRouter()
-  const [searchTerm, setSearchTerm] = useState('')
-  const [products, setProducts] = useState<ExtendedProduct[]>([])
-  const [loading, setLoading] = useState(true)
+  
+  // Use optimized pagination hook
+  const {
+    products,
+    pagination,
+    loading,
+    error,
+    searchTerm,
+    handleSearch,
+    goToPage,
+  } = useAdminProductsPaginated()
 
   // Security check - Only ADMIN and HOST_MANAGER can access products management
   useEffect(() => {
@@ -30,29 +34,6 @@ export default function ProductsPage() {
       router.push('/')
     }
   }, [session, router])
-
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const data = await findAllProducts()
-        if (data) {
-          setProducts(data as unknown as ExtendedProduct[])
-        }
-      } catch (error) {
-        console.error('Erreur lors du chargement des produits:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchProducts()
-  }, [])
-
-  const filteredProducts = products.filter(
-    product =>
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.address.toLowerCase().includes(searchTerm.toLowerCase())
-  )
 
   if (loading) {
     return (
@@ -116,20 +97,49 @@ export default function ProductsPage() {
               className='pl-9 py-5 rounded-full'
               placeholder='Rechercher par nom ou adresse...'
               value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
+              onChange={e => handleSearch(e.target.value)}
             />
           </div>
         </div>
 
+        {error && (
+          <div className='text-center py-12'>
+            <p className='text-red-500'>Erreur lors du chargement des produits</p>
+          </div>
+        )}
+
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-          {filteredProducts.map(product => (
+          {products.map(product => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>
 
-        {filteredProducts.length === 0 && (
+        {products.length === 0 && !loading && (
           <div className='text-center py-12'>
             <p className='text-gray-500'>Aucun hébergement trouvé</p>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {pagination.totalPages > 1 && (
+          <div className='mt-8 flex justify-center'>
+            <Pagination
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              onPageChange={goToPage}
+              showPrevNext={true}
+              showNumbers={true}
+              maxVisiblePages={5}
+            />
+          </div>
+        )}
+
+        {/* Results summary */}
+        {products.length > 0 && (
+          <div className='mt-4 text-center text-sm text-gray-500'>
+            Affichage de {((pagination.currentPage - 1) * pagination.itemsPerPage) + 1} à{' '}
+            {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} sur{' '}
+            {pagination.totalItems} hébergements
           </div>
         )}
       </motion.div>
