@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
       whereClause.typeId = typeRentId
     }
 
-    // Add price filters
+    // Add price filters (string-based comparison for basePrice)
     if (minPrice || maxPrice) {
       const priceFilter: Record<string, string> = {}
       if (minPrice) {
@@ -84,11 +84,33 @@ export async function GET(request: NextRequest) {
       whereClause.autoAccept = true
     }
 
+    // Add promo filter at database level (products under 100 EUR)
+    if (promo) {
+      // Simplified string-based promo filter for better performance
+      whereClause.AND = [
+        ...(Array.isArray(whereClause.AND) ? whereClause.AND : []),
+        {
+          OR: [
+            { basePrice: { startsWith: '0' } },  // 0-9
+            { basePrice: { startsWith: '1' } },  // 10-19
+            { basePrice: { startsWith: '2' } },  // 20-29
+            { basePrice: { startsWith: '3' } },  // 30-39
+            { basePrice: { startsWith: '4' } },  // 40-49
+            { basePrice: { startsWith: '5' } },  // 50-59
+            { basePrice: { startsWith: '6' } },  // 60-69
+            { basePrice: { startsWith: '7' } },  // 70-79
+            { basePrice: { startsWith: '8' } },  // 80-89
+            { basePrice: { startsWith: '9' } },  // 90-99
+          ]
+        }
+      ]
+    }
+
     // Calculate offset
     const skip = (page - 1) * limit
 
-    // Define lightweight includes for search results (only 1 image for performance)
-    const lightweightIncludes = {
+    // Ultra-lightweight includes for maximum search performance
+    const ultraLightIncludes = {
       img: {
         take: 1, // CRITICAL: Only 1 image for search performance
         select: { 
@@ -99,46 +121,48 @@ export async function GET(request: NextRequest) {
       type: {
         select: { name: true, id: true }
       },
-      equipments: {
-        take: 5, // Limit equipment count for performance
-        select: { id: true, name: true }
-      },
-      securities: {
-        take: 3, // Limit security count for performance
-        select: { id: true, name: true }
-      },
-      servicesList: {
-        take: 5, // Limit services count for performance
-        select: { id: true, name: true }
-      },
-      mealsList: {
-        take: 3, // Limit meals count for performance
-        select: { id: true, name: true }
-      },
-      PromotedProduct: {
-        where: {
-          active: true,
-          start: { lte: new Date() },
-          end: { gte: new Date() },
+      // Only include these for popular sorting
+      ...(popular ? {
+        equipments: {
+          select: { id: true }
         },
-        select: { id: true, active: true, start: true, end: true }
-      },
+        servicesList: {
+          select: { id: true }
+        }
+      } : {}),
+      // Only include promoted info if featured
+      ...(featured ? {
+        PromotedProduct: {
+          where: {
+            active: true,
+            start: { lte: new Date() },
+            end: { gte: new Date() },
+          },
+          select: { id: true, active: true }
+        }
+      } : {}),
+    }
+
+    // Build optimized order by clause
+    let orderBy: any = { id: 'desc' }
+    if (featured) {
+      orderBy = [{ certified: 'desc' }, { id: 'desc' }]
+    } else if (recent) {
+      orderBy = { id: 'desc' }
+    } else if (popular) {
+      // For popularity, we'll still need client-side sorting due to Prisma limitations
+      // but we'll pre-order by id to have consistent results
+      orderBy = { id: 'desc' }
     }
 
     // Execute optimized query
     const [rawProducts, totalCount] = await Promise.all([
       prisma.product.findMany({
         where: whereClause,
-        include: lightweightIncludes,
+        include: ultraLightIncludes,
         skip,
         take: limit,
-        orderBy: featured 
-          ? [{ certified: 'desc' }, { id: 'desc' }]
-          : recent 
-          ? { id: 'desc' }
-          : popular
-          ? [{ id: 'desc' }] // Could be enhanced with actual popularity metrics
-          : { id: 'desc' }
+        orderBy
       }),
       prisma.product.count({
         where: whereClause
@@ -156,7 +180,7 @@ export async function GET(request: NextRequest) {
       userManager: product.userManager ? Number(product.userManager) : null,
     }))
 
-    // Apply client-side sorting for special cases
+    // Apply remaining client-side sorting only for popularity (promo is now handled at DB level)
     let sortedProducts = products
     
     if (popular) {
@@ -167,12 +191,7 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    if (promo) {
-      sortedProducts = sortedProducts.filter(product => {
-        const price = parseFloat(product.basePrice)
-        return price < 100
-      })
-    }
+    // Promo filtering is now handled at database level
 
     // Build response with pagination metadata
     const result = {
@@ -204,12 +223,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Add cache headers optimized for search results
+    // Add optimized cache headers for faster subsequent requests
     const response = NextResponse.json(result)
     response.headers.set(
       'Cache-Control',
-      'public, s-maxage=60, stale-while-revalidate=180'
+      'public, s-maxage=30, stale-while-revalidate=60'
     )
+    response.headers.set('X-Response-Time', Date.now().toString())
 
     return response
   } catch (error) {

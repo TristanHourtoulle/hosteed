@@ -210,6 +210,16 @@ model Product {
   @@index([userManager, validate])
   @@index([isDraft])
   @@index([originalProductId])
+  // Critical search performance indexes
+  @@index([validate, isDraft])
+  @@index([validate, isDraft, typeId])
+  @@index([validate, isDraft, certified])
+  @@index([basePrice])
+  @@index([autoAccept])
+  @@index([minPeople, maxPeople])
+  @@index([name])
+  @@index([address])
+  @@index([description])
 }
 
 // Nouveau modèle pour les commentaires de validation
