@@ -144,7 +144,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Build optimized order by clause
-    let orderBy: any = { id: 'desc' }
+    let orderBy: { id: 'desc' } | Array<{ certified: 'desc' } | { id: 'desc' }> = { id: 'desc' }
     if (featured) {
       orderBy = [{ certified: 'desc' }, { id: 'desc' }]
     } else if (recent) {
