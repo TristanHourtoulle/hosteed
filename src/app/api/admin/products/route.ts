@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { findAllProductsPaginated } from '@/lib/services/product.service'
+import prisma from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,59 +15,88 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 50) // Max 50 per page
     const search = searchParams.get('search') || ''
 
-    // Call the existing service with admin-optimized parameters
-    const result = await findAllProductsPaginated({
-      page,
-      limit,
-      imageMode: 'lightweight', // Only 1 image for admin list view
-      includeLightweight: true, // Include lightweight product data
-    })
-
-    // Filter by search term if provided (client-side filtering after pagination)
-    let filteredProducts = result?.products || []
+    // Build optimized database query with server-side search
+    const whereClause: Record<string, unknown> = {}
+    
+    // Add search filter at database level for better performance
     if (search.trim()) {
-      const searchTerm = search.toLowerCase()
-      filteredProducts = filteredProducts.filter(product => 
-        product.name.toLowerCase().includes(searchTerm) ||
-        product.address.toLowerCase().includes(searchTerm) ||
-        (product.description && product.description.toLowerCase().includes(searchTerm))
-      )
+      whereClause.OR = [
+        { name: { contains: search.trim(), mode: 'insensitive' } },
+        { description: { contains: search.trim(), mode: 'insensitive' } },
+        { address: { contains: search.trim(), mode: 'insensitive' } }
+      ]
     }
 
-    if (!result) {
+    const skip = (page - 1) * limit
+
+    // Execute optimized direct query instead of using service layer
+    const [rawProducts, totalCount] = await Promise.all([
+      prisma.product.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          address: true,
+          basePrice: true,
+          priceMGA: true,
+          validate: true,
+          certified: true,
+          autoAccept: true,
+          isDraft: true,
+          // Only essential relations for admin list
+          img: {
+            take: 1,
+            select: { id: true, img: true }
+          },
+          type: {
+            select: { id: true, name: true }
+          },
+          user: {
+            select: { id: true, name: true, email: true }
+          }
+        },
+        orderBy: [{ id: 'desc' }],
+        skip,
+        take: limit,
+      }),
+      prisma.product.count({ where: whereClause })
+    ])
+
+    // Convert BigInt fields for JSON serialization
+    const filteredProducts = rawProducts.map(product => ({
+      ...product,
+      room: null, // Not needed for admin list
+      bathroom: null,
+      personMax: null,
+      priceUSD: null,
+    }))
+
+    if (!rawProducts) {
       return NextResponse.json(
         { error: 'Failed to fetch products' },
         { status: 500 }
       )
     }
 
-    // Convert BigInt fields to numbers for JSON serialization
-    const products = filteredProducts.map(product => ({
-      ...product,
-      room: 'room' in product && product.room ? Number(product.room) : null,
-      bathroom: 'bathroom' in product && product.bathroom ? Number(product.bathroom) : null,
-      personMax: 'personMax' in product && product.personMax ? Number(product.personMax) : null,
-      priceUSD: 'priceUSD' in product && product.priceUSD ? Number(product.priceUSD) : null,
-      priceMGA: 'priceMGA' in product && product.priceMGA ? Number(product.priceMGA) : null,
-    }))
 
-    // Update pagination to reflect filtered results
-    const totalFilteredItems = search.trim() ? filteredProducts.length : result.pagination.total
+    // Build optimized response with accurate pagination
     const response = {
-      products,
+      products: filteredProducts,
       pagination: {
-        currentPage: result.pagination.page,
-        totalPages: search.trim() ? Math.ceil(totalFilteredItems / limit) : result.pagination.totalPages,
-        itemsPerPage: result.pagination.limit,
-        totalItems: totalFilteredItems,
-        hasNext: search.trim() ? false : result.pagination.hasNext,
-        hasPrev: search.trim() ? false : result.pagination.hasPrev,
+        currentPage: page,
+        totalPages: Math.ceil(totalCount / limit),
+        itemsPerPage: limit,
+        totalItems: totalCount,
+        hasNext: page < Math.ceil(totalCount / limit),
+        hasPrev: page > 1,
       },
     }
 
-    // Set cache headers for admin data (shorter cache)
+    // Set optimized cache headers for admin data
     const headers = new Headers()
-    headers.set('Cache-Control', 'public, max-age=30, s-maxage=30') // 30 seconds cache
+    headers.set('Cache-Control', 'public, max-age=15, s-maxage=15') // 15 seconds cache for fresh admin data
+    headers.set('X-Response-Time', Date.now().toString())
 
     return NextResponse.json(response, { headers })
   } catch (error) {

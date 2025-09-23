@@ -537,6 +537,12 @@ model User {
   @@index([isAccountConfirmed])
   @@index([stripeCustomerId])
   @@index([createdAt])
+  // Admin search performance indexes
+  @@index([name])
+  @@index([lastname])
+  @@index([email])
+  @@index([createdAt, email])
+  @@index([roles, createdAt])
 }
 
 model Account {

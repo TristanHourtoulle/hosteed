@@ -33,30 +33,32 @@ export async function GET(request: NextRequest) {
       whereClause.roles = roleFilter
     }
 
-    // Get total count for pagination
-    const totalItems = await prisma.user.count({ where: whereClause })
-    const totalPages = Math.ceil(totalItems / limit)
     const offset = (page - 1) * limit
 
-    // Get paginated users
-    const users = await prisma.user.findMany({
-      where: whereClause,
-      select: {
-        id: true,
-        name: true,
-        lastname: true,
-        email: true,
-        roles: true,
-        createdAt: true,
-        emailVerified: true,
-      },
-      orderBy: [
-        { createdAt: 'desc' },
-        { email: 'asc' },
-      ],
-      skip: offset,
-      take: limit,
-    })
+    // Execute optimized single query with Promise.all for better performance
+    const [users, totalItems] = await Promise.all([
+      prisma.user.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          name: true,
+          lastname: true,
+          email: true,
+          roles: true,
+          createdAt: true,
+          emailVerified: true,
+        },
+        orderBy: [
+          { createdAt: 'desc' },
+          { email: 'asc' },
+        ],
+        skip: offset,
+        take: limit,
+      }),
+      prisma.user.count({ where: whereClause })
+    ])
+
+    const totalPages = Math.ceil(totalItems / limit)
 
     const response = {
       users,
@@ -70,9 +72,10 @@ export async function GET(request: NextRequest) {
       },
     }
 
-    // Set cache headers for admin data (shorter cache)
+    // Set optimized cache headers for admin data
     const headers = new Headers()
-    headers.set('Cache-Control', 'public, max-age=30, s-maxage=30') // 30 seconds cache
+    headers.set('Cache-Control', 'public, max-age=15, s-maxage=15') // 15 seconds cache for fresh admin data
+    headers.set('X-Response-Time', Date.now().toString())
 
     return NextResponse.json(response, { headers })
   } catch (error) {
