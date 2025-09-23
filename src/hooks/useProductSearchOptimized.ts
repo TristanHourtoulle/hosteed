@@ -4,12 +4,68 @@ import { useSearchParams } from 'next/navigation'
 import { useQuery, useQueries } from '@tanstack/react-query'
 import { CACHE_TAGS } from '@/lib/cache/query-client'
 import { findAllProducts } from '@/lib/services/product.service'
-import { findAllTypeRent } from '@/lib/services/typeRent.service'
-import { findAllSecurity } from '@/lib/services/security.services'
-import { findAllMeals } from '@/lib/services/meals.service'
-import { findAllEquipments } from '@/lib/services/equipments.service'
-import { findAllServices } from '@/lib/services/services.service'
 import { sortProductsWithSponsoredFirst } from '@/lib/utils'
+
+// Fetch functions for static data APIs
+const fetchTypeRent = async () => {
+  try {
+    const response = await fetch('/api/types')
+    if (!response.ok) throw new Error(`Failed to fetch types: ${response.status}`)
+    const data = await response.json()
+    return Array.isArray(data) ? data : []
+  } catch (error) {
+    console.error('Error fetching typeRent:', error)
+    return []
+  }
+}
+
+const fetchSecurity = async () => {
+  try {
+    const response = await fetch('/api/security')
+    if (!response.ok) throw new Error(`Failed to fetch security: ${response.status}`)
+    const data = await response.json()
+    return Array.isArray(data) ? data : []
+  } catch (error) {
+    console.error('Error fetching security:', error)
+    return []
+  }
+}
+
+const fetchMeals = async () => {
+  try {
+    const response = await fetch('/api/meals')
+    if (!response.ok) throw new Error(`Failed to fetch meals: ${response.status}`)
+    const data = await response.json()
+    return Array.isArray(data) ? data : []
+  } catch (error) {
+    console.error('Error fetching meals:', error)
+    return []
+  }
+}
+
+const fetchEquipments = async () => {
+  try {
+    const response = await fetch('/api/equipments')
+    if (!response.ok) throw new Error(`Failed to fetch equipments: ${response.status}`)
+    const data = await response.json()
+    return Array.isArray(data) ? data : []
+  } catch (error) {
+    console.error('Error fetching equipments:', error)
+    return []
+  }
+}
+
+const fetchServices = async () => {
+  try {
+    const response = await fetch('/api/services')
+    if (!response.ok) throw new Error(`Failed to fetch services: ${response.status}`)
+    const data = await response.json()
+    return Array.isArray(data) ? data : []
+  } catch (error) {
+    console.error('Error fetching services:', error)
+    return []
+  }
+}
 
 interface Product {
   id: string
@@ -123,32 +179,32 @@ export function useProductSearchOptimized() {
   const staticQueries = useQueries({
     queries: [
       {
-        queryKey: ['typeRent'],
-        queryFn: findAllTypeRent,
+        queryKey: CACHE_TAGS.staticData.typeRent,
+        queryFn: fetchTypeRent,
         staleTime: 1000 * 60 * 60 * 24, // 24 hours
         gcTime: 1000 * 60 * 60 * 24 * 7, // 7 days
       },
       {
         queryKey: CACHE_TAGS.staticData.security,
-        queryFn: findAllSecurity,
+        queryFn: fetchSecurity,
         staleTime: 1000 * 60 * 60 * 24,
         gcTime: 1000 * 60 * 60 * 24 * 7,
       },
       {
         queryKey: CACHE_TAGS.staticData.meals,
-        queryFn: findAllMeals,
+        queryFn: fetchMeals,
         staleTime: 1000 * 60 * 60 * 24,
         gcTime: 1000 * 60 * 60 * 24 * 7,
       },
       {
         queryKey: CACHE_TAGS.staticData.equipments,
-        queryFn: findAllEquipments,
+        queryFn: fetchEquipments,
         staleTime: 1000 * 60 * 60 * 24,
         gcTime: 1000 * 60 * 60 * 24 * 7,
       },
       {
         queryKey: CACHE_TAGS.staticData.services,
-        queryFn: findAllServices,
+        queryFn: fetchServices,
         staleTime: 1000 * 60 * 60 * 24,
         gcTime: 1000 * 60 * 60 * 24 * 7,
       },

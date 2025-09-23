@@ -249,4 +249,88 @@
     transform: translateY(-1px);
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
   }
+
+  /* ===================================
+   * PHASE 5 UX OPTIMIZATIONS STYLES
+   * ===================================*/
+
+  /* Enhanced shimmer animation for skeleton loading */
+  .shimmer-enhanced {
+    background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+    background-size: 200% 100%;
+    animation: shimmer-enhanced 2s infinite ease-in-out;
+  }
+
+  @keyframes shimmer-enhanced {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  /* Smooth fade in for images */
+  .image-fade-in {
+    opacity: 0;
+    transform: scale(1.02);
+    animation: image-fade-in 0.4s ease-out forwards;
+  }
+
+  @keyframes image-fade-in {
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Progressive image blur effect */
+  .progressive-blur {
+    filter: blur(5px);
+    transition: filter 0.3s ease-out;
+  }
+
+  .progressive-blur.loaded {
+    filter: blur(0);
+  }
+
+  /* Virtual scroll optimization */
+  .virtual-scroll-container {
+    contain: layout style paint;
+    will-change: transform;
+  }
+
+  /* Skeleton pulse animation - enhanced for Phase 5 */
+  .skeleton-pulse {
+    animation: skeleton-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes skeleton-pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+
+  /* Performance optimized transitions */
+  .perf-transition {
+    transition-property: transform, opacity;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+  }
+
+  /* Reduced motion preferences */
+  @media (prefers-reduced-motion: reduce) {
+    .shimmer-enhanced,
+    .skeleton-pulse,
+    .image-fade-in {
+      animation: none;
+    }
+    
+    .perf-transition {
+      transition: none;
+    }
+  }
 }

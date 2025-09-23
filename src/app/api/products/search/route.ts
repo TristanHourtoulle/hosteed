@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { ProductValidation } from '@prisma/client'
+import { productCacheService } from '@/lib/cache/redis-cache.service'
 
 export async function GET(request: NextRequest) {
+  const startTime = Date.now()
+  let cacheHit = false
+  
   try {
     const { searchParams } = new URL(request.url)
     
@@ -26,6 +30,44 @@ export async function GET(request: NextRequest) {
     const maxPeople = searchParams.get('maxPeople')
     const certifiedOnly = searchParams.get('certifiedOnly') === 'true'
     const autoAcceptOnly = searchParams.get('autoAcceptOnly') === 'true'
+
+    // Create cache filters object
+    const cacheFilters = {
+      query: search,
+      location,
+      typeId: typeRentId,
+      minPrice: minPrice ? parseInt(minPrice) : undefined,
+      maxPrice: maxPrice ? parseInt(maxPrice) : undefined,
+      page,
+      limit,
+      sortBy: (featured ? 'featured' : popular ? 'popular' : recent ? 'recent' : promo ? 'promo' : 'created') as 'featured' | 'popular' | 'recent' | 'promo' | 'created',
+      guests: minPeople ? parseInt(minPeople) : undefined,
+      // Include boolean filters in cache key
+      featured: featured || undefined,
+      certifiedOnly: certifiedOnly || undefined,
+      autoAcceptOnly: autoAcceptOnly || undefined,
+    }
+
+    // Check cache first for performance boost
+    const cachedResult = await productCacheService.getCachedProductSearch(cacheFilters)
+    if (cachedResult) {
+      cacheHit = true
+      const response = NextResponse.json({
+        ...cachedResult,
+        meta: {
+          cached: true,
+          responseTime: Date.now() - startTime,
+          cacheHit: true
+        }
+      })
+      
+      // Add cache headers for cached responses
+      response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
+      response.headers.set('X-Cache', 'HIT')
+      response.headers.set('X-Response-Time', (Date.now() - startTime).toString())
+      
+      return response
+    }
 
     // Build database where clause for server-side filtering
     const whereClause: Record<string, unknown> = {
@@ -194,16 +236,18 @@ export async function GET(request: NextRequest) {
     // Promo filtering is now handled at database level
 
     // Build response with pagination metadata
+    const pagination = {
+      page,
+      limit,
+      total: totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+      hasNext: page < Math.ceil(totalCount / limit),
+      hasPrev: page > 1
+    }
+
     const result = {
       products: sortedProducts,
-      pagination: {
-        page,
-        limit,
-        total: totalCount,
-        totalPages: Math.ceil(totalCount / limit),
-        hasNext: page < Math.ceil(totalCount / limit),
-        hasPrev: page > 1
-      },
+      pagination,
       filters: {
         search,
         typeRentId,
@@ -220,16 +264,36 @@ export async function GET(request: NextRequest) {
           certifiedOnly,
           autoAcceptOnly
         }
+      },
+      meta: {
+        cached: false,
+        responseTime: Date.now() - startTime,
+        cacheHit: false,
+        dbQueryTime: Date.now() - startTime
       }
+    }
+
+    // Cache the search results for future requests (massive performance boost)
+    try {
+      await productCacheService.cacheProductSearch(
+        cacheFilters,
+        sortedProducts,
+        pagination
+      )
+    } catch (cacheError) {
+      console.warn('Failed to cache search results:', cacheError)
+      // Don't fail the request if caching fails
     }
 
     // Add optimized cache headers for faster subsequent requests
     const response = NextResponse.json(result)
     response.headers.set(
       'Cache-Control',
-      'public, s-maxage=30, stale-while-revalidate=60'
+      'public, s-maxage=300, stale-while-revalidate=600'
     )
-    response.headers.set('X-Response-Time', Date.now().toString())
+    response.headers.set('X-Cache', 'MISS')
+    response.headers.set('X-Response-Time', (Date.now() - startTime).toString())
+    response.headers.set('X-DB-Query', 'true')
 
     return response
   } catch (error) {

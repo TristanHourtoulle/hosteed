@@ -1,5 +1,5 @@
 import { dehydrate } from '@tanstack/react-query'
-import { queryClient } from './query-client'
+import { queryClient, CACHE_TAGS } from './query-client'
 
 // Prefetch data on the server for better initial load
 export async function prefetchPageData(prefetchFns: Array<() => Promise<void>>) {
@@ -27,7 +27,7 @@ export async function prefetchSearchPage() {
   const { findAllProducts } = await import('@/lib/services/product.service')
   const { findAllEquipments } = await import('@/lib/services/equipments.service')
   const { findAllMeals } = await import('@/lib/services/meals.service')
-  const { findAllServices } = await import('@/lib/services/services.service')
+  const { findAllServicesForQuery } = await import('@/lib/services/services.service')
   const { findAllSecurity } = await import('@/lib/services/security.services')
   const { findAllTypeRent } = await import('@/lib/services/typeRent.service')
   
@@ -38,27 +38,27 @@ export async function prefetchSearchPage() {
       staleTime: 1000 * 60 * 5,
     }),
     queryClient.prefetchQuery({
-      queryKey: ['static', 'equipments'],
+      queryKey: CACHE_TAGS.staticData.equipments,
       queryFn: findAllEquipments,
       staleTime: 1000 * 60 * 60 * 24,
     }),
     queryClient.prefetchQuery({
-      queryKey: ['static', 'meals'],
+      queryKey: CACHE_TAGS.staticData.meals,
       queryFn: findAllMeals,
       staleTime: 1000 * 60 * 60 * 24,
     }),
     queryClient.prefetchQuery({
-      queryKey: ['static', 'services'],
-      queryFn: findAllServices,
+      queryKey: CACHE_TAGS.staticData.services,
+      queryFn: findAllServicesForQuery,
       staleTime: 1000 * 60 * 60 * 24,
     }),
     queryClient.prefetchQuery({
-      queryKey: ['static', 'security'],
+      queryKey: CACHE_TAGS.staticData.security,
       queryFn: findAllSecurity,
       staleTime: 1000 * 60 * 60 * 24,
     }),
     queryClient.prefetchQuery({
-      queryKey: ['typeRent'],
+      queryKey: CACHE_TAGS.staticData.typeRent,
       queryFn: findAllTypeRent,
       staleTime: 1000 * 60 * 60 * 24,
     }),

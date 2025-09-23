@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ProductValidation } from '@prisma/client'
@@ -36,17 +36,18 @@ interface ProductValidationCardProps {
   onUpdate: () => void
 }
 
-export function ProductValidationCard({
+function ProductValidationCard({
   product,
   currentUserId,
   onUpdate,
 }: ProductValidationCardProps) {
   const [loading, setLoading] = useState(false)
 
-  const getValidationBadge = (validation: ProductValidation, isRecentlyModified?: boolean) => {
-    switch (validation) {
+  // Memoize the validation badge to prevent recreation on every render
+  const validationBadge = useMemo(() => {
+    switch (product.validate) {
       case ProductValidation.NotVerified:
-        if (isRecentlyModified) {
+        if (product.isRecentlyModified) {
           return (
             <Badge variant='secondary' className='bg-blue-100 text-blue-800 border-blue-300'>
               Modifié - À revalider
@@ -79,9 +80,30 @@ export function ProductValidationCard({
       default:
         return <Badge variant='outline'>Inconnu</Badge>
     }
-  }
+  }, [product.validate, product.isRecentlyModified])
 
-  const handleValidationAction = async (action: 'approve' | 'reject') => {
+  // Memoize user display name to prevent recalculation
+  const userDisplayName = useMemo(() => {
+    const user = product.user[0]
+    if (user?.name && user?.lastname) {
+      return `${user.name} ${user.lastname}`
+    }
+    return user?.email || 'Utilisateur inconnu'
+  }, [product.user])
+
+  // Memoize whether validation actions should be shown
+  const showValidationActions = useMemo(() => {
+    return product.validate === ProductValidation.NotVerified || 
+           product.validate === ProductValidation.RecheckRequest
+  }, [product.validate])
+
+  // Memoize first image URL
+  const firstImageUrl = useMemo(() => {
+    return product.img && product.img.length > 0 ? product.img[0].img : null
+  }, [product.img])
+
+  // Memoized validation action handler to prevent recreation
+  const handleValidationAction = useCallback(async (action: 'approve' | 'reject') => {
     setLoading(true)
     try {
       let result
@@ -108,22 +130,26 @@ export function ProductValidationCard({
     } finally {
       setLoading(false)
     }
-  }
+  }, [product.id, currentUserId, onUpdate])
+
+  // Memoized click handlers to prevent recreation
+  const handleApprove = useCallback(() => handleValidationAction('approve'), [handleValidationAction])
+  const handleReject = useCallback(() => handleValidationAction('reject'), [handleValidationAction])
 
 
   return (
     <Card className='overflow-hidden hover:shadow-lg transition-all duration-300'>
       {/* Product Image */}
       <div className='relative h-48 w-full'>
-        {product.img && product.img.length > 0 ? (
-          <Image src={product.img[0].img} alt={product.name} fill className='object-cover' />
+        {firstImageUrl ? (
+          <Image src={firstImageUrl} alt={product.name} fill className='object-cover' />
         ) : (
           <div className='w-full h-full bg-gray-200 flex items-center justify-center'>
             <Home className='h-12 w-12 text-gray-400' />
           </div>
         )}
         <div className='absolute top-4 right-4'>
-          {getValidationBadge(product.validate, product.isRecentlyModified)}
+          {validationBadge}
         </div>
       </div>
 
@@ -147,11 +173,7 @@ export function ProductValidationCard({
           {/* Host Info */}
           <div className='flex items-center gap-2 text-sm text-gray-600'>
             <User className='h-4 w-4' />
-            <span>
-              {product.user[0]?.name && product.user[0]?.lastname
-                ? `${product.user[0].name} ${product.user[0].lastname}`
-                : product.user[0]?.email || 'Utilisateur inconnu'}
-            </span>
+            <span>{userDisplayName}</span>
           </div>
 
           {/* Actions */}
@@ -163,12 +185,11 @@ export function ProductValidationCard({
               </Link>
             </Button>
 
-            {(product.validate === ProductValidation.NotVerified ||
-              product.validate === ProductValidation.RecheckRequest) && (
+            {showValidationActions && (
               <>
                 <Button
                   size='sm'
-                  onClick={() => handleValidationAction('approve')}
+                  onClick={handleApprove}
                   className='bg-green-600 hover:bg-green-700'
                   disabled={loading}
                 >
@@ -181,7 +202,7 @@ export function ProductValidationCard({
                 <Button
                   variant='destructive'
                   size='sm'
-                  onClick={() => handleValidationAction('reject')}
+                  onClick={handleReject}
                   disabled={loading}
                 >
                   {loading ? (
@@ -198,3 +219,61 @@ export function ProductValidationCard({
     </Card>
   )
 }
+
+// Custom comparison function for React.memo to prevent unnecessary re-renders
+const arePropsEqual = (prevProps: ProductValidationCardProps, nextProps: ProductValidationCardProps) => {
+  // Check if currentUserId changed
+  if (prevProps.currentUserId !== nextProps.currentUserId) {
+    return false
+  }
+
+  // Check if onUpdate function reference changed
+  if (prevProps.onUpdate !== nextProps.onUpdate) {
+    return false
+  }
+
+  // Check if product has changed (deep comparison of key fields)
+  const prevProduct = prevProps.product
+  const nextProduct = nextProps.product
+
+  if (
+    prevProduct.id !== nextProduct.id ||
+    prevProduct.name !== nextProduct.name ||
+    prevProduct.description !== nextProduct.description ||
+    prevProduct.address !== nextProduct.address ||
+    prevProduct.basePrice !== nextProduct.basePrice ||
+    prevProduct.validate !== nextProduct.validate ||
+    prevProduct.isRecentlyModified !== nextProduct.isRecentlyModified ||
+    prevProduct.wasRecheckRequested !== nextProduct.wasRecheckRequested
+  ) {
+    return false
+  }
+
+  // Check if images changed (shallow comparison)
+  if (prevProduct.img?.length !== nextProduct.img?.length) {
+    return false
+  }
+
+  if (prevProduct.img && nextProduct.img && prevProduct.img.length > 0) {
+    if (prevProduct.img[0].img !== nextProduct.img[0].img) {
+      return false
+    }
+  }
+
+  // Check if user data changed (focus on first user which is displayed)
+  const prevUser = prevProduct.user[0]
+  const nextUser = nextProduct.user[0]
+
+  if (
+    prevUser?.id !== nextUser?.id ||
+    prevUser?.name !== nextUser?.name ||
+    prevUser?.lastname !== nextUser?.lastname ||
+    prevUser?.email !== nextUser?.email
+  ) {
+    return false
+  }
+
+  return true
+}
+
+export default React.memo(ProductValidationCard, arePropsEqual)

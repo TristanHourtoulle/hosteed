@@ -5,6 +5,7 @@ import { ClientProviders } from '@/components/providers/ClientProviders'
 import Navbar from '@/components/ui/header/Navbar'
 import Footer from '@/components/ui/Footer'
 import { Toaster } from '@/components/ui/shadcnui/sonner'
+import { PerformanceMonitor } from '@/components/PerformanceMonitor'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -31,6 +32,7 @@ export default function RootLayout({
     <html lang='fr'>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ClientProviders>
+          <PerformanceMonitor debug={process.env.NODE_ENV === 'development'} />
           <Navbar />
           <main className='min-h-screen'>{children}</main>
           <Footer />

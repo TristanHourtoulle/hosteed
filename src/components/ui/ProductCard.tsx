@@ -1,7 +1,7 @@
+import React, { useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Heart, Star, ChevronLeft, ChevronRight, ImageIcon } from 'lucide-react'
-import { useState } from 'react'
 import { getCityFromAddress, calculateAverageRating, isProductSponsored } from '@/lib/utils'
 import { useFavoritesOptimized } from '@/hooks/useFavoritesOptimized'
 import { motion } from 'framer-motion'
@@ -41,57 +41,105 @@ interface Product {
   }>
 }
 
-export default function ProductCard({ product, index = 0 }: { product: Product; index?: number }) {
+function ProductCard({ product, index = 0 }: { product: Product; index?: number }) {
   const { isFavorite, isLoading, toggleFavorite } = useFavoritesOptimized(product.id)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [imageError, setImageError] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
 
-  // Check if product is sponsored
-  const isSponsored = isProductSponsored(product.PromotedProduct)
+  // Memoize expensive calculations to prevent recalculation on every render
+  const isSponsored = useMemo(() => 
+    isProductSponsored(product.PromotedProduct), 
+    [product.PromotedProduct]
+  )
 
-  const rating = product.reviews ? calculateAverageRating(product.reviews) : null
+  const rating = useMemo(() => 
+    product.reviews ? calculateAverageRating(product.reviews) : null, 
+    [product.reviews]
+  )
 
-  const images =
+  const images = useMemo(() => 
     product.img && product.img.length > 0
       ? product.img.filter(img => img.img && img.img.trim() !== '')
-      : []
-  const hasMultipleImages = images.length > 1
-  const hasValidImages = images.length > 0
+      : [], 
+    [product.img]
+  )
 
-  const goToPrevious = (e: React.MouseEvent) => {
+  const hasMultipleImages = useMemo(() => images.length > 1, [images])
+  const hasValidImages = useMemo(() => images.length > 0, [images])
+
+  // Memoize motion props to prevent recreation
+  const cardMotionProps = useMemo(() => ({
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.5, delay: index * 0.1 },
+    whileHover: { y: -5 }
+  }), [index])
+
+  const imageMotionProps = useMemo(() => ({
+    initial: { opacity: 0 },
+    animate: { opacity: 1 },
+    transition: { duration: 0.3 }
+  }), [])
+
+  const contentMotionProps = useMemo(() => ({
+    initial: { opacity: 0, y: 10 },
+    animate: { opacity: 1, y: 0 },
+    transition: { delay: 0.3 }
+  }), [])
+
+  // Memoize event handlers to prevent recreation and unnecessary re-renders
+  const goToPrevious = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
     setCurrentImageIndex(prev => (prev === 0 ? images.length - 1 : prev - 1))
     setImageError(false)
-  }
+  }, [images.length])
 
-  const goToNext = (e: React.MouseEvent) => {
+  const goToNext = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
     setCurrentImageIndex(prev => (prev === images.length - 1 ? 0 : prev + 1))
     setImageError(false)
-  }
+  }, [images.length])
 
-  const goToImage = (index: number, e: React.MouseEvent) => {
+  const goToImage = useCallback((imageIndex: number, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setCurrentImageIndex(index)
+    setCurrentImageIndex(imageIndex)
     setImageError(false)
-  }
+  }, [])
+
+  const handleToggleFavorite = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    toggleFavorite()
+  }, [toggleFavorite])
+
+  const handleImageError = useCallback(() => {
+    setImageError(true)
+  }, [])
+
+  const handleMouseEnter = useCallback(() => {
+    setIsHovered(true)
+  }, [])
+
+  const handleMouseLeave = useCallback(() => {
+    setIsHovered(false)
+  }, [])
+
+  // Create a memoized function factory for image dot clicks
+  const createImageClickHandler = useCallback((imageIndex: number) => {
+    return (e: React.MouseEvent) => goToImage(imageIndex, e)
+  }, [goToImage])
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: index * 0.1 }}
-      whileHover={{ y: -5 }}
-    >
+    <motion.div {...cardMotionProps}>
       <Link href={`/host/${product.id}`} className='block'>
         <motion.div
           className='bg-white rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 group'
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
           layoutId={`card-${product.id}`}
         >
           <div className='relative aspect-[4/3] w-full'>
@@ -99,9 +147,7 @@ export default function ProductCard({ product, index = 0 }: { product: Product; 
               <>
                 <motion.div
                   key={currentImageIndex}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.3 }}
+                  {...imageMotionProps}
                   className='w-full h-full'
                 >
                   <Image
@@ -109,7 +155,7 @@ export default function ProductCard({ product, index = 0 }: { product: Product; 
                     alt={product.name}
                     fill
                     className='object-cover'
-                    onError={() => setImageError(true)}
+                    onError={handleImageError}
                     sizes='(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw'
                   />
                 </motion.div>
@@ -175,11 +221,7 @@ export default function ProductCard({ product, index = 0 }: { product: Product; 
                     }
                   : {}
               }
-              onClick={e => {
-                e.preventDefault()
-                e.stopPropagation()
-                toggleFavorite()
-              }}
+              onClick={handleToggleFavorite}
               disabled={isLoading}
               className='absolute top-3 right-3 z-10 p-2 rounded-full bg-white/80 hover:bg-white transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed'
             >
@@ -236,7 +278,7 @@ export default function ProductCard({ product, index = 0 }: { product: Product; 
                   <motion.button
                     key={index}
                     whileHover={{ scale: 1.2 }}
-                    onClick={e => goToImage(index, e)}
+                    onClick={createImageClickHandler(index)}
                     className={`w-2 h-2 rounded-full transition-all duration-200 ${
                       index === currentImageIndex
                         ? 'bg-white shadow-lg'
@@ -250,9 +292,7 @@ export default function ProductCard({ product, index = 0 }: { product: Product; 
 
           <motion.div
             className='p-4 space-y-2'
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
+            {...contentMotionProps}
           >
             <div className='space-y-1'>
               <h3 className='font-semibold text-gray-900 text-base leading-tight line-clamp-1'>
@@ -296,3 +336,52 @@ export default function ProductCard({ product, index = 0 }: { product: Product; 
     </motion.div>
   )
 }
+
+// Custom comparison function for React.memo to optimize re-renders
+const arePropsEqual = (prevProps: { product: Product; index?: number }, nextProps: { product: Product; index?: number }) => {
+  // Check if it's the same product by id
+  if (prevProps.product.id !== nextProps.product.id) {
+    return false
+  }
+
+  // Check if index changed
+  if (prevProps.index !== nextProps.index) {
+    return false
+  }
+
+  // Check critical product properties that affect rendering
+  const prev = prevProps.product
+  const next = nextProps.product
+
+  if (
+    prev.name !== next.name ||
+    prev.address !== next.address ||
+    prev.basePrice !== next.basePrice ||
+    prev.originalBasePrice !== next.originalBasePrice ||
+    prev.specialPriceApplied !== next.specialPriceApplied ||
+    prev.certified !== next.certified
+  ) {
+    return false
+  }
+
+  // Check images array (shallow comparison)
+  if (prev.img?.length !== next.img?.length) {
+    return false
+  }
+
+  // Check if PromotedProduct status changed (for sponsored badge)
+  const prevPromoted = prev.PromotedProduct?.length || 0
+  const nextPromoted = next.PromotedProduct?.length || 0
+  if (prevPromoted !== nextPromoted) {
+    return false
+  }
+
+  // Check reviews for rating calculation (shallow comparison)
+  if (prev.reviews?.length !== next.reviews?.length) {
+    return false
+  }
+
+  return true
+}
+
+export default React.memo(ProductCard, arePropsEqual)

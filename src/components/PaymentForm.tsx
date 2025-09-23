@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { loadStripe } from '@stripe/stripe-js'
-import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
+import { useStripe, useElements } from '@stripe/react-stripe-js'
+import { LazyStripeElements, LazyPaymentElement } from '@/components/dynamic/LazyComponents'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
@@ -54,7 +55,7 @@ const PaymentFormContent = ({ amount, onSuccess, onError }: PaymentFormProps) =>
 
   return (
     <form onSubmit={handleSubmit} className='space-y-4'>
-      <PaymentElement />
+      <LazyPaymentElement />
       {error && <div className='text-red-500'>{error}</div>}
       <button
         type='submit'
@@ -96,8 +97,8 @@ export const PaymentForm = ({ amount, onSuccess, onError }: PaymentFormProps) =>
   }
 
   return (
-    <Elements stripe={stripePromise} options={{ clientSecret }}>
+    <LazyStripeElements stripe={stripePromise} options={{ clientSecret }}>
       <PaymentFormContent amount={amount} onSuccess={onSuccess} onError={onError} />
-    </Elements>
+    </LazyStripeElements>
   )
 }

@@ -9,8 +9,8 @@ export async function getProductsForValidation() {
   try {
     const result = await validationService.getProductsForValidationPaginated({ 
       page: 1, 
-      limit: 100,
-      includeLightweight: false 
+      limit: 20,        // ✅ Réduit de 100 à 20 produits
+      includeLightweight: true  // ✅ Mode léger = 1 image seulement
     })
     return { success: true, data: result.products }
   } catch (error) {

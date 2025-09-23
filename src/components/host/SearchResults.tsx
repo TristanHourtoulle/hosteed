@@ -1,3 +1,4 @@
+import React, { useMemo } from 'react'
 import ProductCard from '@/components/ui/ProductCard'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/shadcnui'
@@ -51,25 +52,37 @@ const container = {
   },
 }
 
-export default function SearchResults({
+// Memoized motion props to prevent recreation on every render
+const noResultsMotion = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5 }
+}
+
+const buttonMotion = {
+  initial: { scale: 0 },
+  animate: { scale: 1 },
+  transition: { delay: 0.2 }
+}
+
+function SearchResults({
   products,
   hasActiveFilters,
   onResetFilters,
   pagination,
   onPageChange,
 }: SearchResultsProps) {
+  // Memoize motion props for empty state
+  const noResultsProps = useMemo(() => noResultsMotion, [])
+  const buttonProps = useMemo(() => buttonMotion, [])
   if (products.length === 0) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
+      <motion.div {...noResultsProps}>
         <Card>
           <CardContent className='py-12 text-center'>
             <p className='text-gray-500'>Aucun hébergement trouvé avec ces critères</p>
             {hasActiveFilters && (
-              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2 }}>
+              <motion.div {...buttonProps}>
                 <Button variant='outline' className='mt-4' onClick={onResetFilters}>
                   Réinitialiser les filtres
                 </Button>
@@ -123,3 +136,51 @@ export default function SearchResults({
     </div>
   )
 }
+
+// Memoize the component to prevent unnecessary re-renders
+// Custom comparison to handle deep comparison of products array and pagination object
+const areEqual = (prevProps: SearchResultsProps, nextProps: SearchResultsProps) => {
+  // Check basic props
+  if (
+    prevProps.hasActiveFilters !== nextProps.hasActiveFilters ||
+    prevProps.onResetFilters !== nextProps.onResetFilters ||
+    prevProps.onPageChange !== nextProps.onPageChange
+  ) {
+    return false
+  }
+
+  // Check products array
+  if (prevProps.products.length !== nextProps.products.length) {
+    return false
+  }
+
+  // Check if products have changed (shallow comparison of ids should be sufficient)
+  for (let i = 0; i < prevProps.products.length; i++) {
+    if (prevProps.products[i].id !== nextProps.products[i].id) {
+      return false
+    }
+  }
+
+  // Check pagination object
+  const prevPag = prevProps.pagination
+  const nextPag = nextProps.pagination
+  
+  if (prevPag !== nextPag) {
+    if (!prevPag || !nextPag) return false
+    
+    if (
+      prevPag.page !== nextPag.page ||
+      prevPag.limit !== nextPag.limit ||
+      prevPag.total !== nextPag.total ||
+      prevPag.totalPages !== nextPag.totalPages ||
+      prevPag.hasNext !== nextPag.hasNext ||
+      prevPag.hasPrev !== nextPag.hasPrev
+    ) {
+      return false
+    }
+  }
+
+  return true
+}
+
+export default React.memo(SearchResults, areEqual)

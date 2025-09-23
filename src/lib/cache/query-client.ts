@@ -31,6 +31,7 @@ export const CACHE_TAGS = {
     meals: ['static', 'meals'] as const,
     services: ['static', 'services'] as const,
     security: ['static', 'security'] as const,
+    typeRent: ['static', 'typeRent'] as const,
     all: ['static'] as const,
   },
 } as const

@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { TypeRent } from '@prisma/client'
 import { useSearchParams } from 'next/navigation'
 import { findAllProducts } from '@/lib/services/product.service'
@@ -7,7 +7,7 @@ import { findAllTypeRent } from '@/lib/services/typeRent.service'
 import { findAllSecurity } from '@/lib/services/security.services'
 import { findAllMeals } from '@/lib/services/meals.service'
 import { findAllEquipments } from '@/lib/services/equipments.service'
-import { findAllServices } from '@/lib/services/services.service'
+import { findAllServicesForQuery } from '@/lib/services/services.service'
 import { sortProductsWithSponsoredFirst } from '@/lib/utils'
 
 interface Product {
@@ -81,19 +81,21 @@ export function useProductSearch() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Get URL parameters
-  const typeRentId = searchParams.get('type') || searchParams.get('typeRent') || ''
-  const searchQuery = searchParams.get('q') || searchParams.get('location') || ''
-  const featured = searchParams.get('featured') === 'true'
-  const popular = searchParams.get('popular') === 'true'
-  const recent = searchParams.get('recent') === 'true'
-  const promo = searchParams.get('promo') === 'true'
+  // Memoize URL parameters to prevent unnecessary recalculations
+  const urlParams = useMemo(() => ({
+    typeRentId: searchParams.get('type') || searchParams.get('typeRent') || '',
+    searchQuery: searchParams.get('q') || searchParams.get('location') || '',
+    featured: searchParams.get('featured') === 'true',
+    popular: searchParams.get('popular') === 'true',
+    recent: searchParams.get('recent') === 'true',
+    promo: searchParams.get('promo') === 'true',
+  }), [searchParams])
 
   // Search state
-  const [location, setLocation] = useState(searchQuery)
+  const [location, setLocation] = useState(urlParams.searchQuery)
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
-  const [selectedType, setSelectedType] = useState(typeRentId)
+  const [selectedType, setSelectedType] = useState(urlParams.typeRentId)
   const [guests, setGuests] = useState(1)
 
   const searchTimeout = useRef<NodeJS.Timeout | undefined>(undefined)
@@ -137,7 +139,7 @@ export function useProductSearch() {
           findAllSecurity(),
           findAllMeals(),
           findAllEquipments(),
-          findAllServices(),
+          findAllServicesForQuery(),
         ])
 
         if (types) setTypeRent(types)
@@ -155,8 +157,8 @@ export function useProductSearch() {
     fetchData()
   }, [])
 
-  // Filter products
-  const filterProducts = (allProducts: Product[]) => {
+  // Memoized filter function to prevent recreation on every render
+  const filterProducts = useCallback((allProducts: Product[]) => {
     return allProducts.filter((product: Product) => {
       const matchesTypeRent = !selectedType || product.typeRentId === selectedType
       const matchesSearch =
@@ -258,17 +260,17 @@ export function useProductSearch() {
         matchesSpecialOptions
       )
     })
-  }
+  }, [selectedType, location, filters, guests])
 
-  // Apply special filters
-  const applySpecialFilters = (filteredProducts: Product[]) => {
+  // Memoized special filters function to prevent recreation on every render
+  const applySpecialFilters = useCallback((filteredProducts: Product[]) => {
     let result = [...filteredProducts]
 
-    if (featured) {
+    if (urlParams.featured) {
       result = result.filter(product => product.certified || product.validate === 'Approve')
     }
 
-    if (popular) {
+    if (urlParams.popular) {
       result = result.sort((a, b) => {
         const aScore = (a.equipments?.length || 0) + (a.servicesList?.length || 0)
         const bScore = (b.equipments?.length || 0) + (b.servicesList?.length || 0)
@@ -276,11 +278,11 @@ export function useProductSearch() {
       })
     }
 
-    if (recent) {
+    if (urlParams.recent) {
       result = result.sort((a, b) => b.id.localeCompare(a.id))
     }
 
-    if (promo) {
+    if (urlParams.promo) {
       result = result.filter(product => {
         const price = parseFloat(product.basePrice)
         return price < 100
@@ -291,7 +293,7 @@ export function useProductSearch() {
     result = sortProductsWithSponsoredFirst(result)
 
     return result
-  }
+  }, [urlParams.featured, urlParams.popular, urlParams.recent, urlParams.promo])
 
   // Load and filter products
   useEffect(() => {
@@ -313,10 +315,22 @@ export function useProductSearch() {
     }
 
     fetchProducts()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedType, location, filters, featured, popular, recent, promo, guests])
+  }, [selectedType, location, filters, urlParams.featured, urlParams.popular, urlParams.recent, urlParams.promo, guests, filterProducts, applySpecialFilters])
 
-  // Location suggestions
+  // Location suggestions with memoized fetch function
+  const fetchLocationSuggestions = useCallback(async (searchLocation: string) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchLocation)}&limit=5`
+      )
+      const data = await response.json()
+      setSuggestions(data)
+      setShowSuggestions(true)
+    } catch (error) {
+      console.error('Error fetching suggestions:', error)
+    }
+  }, [])
+
   useEffect(() => {
     if (location.length < 3) {
       setSuggestions([])
@@ -327,21 +341,13 @@ export function useProductSearch() {
       clearTimeout(searchTimeout.current)
     }
 
-    searchTimeout.current = setTimeout(async () => {
-      try {
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=5`
-        )
-        const data = await response.json()
-        setSuggestions(data)
-        setShowSuggestions(true)
-      } catch (error) {
-        console.error('Error fetching suggestions:', error)
-      }
+    searchTimeout.current = setTimeout(() => {
+      fetchLocationSuggestions(location)
     }, 300)
-  }, [location])
+  }, [location, fetchLocationSuggestions])
 
-  const handleModernSearch = (data: {
+  // Memoized event handlers to prevent recreation on every render
+  const handleModernSearch = useCallback((data: {
     location: string
     checkIn: string
     checkOut: string
@@ -359,18 +365,18 @@ export function useProductSearch() {
       setGuests(data.guests)
     }
     setShowSuggestions(false)
-  }
+  }, [])
 
-  const handleFilterChange = (filterType: string, value: string, checked: boolean) => {
+  const handleFilterChange = useCallback((filterType: string, value: string, checked: boolean) => {
     setFilters(prev => ({
       ...prev,
       [filterType]: checked
         ? [...(prev[filterType as keyof typeof prev] as string[]), value]
         : (prev[filterType as keyof typeof prev] as string[]).filter(id => id !== value),
     }))
-  }
+  }, [])
 
-  const resetFilters = () => {
+  const resetFilters = useCallback(() => {
     setSelectedType('')
     setLocation('')
     setGuests(1)
@@ -397,7 +403,7 @@ export function useProductSearch() {
       certifiedOnly: false,
       contractRequired: false,
     })
-  }
+  }, [])
 
   return {
     // State
@@ -414,13 +420,13 @@ export function useProductSearch() {
     meals,
     equipments,
     services,
-    featured,
-    popular,
-    recent,
-    promo,
+    featured: urlParams.featured,
+    popular: urlParams.popular,
+    recent: urlParams.recent,
+    promo: urlParams.promo,
     guests,
 
-    // Actions
+    // Actions (all memoized)
     setLocation,
     setShowSuggestions,
     setSelectedType,

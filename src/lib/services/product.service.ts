@@ -119,14 +119,29 @@ export async function findProductById(id: string) {
     const product = await prisma.product.findUnique({
       where: { id },
       include: {
-        img: true,
+        img: {
+          take: 10, // ✅ Limite les images à 10 au lieu de TOUTES
+        },
         type: true,
-        equipments: true,
-        servicesList: true,
-        mealsList: true,
-        options: true,
-        rents: true,
-        discount: true,
+        equipments: {
+          take: 20, // ✅ Limite les équipements
+        },
+        servicesList: {
+          take: 20, // ✅ Limite les services
+        },
+        mealsList: {
+          take: 10, // ✅ Limite les repas
+        },
+        options: {
+          take: 10, // ✅ Limite les options
+        },
+        rents: {
+          take: 5, // ✅ Limite les réservations récentes
+          orderBy: { id: 'desc' }
+        },
+        discount: {
+          take: 5, // ✅ Limite les réductions
+        },
         user: {
           select: {
             name: true,
@@ -134,20 +149,33 @@ export async function findProductById(id: string) {
             image: true,
           },
         },
-        securities: true,
-        includedServices: true,
-        extras: true,
-        highlights: true,
+        securities: {
+          take: 10, // ✅ Limite les éléments de sécurité
+        },
+        includedServices: {
+          take: 15, // ✅ Limite les services inclus
+        },
+        extras: {
+          take: 15, // ✅ Limite les extras
+        },
+        highlights: {
+          take: 10, // ✅ Limite les points forts
+        },
         hotel: true, // Inclure les informations hôtel
         rules: true, // Inclure les règles
-        nearbyPlaces: true, // Inclure les lieux à proximité
-        transportOptions: true, // Inclure les options de transport
+        nearbyPlaces: {
+          take: 10, // ✅ Limite les lieux à proximité
+        },
+        transportOptions: {
+          take: 10, // ✅ Limite les options de transport
+        },
         propertyInfo: true, // Inclure les informations de propriété
         // specialPrices: true, // Temporairement désactivé car le modèle n'est pas généré
         reviews: {
           where: {
             approved: true,
           },
+          take: 10, // ✅ Limite les avis à 10 au lieu de TOUS
           select: {
             id: true,
             title: true,

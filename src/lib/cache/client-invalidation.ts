@@ -19,14 +19,14 @@ export const invalidateClientCache = {
     if (type && type !== 'typeRent') {
       await queryClient.invalidateQueries({ queryKey: CACHE_TAGS.staticData[type as keyof typeof CACHE_TAGS.staticData] })
     } else if (type === 'typeRent') {
-      await queryClient.invalidateQueries({ queryKey: ['typeRent'] })
+      await queryClient.invalidateQueries({ queryKey: CACHE_TAGS.staticData.typeRent })
     } else {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: CACHE_TAGS.staticData.equipments }),
         queryClient.invalidateQueries({ queryKey: CACHE_TAGS.staticData.meals }),
         queryClient.invalidateQueries({ queryKey: CACHE_TAGS.staticData.services }),
         queryClient.invalidateQueries({ queryKey: CACHE_TAGS.staticData.security }),
-        queryClient.invalidateQueries({ queryKey: ['typeRent'] }),
+        queryClient.invalidateQueries({ queryKey: CACHE_TAGS.staticData.typeRent }),
       ])
     }
   },

@@ -1,9 +1,8 @@
 'use client'
 
 import React from 'react'
-import ReactMarkdown from 'react-markdown'
+import { LazyReactMarkdown, LazySyntaxHighlighter } from '@/components/dynamic/LazyComponents'
 import remarkGfm from 'remark-gfm'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
 interface MarkdownRendererProps {
@@ -13,7 +12,7 @@ interface MarkdownRendererProps {
 export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
   return (
     <div className="prose prose-lg max-w-none prose-slate prose-headings:font-bold prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl prose-p:text-gray-700 prose-a:text-purple-600 prose-a:no-underline hover:prose-a:underline prose-strong:text-gray-900 prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-blockquote:border-l-purple-500 prose-blockquote:bg-purple-50 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r prose-ul:list-disc prose-ol:list-decimal prose-li:my-1">
-      <ReactMarkdown
+      <LazyReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -21,14 +20,14 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
             const { inline, className, children, ...rest } = props
             const match = /language-(\w+)/.exec(className || '')
             return !inline && match ? (
-              <SyntaxHighlighter
+              <LazySyntaxHighlighter
                 style={tomorrow}
                 language={match[1]}
                 PreTag="div"
                 {...rest}
               >
                 {String(children).replace(/\n$/, '')}
-              </SyntaxHighlighter>
+              </LazySyntaxHighlighter>
             ) : (
               <code className={className} {...rest}>
                 {children}
@@ -55,7 +54,7 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
         }}
       >
         {content}
-      </ReactMarkdown>
+      </LazyReactMarkdown>
     </div>
   )
 }

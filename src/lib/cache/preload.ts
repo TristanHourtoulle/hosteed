@@ -31,7 +31,7 @@ export async function preloadStaticData() {
         1000 * 60 * 60 * 24
       ),
       prefetchQuery(
-        ['typeRent'],
+        CACHE_TAGS.staticData.typeRent,
         findAllTypeRent,
         1000 * 60 * 60 * 24
       ),

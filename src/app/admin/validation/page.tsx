@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, XCircle, ArrowLeft } from 'lucide-react'
 import { getProductsForValidation, getValidationStats } from './actions'
 import { ValidationStatsCards } from './components/ValidationStatsCards'
-import { ValidationTabs } from './components/ValidationTabs'
+import ValidationTabs from './components/ValidationTabs'
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },

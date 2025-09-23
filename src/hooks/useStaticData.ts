@@ -1,29 +1,65 @@
 import { useQuery, useQueries } from '@tanstack/react-query'
 import { CACHE_TAGS } from '@/lib/cache/query-client'
-import { Equipment, Meals, Security, Services } from '@prisma/client'
+import { Equipment, Meals, Security, Services, TypeRent } from '@prisma/client'
 
 const fetchEquipments = async (): Promise<Equipment[]> => {
-  const response = await fetch('/api/equipments')
-  if (!response.ok) throw new Error('Failed to fetch equipments')
-  return response.json()
+  try {
+    const response = await fetch('/api/equipments')
+    if (!response.ok) throw new Error(`Failed to fetch equipments: ${response.status}`)
+    const data = await response.json()
+    return Array.isArray(data) ? data : []
+  } catch (error) {
+    console.error('Error fetching equipments:', error)
+    return []
+  }
 }
 
 const fetchMeals = async (): Promise<Meals[]> => {
-  const response = await fetch('/api/meals')
-  if (!response.ok) throw new Error('Failed to fetch meals')
-  return response.json()
+  try {
+    const response = await fetch('/api/meals')
+    if (!response.ok) throw new Error(`Failed to fetch meals: ${response.status}`)
+    const data = await response.json()
+    return Array.isArray(data) ? data : []
+  } catch (error) {
+    console.error('Error fetching meals:', error)
+    return []
+  }
 }
 
 const fetchServices = async (): Promise<Services[]> => {
-  const response = await fetch('/api/services')
-  if (!response.ok) throw new Error('Failed to fetch services')
-  return response.json()
+  try {
+    const response = await fetch('/api/services')
+    if (!response.ok) throw new Error(`Failed to fetch services: ${response.status}`)
+    const data = await response.json()
+    return Array.isArray(data) ? data : []
+  } catch (error) {
+    console.error('Error fetching services:', error)
+    return []
+  }
 }
 
 const fetchSecurity = async (): Promise<Security[]> => {
-  const response = await fetch('/api/security')
-  if (!response.ok) throw new Error('Failed to fetch security')
-  return response.json()
+  try {
+    const response = await fetch('/api/security')
+    if (!response.ok) throw new Error(`Failed to fetch security: ${response.status}`)
+    const data = await response.json()
+    return Array.isArray(data) ? data : []
+  } catch (error) {
+    console.error('Error fetching security:', error)
+    return []
+  }
+}
+
+const fetchTypeRent = async (): Promise<TypeRent[]> => {
+  try {
+    const response = await fetch('/api/types')
+    if (!response.ok) throw new Error(`Failed to fetch types: ${response.status}`)
+    const data = await response.json()
+    return Array.isArray(data) ? data : []
+  } catch (error) {
+    console.error('Error fetching typeRent:', error)
+    return []
+  }
 }
 
 export const useEquipments = () => {
@@ -62,6 +98,15 @@ export const useSecurity = () => {
   })
 }
 
+export const useTypeRent = () => {
+  return useQuery({
+    queryKey: CACHE_TAGS.staticData.typeRent,
+    queryFn: fetchTypeRent,
+    staleTime: 1000 * 60 * 60 * 24, // 24 hours
+    gcTime: 1000 * 60 * 60 * 24 * 7, // 7 days
+  })
+}
+
 export const useAllStaticData = () => {
   const queries = useQueries({
     queries: [
@@ -89,6 +134,12 @@ export const useAllStaticData = () => {
         staleTime: 1000 * 60 * 60 * 24,
         gcTime: 1000 * 60 * 60 * 24 * 7,
       },
+      {
+        queryKey: CACHE_TAGS.staticData.typeRent,
+        queryFn: fetchTypeRent,
+        staleTime: 1000 * 60 * 60 * 24,
+        gcTime: 1000 * 60 * 60 * 24 * 7,
+      },
     ],
   })
 
@@ -97,6 +148,7 @@ export const useAllStaticData = () => {
     meals: queries[1],
     services: queries[2],
     security: queries[3],
+    typeRent: queries[4],
     isLoading: queries.some(q => q.isLoading),
     isError: queries.some(q => q.isError),
   }
