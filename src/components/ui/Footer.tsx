@@ -16,7 +16,7 @@ export default function Footer() {
               <h3 className="text-xl font-bold text-gray-900">Hosteed</h3>
             </div>
             <p className="text-gray-600 mb-4">
-              Plateforme de réservation d'hébergements, de transport et de services de voyage.
+              Plateforme de réservation d&apos;hébergements, de transport et de services de voyage.
             </p>
             <p className="text-gray-600">
               <span className="font-semibold">Contact:</span>{' '}
@@ -49,7 +49,7 @@ export default function Footer() {
                 href="/legal/conditions-utilisation"
                 className="block text-gray-600 hover:text-[#015993] transition-colors"
               >
-                Conditions d'utilisation
+                Conditions d&apos;utilisation
               </Link>
               <Link 
                 href="/legal/conditions-hebergeurs"

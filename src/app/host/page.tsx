@@ -1,6 +1,6 @@
 'use client'
 import { Suspense } from 'react'
-import { useProductSearch } from '@/hooks/useProductSearch'
+import { useProductSearchPaginated } from '@/hooks/useProductSearchPaginated'
 import ModernSearchBar from '@/components/ui/modernSearchBar'
 import SearchHeader from '@/components/host/SearchHeader'
 import SearchResults from '@/components/host/SearchResults'
@@ -10,6 +10,7 @@ import ErrorState from '@/components/host/ErrorState'
 function HostPageContent() {
   const {
     products,
+    pagination,
     loading,
     error,
     location,
@@ -28,7 +29,8 @@ function HostPageContent() {
     handleModernSearch,
     resetFilters,
     setFilters,
-  } = useProductSearch()
+    goToPage,
+  } = useProductSearchPaginated()
 
   if (loading) {
     return <LoadingState />
@@ -74,7 +76,7 @@ function HostPageContent() {
               promo={promo}
               selectedType={selectedType}
               typeRent={typeRent}
-              productsCount={products.length}
+              productsCount={pagination?.total || products.length}
             />
           </div>
 
@@ -82,6 +84,8 @@ function HostPageContent() {
             products={products}
             hasActiveFilters={hasActiveFilters}
             onResetFilters={resetFilters}
+            pagination={pagination}
+            onPageChange={goToPage}
           />
         </div>
       </div>

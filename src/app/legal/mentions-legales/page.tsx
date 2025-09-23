@@ -7,7 +7,7 @@ export default function MentionsLegalesPage() {
           
           <div className="space-y-6">
             <section>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Informations sur l'entreprise</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Informations sur l&apos;entreprise</h2>
               <div className="space-y-2 text-gray-700">
                 <p><span className="font-medium">Société :</span> HOSTEED</p>
                 <p><span className="font-medium">Responsable :</span> Santatra BENJAMINA</p>
@@ -31,7 +31,7 @@ export default function MentionsLegalesPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Informations sur l'hébergement</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Informations sur l&apos;hébergement</h2>
               <div className="space-y-2 text-gray-700">
                 <p><span className="font-medium">Hébergé par :</span> OVH SAS</p>
                 <p><span className="font-medium">Numéro RCS :</span> 537 407 926</p>

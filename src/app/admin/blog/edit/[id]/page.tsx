@@ -228,7 +228,7 @@ export default function EditPostPage({ params }: PageProps) {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-gray-900">Article non trouvé</h2>
-          <p className="text-gray-600 mt-2">L'article que vous cherchez n'existe pas.</p>
+          <p className="text-gray-600 mt-2">L&apos;article que vous cherchez n&apos;existe pas.</p>
           <Button asChild className="mt-4">
             <Link href="/admin/blog">
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -264,7 +264,7 @@ export default function EditPostPage({ params }: PageProps) {
               </Badge>
             </div>
             <h1 className="text-3xl font-bold text-gray-900">
-              Modifier l'article
+              Modifier l&apos;article
             </h1>
             <p className="text-gray-600 mt-1">
               Éditez votre article et optimisez son référencement
@@ -311,10 +311,10 @@ export default function EditPostPage({ params }: PageProps) {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-yellow-600" />
-                  Titre de l'article
+                  Titre de l&apos;article
                 </CardTitle>
                 <CardDescription>
-                  Un titre accrocheur est essentiel pour attirer l'attention
+                  Un titre accrocheur est essentiel pour attirer l&apos;attention
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -330,7 +330,7 @@ export default function EditPostPage({ params }: PageProps) {
             {/* Content Editor */}
             <Card>
               <CardHeader>
-                <CardTitle>Contenu de l'article</CardTitle>
+                <CardTitle>Contenu de l&apos;article</CardTitle>
                 <CardDescription>
                   Utilisez Markdown pour formater votre contenu
                 </CardDescription>
@@ -370,7 +370,7 @@ export default function EditPostPage({ params }: PageProps) {
                   Image de couverture
                 </CardTitle>
                 <CardDescription>
-                  Une image attrayante améliore l'engagement
+                  Une image attrayante améliore l&apos;engagement
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">

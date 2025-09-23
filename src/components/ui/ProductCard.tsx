@@ -3,7 +3,7 @@ import Image from 'next/image'
 import { Heart, Star, ChevronLeft, ChevronRight, ImageIcon } from 'lucide-react'
 import { useState } from 'react'
 import { getCityFromAddress, calculateAverageRating, isProductSponsored } from '@/lib/utils'
-import { useFavorites } from '@/hooks/useFavorites'
+import { useFavoritesOptimized } from '@/hooks/useFavoritesOptimized'
 import { motion } from 'framer-motion'
 
 interface Review {
@@ -42,7 +42,7 @@ interface Product {
 }
 
 export default function ProductCard({ product, index = 0 }: { product: Product; index?: number }) {
-  const { isFavorite, isLoading, toggleFavorite } = useFavorites(product.id)
+  const { isFavorite, isLoading, toggleFavorite } = useFavoritesOptimized(product.id)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [imageError, setImageError] = useState(false)
   const [isHovered, setIsHovered] = useState(false)

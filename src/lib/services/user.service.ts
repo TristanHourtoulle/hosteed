@@ -5,20 +5,87 @@ import prisma from '@/lib/prisma'
 import { UserRole } from '@prisma/client'
 import jwt from 'jsonwebtoken'
 import { sendTemplatedMail } from '@/lib/services/sendTemplatedMail'
+// Legacy function - use findAllUserPaginated instead
 export async function findAllUser() {
+  const result = await findAllUserPaginated({ page: 1, limit: 100 })
+  return result?.users || null
+}
+
+export async function findAllUserPaginated({
+  page = 1,
+  limit = 20,
+  includeRelations = false,
+  role
+}: {
+  page?: number
+  limit?: number
+  includeRelations?: boolean
+  role?: UserRole
+} = {}) {
   try {
-    return await prisma.user.findMany({
-      include: {
-        Rent: true,
-        Product: true,
+    const skip = (page - 1) * limit
+
+    const whereClause = role ? { roles: role } : {}
+
+    // Lightweight includes for admin user lists
+    const lightweightIncludes = {
+      _count: {
+        select: {
+          Rent: true,
+          Product: true
+        }
+      }
+    }
+
+    // Full includes only when needed
+    const fullIncludes = {
+      Rent: {
+        select: {
+          id: true,
+          status: true,
+          arrivingDate: true,
+          leavingDate: true
+        }
       },
-      omit: {
-        password: true,
-        stripeCustomerId: true,
+      Product: {
+        select: {
+          id: true,
+          name: true,
+          validate: true
+        }
       },
-    })
+    }
+
+    const [users, totalCount] = await Promise.all([
+      prisma.user.findMany({
+        where: whereClause,
+        include: includeRelations ? fullIncludes : lightweightIncludes,
+        omit: {
+          password: true,
+          stripeCustomerId: true,
+        },
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.user.count({
+        where: whereClause
+      })
+    ])
+
+    return {
+      users,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        hasNext: page < Math.ceil(totalCount / limit),
+        hasPrev: page > 1
+      }
+    }
   } catch (e) {
-    console.error(e)
+    console.error('Error in findAllUserPaginated:', e)
     return null
   }
 }
@@ -197,24 +264,9 @@ export async function sendEmailVerification(userId: string) {
         emailToken: token,
       },
     })
-    console.log('User updated with token')
-
-    // Fix potential double slash in URL
-    const baseUrl = process.env.NEXTAUTH_URL?.replace(/\/$/, '') || 'http://localhost:3000'
-    const verificationUrl = baseUrl + '/checkEmail/' + token
-    console.log('Verification URL:', verificationUrl)
-    console.log('About to send templated mail...')
-
-    await sendTemplatedMail(
-      user.email,
-      'Confirmez votre inscription sur Hosteed',
-      'checkEmail.html',
-      {
-        verificationUrl: verificationUrl,
-      }
-    )
-
-    console.log('=== EMAIL VERIFICATION SENT SUCCESSFULLY ===')
+    await sendTemplatedMail(user.email, 'Verifier votre email !', 'checkEmail.html', {
+      verificationUrl: process.env.NEXTAUTH_URL + '/checkEmail/' + token,
+    }, true)
   } catch (e) {
     console.error('=== ERROR IN EMAIL VERIFICATION ===')
     console.error('Error:', e)
@@ -285,7 +337,8 @@ export async function sendResetEmail(userEmail: string) {
       'resetPassword.html',
       {
         resetUrl: process.env.NEXTAUTH_URL + '/forgetPassword/' + token,
-      }
+      },
+      true
     )
   } catch (e) {
     console.error(e)

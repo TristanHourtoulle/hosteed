@@ -13,7 +13,8 @@ export async function sendTemplatedMail(
   to: string,
   subject: string,
   templateName: string,
-  variables: Record<string, string | number>
+  variables: Record<string, string | number>,
+  forceScend: boolean = false
 ) {
   const templatePath = path.join(process.cwd(), 'public/templates/emails', templateName)
   let html = await fs.readFile(templatePath, 'utf-8')
@@ -22,5 +23,5 @@ export async function sendTemplatedMail(
     html = html.replace(regex, String(value))
   }
   // Envoi du mail avec le HTML généré
-  return SendMail(to, subject, html, true)
+  return SendMail(to, subject, html, true, forceScend)
 }

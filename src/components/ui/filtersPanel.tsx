@@ -2,10 +2,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { findAllSecurity } from '@/lib/services/security.services'
-import { findAllMeals } from '@/lib/services/meals.service'
-import { findAllEquipments } from '@/lib/services/equipments.service'
-import { findAllServices } from '@/lib/services/services.service'
 
 interface Security {
   id: string
@@ -56,24 +52,32 @@ export default function FiltersPanel({ filters, setFilters }: FiltersPanelProps)
 
   useEffect(() => {
     const fetchData = async () => {
-      const [securityList, mealsList, equipmentsList, servicesList] = await Promise.all([
-        findAllSecurity(),
-        findAllMeals(),
-        findAllEquipments(),
-        findAllServices(),
-      ])
+      try {
+        const [securityResponse, mealsResponse, equipmentsResponse, servicesResponse] = await Promise.all([
+          fetch('/api/securities'),
+          fetch('/api/meals'),
+          fetch('/api/equipments'),
+          fetch('/api/services'),
+        ])
 
-      if (securityList) {
-        setSecurities(securityList)
-      }
-      if (mealsList) {
-        setMeals(mealsList)
-      }
-      if (equipmentsList) {
-        setEquipments(equipmentsList)
-      }
-      if (servicesList) {
-        setServices(servicesList)
+        if (securityResponse.ok) {
+          const securityList = await securityResponse.json()
+          setSecurities(securityList)
+        }
+        if (mealsResponse.ok) {
+          const mealsList = await mealsResponse.json()
+          setMeals(mealsList)
+        }
+        if (equipmentsResponse.ok) {
+          const equipmentsList = await equipmentsResponse.json()
+          setEquipments(equipmentsList)
+        }
+        if (servicesResponse.ok) {
+          const servicesList = await servicesResponse.json()
+          setServices(servicesList)
+        }
+      } catch (error) {
+        console.error('Error fetching filter data:', error)
       }
     }
     fetchData()

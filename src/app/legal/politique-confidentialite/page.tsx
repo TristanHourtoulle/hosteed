@@ -11,7 +11,7 @@ export default function PolitiqueConfidentialitePage() {
               <div className="space-y-3 text-gray-700">
                 <p>Nous collectons les informations suivantes :</p>
                 <ul className="list-disc list-inside space-y-2 ml-4">
-                  <li><strong>Informations fournies par l'utilisateur :</strong> identité, détails de réservation, informations de compte</li>
+                  <li><strong>Informations fournies par l&apos;utilisateur :</strong> identité, détails de réservation, informations de compte</li>
                   <li><strong>Données collectées automatiquement :</strong> utilisation, localisation, informations techniques</li>
                   <li><strong>Informations de tiers :</strong> partenaires et prestataires de services</li>
                 </ul>
@@ -39,8 +39,8 @@ export default function PolitiqueConfidentialitePage() {
                 <ul className="list-disc list-inside space-y-2 ml-4">
                   <li>Prestataires de services</li>
                   <li>Partenaires commerciaux</li>
-                  <li>En cas d'exigences légales</li>
-                  <li>Lors de transferts d'entreprise</li>
+                  <li>En cas d&apos;exigences légales</li>
+                  <li>Lors de transferts d&apos;entreprise</li>
                 </ul>
               </div>
             </section>
@@ -48,7 +48,7 @@ export default function PolitiqueConfidentialitePage() {
             <section>
               <h2 className="text-xl font-semibold text-gray-900 mb-4">4. Conservation des Données</h2>
               <p className="text-gray-700">
-                Nous conservons vos données aussi longtemps que nécessaire pour les finalités pour lesquelles elles ont été collectées à l'origine.
+                Nous conservons vos données aussi longtemps que nécessaire pour les finalités pour lesquelles elles ont été collectées à l&apos;origine.
               </p>
             </section>
 

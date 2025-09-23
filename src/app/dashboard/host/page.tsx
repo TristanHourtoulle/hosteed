@@ -1,29 +1,17 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import { useEffect, useState } from 'react'
-import { findAllProductByHostId } from '@/lib/services/product.service'
+import { useState } from 'react'
+import { useHostProducts } from '@/hooks/useHostProducts'
 import { ProductValidation } from '@prisma/client'
-import Image from 'next/image'
+import { LazyImage } from '@/components/ui/LazyImage'
 import Link from 'next/link'
 import { getCityFromAddress } from '@/lib/utils'
 import { Card, CardContent } from '@/components/ui/shadcnui/card'
 import { Button } from '@/components/ui/shadcnui/button'
 import { motion } from 'framer-motion'
-import { Home, Calendar, Edit, Eye, Plus } from 'lucide-react'
+import { Home, Calendar, Edit, Eye, Plus, ChevronLeft, ChevronRight } from 'lucide-react'
 import HostNavbar from './components/HostNavbar'
-
-interface Product {
-  id: string
-  name: string
-  description: string
-  address: string
-  basePrice: string
-  validate: ProductValidation
-  isDraft?: boolean
-  originalProductId?: string | null
-  img?: { img: string }[]
-}
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -41,32 +29,20 @@ const itemVariants = {
 }
 
 export default function HostDashboard() {
-  const { data: session } = useSession()
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { status } = useSession()
+  const [currentPage, setCurrentPage] = useState(1)
+  const productsPerPage = 20
+  
+  const {
+    data: hostProductsData,
+    isLoading: loading,
+    error,
+  } = useHostProducts(currentPage, productsPerPage)
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        if (session?.user?.id) {
-          const userProducts = await findAllProductByHostId(session.user.id)
-          if (userProducts) {
-            setProducts(userProducts as unknown as Product[])
-          }
-        }
-      } catch (err) {
-        setError('Erreur lors du chargement des annonces')
-        console.error(err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    if (session?.user) {
-      fetchProducts()
-    }
-  }, [session])
+  const products = hostProductsData?.products || []
+  const totalPages = hostProductsData?.totalPages || 0
+  const hasNextPage = hostProductsData?.hasNextPage || false
+  const hasPreviousPage = hostProductsData?.hasPreviousPage || false
 
   const getStatusBadgeColor = (status: ProductValidation, isDraft?: boolean) => {
     if (isDraft) {
@@ -108,7 +84,8 @@ export default function HostDashboard() {
     }
   }
 
-  if (loading) {
+  // Gestion de l'authentification
+  if (status === 'loading') {
     return (
       <div className='min-h-screen bg-gradient-to-br from-gray-50 to-blue-50'>
         <HostNavbar />
@@ -133,6 +110,21 @@ export default function HostDashboard() {
     )
   }
 
+  if (status === 'unauthenticated') {
+    return (
+      <div className='min-h-screen bg-gradient-to-br from-gray-50 to-blue-50'>
+        <HostNavbar />
+        <div className='max-w-7xl mx-auto p-6'>
+          <Card className='border-amber-200 bg-amber-50'>
+            <CardContent className='p-6'>
+              <p className='text-amber-600'>Vous devez être connecté pour accéder à cette page.</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
   if (error) {
     return (
       <div className='min-h-screen bg-gradient-to-br from-gray-50 to-blue-50'>
@@ -140,7 +132,16 @@ export default function HostDashboard() {
         <div className='max-w-7xl mx-auto p-6'>
           <Card className='border-red-200 bg-red-50'>
             <CardContent className='p-6'>
-              <p className='text-red-600'>{error}</p>
+              <p className='text-red-600'>
+                {error instanceof Error ? error.message : 'Erreur lors du chargement des annonces'}
+              </p>
+              <Button 
+                onClick={() => window.location.reload()} 
+                className='mt-4'
+                variant='outline'
+              >
+                Réessayer
+              </Button>
             </CardContent>
           </Card>
         </div>
@@ -204,11 +205,12 @@ export default function HostDashboard() {
                 <Card className='pt-0 pb-0 overflow-hidden group hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm'>
                   {product.img && product.img[0] && (
                     <div className='relative h-48 w-full overflow-hidden'>
-                      <Image
+                      <LazyImage
                         src={product.img[0].img}
                         alt={product.name}
                         fill
                         className='object-cover group-hover:scale-110 transition-transform duration-300'
+                        quality={80}
                       />
                     </div>
                   )}
@@ -275,6 +277,79 @@ export default function HostDashboard() {
                 </Card>
               </motion.div>
             ))}
+          </motion.div>
+        )}
+
+        {/* Contrôles de pagination */}
+        {totalPages > 1 && (
+          <motion.div
+            className='flex justify-center items-center mt-8 space-x-2'
+            variants={itemVariants}
+            initial='hidden'
+            animate='visible'
+          >
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={!hasPreviousPage || loading}
+              className='hover:bg-blue-50'
+            >
+              <ChevronLeft className='w-4 h-4 mr-1' />
+              Précédent
+            </Button>
+            
+            <div className='flex space-x-1'>
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const pageNum = Math.max(1, Math.min(totalPages, currentPage - 2 + i))
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={pageNum === currentPage ? 'default' : 'outline'}
+                    size='sm'
+                    onClick={() => setCurrentPage(pageNum)}
+                    disabled={loading}
+                    className={pageNum === currentPage ? 'bg-blue-600 text-white' : 'hover:bg-blue-50'}
+                  >
+                    {pageNum}
+                  </Button>
+                )
+              })}
+            </div>
+            
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={!hasNextPage || loading}
+              className='hover:bg-blue-50'
+            >
+              Suivant
+              <ChevronRight className='w-4 h-4 ml-1' />
+            </Button>
+          </motion.div>
+        )}
+
+        {/* Indicateur de chargement pour les nouvelles pages */}
+        {loading && products.length > 0 && (
+          <motion.div
+            className='flex justify-center items-center mt-4'
+            variants={itemVariants}
+          >
+            <div className='animate-pulse text-gray-500 text-sm'>
+              Chargement en cours...
+            </div>
+          </motion.div>
+        )}
+
+        {/* Informations sur la pagination */}
+        {hostProductsData && products.length > 0 && (
+          <motion.div
+            className='text-center mt-6 text-gray-600 text-sm'
+            variants={itemVariants}
+          >
+            Affichage de {Math.min(productsPerPage, products.length)} sur {hostProductsData.totalCount} annonce{hostProductsData.totalCount > 1 ? 's' : ''}
+            {totalPages > 1 && ` (page ${currentPage} sur ${totalPages})`}
           </motion.div>
         )}
       </motion.div>
