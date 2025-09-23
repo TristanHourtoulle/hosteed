@@ -75,6 +75,12 @@ function SearchResults({
   // Memoize motion props for empty state
   const noResultsProps = useMemo(() => noResultsMotion, [])
   const buttonProps = useMemo(() => buttonMotion, [])
+  
+  // Debug logging
+  console.log('SearchResults - products received:', products)
+  console.log('SearchResults - products length:', products.length)
+  console.log('SearchResults - first product img:', products[0]?.img)
+  
   if (products.length === 0) {
     return (
       <motion.div {...noResultsProps}>

@@ -47,6 +47,10 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
   const [imageError, setImageError] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
 
+  // Debug logging
+  console.log(`ProductCard ${product.id} - img structure:`, product.img)
+  console.log(`ProductCard ${product.id} - img length:`, product.img?.length)
+
   // Memoize expensive calculations to prevent recalculation on every render
   const isSponsored = useMemo(() => 
     isProductSponsored(product.PromotedProduct), 

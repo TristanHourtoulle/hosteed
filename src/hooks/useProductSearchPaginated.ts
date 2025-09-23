@@ -303,6 +303,9 @@ export function useProductSearchPaginated() {
       const result = await response.json()
       if (!result) return null
       
+      // Debug logging to check products structure
+      console.log('API Response products:', result.products?.slice(0, 1))
+      
       // Server already handles most filtering, just return the result
       return {
         products: result.products,
