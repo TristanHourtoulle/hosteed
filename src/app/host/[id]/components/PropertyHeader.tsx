@@ -1,6 +1,6 @@
 'use client'
 
-import { Star, Heart, MapPin } from 'lucide-react'
+import { Star, Heart, MapPin, Award } from 'lucide-react'
 import { getCityFromAddress } from '@/lib/utils'
 import { useFavoritesOptimized } from '@/hooks/useFavoritesOptimized'
 import { ShareButton } from './ShareButton'
@@ -26,6 +26,8 @@ interface PropertyHeaderProps {
   globalGrade: number
   address?: string
   productId: string
+  isCertificated?: boolean
+  certified?: boolean
 }
 
 export default function PropertyHeader({
@@ -34,12 +36,22 @@ export default function PropertyHeader({
   globalGrade,
   address,
   productId,
+  isCertificated,
+  certified,
 }: PropertyHeaderProps) {
   const { isFavorite, isLoading, toggleFavorite } = useFavoritesOptimized(productId)
   return (
     <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6'>
       <div className='flex-1'>
-        <h1 className='text-2xl sm:text-3xl font-semibold text-gray-900 mb-2'>{name}</h1>
+        <div className='flex items-center gap-3 mb-2'>
+          <h1 className='text-2xl sm:text-3xl font-semibold text-gray-900'>{name}</h1>
+          {(isCertificated || certified) && (
+            <div className='bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1'>
+              <Award className='w-4 h-4' />
+              Certifié
+            </div>
+          )}
+        </div>
         <div className='flex items-center gap-4 text-sm'>
           {reviews && reviews.length > 0 && (
             <div className='flex items-center gap-1'>

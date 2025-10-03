@@ -6,7 +6,7 @@ import { CheckRentIsAvailable } from '@/lib/services/rents.service'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Equipment, Meals, Services, User } from '@prisma/client'
-import { X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { X, ChevronLeft, ChevronRight, Award } from 'lucide-react'
 
 import PropertyHeader from './components/PropertyHeader'
 import ImageGallery from './components/ImageGallery'
@@ -83,6 +83,7 @@ interface Product {
   sizeRoom?: number
   autoAccept?: boolean
   certified?: boolean
+  isCertificated?: boolean // Nouveau champ de certification
   contract?: boolean
   longitude?: number
   latitude?: number
@@ -286,6 +287,8 @@ export default function ProductDetails() {
           globalGrade={globalGrade}
           address={product.address}
           productId={product.id}
+          isCertificated={product.isCertificated}
+          certified={product.certified}
         />
 
         <ImageGallery

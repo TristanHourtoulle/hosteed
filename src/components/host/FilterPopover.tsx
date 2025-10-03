@@ -25,9 +25,7 @@ interface FilterState {
   maxBathrooms: string
   sizeMin: string
   sizeMax: string
-  autoAcceptOnly: boolean
   certifiedOnly: boolean
-  contractRequired: boolean
 }
 
 interface FilterPopoverProps {
@@ -110,9 +108,7 @@ export default function FilterPopover({
       maxBathrooms: '',
       sizeMin: '',
       sizeMax: '',
-      autoAcceptOnly: false,
       certifiedOnly: false,
-      contractRequired: false,
     }
     setLocalFilters(emptyFilters)
   }
@@ -133,9 +129,7 @@ export default function FilterPopover({
     localFilters.maxBathrooms ? 1 : 0,
     localFilters.sizeMin ? 1 : 0,
     localFilters.sizeMax ? 1 : 0,
-    localFilters.autoAcceptOnly ? 1 : 0,
     localFilters.certifiedOnly ? 1 : 0,
-    localFilters.contractRequired ? 1 : 0,
   ].reduce((sum, count) => sum + count, 0)
 
   return (
@@ -367,31 +361,11 @@ export default function FilterPopover({
                 <label className='flex items-center space-x-2 cursor-pointer'>
                   <input
                     type='checkbox'
-                    checked={localFilters.autoAcceptOnly}
-                    onChange={e => handleInputChange('autoAcceptOnly', e.target.checked)}
-                    className='w-4 h-4 text-blue-600 rounded focus:ring-blue-500'
-                  />
-                  <span className='text-sm text-gray-700'>Acceptation automatique</span>
-                </label>
-
-                <label className='flex items-center space-x-2 cursor-pointer'>
-                  <input
-                    type='checkbox'
                     checked={localFilters.certifiedOnly}
                     onChange={e => handleInputChange('certifiedOnly', e.target.checked)}
                     className='w-4 h-4 text-blue-600 rounded focus:ring-blue-500'
                   />
                   <span className='text-sm text-gray-700'>Hébergements certifiés</span>
-                </label>
-
-                <label className='flex items-center space-x-2 cursor-pointer'>
-                  <input
-                    type='checkbox'
-                    checked={localFilters.contractRequired}
-                    onChange={e => handleInputChange('contractRequired', e.target.checked)}
-                    className='w-4 h-4 text-blue-600 rounded focus:ring-blue-500'
-                  />
-                  <span className='text-sm text-gray-700'>Contrat requis</span>
                 </label>
               </div>
             </CardContent>

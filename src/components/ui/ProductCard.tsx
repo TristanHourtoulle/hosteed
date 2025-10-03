@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { Heart, Star, ChevronLeft, ChevronRight, ImageIcon } from 'lucide-react'
+import { Heart, Star, ChevronLeft, ChevronRight, ImageIcon, Award } from 'lucide-react'
 import { useState } from 'react'
 import { getCityFromAddress, calculateAverageRating, isProductSponsored } from '@/lib/utils'
 import { useFavoritesOptimized } from '@/hooks/useFavoritesOptimized'
@@ -32,6 +32,7 @@ interface Product {
     endDate: Date | null
   }
   certified?: boolean
+  isCertificated?: boolean // Nouveau champ de certification
   reviews?: Review[]
   PromotedProduct?: Array<{
     id: string
@@ -280,12 +281,13 @@ export default function ProductCard({ product, index = 0 }: { product: Product; 
                   </motion.div>
                 )}
               </div>
-              {product.certified && (
+              {(product.isCertificated || product.certified) && (
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className='bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-medium'
+                  className='bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1'
                 >
+                  <Award className='w-3 h-3' />
                   Certifié
                 </motion.div>
               )}

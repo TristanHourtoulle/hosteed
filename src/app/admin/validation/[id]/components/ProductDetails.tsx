@@ -20,6 +20,7 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Award,
 } from 'lucide-react'
 import ImageGallery from './ImageGallery'
 import { ExtraPriceType } from '@prisma/client'
@@ -80,6 +81,16 @@ interface Product {
   includedServices?: { id: string; name: string; description: string | null; icon: string | null }[]
   extras?: { id: string; name: string; description: string | null; priceEUR: number; priceMGA: number; type: ExtraPriceType }[]
   highlights?: { id: string; name: string; description: string | null; icon: string | null }[]
+  // Champs de certification
+  isCertificated?: boolean
+  certificationDate?: Date | null
+  certificatedBy?: string | null
+  certificatedRelation?: {
+    id: string
+    name?: string | null
+    lastname?: string | null
+    email: string
+  } | null
 }
 
 interface ProductDetailsProps {
@@ -471,6 +482,92 @@ export function ProductDetails({ product }: ProductDetailsProps) {
           </CardContent>
         </Card>
       )}
+
+      {/* Section Certification */}
+      <Card>
+        <CardHeader>
+          <CardTitle className='flex items-center gap-2'>
+            <Award className='h-5 w-5' />
+            Certification
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className='space-y-4'>
+            <div className='flex items-center justify-between'>
+              <span className='text-sm font-medium'>Statut de certification</span>
+              <Badge variant={product.isCertificated ? 'default' : 'secondary'} className={product.isCertificated ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' : ''}>
+                {product.isCertificated ? (
+                  <div className='flex items-center gap-1'>
+                    <Award className='h-3 w-3' />
+                    Certifiée
+                  </div>
+                ) : (
+                  'Non certifiée'
+                )}
+              </Badge>
+            </div>
+
+            {product.isCertificated && (
+              <>
+                {product.certificationDate && (
+                  <div className='flex items-center justify-between'>
+                    <span className='text-sm'>Date de certification</span>
+                    <span className='text-sm font-medium text-gray-900'>
+                      {new Date(product.certificationDate).toLocaleDateString('fr-FR', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </span>
+                  </div>
+                )}
+
+                {product.certificatedRelation && (
+                  <div className='flex items-center justify-between'>
+                    <span className='text-sm'>Certifiée par</span>
+                    <div className='flex items-center gap-2'>
+                      <User className='h-4 w-4 text-gray-500' />
+                      <span className='text-sm font-medium text-gray-900'>
+                        {product.certificatedRelation.name && product.certificatedRelation.lastname
+                          ? `${product.certificatedRelation.name} ${product.certificatedRelation.lastname}`
+                          : product.certificatedRelation.email}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <div className='mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg'>
+                  <div className='flex items-start gap-2'>
+                    <Award className='h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0' />
+                    <div>
+                      <p className='text-sm font-medium text-yellow-800'>Annonce certifiée</p>
+                      <p className='text-xs text-yellow-700 mt-1'>
+                        Cette annonce bénéficie d'un badge de certification et est mise en avant dans les résultats de recherche.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {!product.isCertificated && (
+              <div className='mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg'>
+                <div className='flex items-start gap-2'>
+                  <X className='h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0' />
+                  <div>
+                    <p className='text-sm font-medium text-gray-700'>Annonce non certifiée</p>
+                    <p className='text-xs text-gray-600 mt-1'>
+                      Cette annonce n'est pas encore certifiée par l'équipe d'administration.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

@@ -91,6 +91,16 @@ interface Product {
   servicesList?: { id: string; name: string }[]
   securities?: { id: string; name: string }[]
   typeRoom?: { name: string; description: string }
+  // Champs de certification
+  isCertificated?: boolean
+  certificationDate?: Date | null
+  certificatedBy?: string | null
+  certificatedRelation?: {
+    id: string
+    name?: string | null
+    lastname?: string | null
+    email: string
+  } | null
   rules?: {
     smokingAllowed: boolean
     petsAllowed: boolean

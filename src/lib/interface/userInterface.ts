@@ -86,6 +86,10 @@ export interface CreateProductInput {
   hotelInfo?: HotelInfo | null
   // Prix spéciaux
   specialPrices?: SpecialPriceInput[]
+  // Champs de certification
+  isCertificated?: boolean
+  certificationDate?: Date | string | null
+  certificatedBy?: string | null
 }
 
 export interface Product {

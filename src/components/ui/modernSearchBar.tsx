@@ -32,9 +32,7 @@ interface FilterState {
   maxBathrooms: string
   sizeMin: string
   sizeMax: string
-  autoAcceptOnly: boolean
   certifiedOnly: boolean
-  contractRequired: boolean
 }
 
 interface ModernSearchBarProps {

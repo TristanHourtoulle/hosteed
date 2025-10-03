@@ -43,21 +43,21 @@ interface ProductWithSpecialPrice {
 // Fonction utilitaire pour filtrer les prix spéciaux par dates et jour
 function filterActiveSpecialPrices(specialPrices: SpecialPrice[], currentDate: Date = new Date()) {
   const currentDay = currentDate.toLocaleDateString('en-US', { weekday: 'long' }) // Ex: "Monday", "Tuesday", etc.
-  
+
   return specialPrices.filter(sp => {
     // Vérifier si le prix spécial est activé
     if (!sp.activate) return false
-    
+
     // Vérifier si le jour actuel est dans la liste des jours du prix spécial
     if (!sp.day || !sp.day.includes(currentDay)) return false
-    
+
     // Si pas de dates définies, inclure le prix spécial
     if (!sp.startDate && !sp.endDate) return true
-    
+
     // Vérifier si la date actuelle est dans la plage
     const startDate = sp.startDate ? new Date(sp.startDate) : null
     const endDate = sp.endDate ? new Date(sp.endDate) : null
-    
+
     if (startDate && endDate) {
       return currentDate >= startDate && currentDate <= endDate
     } else if (startDate) {
@@ -65,7 +65,7 @@ function filterActiveSpecialPrices(specialPrices: SpecialPrice[], currentDate: D
     } else if (endDate) {
       return currentDate <= endDate
     }
-    
+
     return true
   })
 }
@@ -85,15 +85,25 @@ async function getSpecialPricesForProduct(productId: string) {
   }
 }
 
+// Fonction utilitaire pour valider la cohérence des champs de certification
+function validateCertificationFields(isCertificated: boolean, certificationDate?: Date | string | null, certificatedBy?: string | null) {
+  if (isCertificated) {
+    if (!certificationDate || !certificatedBy) {
+      throw new Error('Si isCertificated est true, certificationDate et certificatedBy sont obligatoires')
+    }
+  }
+  return true
+}
+
 // Fonction pour appliquer le prix spécial au produit
 function applySpecialPriceToProduct(product: ProductWithSpecialPrice, specialPrices: SpecialPrice[]) {
   if (!specialPrices || specialPrices.length === 0) {
     return product
   }
-  
+
   // Prendre le premier prix spécial valide (on pourrait aussi prendre le plus récent ou le plus avantageux)
   const activeSpecialPrice = specialPrices[0]
-  
+
   if (activeSpecialPrice && activeSpecialPrice.pricesEuro) {
     // Remplacer le basePrice par le prix spécial en euros
     return {
@@ -110,7 +120,7 @@ function applySpecialPriceToProduct(product: ProductWithSpecialPrice, specialPri
       }
     }
   }
-  
+
   return product
 }
 
@@ -143,6 +153,13 @@ export async function findProductById(id: string) {
         nearbyPlaces: true, // Inclure les lieux à proximité
         transportOptions: true, // Inclure les options de transport
         propertyInfo: true, // Inclure les informations de propriété
+        certificatedRelation: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
         // specialPrices: true, // Temporairement désactivé car le modèle n'est pas généré
         reviews: {
           where: {
@@ -169,10 +186,10 @@ export async function findProductById(id: string) {
       // Récupérer et filtrer les prix spéciaux activés et dans les dates actuelles
       const specialPrices = await getSpecialPricesForProduct(product.id)
       const filteredSpecialPrices = filterActiveSpecialPrices(specialPrices)
-      
+
       // Appliquer le prix spécial au produit si applicable
       const productWithSpecialPrice = applySpecialPriceToProduct(product, filteredSpecialPrices)
-      
+
       // Ajouter les prix spéciaux filtrés au produit
       return {
         ...productWithSpecialPrice,
@@ -188,9 +205,9 @@ export async function findProductById(id: string) {
 
 // Legacy function - use findAllProductsPaginated instead
 export async function findAllProducts() {
-  return findAllProductsPaginated({ 
-    page: 1, 
-    limit: 50, 
+  return findAllProductsPaginated({
+    page: 1,
+    limit: 50,
     imageMode: 'medium' // Max 5 images for better performance
   })
 }
@@ -205,12 +222,12 @@ export async function findAllProductsForPublic({
   limit?: number
   includeSpecialPrices?: boolean
 } = {}) {
-  return findAllProductsPaginated({ 
-    page, 
-    limit, 
+  return findAllProductsPaginated({
+    page,
+    limit,
     includeSpecialPrices,
     imageMode: 'medium', // CRITICAL: Only 5 images per product for public views
-    includeLightweight: false 
+    includeLightweight: false
   })
 }
 
@@ -234,9 +251,9 @@ export async function findAllProductsPaginated({
     const lightweightIncludes = {
       img: {
         take: 1, // Only first image for list views
-        select: { 
+        select: {
           id: true,
-          img: true 
+          img: true
         }
       },
       type: {
@@ -255,9 +272,9 @@ export async function findAllProductsPaginated({
     const mediumIncludes = {
       img: {
         take: 5, // Maximum 5 images for public product lists
-        select: { 
+        select: {
           id: true,
-          img: true 
+          img: true
         }
       },
       type: {
@@ -278,6 +295,13 @@ export async function findAllProductsPaginated({
       type: true,
       equipments: true,
       securities: true,
+        certificatedRelation: {
+            select: {
+                id: true,
+                name: true,
+                email: true,
+            },
+        },
       servicesList: true,
       mealsList: true,
       options: true,
@@ -351,7 +375,7 @@ export async function findAllProductsPaginated({
           activate: true
         }
       })
-      
+
       // Group by productId for efficient lookup
       const specialPricesByProduct = allSpecialPrices.reduce((acc, sp) => {
         if (!acc[sp.productId]) acc[sp.productId] = []
@@ -364,7 +388,7 @@ export async function findAllProductsPaginated({
         const specialPrices = specialPricesByProduct[product.id] || []
         const filteredSpecialPrices = filterActiveSpecialPrices(specialPrices)
         const productWithSpecialPrice = applySpecialPriceToProduct(product, filteredSpecialPrices)
-        
+
         return {
           ...productWithSpecialPrice,
           specialPrices: filteredSpecialPrices
@@ -478,8 +502,8 @@ export async function findAllProductByHostIdPaginated(
           },
           isDraft: false,
         },
-        include: includeLightweight || imageMode === 'lightweight' ? lightweightIncludes 
-                : imageMode === 'medium' ? mediumIncludes 
+        include: includeLightweight || imageMode === 'lightweight' ? lightweightIncludes
+                : imageMode === 'medium' ? mediumIncludes
                 : fullIncludes,
         skip,
         take: limit,
@@ -509,7 +533,7 @@ export async function findAllProductByHostIdPaginated(
           activate: true
         }
       })
-      
+
       const specialPricesByProduct = allSpecialPrices.reduce((acc, sp) => {
         if (!acc[sp.productId]) acc[sp.productId] = []
         acc[sp.productId].push(sp)
@@ -520,8 +544,10 @@ export async function findAllProductByHostIdPaginated(
       productsWithSpecialPrices = (products as any[]).map((product: any) => {
         const specialPrices = specialPricesByProduct[product.id] || []
         const filteredSpecialPrices = filterActiveSpecialPrices(specialPrices)
+
+        // Appliquer le prix spécial au produit si applicable
         const productWithSpecialPrice = applySpecialPriceToProduct(product, filteredSpecialPrices)
-        
+
         return {
           ...productWithSpecialPrice,
           specialPrices: filteredSpecialPrices
@@ -570,58 +596,105 @@ export async function createProduct(data: CreateProductInput) {
       throw new Error('Aucun utilisateur assigné au produit')
     }
 
-    // Créer d'abord le produit de base
-    const createdProduct = await prisma.product.create({
-      data: {
-        name: data.name,
-        description: data.description,
-        address: data.address,
-        longitude: Number(data.longitude),
-        latitude: Number(data.latitude),
-        basePrice: data.basePrice,
-        priceMGA: data.priceMGA,
-        room: data.room ? BigInt(data.room) : null,
-        bathroom: data.bathroom ? BigInt(data.bathroom) : null,
-        arriving: Number(data.arriving),
-        leaving: Number(data.leaving),
-        autoAccept: false,
-        phone: data.phone || '',
-        phoneCountry: data.phoneCountry || 'MG',
-        maxPeople: data.maxPeople ? BigInt(data.maxPeople) : null,
-        categories: BigInt(0),
-        validate: ProductValidation.NotVerified,
-        userManager: BigInt(0),
-        // Gestion du nombre de chambres disponibles pour les hôtels
-        availableRooms: data.hotelInfo ? data.hotelInfo.availableRooms : null,
-        type: { connect: { id: data.typeId } },
-        user: {
-          connect: data.userId.map(id => ({ id })),
-        },
-        equipments: {
-          connect: data.equipments.map(equipmentId => ({ id: equipmentId })),
-        },
-        servicesList: {
-          connect: data.services.map(serviceId => ({ id: serviceId })),
-        },
-        mealsList: {
-          connect: data.meals.map(mealId => ({ id: mealId })),
-        },
-        securities: {
-          connect: data.securities.map(securityId => ({ id: securityId })),
-        },
-        includedServices: {
-          connect: data.includedServices?.map(serviceId => ({ id: serviceId })) || [],
-        },
-        extras: {
-          connect: data.extras?.map(extraId => ({ id: extraId })) || [],
-        },
-        highlights: {
-          connect: data.highlights?.map(highlightId => ({ id: highlightId })) || [],
-        },
-        img: {
-          create: data.images.map(img => ({ img })),
-        },
+    // Validation des champs de certification
+    if (data.isCertificated !== undefined) {
+      validateCertificationFields(data.isCertificated, data.certificationDate, data.certificatedBy)
+    }
+
+    // Préparer les données de base
+    const productData: {
+      name: string
+      description: string
+      address: string
+      longitude: number
+      latitude: number
+      basePrice: string
+      priceMGA: string
+      room: number | null
+      bathroom: number | null
+      arriving: number
+      leaving: number
+      autoAccept: boolean
+      phone: string
+      phoneCountry: string
+      maxPeople: number | null
+      categories: number
+      validate: ProductValidation
+      userManager: number
+      availableRooms: number | null
+      isCertificated: boolean | undefined
+      certificationDate: Date | undefined
+      certificatedBy?: string
+      typeId: string
+      user: { connect: { id: string }[] }
+      equipments: { connect: { id: string }[] }
+      servicesList: { connect: { id: string }[] }
+      mealsList: { connect: { id: string }[] }
+      securities: { connect: { id: string }[] }
+      includedServices: { connect: { id: string }[] }
+      extras: { connect: { id: string }[] }
+      highlights: { connect: { id: string }[] }
+      img: { create: { img: string }[] }
+    } = {
+      name: data.name,
+      description: data.description,
+      address: data.address,
+      longitude: Number(data.longitude),
+      latitude: Number(data.latitude),
+      basePrice: data.basePrice,
+      priceMGA: data.priceMGA,
+      room: data.room ? Number(data.room) : null,
+      bathroom: data.bathroom ? Number(data.bathroom) : null,
+      arriving: Number(data.arriving),
+      leaving: Number(data.leaving),
+      autoAccept: false,
+      phone: data.phone || '',
+      phoneCountry: data.phoneCountry || 'MG',
+      maxPeople: data.maxPeople ? Number(data.maxPeople) : null,
+      categories: 0,
+      validate: ProductValidation.NotVerified,
+      userManager: 0,
+      // Gestion du nombre de chambres disponibles pour les hôtels
+      availableRooms: data.hotelInfo ? data.hotelInfo.availableRooms : null,
+      // Champs de certification
+      isCertificated: data.isCertificated,
+      certificationDate: data.isCertificated && data.certificationDate ? new Date(data.certificationDate) : undefined,
+      certificatedBy: data.isCertificated && data.certificatedBy ? data.certificatedBy : undefined,
+      typeId: data.typeId,
+      user: {
+        connect: data.userId.map(id => ({ id })),
       },
+      equipments: {
+        connect: data.equipments.map(equipmentId => ({ id: equipmentId })),
+      },
+      servicesList: {
+        connect: data.services.map(serviceId => ({ id: serviceId })),
+      },
+      mealsList: {
+        connect: data.meals.map(mealId => ({ id: mealId })),
+      },
+      securities: {
+        connect: data.securities.map(securityId => ({ id: securityId })),
+      },
+      includedServices: {
+        connect: data.includedServices?.map(serviceId => ({ id: serviceId })) || [],
+      },
+      extras: {
+        connect: data.extras?.map(extraId => ({ id: extraId })) || [],
+      },
+      highlights: {
+        connect: data.highlights?.map(highlightId => ({ id: highlightId })) || [],
+      },
+      img: {
+        create: data.images.map(img => ({ img })),
+      },
+    }
+
+    // La relation certificatedRelation sera automatiquement gérée par Prisma via le champ certificatedBy
+
+    // Créer le produit
+    const createdProduct = await prisma.product.create({
+      data: productData,
     })
 
     // Ensuite, mettre à jour avec les relations supplémentaires
@@ -698,7 +771,7 @@ export async function createProduct(data: CreateProductInput) {
     console.log('=== Special Prices Debug ===')
     console.log('data.specialPrices:', data.specialPrices)
     console.log('data.specialPrices length:', data.specialPrices?.length)
-    
+
     if (data.specialPrices && data.specialPrices.length > 0) {
       console.log('Creating special prices...')
       for (const specialPrice of data.specialPrices) {
@@ -747,21 +820,21 @@ export async function createProduct(data: CreateProductInput) {
         // Vérifier si l'utilisateur a déjà un hôtel avec ce nom
         const managerId = data.userId[0] // Premier utilisateur comme manager
         const existingHotels = await findHotelByManagerId({ id: managerId })
-        
+
         let hotelId: string | null = null
-        
+
         if (existingHotels && Array.isArray(existingHotels)) {
           // Chercher un hôtel existant avec le même nom
-          const existingHotel = existingHotels.find(hotel => 
+          const existingHotel = existingHotels.find(hotel =>
             hotel.name.toLowerCase() === data.hotelInfo!.name.toLowerCase()
           )
-          
+
           if (existingHotel) {
             hotelId = existingHotel.id
             console.log(`Hôtel existant trouvé: ${existingHotel.name} (ID: ${hotelId})`)
           }
         }
-        
+
         // Si aucun hôtel existant, en créer un nouveau
         if (!hotelId) {
           const newHotel = await createHotel({
@@ -770,13 +843,13 @@ export async function createProduct(data: CreateProductInput) {
             adress: data.address,
             manager: managerId,
           })
-          
+
           if (newHotel && typeof newHotel === 'object' && 'id' in newHotel) {
             hotelId = newHotel.id
             console.log(`Nouvel hôtel créé: ${data.hotelInfo.name} (ID: ${hotelId})`)
           }
         }
-        
+
         // Associer le produit (chambre) à l'hôtel
         if (hotelId) {
           await prisma.product.update({
@@ -789,7 +862,7 @@ export async function createProduct(data: CreateProductInput) {
           })
           console.log(`Produit associé à l'hôtel: ${hotelId}`)
         }
-        
+
       } catch (hotelError) {
         console.error('Erreur lors de la gestion de l\'hôtel:', hotelError)
         // Ne pas faire échouer la création du produit pour un problème d'hôtel
@@ -843,12 +916,10 @@ export async function createProduct(data: CreateProductInput) {
       }
     } catch (adminError) {
       console.error('Erreur lors de la récupération des admins:', adminError)
-      // Ne pas faire échouer la création du produit
     }
 
-    // Invalider le cache après création
     await invalidateProductCache()
-    
+
     return finalProduct
   } catch (error) {
     console.error('Error creating product:', error)
@@ -903,10 +974,10 @@ export async function validateProduct(id: string) {
         )
       })
     }
-    
+
     // Invalider le cache après validation
     await invalidateProductCache(id)
-    
+
     return product
   } catch (error) {
     console.error('Erreur lors de la validation du produit:', error)
@@ -940,7 +1011,7 @@ export async function rejectProduct(id: string) {
         )
       })
     }
-    
+
     // Invalider le cache après rejet
     await invalidateProductCache(id)
 
@@ -988,7 +1059,7 @@ export async function deleteMultipleRejectedProducts(ids: string[]) {
   try {
     // Récupérer tous les produits avec leurs utilisateurs avant suppression
     const products = await prisma.product.findMany({
-      where: { 
+      where: {
         id: { in: ids },
         validate: ProductValidation.Refused // Sécurité supplémentaire
       },
@@ -1016,8 +1087,8 @@ export async function deleteMultipleRejectedProducts(ids: string[]) {
     const cachePromises = products.map(p => invalidateProductCache(p.id))
     await Promise.allSettled(cachePromises)
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       deletedCount: deletedCount.count,
       productNames: products.map(p => p.name),
       userEmails: [...new Set(products.flatMap(p => p.user.map(u => u.email)))] // Emails uniques
@@ -1047,59 +1118,141 @@ export async function resubmitProductWithChange(
     services: string[]
     meals: string[]
     images: string[]
+    // Champs de certification
+    isCertificated?: boolean
+    certificationDate?: Date | string | null
+    certificatedBy?: string
   },
   hostId?: string
 ) {
   try {
+    // Validation des champs de certification si fournis
+    if (params.isCertificated !== undefined) {
+      validateCertificationFields(params.isCertificated, params.certificationDate, params.certificatedBy)
+    }
+
     // Récupérer le statut actuel avant la mise à jour
     const currentProduct = await prisma.product.findUnique({
       where: { id },
-      select: { validate: true },
+      select: { validate: true, isCertificated: true },
     })
 
-    // Déterminer le nouveau statut
+    // Déterminer le nouveau statut seulement si ce ne sont pas uniquement les champs de certification qui changent
     let newValidationStatus: ProductValidation
-    if (currentProduct?.validate === ProductValidation.RecheckRequest) {
-      // Si une révision était demandée et que l'hôte fait des modifications,
-      // le statut passe à "En attente" pour signaler à l'admin qu'il y a du nouveau travail
-      newValidationStatus = ProductValidation.NotVerified
+    let shouldChangeValidationStatus = true
+
+    // Vérifier si seuls les champs de certification sont modifiés
+    // On considère que c'est une modification de certification uniquement si :
+    // 1. isCertificated est fourni (modification de certification)
+    // 2. certificatedBy est fourni (admin qui fait la modification)
+    // 3. La certification change réellement
+    const isCertificationOnlyChange = params.isCertificated !== undefined &&
+                                     params.certificatedBy &&
+                                     currentProduct?.isCertificated !== params.isCertificated
+
+    console.log('Debug certification:', {
+      isCertificatedProvided: params.isCertificated !== undefined,
+      certificatedByProvided: !!params.certificatedBy,
+      currentCertificated: currentProduct?.isCertificated,
+      newCertificated: params.isCertificated,
+      certificationChanged: currentProduct?.isCertificated !== params.isCertificated,
+      isCertificationOnlyChange,
+      shouldChangeValidationStatus: !isCertificationOnlyChange,
+      hostId: !!hostId
+    })
+
+    if (isCertificationOnlyChange) {
+      // C'est uniquement une modification de certification, ne pas changer le statut de validation
+      shouldChangeValidationStatus = false
+      newValidationStatus = currentProduct?.validate || ProductValidation.NotVerified
+      console.log('Certification uniquement détectée - statut préservé:', newValidationStatus)
     } else {
-      // Pour les autres cas, garder la logique actuelle
-      newValidationStatus = ProductValidation.RecheckRequest
+      // Logique normale pour les autres modifications
+      shouldChangeValidationStatus = true
+      if (currentProduct?.validate === ProductValidation.RecheckRequest) {
+        // Si une révision était demandée et que l'hôte fait des modifications,
+        // le statut passe à "En attente" pour signaler à l'admin qu'il y a du nouveau travail
+        newValidationStatus = ProductValidation.NotVerified
+      } else {
+        // Pour les autres cas, garder la logique actuelle
+        newValidationStatus = ProductValidation.RecheckRequest
+      }
+      console.log('Modification normale détectée - statut changé vers:', newValidationStatus)
+    }
+
+    // Construire l'objet de données de manière conditionnelle
+    const updateData: {
+      name: string
+      description: string
+      address: string
+      longitude: number
+      latitude: number
+      basePrice: string
+      room: number | null
+      bathroom: number | null
+      arriving: number
+      leaving: number
+      type: { connect: { id: string } }
+      equipments: { set: { id: string }[] }
+      servicesList: { set: { id: string }[] }
+      mealsList: { set: { id: string }[] }
+      securities: { set: { id: string }[] }
+      img: { deleteMany: Record<string, never>; create: { img: string }[] }
+      validate?: ProductValidation
+      isCertificated?: boolean
+      certificationDate?: Date | null
+      certificatedRelation?: { connect: { id: string } } | { disconnect: true }
+    } = {
+      name: params.name,
+      description: params.description,
+      address: params.address,
+      longitude: params.longitude,
+      latitude: params.latitude,
+      basePrice: params.basePrice,
+      room: params.room ? Number(params.room) : null,
+      bathroom: params.bathroom ? Number(params.bathroom) : null,
+      arriving: params.arriving,
+      leaving: params.leaving,
+      type: { connect: { id: params.typeId } },
+      equipments: {
+        set: params.equipments.map(equipmentId => ({ id: equipmentId })),
+      },
+      servicesList: {
+        set: params.services.map(serviceId => ({ id: serviceId })),
+      },
+      mealsList: {
+        set: params.meals.map(mealId => ({ id: mealId })),
+      },
+      securities: {
+        set: params.securities.map(securityId => ({ id: securityId })),
+      },
+      img: {
+        deleteMany: {},
+        create: params.images.map(img => ({ img })),
+      },
+    }
+
+    // Ajouter le statut de validation seulement si ce n'est pas une modification de certification uniquement
+    if (shouldChangeValidationStatus) {
+      updateData.validate = newValidationStatus
+    }
+
+    if (params.isCertificated !== undefined) {
+      updateData.isCertificated = params.isCertificated
+      updateData.certificationDate = params.isCertificated && params.certificationDate ? new Date(params.certificationDate) : null
+
+      if (params.isCertificated && params.certificatedBy) {
+        updateData.certificatedRelation = { connect: {
+          id: params.certificatedBy
+          }}
+      } else {
+        updateData.certificatedRelation = { disconnect: true,}
+      }
     }
 
     const updatedProduct = await prisma.product.update({
       where: { id },
-      data: {
-        name: params.name,
-        description: params.description,
-        address: params.address,
-        longitude: params.longitude,
-        latitude: params.latitude,
-        basePrice: params.basePrice,
-        room: params.room ? BigInt(params.room) : null,
-        bathroom: params.bathroom ? BigInt(params.bathroom) : null,
-        arriving: params.arriving,
-        leaving: params.leaving,
-        validate: newValidationStatus,
-        type: { connect: { id: params.typeId } },
-        equipments: {
-          set: params.equipments.map(equipmentId => ({ id: equipmentId })),
-        },
-        servicesList: {
-          set: params.services.map(serviceId => ({ id: serviceId })),
-        },
-        mealsList: {
-          set: params.meals.map(mealId => ({ id: mealId })),
-        },
-        securities: {
-          set: params.securities.map(securityId => ({ id: securityId })),
-        },
-        img: {
-          deleteMany: {},
-          create: params.images.map(img => ({ img })),
-        },
-      },
+      data: updateData,
       include: {
         img: true,
         type: true,
@@ -1112,8 +1265,19 @@ export async function resubmitProductWithChange(
     })
 
     if (updatedProduct && currentProduct) {
-      // Créer un historique de validation
-      if (hostId) {
+      // Créer un historique de validation pour les modifications seulement si le statut change
+      console.log('Debug historique validation:', {
+        hostId: !!hostId,
+        shouldChangeValidationStatus,
+        currentStatus: currentProduct.validate,
+        newStatus: newValidationStatus,
+        statusChanged: currentProduct.validate !== newValidationStatus,
+        willCreateHistory: !!(hostId && shouldChangeValidationStatus && currentProduct.validate !== newValidationStatus),
+        isCertificationOnlyChange: isCertificationOnlyChange
+      })
+
+      // Ne pas créer d'historique de validation si c'est uniquement une modification de certification
+      if (hostId && shouldChangeValidationStatus && currentProduct.validate !== newValidationStatus && !isCertificationOnlyChange) {
         const reason =
           currentProduct.validate === ProductValidation.RecheckRequest
             ? "Modifications apportées par l'hôte suite à une demande de révision"
@@ -1135,30 +1299,60 @@ export async function resubmitProductWithChange(
         })
       }
 
-      // Notifier les administrateurs
-      const admin = await findAllUserByRoles('ADMIN')
-      if (admin && admin.length > 0) {
-        const emailPromises = admin.map(async user => {
-          try {
-            await sendTemplatedMail(
-              user.email,
-              'Une annonce a été modifiée et nécessite une nouvelle validation',
-              'annonce-modifiee.html',
-              {
-                name: user.name || 'Administrateur',
-                productName: params.name,
-                annonceUrl: process.env.NEXTAUTH_URL + '/admin/validation/' + updatedProduct.id,
-              }
-            )
-          } catch (emailError) {
-            console.error('Erreur envoi email admin modification:', emailError)
-          }
-        })
+      // Créer un historique spécifique pour les changements de certification
+      if (params.isCertificated !== undefined && params.certificatedBy) {
+        // Comparer l'état de certification avant et après
+        if (currentProduct && currentProduct.isCertificated !== params.isCertificated) {
+          const certificationReason = params.isCertificated
+            ? "Produit certifié par un administrateur"
+            : "Certification du produit retirée par un administrateur"
 
-        // Envoi asynchrone sans attendre
-        Promise.allSettled(emailPromises).catch(error => {
-          console.error("Erreur lors de l'envoi des emails de modification:", error)
-        })
+          await createValidationHistory({
+            productId: id,
+            previousStatus: currentProduct.validate,
+            newStatus: currentProduct.validate, // Le statut de validation ne change pas pour la certification
+            adminId: params.certificatedBy,
+            hostId: hostId,
+            reason: certificationReason,
+            changes: {
+              certification: {
+                previous: currentProduct.isCertificated,
+                new: params.isCertificated,
+                certificatedBy: params.certificatedBy,
+                certificationDate: params.certificationDate,
+                modifiedAt: new Date().toISOString(),
+              },
+            },
+          })
+        }
+      }
+
+      // Notifier les administrateurs seulement si le statut de validation change
+      if (shouldChangeValidationStatus) {
+        const admin = await findAllUserByRoles('ADMIN')
+        if (admin && admin.length > 0) {
+          const emailPromises = admin.map(async user => {
+            try {
+              await sendTemplatedMail(
+                user.email,
+                'Une annonce a été modifiée et nécessite une nouvelle validation',
+                'annonce-modifiee.html',
+                {
+                  name: user.name || 'Administrateur',
+                  productName: params.name,
+                  annonceUrl: process.env.NEXTAUTH_URL + '/admin/validation/' + updatedProduct.id,
+                }
+              )
+            } catch (emailError) {
+              console.error('Erreur envoi email admin modification:', emailError)
+            }
+          })
+
+          // Envoi asynchrone sans attendre
+          Promise.allSettled(emailPromises).catch(error => {
+            console.error("Erreur lors de l'envoi des emails de modification:", error)
+          })
+        }
       }
     }
 
@@ -1199,91 +1393,151 @@ export async function createDraftProduct(originalProductId: string) {
       throw new Error('Product not found')
     }
 
+    // Préparer les données de base pour le draft
+    const draftData: {
+      name: string
+      description: string
+      address: string
+      basePrice: string
+      priceMGA: string
+      room: number | null
+      bathroom: number | null
+      arriving: number
+      leaving: number
+      autoAccept: boolean
+      equipement: number | null
+      meal: number | null
+      services: number | null
+      security: number | null
+      minRent: number | null
+      maxRent: number | null
+      advanceRent: number | null
+      delayTime: number | null
+      categories: number
+      minPeople: number | null
+      maxPeople: number | null
+      commission: number
+      validate: ProductValidation
+      userManager: number
+      typeId: string
+      phone: string
+      phoneCountry: string
+      latitude: number
+      longitude: number
+      certified: boolean
+      contract: boolean
+      sizeRoom: number | null
+      availableRooms: number | null
+      isCertificated: boolean
+      certificationDate: Date | undefined
+      certificatedBy?: string
+      isDraft: boolean
+      originalProductId: string
+      img: { create: { img: string }[] }
+      equipments: { connect: { id: string }[] }
+      servicesList: { connect: { id: string }[] }
+      mealsList: { connect: { id: string }[] }
+      securities: { connect: { id: string }[] }
+      includedServices: { connect: { id: string }[] }
+      extras: { connect: { id: string }[] }
+      highlights: { connect: { id: string }[] }
+      user: { connect: { id: string }[] }
+      nearbyPlaces: { create: { name: string; distance: number; duration: number; transport: string }[] }
+      transportOptions: { create: { name: string; description?: string }[] }
+    } = {
+      // Copy all basic fields
+      name: originalProduct.name,
+      description: originalProduct.description,
+      address: originalProduct.address,
+      basePrice: originalProduct.basePrice,
+      priceMGA: originalProduct.priceMGA,
+      room: originalProduct.room ? Number(originalProduct.room) : null,
+      bathroom: originalProduct.bathroom ? Number(originalProduct.bathroom) : null,
+      arriving: originalProduct.arriving,
+      leaving: originalProduct.leaving,
+      autoAccept: originalProduct.autoAccept,
+      equipement: originalProduct.equipement ? Number(originalProduct.equipement) : null,
+      meal: originalProduct.meal ? Number(originalProduct.meal) : null,
+      services: originalProduct.services ? Number(originalProduct.services) : null,
+      security: originalProduct.security ? Number(originalProduct.security) : null,
+      minRent: originalProduct.minRent ? Number(originalProduct.minRent) : null,
+      maxRent: originalProduct.maxRent ? Number(originalProduct.maxRent) : null,
+      advanceRent: originalProduct.advanceRent ? Number(originalProduct.advanceRent) : null,
+      delayTime: originalProduct.delayTime ? Number(originalProduct.delayTime) : null,
+      categories: Number(originalProduct.categories),
+      minPeople: originalProduct.minPeople ? Number(originalProduct.minPeople) : null,
+      maxPeople: originalProduct.maxPeople ? Number(originalProduct.maxPeople) : null,
+      commission: originalProduct.commission,
+      validate: ProductValidation.NotVerified,
+      userManager: Number(originalProduct.userManager),
+      typeId: originalProduct.typeId,
+      phone: originalProduct.phone,
+      phoneCountry: originalProduct.phoneCountry,
+      latitude: originalProduct.latitude,
+      longitude: originalProduct.longitude,
+      certified: originalProduct.certified,
+      contract: originalProduct.contract,
+      sizeRoom: originalProduct.sizeRoom,
+      availableRooms: originalProduct.availableRooms,
+
+      // Copy certification fields avec logique conditionnelle
+      isCertificated: originalProduct.isCertificated,
+      certificationDate: originalProduct.isCertificated ? originalProduct.certificationDate || undefined : undefined,
+      certificatedBy: originalProduct.isCertificated ? originalProduct.certificatedBy || undefined : undefined,
+
+      // Mark as draft and link to original
+      isDraft: true,
+      originalProductId: originalProductId,
+
+      // Copy relationships
+      img: {
+        create: originalProduct.img.map(img => ({ img: img.img })),
+      },
+      equipments: {
+        connect: originalProduct.equipments.map(eq => ({ id: eq.id })),
+      },
+      servicesList: {
+        connect: originalProduct.servicesList.map(srv => ({ id: srv.id })),
+      },
+      mealsList: {
+        connect: originalProduct.mealsList.map(meal => ({ id: meal.id })),
+      },
+      securities: {
+        connect: originalProduct.securities.map(sec => ({ id: sec.id })),
+      },
+      includedServices: {
+        connect: originalProduct.includedServices.map(service => ({ id: service.id })),
+      },
+      extras: {
+        connect: originalProduct.extras.map(extra => ({ id: extra.id })),
+      },
+      highlights: {
+        connect: originalProduct.highlights.map(highlight => ({ id: highlight.id })),
+      },
+      user: {
+        connect: originalProduct.user.map(u => ({ id: u.id })),
+      },
+      nearbyPlaces: {
+        create: originalProduct.nearbyPlaces.map(place => ({
+          name: place.name,
+          distance: place.distance,
+          duration: place.duration,
+          transport: place.transport,
+        })),
+      },
+      transportOptions: {
+        create: originalProduct.transportOptions.map(transport => ({
+          name: transport.name,
+          description: transport.description || undefined,
+        })),
+      },
+    }
+
+    // La relation certificatedRelation sera automatiquement gérée par Prisma via le champ certificatedBy
+
     // Create the draft product
     const draft = await prisma.product.create({
-      data: {
-        // Copy all basic fields
-        name: originalProduct.name,
-        description: originalProduct.description,
-        address: originalProduct.address,
-        basePrice: originalProduct.basePrice,
-        priceMGA: originalProduct.priceMGA,
-        room: originalProduct.room,
-        bathroom: originalProduct.bathroom,
-        arriving: originalProduct.arriving,
-        leaving: originalProduct.leaving,
-        autoAccept: originalProduct.autoAccept,
-        equipement: originalProduct.equipement,
-        meal: originalProduct.meal,
-        services: originalProduct.services,
-        security: originalProduct.security,
-        minRent: originalProduct.minRent,
-        maxRent: originalProduct.maxRent,
-        advanceRent: originalProduct.advanceRent,
-        delayTime: originalProduct.delayTime,
-        categories: originalProduct.categories,
-        minPeople: originalProduct.minPeople,
-        maxPeople: originalProduct.maxPeople,
-        commission: originalProduct.commission,
-        validate: ProductValidation.NotVerified,
-        userManager: originalProduct.userManager,
-        typeId: originalProduct.typeId,
-        phone: originalProduct.phone,
-        phoneCountry: originalProduct.phoneCountry,
-        latitude: originalProduct.latitude,
-        longitude: originalProduct.longitude,
-        certified: originalProduct.certified,
-        contract: originalProduct.contract,
-        sizeRoom: originalProduct.sizeRoom,
-        availableRooms: originalProduct.availableRooms,
-        
-        // Mark as draft and link to original
-        isDraft: true,
-        originalProductId: originalProductId,
-        
-        // Copy relationships
-        img: {
-          create: originalProduct.img.map(img => ({ img: img.img })),
-        },
-        equipments: {
-          connect: originalProduct.equipments.map(eq => ({ id: eq.id })),
-        },
-        servicesList: {
-          connect: originalProduct.servicesList.map(srv => ({ id: srv.id })),
-        },
-        mealsList: {
-          connect: originalProduct.mealsList.map(meal => ({ id: meal.id })),
-        },
-        securities: {
-          connect: originalProduct.securities.map(sec => ({ id: sec.id })),
-        },
-        includedServices: {
-          connect: originalProduct.includedServices.map(service => ({ id: service.id })),
-        },
-        extras: {
-          connect: originalProduct.extras.map(extra => ({ id: extra.id })),
-        },
-        highlights: {
-          connect: originalProduct.highlights.map(highlight => ({ id: highlight.id })),
-        },
-        user: {
-          connect: originalProduct.user.map(u => ({ id: u.id })),
-        },
-        nearbyPlaces: {
-          create: originalProduct.nearbyPlaces.map(place => ({
-            name: place.name,
-            distance: place.distance,
-            duration: place.duration,
-            transport: place.transport,
-          })),
-        },
-        transportOptions: {
-          create: originalProduct.transportOptions.map(transport => ({
-            name: transport.name,
-            description: transport.description,
-          })),
-        },
-      },
+      data: draftData,
     })
 
     // Update original product status to indicate a pending modification
@@ -1352,86 +1606,141 @@ export async function applyDraftChanges(draftId: string) {
       throw new Error('Draft product not found')
     }
 
+    // Préparer les données de mise à jour
+    const updateData: {
+      name: string
+      description: string
+      address: string
+      basePrice: string
+      priceMGA: string
+      room: number | null
+      bathroom: number | null
+      arriving: number
+      leaving: number
+      autoAccept: boolean
+      equipement: number | null
+      meal: number | null
+      services: number | null
+      security: number | null
+      minRent: number | null
+      maxRent: number | null
+      advanceRent: number | null
+      delayTime: number | null
+      categories: number
+      minPeople: number | null
+      maxPeople: number | null
+      commission: number
+      validate: ProductValidation
+      phone: string
+      phoneCountry: string
+      latitude: number
+      longitude: number
+      certified: boolean
+      contract: boolean
+      sizeRoom: number | null
+      availableRooms: number | null
+      isCertificated: boolean
+      certificationDate: Date | undefined
+      certificatedBy?: string
+      img: { deleteMany: Record<string, never>; create: { img: string }[] }
+      equipments: { set: { id: string }[] }
+      servicesList: { set: { id: string }[] }
+      mealsList: { set: { id: string }[] }
+      securities: { set: { id: string }[] }
+      includedServices: { set: { id: string }[] }
+      extras: { set: { id: string }[] }
+      highlights: { set: { id: string }[] }
+      nearbyPlaces: { deleteMany: Record<string, never>; create: { name: string; distance: number; duration: number; transport: string }[] }
+      transportOptions: { deleteMany: Record<string, never>; create: { name: string; description?: string }[] }
+    } = {
+      // Update all basic fields
+      name: draft.name,
+      description: draft.description,
+      address: draft.address,
+      basePrice: draft.basePrice,
+      priceMGA: draft.priceMGA,
+      room: draft.room ? Number(draft.room) : null,
+      bathroom: draft.bathroom ? Number(draft.bathroom) : null,
+      arriving: draft.arriving,
+      leaving: draft.leaving,
+      autoAccept: draft.autoAccept,
+      equipement: draft.equipement ? Number(draft.equipement) : null,
+      meal: draft.meal ? Number(draft.meal) : null,
+      services: draft.services ? Number(draft.services) : null,
+      security: draft.security ? Number(draft.security) : null,
+      minRent: draft.minRent ? Number(draft.minRent) : null,
+      maxRent: draft.maxRent ? Number(draft.maxRent) : null,
+      advanceRent: draft.advanceRent ? Number(draft.advanceRent) : null,
+      delayTime: draft.delayTime ? Number(draft.delayTime) : null,
+      categories: Number(draft.categories),
+      minPeople: draft.minPeople ? Number(draft.minPeople) : null,
+      maxPeople: draft.maxPeople ? Number(draft.maxPeople) : null,
+      commission: draft.commission,
+      validate: ProductValidation.Approve,
+      phone: draft.phone,
+      phoneCountry: draft.phoneCountry,
+      latitude: draft.latitude,
+      longitude: draft.longitude,
+      certified: draft.certified,
+      contract: draft.contract,
+      sizeRoom: draft.sizeRoom,
+      availableRooms: draft.availableRooms,
+
+      // Update certification fields avec logique conditionnelle
+      isCertificated: draft.isCertificated,
+      certificationDate: draft.isCertificated ? draft.certificationDate || undefined : undefined,
+      certificatedBy: draft.isCertificated ? draft.certificatedBy || undefined : undefined,
+
+      // Update relationships
+      img: {
+        deleteMany: {},
+        create: draft.img.map(img => ({ img: img.img })),
+      },
+      equipments: {
+        set: draft.equipments.map(eq => ({ id: eq.id })),
+      },
+      servicesList: {
+        set: draft.servicesList.map(srv => ({ id: srv.id })),
+      },
+      mealsList: {
+        set: draft.mealsList.map(meal => ({ id: meal.id })),
+      },
+      securities: {
+        set: draft.securities.map(sec => ({ id: sec.id })),
+      },
+      includedServices: {
+        set: draft.includedServices.map(service => ({ id: service.id })),
+      },
+      extras: {
+        set: draft.extras.map(extra => ({ id: extra.id })),
+      },
+      highlights: {
+        set: draft.highlights.map(highlight => ({ id: highlight.id })),
+      },
+      nearbyPlaces: {
+        deleteMany: {},
+        create: draft.nearbyPlaces.map(place => ({
+          name: place.name,
+          distance: place.distance,
+          duration: place.duration,
+          transport: place.transport,
+        })),
+      },
+      transportOptions: {
+        deleteMany: {},
+        create: draft.transportOptions.map(transport => ({
+          name: transport.name,
+          description: transport.description || undefined,
+        })),
+      },
+    }
+
+    // La relation certificatedRelation sera automatiquement gérée par Prisma via le champ certificatedBy
+
     // Update the original product with draft data
     const updatedProduct = await prisma.product.update({
       where: { id: draft.originalProductId },
-      data: {
-        // Update all basic fields
-        name: draft.name,
-        description: draft.description,
-        address: draft.address,
-        basePrice: draft.basePrice,
-        priceMGA: draft.priceMGA,
-        room: draft.room,
-        bathroom: draft.bathroom,
-        arriving: draft.arriving,
-        leaving: draft.leaving,
-        autoAccept: draft.autoAccept,
-        equipement: draft.equipement,
-        meal: draft.meal,
-        services: draft.services,
-        security: draft.security,
-        minRent: draft.minRent,
-        maxRent: draft.maxRent,
-        advanceRent: draft.advanceRent,
-        delayTime: draft.delayTime,
-        categories: draft.categories,
-        minPeople: draft.minPeople,
-        maxPeople: draft.maxPeople,
-        commission: draft.commission,
-        validate: ProductValidation.Approve,
-        phone: draft.phone,
-        phoneCountry: draft.phoneCountry,
-        latitude: draft.latitude,
-        longitude: draft.longitude,
-        certified: draft.certified,
-        contract: draft.contract,
-        sizeRoom: draft.sizeRoom,
-        availableRooms: draft.availableRooms,
-        
-        // Update relationships
-        img: {
-          deleteMany: {},
-          create: draft.img.map(img => ({ img: img.img })),
-        },
-        equipments: {
-          set: draft.equipments.map(eq => ({ id: eq.id })),
-        },
-        servicesList: {
-          set: draft.servicesList.map(srv => ({ id: srv.id })),
-        },
-        mealsList: {
-          set: draft.mealsList.map(meal => ({ id: meal.id })),
-        },
-        securities: {
-          set: draft.securities.map(sec => ({ id: sec.id })),
-        },
-        includedServices: {
-          set: draft.includedServices.map(service => ({ id: service.id })),
-        },
-        extras: {
-          set: draft.extras.map(extra => ({ id: extra.id })),
-        },
-        highlights: {
-          set: draft.highlights.map(highlight => ({ id: highlight.id })),
-        },
-        nearbyPlaces: {
-          deleteMany: {},
-          create: draft.nearbyPlaces.map(place => ({
-            name: place.name,
-            distance: place.distance,
-            duration: place.duration,
-            transport: place.transport,
-          })),
-        },
-        transportOptions: {
-          deleteMany: {},
-          create: draft.transportOptions.map(transport => ({
-            name: transport.name,
-            description: transport.description,
-          })),
-        },
-      },
+      data: updateData,
     })
 
     // Update property info if exists
@@ -1520,6 +1829,120 @@ export async function rejectDraftChanges(draftId: string, reason: string): Promi
   } catch (error) {
     console.error('Error rejecting draft changes:', error)
     throw error
+  }
+}
+
+// Update product without changing validation status or sending emails
+export async function updateProduct(
+  id: string,
+  params: {
+    name: string
+    description: string
+    address: string
+    longitude: number
+    latitude: number
+    basePrice: string
+    room: number | null
+    bathroom: number | null
+    arriving: number
+    leaving: number
+    typeId: string
+    securities: string[]
+    equipments: string[]
+    services: string[]
+    meals: string[]
+    images: string[]
+    // Champs de certification
+    isCertificated?: boolean
+    certificationDate?: Date | string | null
+    certificatedBy?: string
+  }
+) {
+  try {
+    // Construire l'objet de données de manière conditionnelle
+    const updateData: {
+      name: string
+      description: string
+      address: string
+      longitude: number
+      latitude: number
+      basePrice: string
+      room: number | null
+      bathroom: number | null
+      arriving: number
+      leaving: number
+      type: { connect: { id: string } }
+      equipments: { set: { id: string }[] }
+      servicesList: { set: { id: string }[] }
+      mealsList: { set: { id: string }[] }
+      securities: { set: { id: string }[] }
+      img: { deleteMany: Record<string, never>; create: { img: string }[] }
+      isCertificated?: boolean
+      certificationDate?: Date | null
+    } = {
+      name: params.name,
+      description: params.description,
+      address: params.address,
+      longitude: params.longitude,
+      latitude: params.latitude,
+      basePrice: params.basePrice,
+      room: params.room ? Number(params.room) : null,
+      bathroom: params.bathroom ? Number(params.bathroom) : null,
+      arriving: params.arriving,
+      leaving: params.leaving,
+      // Ne pas modifier le statut de validation - garder le statut existant
+      type: { connect: { id: params.typeId } },
+      equipments: {
+        set: params.equipments.map(equipmentId => ({ id: equipmentId })),
+      },
+      servicesList: {
+        set: params.services.map(serviceId => ({ id: serviceId })),
+      },
+      mealsList: {
+        set: params.meals.map(mealId => ({ id: mealId })),
+      },
+      securities: {
+        set: params.securities.map(securityId => ({ id: securityId })),
+      },
+      img: {
+        deleteMany: {},
+        create: params.images.map(img => ({ img })),
+      },
+    }
+
+    // Ajouter les champs de certification avec logique conditionnelle
+    if (params.isCertificated !== undefined) {
+      updateData.isCertificated = params.isCertificated
+      updateData.certificationDate = params.isCertificated && params.certificationDate ? new Date(params.certificationDate) : null
+
+      if (params.isCertificated && params.certificatedBy) {
+        (updateData as Record<string, unknown>).certificatedBy = params.certificatedBy
+      } else {
+        (updateData as Record<string, unknown>).certificatedBy = undefined
+      }
+    }
+
+    const updatedProduct = await prisma.product.update({
+      where: { id },
+      data: updateData,
+      include: {
+        img: true,
+        type: true,
+        equipments: true,
+        servicesList: true,
+        mealsList: true,
+        securities: true,
+        user: true,
+      },
+    })
+
+    // Invalider le cache après mise à jour
+    await invalidateProductCache(id)
+
+    return updatedProduct
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour du produit:', error)
+    return null
   }
 }
 
