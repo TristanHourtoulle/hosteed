@@ -220,6 +220,12 @@ export default function AdminDashboard() {
           href: '/admin/promoted',
         },
         {
+          title: 'Configuration des commissions',
+          description: 'Gérer les taux de commission par type de logement',
+          icon: Calculator,
+          href: '/admin/commissions',
+        },
+        {
           title: 'Gestion des retraits',
           description: 'Gérer les demandes de retrait des hôtes',
           icon: Wallet,
