@@ -44,15 +44,30 @@ interface OptimizedProductFilters {
   typeId?: string
   minPrice?: number
   maxPrice?: number
+  minPeople?: number
+  maxPeople?: number
+  minRooms?: number
+  maxRooms?: number
+  minBathrooms?: number
+  maxBathrooms?: number
+  sizeMin?: number
+  sizeMax?: number
   guests?: number
   page?: number
   limit?: number
   sortBy?: 'price' | 'rating' | 'distance' | 'created' | 'updated' | 'featured' | 'popular' | 'recent' | 'promo'
   sortOrder?: 'asc' | 'desc'
-  // ✅ FIXED: Add boolean filters for cache key generation
+  // Boolean filters
   featured?: boolean
   certifiedOnly?: boolean
   autoAcceptOnly?: boolean
+  contractRequired?: boolean
+  // Array filters (as comma-separated strings for cache key)
+  equipments?: string
+  services?: string
+  meals?: string
+  securities?: string
+  typeRooms?: string
 }
 
 interface OptimizedProduct {
@@ -692,21 +707,36 @@ export class ProductCacheService {
     // Create deterministic cache key from ALL filters (CRITICAL FIX)
     const keyParts = [
       'search',
-      'v2', // Cache version
+      'v3', // Cache version (bumped to invalidate old cache)
       filters.query || 'all',
       filters.location || 'anywhere',
       filters.typeId || 'any',
       filters.minPrice || '0',
       filters.maxPrice || 'inf',
+      filters.minPeople || '0',
+      filters.maxPeople || 'inf',
+      filters.minRooms || '0',
+      filters.maxRooms || 'inf',
+      filters.minBathrooms || '0',
+      filters.maxBathrooms || 'inf',
+      filters.sizeMin || '0',
+      filters.sizeMax || 'inf',
       filters.guests || '1',
       filters.page || '1',
       filters.limit || '20',
       filters.sortBy || 'created',
       filters.sortOrder || 'desc',
-      // ✅ FIXED: Include ALL boolean filters in cache key
+      // Boolean filters
       filters.featured ? 'featured' : '',
       filters.certifiedOnly ? 'certified' : '',
       filters.autoAcceptOnly ? 'autoaccept' : '',
+      filters.contractRequired ? 'contract' : '',
+      // Array filters (already comma-separated strings from API)
+      filters.equipments ? `eq_${filters.equipments}` : '',
+      filters.services ? `sv_${filters.services}` : '',
+      filters.meals ? `ml_${filters.meals}` : '',
+      filters.securities ? `sc_${filters.securities}` : '',
+      filters.typeRooms ? `tr_${filters.typeRooms}` : '',
     ]
 
     // Remove empty strings and create cache key
@@ -714,7 +744,7 @@ export class ProductCacheService {
       .filter(part => part !== '')
       .join(':')
       .toLowerCase()
-      .replace(/[^a-z0-9:]/g, '_')
+      .replace(/[^a-z0-9:_,]/g, '_') // Allow commas for array filters
 
     return cacheKey
   }

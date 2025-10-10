@@ -66,6 +66,7 @@ export interface CreateProductInput {
   leaving: number | string
   phone?: string
   phoneCountry?: string
+  minPeople?: number | null
   maxPeople?: number | null
   typeId: string
   userId: string[]
