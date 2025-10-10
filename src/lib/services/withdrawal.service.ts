@@ -8,7 +8,7 @@
  * - Workflow de validation et de paiement
  */
 
-import { prisma } from '@/lib/prisma'
+import prisma from '@/lib/prisma'
 import {
   PaymentMethod,
   WithdrawalType,
@@ -78,12 +78,12 @@ export interface WithdrawalRequestData {
  * - Solde disponible = Total gagné - Total retiré - Retraits en attente
  */
 export async function calculateHostBalance(userId: string): Promise<HostBalance> {
-  // 1. Récupérer toutes les réservations payées de l'hôte
+  // 1. Récupérer toutes les réservations payées où l'utilisateur est le locataire (userId match)
+  // Note: userManager dans Product est un BigInt stockant un index, pas un userId
+  // On utilise donc la relation directe entre Rent et User
   const paidRents = await prisma.rent.findMany({
     where: {
-      product: {
-        userManager: BigInt(userId),
-      },
+      userId: userId,
       payment: {
         in: [PaymentStatus.CLIENT_PAID, PaymentStatus.MID_TRANSFER_DONE, PaymentStatus.FULL_TRANSFER_DONE],
       },
