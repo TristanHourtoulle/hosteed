@@ -20,7 +20,12 @@
     "analyze:browser": "cross-env BUNDLE_ANALYZE=browser next build",
     "cache:clear": "tsx scripts/clear-redis-cache.ts",
     "cache:inspect": "tsx scripts/inspect-redis-cache.ts",
-    "cache:clear-search": "tsx scripts/clear-redis-cache.ts 'search:*'"
+    "cache:clear-search": "tsx scripts/clear-redis-cache.ts 'search:*'",
+    "test:images:migrate": "tsx scripts/test-image-migration.ts",
+    "test:images:migrate:5": "tsx scripts/test-image-migration.ts --limit=5",
+    "images:migrate": "tsx scripts/migrate-images-to-filesystem.ts",
+    "images:migrate:dry-run": "tsx scripts/migrate-images-to-filesystem.ts --dry-run",
+    "images:migrate:preview": "tsx scripts/migrate-images-to-filesystem.ts --dry-run --limit 10"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
