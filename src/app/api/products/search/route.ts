@@ -176,14 +176,14 @@ export async function GET(request: NextRequest) {
 
     // Ultra-lightweight includes for maximum search performance
     const ultraLightIncludes = {
-      // ✅ CRITICAL PERFORMANCE FIX: Ne PAS inclure les images base64 !
-      // Les images seront chargées à la demande via une route dédiée
-      // Gain: JSON de 3MB → 300KB (-90%)
+      // ✅ CRITICAL PERFORMANCE FIX: Inclure seulement les URLs d'images migrées
+      // Les URLs /uploads/ sont légères (83 bytes vs 500KB base64)
+      // Les images base64 et Unsplash seront gérées par l'API thumbnail
       img: {
         take: 1,
         select: {
-          id: true
-          // ❌ REMOVED: img: true (base64 énorme, 500KB par image)
+          id: true,
+          img: true  // ✅ URL needed for migrated images (/uploads/...)
         }
       },
       type: {

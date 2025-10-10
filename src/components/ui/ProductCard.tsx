@@ -61,21 +61,27 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
     [product.reviews]
   )
 
-  // ✅ PERFORMANCE FIX: Utiliser la route thumbnail au lieu du base64
-  // Les images base64 ne sont plus incluses dans la recherche
+  // ✅ PERFORMANCE FIX: Utiliser directement l'URL de l'image migrée ou l'API thumbnail
   const hasImages = useMemo(() =>
     product.img && product.img.length > 0,
     [product.img]
   )
 
   // Générer l'URL du thumbnail optimisé
-  const thumbnailUrl = useMemo(() =>
-    `/api/products/${product.id}/thumbnail`,
-    [product.id]
-  )
+  // Si l'image a été migrée (commence par /uploads/), l'utiliser directement
+  // Sinon, utiliser l'API thumbnail pour conversion à la volée
+  const thumbnailUrl = useMemo(() => {
+    if (product.img && product.img.length > 0 && product.img[0].img) {
+      const imageUrl = product.img[0].img
+      // Si l'image est déjà migrée, l'utiliser directement
+      if (imageUrl.startsWith('/uploads/')) {
+        return imageUrl
+      }
+    }
+    // Fallback vers l'API thumbnail (pour images non migrées ou Unsplash)
+    return `/api/products/${product.id}/thumbnail`
+  }, [product.img, product.id])
 
-  // Pour l'instant, pas de support multi-images car on a supprimé le base64
-  // Les images seront chargées à la demande
   const hasValidImages = hasImages
 
   // Memoize motion props to prevent recreation
