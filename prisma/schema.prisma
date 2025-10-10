@@ -8,11 +8,12 @@ datasource db {
 }
 
 model TypeRent {
-  id          String    @id @default(cuid())
+  id          String      @id @default(cuid())
   name        String
   description String
-  isHotelType Boolean   @default(false) // Indique si ce type fonctionne comme un hôtel
+  isHotelType Boolean     @default(false) // Indique si ce type fonctionne comme un hôtel
   products    Product[]
+  commission  Commission? // Nouvelle relation: Une commission par type de logement
 }
 
 model Equipment {
@@ -776,7 +777,8 @@ model SpecialPrices {
   @@index([startDate, endDate])
 }
 
-// Configuration des commissions (globale pour la plateforme)
+// Configuration des commissions (globale pour la plateforme - LEGACY)
+// DEPRECATED: Utilisez le modèle Commission à la place
 model CommissionSettings {
   id                    String   @id @default(cuid())
   // Commission côté hébergeur
@@ -792,4 +794,36 @@ model CommissionSettings {
   createdBy             String? // ID de l'admin qui a créé
 
   @@map("commission_settings")
+}
+
+// Nouvelle configuration des commissions (par type de logement)
+model Commission {
+  id          String   @id @default(cuid())
+
+  // Identification
+  title       String   // Ex: "Commission Appartement Standard"
+  description String?  // Description détaillée optionnelle
+
+  // Commission côté hébergeur (déduite du prix de base)
+  hostCommissionRate  Float @default(0.0) // Taux en pourcentage (ex: 5.0 pour 5%)
+  hostCommissionFixed Float @default(0.0) // Frais fixes en euros
+
+  // Commission côté client (ajoutée au prix de base)
+  clientCommissionRate  Float @default(0.0) // Taux en pourcentage
+  clientCommissionFixed Float @default(0.0) // Frais fixes en euros
+
+  // Relation avec le type de logement (one-to-one)
+  typeRentId String   @unique
+  typeRent   TypeRent @relation(fields: [typeRentId], references: [id], onDelete: Cascade)
+
+  // Metadata
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?  // ID de l'admin qui a créé
+
+  @@map("commissions")
+  @@index([typeRentId])
+  @@index([isActive])
+  @@index([createdAt])
 }
