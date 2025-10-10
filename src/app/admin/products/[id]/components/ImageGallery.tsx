@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import { ChevronLeft, ChevronRight, Grid3X3, Expand } from 'lucide-react'
 import { useState } from 'react'
+import { getFullSizeImageUrl } from '@/lib/utils/imageUtils'
 
 interface ImageGalleryProps {
   images: { img: string }[]
@@ -43,7 +44,7 @@ export default function ImageGallery({
         {/* Main Image */}
         <div className='md:col-span-2 relative group'>
           <Image
-            src={images[currentImageIndex]?.img || images[0].img}
+            src={getFullSizeImageUrl(images[currentImageIndex]?.img || images[0].img)}
             alt={productName}
             fill
             className='object-cover'
@@ -90,7 +91,7 @@ export default function ImageGallery({
               }}
             >
               <Image
-                src={img.img}
+                src={getFullSizeImageUrl(img.img)}
                 alt={`${productName} ${index + 2}`}
                 fill
                 className='object-cover transition-transform group-hover:scale-105'
@@ -120,7 +121,7 @@ export default function ImageGallery({
               }}
             >
               <Image
-                src={img.img}
+                src={getFullSizeImageUrl(img.img)}
                 alt={`${productName} ${index + 4}`}
                 fill
                 className='object-cover transition-transform group-hover:scale-105'
@@ -163,7 +164,7 @@ export default function ImageGallery({
                 }}
               >
                 <Image
-                  src={img.img}
+                  src={getFullSizeImageUrl(img.img)}
                   alt={`${productName} ${index + 6}`}
                   fill
                   className='object-cover transition-transform group-hover:scale-105'
