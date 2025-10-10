@@ -532,6 +532,11 @@ model User {
   // Relation pour les articles de blog
   authoredPosts Post[] @relation("AuthoredPosts") // Articles de blog créés par cet utilisateur
 
+  // Relations pour le système de retrait
+  paymentAccounts      PaymentAccount[]    @relation("UserPaymentAccounts") // Comptes de paiement enregistrés
+  withdrawalRequests   WithdrawalRequest[] @relation("UserWithdrawals") // Demandes de retrait
+  processedWithdrawals WithdrawalRequest[] @relation("ProcessedWithdrawals") // Retraits traités par cet admin
+
   // Performance indexes
   @@index([roles])
   @@index([isVerifiedTraveler])
@@ -629,10 +634,13 @@ enum PaymentReqStatus {
 
 enum PaymentMethod {
   SEPA_VIREMENT
-  TAPTAP
+  PRIPEO
+  MOBILE_MONEY
   PAYPAL
-  INTERNATIONAL
-  OTHER
+  MONEYGRAM
+  TAPTAP // Kept for backward compatibility
+  INTERNATIONAL // Kept for backward compatibility
+  OTHER // Kept for backward compatibility
 }
 
 enum UserRole {
@@ -826,4 +834,121 @@ model Commission {
   @@index([typeRentId])
   @@index([isActive])
   @@index([createdAt])
+}
+
+// ============================================
+// WITHDRAWAL SYSTEM MODELS
+// ============================================
+
+// Comptes de paiement enregistrés par les hôtes
+model PaymentAccount {
+  id        String        @id @default(cuid())
+  userId    String
+  user      User          @relation("UserPaymentAccounts", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Type de moyen de paiement
+  method    PaymentMethod
+
+  // Informations communes
+  accountHolderName String // Nom du titulaire du compte
+
+  // Informations spécifiques selon le moyen de paiement
+  // SEPA_VIREMENT
+  iban String? // IBAN pour SEPA
+
+  // PRIPEO
+  cardNumber String? // Numéro de carte Pripeo
+  cardEmail  String? // Email associé à la carte Pripeo
+
+  // MOBILE_MONEY
+  mobileNumber String? // Numéro de téléphone mobile (format: +261 XX XX XXX XX)
+
+  // PAYPAL
+  paypalUsername String? // Nom d'utilisateur PayPal
+  paypalEmail    String? // Email PayPal
+  paypalPhone    String? // Téléphone PayPal (avec code pays)
+  paypalIban     String? // IBAN PayPal (si applicable)
+
+  // MONEYGRAM
+  moneygramFullName String? // Nom complet pour MoneyGram
+  moneygramPhone    String? // Téléphone MoneyGram
+
+  // Validation et statut
+  isValidated Boolean  @default(false) // Validé par un admin
+  isDefault   Boolean  @default(false) // Compte par défaut pour les retraits
+  validatedAt DateTime? // Date de validation
+  validatedBy String? // ID de l'admin qui a validé
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  withdrawalRequests WithdrawalRequest[] @relation("AccountWithdrawals")
+
+  @@index([userId])
+  @@index([method])
+  @@index([isValidated])
+  @@index([isDefault])
+  @@map("payment_accounts")
+}
+
+// Demandes de retrait
+model WithdrawalRequest {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation("UserWithdrawals", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Montant et type de retrait
+  amount           Float  // Montant demandé en euros
+  availableBalance Float  // Solde disponible au moment de la demande
+  withdrawalType   WithdrawalType // 50% ou 100%
+
+  // Méthode de paiement choisie
+  paymentAccountId String?
+  paymentAccount   PaymentAccount? @relation("AccountWithdrawals", fields: [paymentAccountId], references: [id])
+  paymentMethod    PaymentMethod // Copie pour historique
+
+  // Informations de paiement (copie au moment de la demande)
+  paymentDetails Json // Stocke les détails du compte de paiement
+
+  // Statut et workflow
+  status WithdrawalStatus @default(PENDING)
+
+  // Notes et commentaires
+  notes        String? // Notes de l'hébergeur
+  adminNotes   String? // Notes internes de l'admin
+  rejectionReason String? // Raison du refus si applicable
+
+  // Traitement par l'admin
+  processedBy String? // ID de l'admin qui a traité
+  processor   User?   @relation("ProcessedWithdrawals", fields: [processedBy], references: [id])
+  processedAt DateTime? // Date de traitement
+  paidAt      DateTime? // Date de paiement effectif
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([processedAt])
+  @@map("withdrawal_requests")
+}
+
+// Type de retrait (50% ou 100%)
+enum WithdrawalType {
+  PARTIAL_50  // 50% du montant (selon contrat)
+  FULL_100    // 100% du montant
+}
+
+// Statut de la demande de retrait
+enum WithdrawalStatus {
+  PENDING           // En attente de traitement
+  ACCOUNT_VALIDATION // En attente de validation du compte
+  APPROVED          // Approuvée, en attente de paiement
+  PAID              // Payée
+  REJECTED          // Refusée
+  CANCELLED         // Annulée par l'hébergeur
 }
