@@ -67,19 +67,25 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
     [product.img]
   )
 
-  // Générer l'URL du thumbnail optimisé
-  // Si l'image a été migrée (commence par /uploads/), l'utiliser directement
-  // Sinon, utiliser l'API thumbnail pour conversion à la volée
+  // Générer l'URL de l'image en taille originale (pas de thumbnail pixelisé)
   const thumbnailUrl = useMemo(() => {
     if (product.img && product.img.length > 0 && product.img[0].img) {
       const imageUrl = product.img[0].img
-      // Si l'image est déjà migrée, l'utiliser directement
+
+      // Si l'image est migrée (commence par /uploads/), utiliser le format FULL
       if (imageUrl.startsWith('/uploads/')) {
+        // Remplacer _thumb_ par _full_ pour avoir l'image en haute résolution
+        return imageUrl.replace('_thumb_', '_full_')
+      }
+
+      // Si c'est une URL externe (Unsplash, etc.) ou base64, l'utiliser directement
+      if (imageUrl.startsWith('http') || imageUrl.startsWith('data:image')) {
         return imageUrl
       }
     }
-    // Fallback vers l'API thumbnail (pour images non migrées ou Unsplash)
-    return `/api/products/${product.id}/thumbnail`
+
+    // Fallback: pas d'image
+    return ''
   }, [product.img, product.id])
 
   const hasValidImages = hasImages
