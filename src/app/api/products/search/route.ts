@@ -5,8 +5,7 @@ import { productCacheService } from '@/lib/cache/redis-cache.service'
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
-  let cacheHit = false
-  
+
   try {
     const { searchParams } = new URL(request.url)
     
@@ -49,25 +48,49 @@ export async function GET(request: NextRequest) {
     }
 
     // Check cache first for performance boost
+    console.log('[SEARCH API] Checking cache for filters:', JSON.stringify(cacheFilters, null, 2))
     const cachedResult = await productCacheService.getCachedProductSearch(cacheFilters)
+
     if (cachedResult) {
-      cacheHit = true
+      console.log(`[SEARCH API] Cache HIT - Returning ${cachedResult.products?.length || 0} products`)
+
+      // ✅ FIXED: Ensure we always use "products" key
       const response = NextResponse.json({
-        ...cachedResult,
+        products: cachedResult.products,
+        pagination: cachedResult.pagination,
+        filters: {
+          search,
+          typeRentId,
+          location,
+          featured,
+          popular,
+          recent,
+          promo,
+          appliedFilters: {
+            minPrice,
+            maxPrice,
+            minPeople,
+            maxPeople,
+            certifiedOnly,
+            autoAcceptOnly
+          }
+        },
         meta: {
           cached: true,
           responseTime: Date.now() - startTime,
           cacheHit: true
         }
       })
-      
+
       // Add cache headers for cached responses
       response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
       response.headers.set('X-Cache', 'HIT')
       response.headers.set('X-Response-Time', (Date.now() - startTime).toString())
-      
+
       return response
     }
+
+    console.log('[SEARCH API] Cache MISS - Querying database')
 
     // Build database where clause for server-side filtering
     const whereClause: Record<string, unknown> = {
@@ -198,6 +221,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Execute optimized query
+    console.log('[SEARCH API] Executing DB query with whereClause:', JSON.stringify(whereClause, null, 2))
     const [rawProducts, totalCount] = await Promise.all([
       prisma.product.findMany({
         where: whereClause,
@@ -211,6 +235,8 @@ export async function GET(request: NextRequest) {
       })
     ])
 
+    console.log(`[SEARCH API] DB query returned ${rawProducts.length} products (total: ${totalCount})`)
+
     // Convert BigInt fields to strings for JSON serialization
     const products = rawProducts.map(product => ({
       ...product,
@@ -221,6 +247,8 @@ export async function GET(request: NextRequest) {
       categories: product.categories ? Number(product.categories) : null,
       userManager: product.userManager ? Number(product.userManager) : null,
     }))
+
+    console.log(`[SEARCH API] Converted ${products.length} products for serialization`)
 
     // Apply remaining client-side sorting only for popularity (promo is now handled at DB level)
     let sortedProducts = products
@@ -274,14 +302,16 @@ export async function GET(request: NextRequest) {
     }
 
     // Cache the search results for future requests (massive performance boost)
+    console.log(`[SEARCH API] Caching ${sortedProducts.length} products with pagination:`, pagination)
     try {
       await productCacheService.cacheProductSearch(
         cacheFilters,
         sortedProducts,
         pagination
       )
+      console.log('[SEARCH API] Successfully cached search results')
     } catch (cacheError) {
-      console.warn('Failed to cache search results:', cacheError)
+      console.error('[SEARCH API] Failed to cache search results:', cacheError)
       // Don't fail the request if caching fails
     }
 

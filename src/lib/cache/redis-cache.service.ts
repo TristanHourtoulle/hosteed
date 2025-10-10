@@ -49,6 +49,10 @@ interface OptimizedProductFilters {
   limit?: number
   sortBy?: 'price' | 'rating' | 'distance' | 'created' | 'updated' | 'featured' | 'popular' | 'recent' | 'promo'
   sortOrder?: 'asc' | 'desc'
+  // ✅ FIXED: Add boolean filters for cache key generation
+  featured?: boolean
+  certifiedOnly?: boolean
+  autoAcceptOnly?: boolean
 }
 
 interface OptimizedProduct {
@@ -187,6 +191,7 @@ class RedisCache {
     try {
       // If Redis is not available, use fallback immediately
       if (!this.isRedisAvailable()) {
+        console.log(`[REDIS] Redis not available for key ${key}, using fallback`)
         return fallback ? await fallback() : null
       }
 
@@ -196,27 +201,35 @@ class RedisCache {
           const parsed = JSON.parse(cached)
           // Ensure we never return undefined from parsing
           if (parsed !== undefined) {
+            console.log(`[REDIS] Successfully retrieved and parsed cache for key: ${key}`)
             return parsed
+          } else {
+            console.warn(`[REDIS] Parsed cache data is undefined for key: ${key}`)
+            await this.delete(key)
           }
         } catch (parseError) {
-          console.warn(`Failed to parse cached data for key ${key}:`, parseError)
+          console.error(`[REDIS ERROR] Failed to parse cached data for key ${key}:`, parseError)
+          console.error(`[REDIS ERROR] Corrupted cache value (first 200 chars):`, cached.substring(0, 200))
           // Remove invalid cached data
           await this.delete(key)
+          console.log(`[REDIS] Deleted corrupted cache for key: ${key}`)
         }
       }
 
       // Cache miss - use fallback and cache the result
       if (fallback) {
+        console.log(`[REDIS] Cache miss for key ${key}, using fallback`)
         const data = await fallback()
         if (data !== null && data !== undefined) {
           await this.set(key, data, ttl)
+          console.log(`[REDIS] Cached fallback result for key: ${key}`)
         }
         return data
       }
 
       return null
     } catch (error) {
-      console.error(`Cache get error for key ${key}:`, error)
+      console.error(`[REDIS ERROR] Cache get error for key ${key}:`, error)
       // Always fall back to the callback on error
       return fallback ? await fallback() : null
     }
@@ -227,12 +240,33 @@ class RedisCache {
    */
   async set(key: string, value: unknown, ttlSeconds: number = 300): Promise<void> {
     try {
-      if (!this.isRedisAvailable()) return
+      if (!this.isRedisAvailable()) {
+        console.log(`[REDIS] Redis not available, skipping cache set for key: ${key}`)
+        return
+      }
+
+      // ✅ FIXED: Validate value before serialization
+      if (value === null || value === undefined) {
+        console.warn(`[REDIS] Attempting to cache null/undefined value for key: ${key}`)
+        return
+      }
 
       const serializedValue = JSON.stringify(value)
+
+      // Validate serialization didn't produce invalid JSON
+      if (!serializedValue || serializedValue === 'null' || serializedValue === 'undefined') {
+        console.error(`[REDIS ERROR] Invalid serialization result for key ${key}:`, serializedValue)
+        return
+      }
+
       await this.client!.setex(key, ttlSeconds, serializedValue)
+      console.log(`[REDIS] Successfully cached data for key: ${key} (TTL: ${ttlSeconds}s, size: ${serializedValue.length} bytes)`)
     } catch (error) {
-      console.error(`Cache set error for key ${key}:`, error)
+      console.error(`[REDIS ERROR] Cache set error for key ${key}:`, error)
+      // Check if it's a serialization error
+      if (error instanceof TypeError && error.message.includes('circular')) {
+        console.error(`[REDIS ERROR] Circular reference detected in value for key ${key}`)
+      }
       // Don't throw - caching is optional
     }
   }
@@ -548,27 +582,59 @@ export class ProductCacheService {
    */
   async cacheProductSearch(
     filters: OptimizedProductFilters,
-    results: OptimizedProduct[],
+    products: OptimizedProduct[],
     pagination: { page: number; limit: number; total: number; hasNext: boolean; hasPrev: boolean }
   ): Promise<void> {
     const cacheKey = this.generateSearchKey(filters)
-    const cacheData = { 
-      results, 
-      pagination, 
+    const cacheData = {
+      products, // ✅ FIXED: Use "products" instead of "results" to match API response
+      pagination,
       timestamp: Date.now(),
       filters: filters, // Store filters for debugging
-      resultCount: results.length
+      resultCount: products.length,
+      cacheVersion: 'v2' // Version for cache invalidation if structure changes
     }
-    
+
+    console.log(`[CACHE WRITE] Caching ${products.length} products for key: ${cacheKey}`)
+
     // Use configurable TTL for search results
     await this.cache.set(cacheKey, cacheData, CACHE_TTL.PRODUCT_SEARCH)
   }
 
   async getCachedProductSearch(
     filters: OptimizedProductFilters
-  ): Promise<{ results: OptimizedProduct[]; pagination: { page: number; limit: number; total: number; hasNext: boolean; hasPrev: boolean } } | null> {
+  ): Promise<{ products: OptimizedProduct[]; pagination: { page: number; limit: number; total: number; hasNext: boolean; hasPrev: boolean } } | null> {
     const cacheKey = this.generateSearchKey(filters)
-    return await this.cache.get(cacheKey)
+    const cached = await this.cache.get<{
+      products?: OptimizedProduct[]
+      results?: OptimizedProduct[] // Support old cache format
+      pagination: { page: number; limit: number; total: number; hasNext: boolean; hasPrev: boolean }
+      timestamp: number
+      cacheVersion?: string
+    }>(cacheKey)
+
+    if (!cached) {
+      console.log(`[CACHE MISS] No cached data for key: ${cacheKey}`)
+      return null
+    }
+
+    // Handle both old and new cache formats
+    const products = cached.products || cached.results || []
+
+    // Validate cached data structure
+    if (!Array.isArray(products)) {
+      console.error(`[CACHE ERROR] Invalid cached data structure for key: ${cacheKey}`, cached)
+      // Invalidate corrupted cache
+      await this.cache.delete(cacheKey)
+      return null
+    }
+
+    console.log(`[CACHE HIT] Retrieved ${products.length} products from cache (key: ${cacheKey})`)
+
+    return {
+      products,
+      pagination: cached.pagination
+    }
   }
 
   /**
@@ -623,9 +689,10 @@ export class ProductCacheService {
   }
 
   private generateSearchKey(filters: OptimizedProductFilters): string {
-    // Create deterministic cache key from filters
+    // Create deterministic cache key from ALL filters (CRITICAL FIX)
     const keyParts = [
       'search',
+      'v2', // Cache version
       filters.query || 'all',
       filters.location || 'anywhere',
       filters.typeId || 'any',
@@ -635,10 +702,21 @@ export class ProductCacheService {
       filters.page || '1',
       filters.limit || '20',
       filters.sortBy || 'created',
-      filters.sortOrder || 'desc'
+      filters.sortOrder || 'desc',
+      // ✅ FIXED: Include ALL boolean filters in cache key
+      filters.featured ? 'featured' : '',
+      filters.certifiedOnly ? 'certified' : '',
+      filters.autoAcceptOnly ? 'autoaccept' : '',
     ]
-    
-    return keyParts.join(':').toLowerCase().replace(/[^a-z0-9:]/g, '_')
+
+    // Remove empty strings and create cache key
+    const cacheKey = keyParts
+      .filter(part => part !== '')
+      .join(':')
+      .toLowerCase()
+      .replace(/[^a-z0-9:]/g, '_')
+
+    return cacheKey
   }
 }
 
