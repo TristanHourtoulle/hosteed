@@ -24,11 +24,15 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Récupérer tous les utilisateurs avec rôle HOST
+    // Récupérer tous les utilisateurs avec rôle HOST qui ont au moins un hébergement
     const hosts = await prisma.user.findMany({
       where: {
         roles: {
           in: ['HOST', 'HOST_VERIFIED', 'HOST_MANAGER']
+        },
+        // S'assurer qu'ils ont au moins un produit (hébergement)
+        Product: {
+          some: {}
         }
       },
       select: {
@@ -37,6 +41,11 @@ export async function GET(request: NextRequest) {
         email: true,
         roles: true,
         createdAt: true,
+        _count: {
+          select: {
+            Product: true
+          }
+        }
       },
       orderBy: {
         name: 'asc'
