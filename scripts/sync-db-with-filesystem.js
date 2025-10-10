@@ -24,9 +24,6 @@ async function syncDatabaseWithFilesystem() {
         img: {
           startsWith: '/uploads/products/'
         }
-      },
-      include: {
-        products: true
       }
     })
 
