@@ -30,8 +30,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ products: [], totalPages: 0, currentPage: page }, { status: 200 })
     }
 
+    // Fonction récursive pour convertir les BigInt en nombres
+    const convertBigIntToNumber = (obj: unknown): unknown => {
+      if (obj === null || obj === undefined) return obj
+      if (typeof obj === 'bigint') return Number(obj)
+      if (Array.isArray(obj)) return obj.map(convertBigIntToNumber)
+      if (typeof obj === 'object') {
+        return Object.fromEntries(
+          Object.entries(obj).map(([key, value]) => [key, convertBigIntToNumber(value)])
+        )
+      }
+      return obj
+    }
+
+    const serializedProducts = result.products.map(product => convertBigIntToNumber(product))
+
     const response = NextResponse.json({
-      products: result.products,
+      products: serializedProducts,
       totalPages: result.pagination.totalPages,
       currentPage: page,
       totalCount: result.pagination.total,
