@@ -67,10 +67,10 @@ export async function POST(request: NextRequest) {
     // TODO: Envoyer email de notification à l'hôte
 
     return NextResponse.json(withdrawalRequest, { status: 201 })
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating withdrawal request for host:', error)
     return NextResponse.json(
-      { error: error.message || 'Erreur lors de la création de la demande' },
+      { error: error instanceof Error ? error.message : 'Erreur lors de la création de la demande' },
       { status: 400 }
     )
   }

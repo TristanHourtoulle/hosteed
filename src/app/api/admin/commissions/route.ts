@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 
     const commissions = await getAllCommissions()
 
-    let response: { commissions: typeof commissions; unassignedTypes?: Awaited<ReturnType<typeof getPropertyTypesWithoutCommissions>> } = {
+    const response: { commissions: typeof commissions; unassignedTypes?: Awaited<ReturnType<typeof getPropertyTypesWithoutCommissions>> } = {
       commissions
     }
 

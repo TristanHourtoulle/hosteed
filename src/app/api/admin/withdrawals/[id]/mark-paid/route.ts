@@ -32,10 +32,10 @@ export async function PUT(
     // TODO: Envoyer email de confirmation à l'hôte
 
     return NextResponse.json(withdrawalRequest)
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error marking withdrawal as paid:', error)
     return NextResponse.json(
-      { error: error.message || 'Erreur lors du marquage comme payé' },
+      { error: error instanceof Error ? error.message : 'Erreur lors du marquage comme payé' },
       { status: 400 }
     )
   }

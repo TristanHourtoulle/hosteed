@@ -38,10 +38,10 @@ export async function PUT(
     // TODO: Envoyer email de notification à l'hôte
 
     return NextResponse.json(withdrawalRequest)
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error approving withdrawal request:', error)
     return NextResponse.json(
-      { error: error.message || 'Erreur lors de l\'approbation' },
+      { error: error instanceof Error ? error.message : 'Erreur lors de l\'approbation' },
       { status: 400 }
     )
   }

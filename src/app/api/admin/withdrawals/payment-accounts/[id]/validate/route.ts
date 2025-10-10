@@ -32,10 +32,10 @@ export async function PUT(
     // TODO: Envoyer email de notification à l'hôte
 
     return NextResponse.json(paymentAccount)
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error validating payment account:', error)
     return NextResponse.json(
-      { error: error.message || 'Erreur lors de la validation du compte' },
+      { error: error instanceof Error ? error.message : 'Erreur lors de la validation du compte' },
       { status: 400 }
     )
   }
