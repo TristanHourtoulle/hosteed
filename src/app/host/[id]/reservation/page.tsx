@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { CheckRentIsAvailable } from '@/lib/services/rents.service'
@@ -163,12 +163,12 @@ export default function ReservationPage() {
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
-  const calculateNights = () => {
+  const calculateNights = useCallback(() => {
     if (!formData.arrivingDate || !formData.leavingDate) return 0
     const from = new Date(formData.arrivingDate)
     const to = new Date(formData.leavingDate)
     return Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24))
-  }
+  }, [formData.arrivingDate, formData.leavingDate])
 
   // Effect to calculate commission-based pricing
   useEffect(() => {
@@ -202,7 +202,7 @@ export default function ReservationPage() {
     }
 
     updatePrices()
-  }, [product, formData.arrivingDate, formData.leavingDate, extrasCost])
+  }, [product, formData.arrivingDate, formData.leavingDate, extrasCost, calculateNights])
 
   const calculateTotalPrice = () => {
     if (priceCalculation) {
