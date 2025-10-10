@@ -28,6 +28,7 @@ import {
   Highlighter,
   BookOpen,
   Edit3,
+  Wallet,
 } from 'lucide-react'
 import { Button } from '@/components/ui/shadcnui/button'
 import {
@@ -199,10 +200,10 @@ const navGroups: NavGroup[] = [
         icon: Home,
       },
       {
-        title: 'Commissions',
-        href: '/admin/commission-settings',
-        icon: CreditCard,
-        requiredRoles: ['ADMIN'],
+        title: 'Retraits',
+        href: '/admin/withdrawals',
+        icon: Wallet,
+        requiredRoles: ['ADMIN', 'HOST_MANAGER'],
       },
     ],
   },

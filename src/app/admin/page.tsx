@@ -24,6 +24,7 @@ import {
   Soup,
   BrushCleaning,
   Calculator,
+  Wallet,
 } from 'lucide-react'
 import { StatsOverview } from './components/StatsOverview'
 import { ActionCardGroup } from './components/ActionCardGroup'
@@ -219,10 +220,10 @@ export default function AdminDashboard() {
           href: '/admin/promoted',
         },
         {
-          title: 'Configuration des commissions',
-          description: 'Gérer les taux de commission et frais',
-          icon: Calculator,
-          href: '/admin/commission-settings',
+          title: 'Gestion des retraits',
+          description: 'Gérer les demandes de retrait des hôtes',
+          icon: Wallet,
+          href: '/admin/withdrawals',
         },
       ],
     },
