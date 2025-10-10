@@ -88,12 +88,17 @@ export default function BlogManagementPage() {
       setIsLoadingPosts(true)
       // For BLOGWRITER: fetch only their posts, for ADMIN: fetch all posts
       const authorParam = session.user.roles === 'ADMIN' ? '' : `?authorId=${session.user.id}`
-      const response = await fetch(`/api/posts${authorParam}`)
-      
+      const response = await fetch(`/api/posts${authorParam}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      })
+
       if (!response.ok) {
         throw new Error('Erreur lors du chargement des articles')
       }
-      
+
       const data = await response.json()
       setPosts(data)
     } catch (error) {

@@ -28,7 +28,12 @@ export default function WithdrawalsPage() {
 
   const fetchBalance = async () => {
     try {
-      const response = await fetch('/api/withdrawals/balance')
+      const response = await fetch('/api/withdrawals/balance', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      })
       if (response.ok) {
         const data = await response.json()
         setBalance(data)

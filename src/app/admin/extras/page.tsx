@@ -72,7 +72,12 @@ export default function ExtrasPage() {
 
   const fetchExtras = async () => {
     try {
-      const response = await fetch('/api/admin/extras')
+      const response = await fetch('/api/admin/extras', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      })
       if (response.ok) {
         const data = await response.json()
         setExtras(data)

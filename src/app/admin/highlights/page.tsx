@@ -53,7 +53,12 @@ export default function HighlightsPage() {
 
   const fetchHighlights = async () => {
     try {
-      const response = await fetch('/api/admin/highlights')
+      const response = await fetch('/api/admin/highlights', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      })
       if (response.ok) {
         const data = await response.json()
         setHighlights(data)

@@ -55,7 +55,12 @@ export default function CommissionSettingsPage() {
 
   const fetchSettings = async () => {
     try {
-      const response = await fetch('/api/admin/commission-settings')
+      const response = await fetch('/api/admin/commission-settings', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      })
       if (response.ok) {
         const data = await response.json()
         setSettings(data)
