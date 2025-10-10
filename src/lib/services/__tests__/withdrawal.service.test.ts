@@ -4,13 +4,11 @@
  * Suite complète de tests pour le système de retrait
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { prisma } from '@/lib/prisma'
 import {
   PaymentMethod,
   WithdrawalType,
-  WithdrawalStatus,
-  PaymentStatus,
 } from '@prisma/client'
 import {
   calculateHostBalance,
@@ -19,18 +17,12 @@ import {
   setDefaultPaymentAccount,
   validatePaymentAccount,
   createWithdrawalRequest,
-  getWithdrawalRequests,
-  approveWithdrawalRequest,
-  rejectWithdrawalRequest,
-  markWithdrawalAsPaid,
-  cancelWithdrawalRequest,
   getWithdrawalStats,
 } from '../withdrawal.service'
 
 // Données de test
 const testUserId = 'test-user-id'
 const testAdminId = 'test-admin-id'
-const testProductId = 'test-product-id'
 
 describe('Withdrawal Service', () => {
   // Nettoyer la base de données avant chaque test
@@ -75,7 +67,7 @@ describe('Withdrawal Service', () => {
 
     it('should subtract pending withdrawals from available balance', async () => {
       // 1. Créer un compte de paiement
-      const account = await createPaymentAccount(testUserId, {
+      await createPaymentAccount(testUserId, {
         method: PaymentMethod.SEPA_VIREMENT,
         accountHolderName: 'Test User',
         iban: 'FR7630001007941234567890185',
@@ -322,7 +314,7 @@ describe('Withdrawal Service', () => {
 
     describe('approveWithdrawalRequest', () => {
       it('should update status to APPROVED and set processor', async () => {
-        const account = await createPaymentAccount(testUserId, {
+        await createPaymentAccount(testUserId, {
           method: PaymentMethod.SEPA_VIREMENT,
           accountHolderName: 'Test',
           iban: 'FR7630001007941234567890185',

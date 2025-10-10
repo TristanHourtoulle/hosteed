@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { Filter, Users, Home, Euro, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react'
+import { Filter, Users, Home, Euro, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@/shadcnui'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/shadcnui/popover'

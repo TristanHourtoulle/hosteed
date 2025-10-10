@@ -36,8 +36,9 @@ export async function GET(request: NextRequest) {
     const certifiedOnly = searchParams.get('certifiedOnly') === 'true'
     const autoAcceptOnly = searchParams.get('autoAcceptOnly') === 'true'
     const contractRequired = searchParams.get('contractRequired') === 'true'
-    const arrivingDate = searchParams.get('arrivingDate')
-    const leavingDate = searchParams.get('leavingDate')
+    // TODO: Implement date-based availability filtering
+    // const arrivingDate = searchParams.get('arrivingDate')
+    // const leavingDate = searchParams.get('leavingDate')
 
     // Array filters (comma-separated IDs)
     const equipments = searchParams.get('equipments')?.split(',').filter(Boolean) || []

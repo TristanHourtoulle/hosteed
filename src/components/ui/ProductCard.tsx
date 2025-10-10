@@ -44,7 +44,7 @@ interface Product {
 function ProductCard({ product, index = 0 }: { product: Product; index?: number }) {
   const { isFavorite, isLoading, toggleFavorite } = useFavoritesOptimized(product.id)
   const [imageError, setImageError] = useState(false)
-  const [isHovered, setIsHovered] = useState(false)
+  const [, setIsHovered] = useState(false)
 
   // Debug logging
   console.log(`ProductCard ${product.id} - img structure:`, product.img)
