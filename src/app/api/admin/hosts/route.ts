@@ -5,11 +5,11 @@
  * Récupère la liste de tous les hôtes (pour sélection)
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await auth()
 
@@ -24,12 +24,23 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Récupérer tous les utilisateurs avec rôle HOST qui ont au moins un hébergement
+    // Récupérer tous les utilisateurs qui ont au moins un hébergement
+    // Inclure les hôtes ET les admins qui ont des produits
     const hosts = await prisma.user.findMany({
       where: {
-        roles: {
-          in: ['HOST', 'HOST_VERIFIED', 'HOST_MANAGER']
-        },
+        OR: [
+          {
+            roles: {
+              in: ['HOST', 'HOST_VERIFIED', 'HOST_MANAGER']
+            }
+          },
+          {
+            // Inclure aussi les admins qui ont des produits
+            roles: {
+              in: ['ADMIN']
+            }
+          }
+        ],
         // S'assurer qu'ils ont au moins un produit (hébergement)
         Product: {
           some: {}

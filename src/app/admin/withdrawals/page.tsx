@@ -46,6 +46,14 @@ type Host = {
   createdAt: Date
 }
 
+type HostBalance = {
+  totalEarned: number
+  totalWithdrawn: number
+  availableBalance: number
+  amount50Percent: number
+  amount100Percent: number
+}
+
 export default function AdminWithdrawalsPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -55,7 +63,7 @@ export default function AdminWithdrawalsPage() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<WithdrawalStatus | 'ALL'>('ALL')
   const [selectedHost, setSelectedHost] = useState<string>('')
-  const [hostBalance, setHostBalance] = useState<any>(null)
+  const [hostBalance, setHostBalance] = useState<HostBalance | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
 
   // Form state for withdrawal creation
@@ -64,6 +72,21 @@ export default function AdminWithdrawalsPage() {
     withdrawalType: 'PARTIAL_50' as 'PARTIAL_50' | 'FULL_100',
     paymentMethod: 'SEPA_VIREMENT' as PaymentMethod,
     notes: '',
+  })
+
+  // Payment details for each method
+  const [paymentDetails, setPaymentDetails] = useState({
+    accountHolderName: '',
+    iban: '',
+    cardNumber: '',
+    cardEmail: '',
+    mobileNumber: '',
+    paypalUsername: '',
+    paypalEmail: '',
+    paypalPhone: '',
+    paypalIban: '',
+    moneygramFullName: '',
+    moneygramPhone: '',
   })
 
   useEffect(() => {
@@ -110,7 +133,7 @@ export default function AdminWithdrawalsPage() {
       if (response.ok) {
         const data = await response.json()
         console.log('✅ [fetchRequests] Données reçues:', data.requests.length, 'demandes')
-        console.log('📝 [fetchRequests] Détails des demandes:', data.requests.map((r: any) => ({ id: r.id, status: r.status })))
+        console.log('📝 [fetchRequests] Détails des demandes:', data.requests.map((r: WithdrawalRequest) => ({ id: r.id, status: r.status })))
         setRequests(data.requests)
         console.log('💾 [fetchRequests] State mis à jour')
       } else {
@@ -310,7 +333,7 @@ export default function AdminWithdrawalsPage() {
       return
     }
 
-    if (parseFloat(withdrawalForm.amount) > hostBalance.availableBalance) {
+    if (!hostBalance || parseFloat(withdrawalForm.amount) > hostBalance.availableBalance) {
       console.log('❌ [handleCreateWithdrawal] Montant dépasse le solde disponible')
       toast.error('Le montant dépasse le solde disponible')
       return
@@ -326,6 +349,7 @@ export default function AdminWithdrawalsPage() {
           amount: parseFloat(withdrawalForm.amount),
           withdrawalType: withdrawalForm.withdrawalType,
           paymentMethod: withdrawalForm.paymentMethod,
+          paymentDetails: paymentDetails,
           notes: withdrawalForm.notes || `Demande créée par ${session?.user?.name || 'admin'}`,
         }),
       })
@@ -341,6 +365,19 @@ export default function AdminWithdrawalsPage() {
           withdrawalType: 'PARTIAL_50',
           paymentMethod: 'SEPA_VIREMENT',
           notes: '',
+        })
+        setPaymentDetails({
+          accountHolderName: '',
+          iban: '',
+          cardNumber: '',
+          cardEmail: '',
+          mobileNumber: '',
+          paypalUsername: '',
+          paypalEmail: '',
+          paypalPhone: '',
+          paypalIban: '',
+          moneygramFullName: '',
+          moneygramPhone: '',
         })
         console.log('🔄 [handleCreateWithdrawal] Appel de fetchRequests()...')
         await fetchRequests()
@@ -732,6 +769,188 @@ export default function AdminWithdrawalsPage() {
                       Note : Le compte de paiement de l'hôte sera utilisé s'il existe, sinon un nouveau sera créé.
                     </p>
                   </div>
+
+                  {/* Champs conditionnels selon la méthode de paiement */}
+                  {withdrawalForm.paymentMethod === 'SEPA_VIREMENT' && (
+                    <>
+                      <div>
+                        <label className='block text-sm font-medium text-gray-700 mb-2'>
+                          Nom du titulaire *
+                        </label>
+                        <input
+                          type='text'
+                          value={paymentDetails.accountHolderName}
+                          onChange={(e) => setPaymentDetails({ ...paymentDetails, accountHolderName: e.target.value })}
+                          className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
+                          placeholder='Jean Dupont'
+                        />
+                      </div>
+                      <div>
+                        <label className='block text-sm font-medium text-gray-700 mb-2'>
+                          IBAN *
+                        </label>
+                        <input
+                          type='text'
+                          value={paymentDetails.iban}
+                          onChange={(e) => setPaymentDetails({ ...paymentDetails, iban: e.target.value })}
+                          className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
+                          placeholder='FR76 XXXX XXXX XXXX XXXX XXXX XXX'
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {withdrawalForm.paymentMethod === 'PRIPEO' && (
+                    <>
+                      <div>
+                        <label className='block text-sm font-medium text-gray-700 mb-2'>
+                          Nom du titulaire *
+                        </label>
+                        <input
+                          type='text'
+                          value={paymentDetails.accountHolderName}
+                          onChange={(e) => setPaymentDetails({ ...paymentDetails, accountHolderName: e.target.value })}
+                          className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
+                          placeholder='Jean Dupont'
+                        />
+                      </div>
+                      <div>
+                        <label className='block text-sm font-medium text-gray-700 mb-2'>
+                          Numéro de carte Pripeo *
+                        </label>
+                        <input
+                          type='text'
+                          value={paymentDetails.cardNumber}
+                          onChange={(e) => setPaymentDetails({ ...paymentDetails, cardNumber: e.target.value })}
+                          className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
+                          placeholder='1234 5678 9012 3456'
+                        />
+                      </div>
+                      <div>
+                        <label className='block text-sm font-medium text-gray-700 mb-2'>
+                          Email *
+                        </label>
+                        <input
+                          type='email'
+                          value={paymentDetails.cardEmail}
+                          onChange={(e) => setPaymentDetails({ ...paymentDetails, cardEmail: e.target.value })}
+                          className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
+                          placeholder='email@example.com'
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {withdrawalForm.paymentMethod === 'MOBILE_MONEY' && (
+                    <>
+                      <div>
+                        <label className='block text-sm font-medium text-gray-700 mb-2'>
+                          Nom du titulaire *
+                        </label>
+                        <input
+                          type='text'
+                          value={paymentDetails.accountHolderName}
+                          onChange={(e) => setPaymentDetails({ ...paymentDetails, accountHolderName: e.target.value })}
+                          className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
+                          placeholder='Jean Dupont'
+                        />
+                      </div>
+                      <div>
+                        <label className='block text-sm font-medium text-gray-700 mb-2'>
+                          Numéro de téléphone *
+                        </label>
+                        <input
+                          type='tel'
+                          value={paymentDetails.mobileNumber}
+                          onChange={(e) => setPaymentDetails({ ...paymentDetails, mobileNumber: e.target.value })}
+                          className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
+                          placeholder='+261 XX XX XXX XX'
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {withdrawalForm.paymentMethod === 'PAYPAL' && (
+                    <>
+                      <div>
+                        <label className='block text-sm font-medium text-gray-700 mb-2'>
+                          Nom d&apos;utilisateur PayPal *
+                        </label>
+                        <input
+                          type='text'
+                          value={paymentDetails.paypalUsername}
+                          onChange={(e) => setPaymentDetails({ ...paymentDetails, paypalUsername: e.target.value })}
+                          className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
+                          placeholder='@username'
+                        />
+                      </div>
+                      <div>
+                        <label className='block text-sm font-medium text-gray-700 mb-2'>
+                          Email PayPal *
+                        </label>
+                        <input
+                          type='email'
+                          value={paymentDetails.paypalEmail}
+                          onChange={(e) => setPaymentDetails({ ...paymentDetails, paypalEmail: e.target.value })}
+                          className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
+                          placeholder='email@example.com'
+                        />
+                      </div>
+                      <div>
+                        <label className='block text-sm font-medium text-gray-700 mb-2'>
+                          Téléphone
+                        </label>
+                        <input
+                          type='tel'
+                          value={paymentDetails.paypalPhone}
+                          onChange={(e) => setPaymentDetails({ ...paymentDetails, paypalPhone: e.target.value })}
+                          className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
+                          placeholder='+33 X XX XX XX XX'
+                        />
+                      </div>
+                      <div>
+                        <label className='block text-sm font-medium text-gray-700 mb-2'>
+                          IBAN (optionnel)
+                        </label>
+                        <input
+                          type='text'
+                          value={paymentDetails.paypalIban}
+                          onChange={(e) => setPaymentDetails({ ...paymentDetails, paypalIban: e.target.value })}
+                          className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
+                          placeholder='FR76 XXXX XXXX XXXX XXXX XXXX XXX'
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {withdrawalForm.paymentMethod === 'MONEYGRAM' && (
+                    <>
+                      <div>
+                        <label className='block text-sm font-medium text-gray-700 mb-2'>
+                          Nom complet *
+                        </label>
+                        <input
+                          type='text'
+                          value={paymentDetails.moneygramFullName}
+                          onChange={(e) => setPaymentDetails({ ...paymentDetails, moneygramFullName: e.target.value })}
+                          className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
+                          placeholder='Jean Dupont'
+                        />
+                      </div>
+                      <div>
+                        <label className='block text-sm font-medium text-gray-700 mb-2'>
+                          Numéro de téléphone *
+                        </label>
+                        <input
+                          type='tel'
+                          value={paymentDetails.moneygramPhone}
+                          onChange={(e) => setPaymentDetails({ ...paymentDetails, moneygramPhone: e.target.value })}
+                          className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
+                          placeholder='+261 XX XX XXX XX'
+                        />
+                      </div>
+                    </>
+                  )}
 
                   {/* Notes */}
                   <div>
