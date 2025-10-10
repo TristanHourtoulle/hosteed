@@ -67,26 +67,13 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
     [product.img]
   )
 
-  // Générer l'URL de l'image en taille originale (pas de thumbnail pixelisé)
+  // Générer l'URL de l'image (DB contient déjà les URLs _full_ après migration)
   const thumbnailUrl = useMemo(() => {
     if (product.img && product.img.length > 0 && product.img[0].img) {
-      const imageUrl = product.img[0].img
-
-      // Si l'image est migrée (commence par /uploads/), utiliser le format FULL
-      if (imageUrl.startsWith('/uploads/')) {
-        // Remplacer _thumb_ par _full_ pour avoir l'image en haute résolution
-        return imageUrl.replace('_thumb_', '_full_')
-      }
-
-      // Si c'est une URL externe (Unsplash, etc.) ou base64, l'utiliser directement
-      if (imageUrl.startsWith('http') || imageUrl.startsWith('data:image')) {
-        return imageUrl
-      }
+      return product.img[0].img
     }
-
-    // Fallback: pas d'image
     return ''
-  }, [product.img, product.id])
+  }, [product.img])
 
   const hasValidImages = hasImages
 
@@ -155,6 +142,7 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
                   loading='lazy'
                   placeholder='blur'
                   blurDataURL='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2VlZSIvPjwvc3ZnPg=='
+                  unoptimized={thumbnailUrl.startsWith('/uploads/')}
                 />
               </motion.div>
             ) : (
