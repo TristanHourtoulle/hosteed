@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { CheckRentIsAvailable } from '@/lib/services/rents.service'
 import { findProductById } from '@/lib/services/product.service'
 import { findUserById } from '@/lib/services/user.service'
+import { calculateTotalRentPrice, type CommissionCalculation } from '@/lib/services/commission.service'
 import { MapPin, Star, CreditCard, Shield, ArrowLeft, Check } from 'lucide-react'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
@@ -32,7 +33,7 @@ interface Product {
   name: string
   basePrice: string
   options: Option[]
-  commission: number
+  commission: number // LEGACY - Keep for backward compatibility
   arriving: number
   leaving: number
   address?: string
@@ -41,6 +42,8 @@ interface Product {
   img?: {
     img: string
   }[]
+  typeId?: string // Property type ID for commission calculation
+  type?: { id: string; name: string } // Property type relation
 }
 
 interface FormData {
@@ -64,6 +67,7 @@ export default function ReservationPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [step, setStep] = useState(2) // 2: extras selection, 3: personal info, 4: payment (étape dates supprimée)
+  const [priceCalculation, setPriceCalculation] = useState<CommissionCalculation | null>(null)
 
   // Get URL parameters
   const checkInParam = searchParams.get('checkIn')
@@ -166,7 +170,46 @@ export default function ReservationPage() {
     return Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24))
   }
 
+  // Effect to calculate commission-based pricing
+  useEffect(() => {
+    const updatePrices = async () => {
+      if (!product || !formData.arrivingDate || !formData.leavingDate) {
+        setPriceCalculation(null)
+        return
+      }
+
+      const nights = calculateNights()
+      if (nights <= 0) {
+        setPriceCalculation(null)
+        return
+      }
+
+      try {
+        // Use typeId from product.type relation, fallback to product.typeId field
+        const typeId = product.type?.id || product.typeId
+
+        const calculation = await calculateTotalRentPrice(
+          parseFloat(product.basePrice),
+          nights,
+          extrasCost, // Include extras in commission calculation
+          typeId // Pass typeId for type-specific commission
+        )
+        setPriceCalculation(calculation)
+      } catch (error) {
+        console.error('Error calculating prices:', error)
+        setPriceCalculation(null)
+      }
+    }
+
+    updatePrices()
+  }, [product, formData.arrivingDate, formData.leavingDate, extrasCost])
+
   const calculateTotalPrice = () => {
+    if (priceCalculation) {
+      return Math.round(priceCalculation.clientPays)
+    }
+
+    // Fallback to legacy calculation if commission service fails
     if (!product || !formData.arrivingDate || !formData.leavingDate) return 0
 
     const nights = calculateNights()
@@ -278,7 +321,7 @@ export default function ReservationPage() {
 
   const nights = calculateNights()
   const subtotal = parseFloat(product.basePrice) * nights
-  const serviceFee = 0
+  const serviceFee = priceCalculation ? Math.round(priceCalculation.clientCommission) : 0
   const total = calculateTotalPrice()
 
   return (
