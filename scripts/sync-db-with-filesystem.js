@@ -55,22 +55,27 @@ async function syncDatabaseWithFilesystem() {
         continue
       }
 
-      // Find all files for this image index and timestamp
+      // Find all files for this image index - ignore timestamp and hash differences
       const files = fs.readdirSync(uploadsDir)
-      const pattern = new RegExp(`^img_${imageIndex}_(thumb|medium|full)_${timestamp}_([a-f0-9]+)\\.webp$`)
+      const pattern = new RegExp(`^img_${imageIndex}_(thumb|medium|full)_\\d+_[a-f0-9]+\\.webp$`)
 
       const matchingFiles = files.filter(f => pattern.test(f))
 
       if (matchingFiles.length === 0) {
-        console.log(`❌ No matching files found for: ${dbUrl}`)
+        console.log(`❌ No matching files found for image index ${imageIndex}`)
         console.log(`   Looking in: ${uploadsDir}`)
-        console.log(`   Pattern: img_${imageIndex}_${size}_${timestamp}_*.webp`)
         notFoundCount++
         continue
       }
 
       // Find the file with the correct size (thumb, medium, or full)
-      const correctFile = matchingFiles.find(f => f.includes(`_${size}_`))
+      // If multiple files exist, prefer the one with matching timestamp
+      let correctFile = matchingFiles.find(f => f.includes(`_${size}_${timestamp}_`))
+
+      if (!correctFile) {
+        // If no file with matching timestamp, use any file with correct size
+        correctFile = matchingFiles.find(f => f.includes(`_${size}_`))
+      }
 
       if (!correctFile) {
         console.log(`⚠️  No ${size} file found for image ${imageIndex}`)
