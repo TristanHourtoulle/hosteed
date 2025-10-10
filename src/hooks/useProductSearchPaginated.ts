@@ -262,13 +262,13 @@ export function useProductSearchPaginated() {
   ])
 
   // Use React Query for paginated products with optimized backend search
-  const { 
-    data: productResult, 
+  const {
+    data: productResult,
     isLoading: productsLoading,
-    error: productsError 
+    error: productsError
   } = useQuery<ProductSearchResult | null>({
     queryKey: [
-      'products-search', 
+      'products-search',
       searchParams_backend
     ],
     queryFn: async () => {
@@ -276,7 +276,7 @@ export function useProductSearchPaginated() {
       const searchURL = new URL('/api/products/search', window.location.origin)
       searchURL.searchParams.set('page', currentPage.toString())
       searchURL.searchParams.set('limit', itemsPerPage.toString())
-      
+
       if (searchTerm) searchURL.searchParams.set('search', searchTerm)
       if (selectedType) searchURL.searchParams.set('typeRentId', selectedType)
       if (location) searchURL.searchParams.set('location', location)
@@ -284,7 +284,7 @@ export function useProductSearchPaginated() {
       if (popular) searchURL.searchParams.set('popular', 'true')
       if (recent) searchURL.searchParams.set('recent', 'true')
       if (promo) searchURL.searchParams.set('promo', 'true')
-      
+
       // Add filter parameters
       if (filters.minPrice) searchURL.searchParams.set('minPrice', filters.minPrice)
       if (filters.maxPrice) searchURL.searchParams.set('maxPrice', filters.maxPrice)
@@ -299,22 +299,25 @@ export function useProductSearchPaginated() {
       if (!response.ok) {
         throw new Error('Failed to fetch search results')
       }
-      
+
       const result = await response.json()
       if (!result) return null
-      
+
       // Debug logging to check products structure
       console.log('API Response products:', result.products?.slice(0, 1))
-      
+
       // Server already handles most filtering, just return the result
       return {
         products: result.products,
         pagination: result.pagination
       }
     },
-    staleTime: 1000 * 60 * 2, // 2 minutes
-    gcTime: 1000 * 60 * 5, // 5 minutes
-    enabled: !staticQueries.some(q => q.isLoading), // Only fetch when static data is ready
+    // ✅ PERFORMANCE FIX: Cache optimisé pour éviter les re-fetch
+    staleTime: 1000 * 60 * 30, // 30 minutes (au lieu de 2min)
+    gcTime: 1000 * 60 * 60 * 2, // 2 heures (au lieu de 5min)
+    // ✅ CRITICAL FIX: Lancer en parallèle avec les données statiques !
+    // Pas besoin d'attendre que types/equipments/etc soient chargés
+    // Les produits et les filtres se chargent indépendamment
   })
 
   // Location suggestions with debounce

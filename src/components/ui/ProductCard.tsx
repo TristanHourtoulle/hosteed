@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Heart, Star, ChevronLeft, ChevronRight, ImageIcon } from 'lucide-react'
+import { Heart, Star, ImageIcon } from 'lucide-react'
 import { getCityFromAddress, calculateAverageRating, isProductSponsored } from '@/lib/utils'
 import { useFavoritesOptimized } from '@/hooks/useFavoritesOptimized'
 import { motion } from 'framer-motion'
@@ -43,7 +43,6 @@ interface Product {
 
 function ProductCard({ product, index = 0 }: { product: Product; index?: number }) {
   const { isFavorite, isLoading, toggleFavorite } = useFavoritesOptimized(product.id)
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [imageError, setImageError] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
 
@@ -62,15 +61,22 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
     [product.reviews]
   )
 
-  const images = useMemo(() => 
-    product.img && product.img.length > 0
-      ? product.img.filter(img => img.img && img.img.trim() !== '')
-      : [], 
+  // ✅ PERFORMANCE FIX: Utiliser la route thumbnail au lieu du base64
+  // Les images base64 ne sont plus incluses dans la recherche
+  const hasImages = useMemo(() =>
+    product.img && product.img.length > 0,
     [product.img]
   )
 
-  const hasMultipleImages = useMemo(() => images.length > 1, [images])
-  const hasValidImages = useMemo(() => images.length > 0, [images])
+  // Générer l'URL du thumbnail optimisé
+  const thumbnailUrl = useMemo(() =>
+    `/api/products/${product.id}/thumbnail`,
+    [product.id]
+  )
+
+  // Pour l'instant, pas de support multi-images car on a supprimé le base64
+  // Les images seront chargées à la demande
+  const hasValidImages = hasImages
 
   // Memoize motion props to prevent recreation
   const cardMotionProps = useMemo(() => ({
@@ -93,27 +99,6 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
   }), [])
 
   // Memoize event handlers to prevent recreation and unnecessary re-renders
-  const goToPrevious = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setCurrentImageIndex(prev => (prev === 0 ? images.length - 1 : prev - 1))
-    setImageError(false)
-  }, [images.length])
-
-  const goToNext = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setCurrentImageIndex(prev => (prev === images.length - 1 ? 0 : prev + 1))
-    setImageError(false)
-  }, [images.length])
-
-  const goToImage = useCallback((imageIndex: number, e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setCurrentImageIndex(imageIndex)
-    setImageError(false)
-  }, [])
-
   const handleToggleFavorite = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -132,11 +117,6 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
     setIsHovered(false)
   }, [])
 
-  // Create a memoized function factory for image dot clicks
-  const createImageClickHandler = useCallback((imageIndex: number) => {
-    return (e: React.MouseEvent) => goToImage(imageIndex, e)
-  }, [goToImage])
-
   return (
     <motion.div {...cardMotionProps}>
       <Link href={`/host/${product.id}`} className='block'>
@@ -148,45 +128,23 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
         >
           <div className='relative aspect-[4/3] w-full'>
             {hasValidImages && !imageError ? (
-              <>
-                <motion.div
-                  key={currentImageIndex}
-                  {...imageMotionProps}
-                  className='w-full h-full'
-                >
-                  <Image
-                    src={images[currentImageIndex].img}
-                    alt={product.name}
-                    fill
-                    className='object-cover'
-                    onError={handleImageError}
-                    sizes='(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw'
-                  />
-                </motion.div>
-
-                {/* Navigation Arrows - Only show on hover and with multiple images */}
-                {hasMultipleImages && isHovered && (
-                  <>
-                    <motion.button
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      onClick={goToPrevious}
-                      className='absolute left-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-white/80 hover:bg-white hover:scale-110 transition-all duration-200 shadow-lg'
-                    >
-                      <ChevronLeft className='w-4 h-4 text-gray-700' />
-                    </motion.button>
-
-                    <motion.button
-                      initial={{ opacity: 0, x: 10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      onClick={goToNext}
-                      className='absolute right-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-white/80 hover:bg-white hover:scale-110 transition-all duration-200 shadow-lg'
-                    >
-                      <ChevronRight className='w-4 h-4 text-gray-700' />
-                    </motion.button>
-                  </>
-                )}
-              </>
+              <motion.div
+                {...imageMotionProps}
+                className='w-full h-full'
+              >
+                {/* ✅ PERFORMANCE: Utiliser l'URL optimisée au lieu du base64 */}
+                <Image
+                  src={thumbnailUrl}
+                  alt={product.name}
+                  fill
+                  className='object-cover'
+                  onError={handleImageError}
+                  sizes='(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw'
+                  loading='lazy'
+                  placeholder='blur'
+                  blurDataURL='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2VlZSIvPjwvc3ZnPg=='
+                />
+              </motion.div>
             ) : (
               <div className='bg-gradient-to-br from-gray-100 to-gray-200 h-full w-full flex flex-col items-center justify-center'>
                 <ImageIcon className='w-12 h-12 text-gray-400 mb-3' />
@@ -275,23 +233,7 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
               </div>
             </motion.div>
 
-            {/* Image Dots */}
-            {hasMultipleImages && hasValidImages && (
-              <div className='absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-1.5'>
-                {images.map((_, index) => (
-                  <motion.button
-                    key={index}
-                    whileHover={{ scale: 1.2 }}
-                    onClick={createImageClickHandler(index)}
-                    className={`w-2 h-2 rounded-full transition-all duration-200 ${
-                      index === currentImageIndex
-                        ? 'bg-white shadow-lg'
-                        : 'bg-white/50 hover:bg-white/75'
-                    }`}
-                  />
-                ))}
-              </div>
-            )}
+            {/* Image Dots - Removed for performance (single thumbnail only) */}
           </div>
 
           <motion.div
