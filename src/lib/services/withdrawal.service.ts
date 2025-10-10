@@ -61,7 +61,7 @@ export interface WithdrawalRequestData {
   withdrawalType: WithdrawalType
   paymentAccountId?: string
   paymentMethod: PaymentMethod
-  paymentDetails: Record<string, any>
+  paymentDetails: Record<string, string | number | boolean | null>
   notes?: string
 }
 
@@ -97,7 +97,7 @@ export async function calculateHostBalance(userId: string): Promise<HostBalance>
 
   // 2. Calculer le total gagné (en soustrayant les commissions)
   const totalEarned = paidRents.reduce((sum, rent) => {
-    const price = parseFloat(rent.prices)
+    const price = parseFloat(rent.prices.toString())
     // TODO: Récupérer la commission réelle pour chaque réservation
     // Pour l'instant, on utilise le prix total
     return sum + price
@@ -283,7 +283,7 @@ export async function createWithdrawalRequest(
   }
 
   // 2. Vérifier si le compte de paiement est validé
-  let status = WithdrawalStatus.PENDING
+  let status: WithdrawalStatus = WithdrawalStatus.PENDING
 
   if (paymentAccountId) {
     const account = await prisma.paymentAccount.findUnique({
