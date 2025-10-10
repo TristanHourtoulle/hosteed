@@ -68,28 +68,30 @@ async function syncDatabaseWithFilesystem() {
         continue
       }
 
-      // Find the file with the correct size (thumb, medium, or full)
-      // If multiple files exist, prefer the one with matching timestamp
-      let correctFile = matchingFiles.find(f => f.includes(`_${size}_${timestamp}_`))
+      // IMPORTANT: Always use _full_ size for best quality (not thumb or medium)
+      // Find the _full_ version regardless of what's in the database
+      let fullFile = matchingFiles.find(f => f.includes(`_full_${timestamp}_`))
 
-      if (!correctFile) {
-        // If no file with matching timestamp, use any file with correct size
-        correctFile = matchingFiles.find(f => f.includes(`_${size}_`))
+      if (!fullFile) {
+        // If no file with matching timestamp, use any _full_ file for this image index
+        fullFile = matchingFiles.find(f => f.includes(`_full_`))
       }
 
-      if (!correctFile) {
-        console.log(`⚠️  No ${size} file found for image ${imageIndex}`)
+      if (!fullFile) {
+        console.log(`⚠️  No _full_ file found for image ${imageIndex}`)
+        console.log(`   Available files:`, matchingFiles)
+        notFoundCount++
         continue
       }
 
-      const correctUrl = `/uploads/products/${productId}/${correctFile}`
+      const correctUrl = `/uploads/products/${productId}/${fullFile}`
 
       if (correctUrl === dbUrl) {
         alreadyCorrectCount++
         continue
       }
 
-      // Update the database
+      // Update the database to use _full_ size
       await prisma.images.update({
         where: { id: image.id },
         data: { img: correctUrl }
