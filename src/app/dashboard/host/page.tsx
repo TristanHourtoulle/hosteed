@@ -203,17 +203,32 @@ export default function HostDashboard() {
             {products.map(product => (
               <motion.div key={product.id} variants={itemVariants}>
                 <Card className='pt-0 pb-0 overflow-hidden group hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm'>
-                  {product.img && product.img[0] && (
-                    <div className='relative h-48 w-full overflow-hidden'>
-                      <LazyImage
-                        src={product.img[0].img}
-                        alt={product.name}
-                        fill
-                        className='object-cover group-hover:scale-110 transition-transform duration-300'
-                        quality={80}
-                      />
-                    </div>
-                  )}
+                  <div className='relative h-48 w-full overflow-hidden bg-gray-100'>
+                    {product.img && product.img[0] && product.img[0].img ? (
+                      // Vérifier si l'image est en base64 ou une URL
+                      product.img[0].img.startsWith('data:image') ? (
+                        // Image base64 - utiliser <img> HTML natif
+                        <img
+                          src={product.img[0].img}
+                          alt={product.name}
+                          className='w-full h-full object-cover group-hover:scale-110 transition-transform duration-300'
+                        />
+                      ) : (
+                        // Image URL - utiliser LazyImage avec Next.js Image
+                        <LazyImage
+                          src={product.img[0].img}
+                          alt={product.name}
+                          fill
+                          className='object-cover group-hover:scale-110 transition-transform duration-300'
+                          quality={80}
+                        />
+                      )
+                    ) : (
+                      <div className='flex items-center justify-center h-full bg-gradient-to-br from-gray-100 to-gray-200'>
+                        <Home className='w-16 h-16 text-gray-400' />
+                      </div>
+                    )}
+                  </div>
                   <CardContent className='p-6 space-y-4'>
                     <div className='flex justify-between items-start'>
                       <h2 className='text-xl font-semibold text-gray-800 line-clamp-1'>
