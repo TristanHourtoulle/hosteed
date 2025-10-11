@@ -553,8 +553,8 @@ export default function CreateProductPage() {
     setSelectedFiles(prev => prev.filter(img => img.id !== id))
   }
 
-  // Convert files to base64 with compression
-  const convertFilesToBase64 = async (imageFiles: ImageFile[]): Promise<string[]> => {
+  // Upload images via API (WebP conversion + 3 sizes)
+  const uploadImagesToServer = async (imageFiles: ImageFile[], productId: string): Promise<string[]> => {
     const files = imageFiles.map(img => img.file)
     setIsUploadingImages(true)
     try {
@@ -566,23 +566,48 @@ export default function CreateProductPage() {
         quality: 0.8,
       })
 
-      // Then convert to base64
-      const promises = compressedFiles.map((file, index) => {
-        return new Promise<string>((resolve, reject) => {
+      // Convert to base64 for API upload
+      const base64Images: string[] = []
+      for (let i = 0; i < compressedFiles.length; i++) {
+        const file = compressedFiles[i]
+        const base64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader()
           reader.onloadend = () => {
             console.log(
-              `Image ${index + 1} (${file.name}) final size: ${formatFileSize(file.size)}`
+              `Image ${i + 1} (${file.name}) compressed size: ${formatFileSize(file.size)}`
             )
             resolve(reader.result as string)
           }
           reader.onerror = () => reject(new Error(`Erreur de lecture de l'image: ${file.name}`))
           reader.readAsDataURL(file)
         })
+        base64Images.push(base64)
+      }
+
+      // Upload to API (converts to WebP + generates 3 sizes)
+      console.log(`📤 Uploading ${base64Images.length} images to server...`)
+      const uploadResponse = await fetch('/api/images/upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          images: base64Images,
+          entityType: 'products',
+          entityId: productId,
+        }),
       })
 
-      const results = await Promise.all(promises)
-      return results
+      if (!uploadResponse.ok) {
+        const error = await uploadResponse.json()
+        throw new Error(error.error || 'Erreur lors de l\'upload des images')
+      }
+
+      const uploadData = await uploadResponse.json()
+      console.log(`✅ Successfully uploaded ${uploadData.count} images`)
+
+      // Return thumb URLs (lightweight for DB)
+      return uploadData.images.map((img: {thumb: string, medium: string, full: string}) => img.thumb)
     } finally {
       setIsUploadingImages(false)
     }
@@ -661,11 +686,6 @@ export default function CreateProductPage() {
     }
 
     try {
-      // Convert images to base64
-      setIsUploadingImages(true)
-      const base64Images = await convertFilesToBase64(selectedFiles)
-      setIsUploadingImages(false)
-
       // Récupérer les coordonnées géographiques si un placeId est disponible
       let latitude = 0
       let longitude = 0
@@ -695,7 +715,7 @@ export default function CreateProductPage() {
       console.log('specialPrices state:', specialPrices)
       console.log('specialPrices length:', specialPrices.length)
 
-      // Préparer les données pour le service
+      // Étape 1: Créer le produit SANS les images pour obtenir un ID
       const productData = {
         name: formData.name,
         description: formData.description,
@@ -720,7 +740,7 @@ export default function CreateProductPage() {
         includedServices: formData.includedServiceIds,
         extras: formData.extraIds,
         highlights: formData.highlightIds,
-        images: base64Images, // Utiliser les images converties en base64
+        images: [], // Créer sans images d'abord
         nearbyPlaces: formData.nearbyPlaces.map(place => ({
           name: place.name,
           distance: place.distance ? Number(place.distance) : 0,
@@ -746,11 +766,29 @@ export default function CreateProductPage() {
 
       const result = await createProduct(productData)
 
-      if (result) {
-        router.push('/dashboard')
-      } else {
+      if (!result) {
         throw new Error("Erreur lors de la création de l'annonce")
       }
+
+      // Étape 2: Upload les images vers le serveur (WebP conversion + 3 sizes)
+      setIsUploadingImages(true)
+      const imageUrls = await uploadImagesToServer(selectedFiles, result.id)
+
+      // Étape 3: Mettre à jour le produit avec les URLs des images
+      const updateResponse = await fetch(`/api/products/${result.id}/images`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ imageUrls }),
+      })
+
+      if (!updateResponse.ok) {
+        console.error('Erreur lors de la mise à jour des images, mais le produit a été créé')
+        // On continue quand même car le produit existe
+      }
+
+      router.push('/dashboard')
     } catch (error) {
       console.error('Error creating product:', error)
       setError(parseCreateProductError(error))
