@@ -390,11 +390,15 @@ model RentRejection {
 }
 
 model UnAvailableProduct {
-  id        String   @id @default(cuid())
-  startDate DateTime
-  endDate   DateTime
-  productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id          String   @id @default(cuid())
+  startDate   DateTime
+  endDate     DateTime
+  productId   String
+  title       String   // Titre du blocage (obligatoire)
+  description String?  // Description du blocage (optionnelle)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   // Performance indexes
   @@index([productId])
