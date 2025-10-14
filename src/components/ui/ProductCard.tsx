@@ -1,10 +1,12 @@
 import React, { useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Heart, Star, ImageIcon } from 'lucide-react'
+import { Heart, Star, ImageIcon, Clock } from 'lucide-react'
 import { getCityFromAddress, calculateAverageRating, isProductSponsored } from '@/lib/utils'
 import { useFavoritesOptimized } from '@/hooks/useFavoritesOptimized'
 import { motion } from 'framer-motion'
+import PromotionBadge from '@/components/promotions/PromotionBadge'
+import { getDaysUntilEnd, getUrgencyMessage } from '@/lib/utils/promotion'
 
 interface Review {
   grade: number
@@ -13,6 +15,14 @@ interface Review {
   comfort: number
   equipment: number
   cleaning: number
+}
+
+interface ProductPromotion {
+  id: string
+  discountPercentage: number
+  startDate: Date
+  endDate: Date
+  isActive: boolean
 }
 
 interface Product {
@@ -39,6 +49,7 @@ interface Product {
     start: Date
     end: Date
   }>
+  promotions?: ProductPromotion[]
 }
 
 function ProductCard({ product, index = 0 }: { product: Product; index?: number }) {
@@ -51,15 +62,63 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
   console.log(`ProductCard ${product.id} - img length:`, product.img?.length)
 
   // Memoize expensive calculations to prevent recalculation on every render
-  const isSponsored = useMemo(() => 
-    isProductSponsored(product.PromotedProduct), 
+  const isSponsored = useMemo(() =>
+    isProductSponsored(product.PromotedProduct),
     [product.PromotedProduct]
   )
 
-  const rating = useMemo(() => 
-    product.reviews ? calculateAverageRating(product.reviews) : null, 
+  const rating = useMemo(() =>
+    product.reviews ? calculateAverageRating(product.reviews) : null,
     [product.reviews]
   )
+
+  // Promotion logic
+  const activePromotion = useMemo(() => {
+    if (!product.promotions || product.promotions.length === 0) return null
+    const now = new Date()
+    return product.promotions.find((promo) =>
+      promo.isActive &&
+      new Date(promo.startDate) <= now &&
+      new Date(promo.endDate) >= now
+    ) || null
+  }, [product.promotions])
+
+  const hasActivePromotion = activePromotion !== null
+
+  const { displayPrice, originalPrice, savings } = useMemo(() => {
+    const basePrice = parseFloat(product.basePrice)
+
+    if (hasActivePromotion && activePromotion) {
+      const discounted = basePrice * (1 - activePromotion.discountPercentage / 100)
+      return {
+        displayPrice: discounted.toFixed(2),
+        originalPrice: basePrice.toFixed(2),
+        savings: (basePrice - discounted).toFixed(2)
+      }
+    }
+
+    // Fallback to special price if exists
+    if (product.specialPriceApplied && product.originalBasePrice) {
+      return {
+        displayPrice: product.basePrice,
+        originalPrice: product.originalBasePrice,
+        savings: (parseFloat(product.originalBasePrice) - basePrice).toFixed(2)
+      }
+    }
+
+    return {
+      displayPrice: basePrice.toFixed(2),
+      originalPrice: null,
+      savings: null
+    }
+  }, [product.basePrice, product.originalBasePrice, product.specialPriceApplied, hasActivePromotion, activePromotion])
+
+  const urgencyInfo = useMemo(() => {
+    if (!activePromotion) return null
+    const daysUntilEnd = getDaysUntilEnd(new Date(activePromotion.endDate))
+    const message = getUrgencyMessage(new Date(activePromotion.endDate))
+    return daysUntilEnd > 0 && daysUntilEnd <= 7 ? message : null
+  }, [activePromotion])
 
   // ✅ PERFORMANCE FIX: Utiliser directement l'URL de l'image migrée ou l'API thumbnail
   const hasImages = useMemo(() =>
@@ -153,12 +212,40 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
               </div>
             )}
 
-            {/* Sponsored Badge */}
+            {/* Promotion Badge */}
+            {hasActivePromotion && activePromotion && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className='absolute top-3 left-3 z-10'
+              >
+                <PromotionBadge
+                  discountPercentage={activePromotion.discountPercentage}
+                  size="md"
+                />
+              </motion.div>
+            )}
+
+            {/* Urgency Badge */}
+            {urgencyInfo && (
+              <motion.div
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className='absolute top-14 left-3 z-10 bg-red-100 text-red-700 px-2 py-0.5 sm:py-1 rounded text-xs sm:text-sm font-medium border border-red-200 flex items-center gap-1'
+              >
+                <Clock className='w-3 h-3' />
+                {urgencyInfo}
+              </motion.div>
+            )}
+
+            {/* Sponsored Badge (moved to right if promotion exists) */}
             {isSponsored && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className='absolute top-3 left-3 z-10 bg-gradient-to-r from-amber-400 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg border border-white/20'
+                className={`absolute top-3 z-10 bg-gradient-to-r from-amber-400 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg border border-white/20 ${
+                  hasActivePromotion ? 'right-3' : 'left-3'
+                }`}
               >
                 <div className='flex items-center gap-1'>
                   <Star className='w-3 h-3 fill-current' />
@@ -249,22 +336,31 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
 
             <div className='flex items-center justify-between pt-1'>
               <div className='flex flex-col gap-1'>
-                <div className='flex items-baseline gap-1'>
-                  <span className='font-bold text-gray-900 text-lg'>{product.basePrice}€</span>
-                  <span className='text-gray-400 text-sm font-light'>/ nuit</span>
+                {/* Prix avec ou sans promotion */}
+                <div className='flex flex-col gap-1'>
+                  {originalPrice && (
+                    <span className='text-sm text-gray-400 line-through'>
+                      {originalPrice}€
+                    </span>
+                  )}
+                  <div className='flex items-baseline gap-1'>
+                    <span className={`font-bold text-lg ${hasActivePromotion ? 'text-green-600' : 'text-gray-900'}`}>
+                      {displayPrice}€
+                    </span>
+                    <span className='text-gray-400 text-sm font-light'>/ nuit</span>
+                  </div>
+                  {savings && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className='bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-lg px-2 py-1'
+                    >
+                      <span className='text-xs text-green-700 font-semibold'>
+                        Économisez {savings}€
+                      </span>
+                    </motion.div>
+                  )}
                 </div>
-                {product.specialPriceApplied && product.originalBasePrice && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className='bg-gradient-to-r from-orange-100 to-red-100 border border-orange-200 rounded-lg px-2 py-1'
-                  >
-                    <div className='flex items-center gap-1'>
-                      <span className='text-xs text-orange-700 font-medium'>Prix de base:</span>
-                      <span className='text-xs text-orange-800 font-semibold line-through'>{product.originalBasePrice}€</span>
-                    </div>
-                  </motion.div>
-                )}
               </div>
               {product.certified && (
                 <motion.div
