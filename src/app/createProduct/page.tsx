@@ -46,7 +46,6 @@ import CreateSpecialPriceModal from '@/components/ui/CreateSpecialPriceModal'
 import BookingCostSummary from '@/components/ui/BookingCostSummary'
 import SortableImageGrid from '@/components/ui/SortableImageGrid'
 import ImageGalleryPreview from '@/components/ui/ImageGalleryPreview'
-import CommissionDisplay from '@/components/ui/CommissionDisplay'
 import PhoneInput from '@/components/ui/PhoneInput'
 import ErrorAlert, { ErrorDetails } from '@/components/ui/ErrorAlert'
 import { parseCreateProductError, createValidationError } from '@/lib/utils/errorHandler'
@@ -1236,14 +1235,6 @@ export default function CreateProductPage() {
                         Acceptation automatique des réservations
                       </label>
                     </div>
-
-                    {/* Calcul des commissions */}
-                    {formData.basePrice && (
-                      <CommissionDisplay 
-                        basePrice={parseFloat(formData.basePrice) || 0}
-                        className="border-orange-200 bg-orange-50/30"
-                      />
-                    )}
                   </CardContent>
                 </Card>
               </motion.div>
@@ -1829,7 +1820,7 @@ export default function CreateProductPage() {
                       startDate={testBooking.startDate}
                       endDate={testBooking.endDate}
                       className='max-w-md'
-                      showCommissions={true}
+                      showCommissions={false}
                     />
                     <p className='text-xs text-slate-500 mt-2'>
                       * Exemple calculé sur {numberOfDays} jour{numberOfDays > 1 ? 's' : ''} pour {testBooking.guestCount} personne{testBooking.guestCount > 1 ? 's' : ''}
