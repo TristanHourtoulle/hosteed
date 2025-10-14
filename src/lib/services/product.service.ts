@@ -171,6 +171,20 @@ export async function findProductById(id: string) {
         },
         propertyInfo: true, // Inclure les informations de propriété
         // specialPrices: true, // Temporairement désactivé car le modèle n'est pas généré
+        promotions: {
+          where: {
+            isActive: true,
+            startDate: { lte: new Date() },
+            endDate: { gte: new Date() },
+          },
+          select: {
+            id: true,
+            discountPercentage: true,
+            startDate: true,
+            endDate: true,
+            isActive: true,
+          }
+        },
         reviews: {
           where: {
             approved: true,
@@ -458,6 +472,20 @@ export async function findAllProductByHostIdPaginated(
           email: true,
         },
       },
+      promotions: {
+        where: {
+          isActive: true,
+          startDate: { lte: new Date() },
+          endDate: { gte: new Date() },
+        },
+        select: {
+          id: true,
+          discountPercentage: true,
+          startDate: true,
+          endDate: true,
+          isActive: true,
+        }
+      },
     }
 
     const mediumIncludes = {
@@ -475,6 +503,20 @@ export async function findAllProductByHostIdPaginated(
           email: true,
         },
       },
+      promotions: {
+        where: {
+          isActive: true,
+          startDate: { lte: new Date() },
+          endDate: { gte: new Date() },
+        },
+        select: {
+          id: true,
+          discountPercentage: true,
+          startDate: true,
+          endDate: true,
+          isActive: true,
+        }
+      },
     }
 
     const fullIncludes = {
@@ -491,6 +533,20 @@ export async function findAllProductByHostIdPaginated(
           name: true,
           email: true,
         },
+      },
+      promotions: {
+        where: {
+          isActive: true,
+          startDate: { lte: new Date() },
+          endDate: { gte: new Date() },
+        },
+        select: {
+          id: true,
+          discountPercentage: true,
+          startDate: true,
+          endDate: true,
+          isActive: true,
+        }
       },
     }
 

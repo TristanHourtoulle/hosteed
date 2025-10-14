@@ -200,32 +200,52 @@ export default function HostDashboard() {
             className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
             variants={containerVariants}
           >
-            {products.map(product => (
+            {products.map(product => {
+              // Check for active promotion
+              const activePromotion = product.promotions && product.promotions.length > 0
+                ? product.promotions.find((promo) => {
+                    if (!promo.isActive) return false
+
+                    const now = new Date()
+                    const startDate = new Date(promo.startDate)
+                    const endDate = new Date(promo.endDate)
+
+                    return (
+                      !isNaN(startDate.getTime()) &&
+                      !isNaN(endDate.getTime()) &&
+                      startDate <= now &&
+                      endDate >= now
+                    )
+                  })
+                : null
+
+              const basePrice = parseFloat(product.basePrice)
+              const effectivePrice = activePromotion
+                ? basePrice * (1 - activePromotion.discountPercentage / 100)
+                : basePrice
+
+              // Utiliser l'image thumb (la full a un hash différent)
+              const imageSrc = product.img?.[0]?.img || null
+
+              return (
               <motion.div key={product.id} variants={itemVariants}>
                 <Card className='pt-0 pb-0 overflow-hidden group hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm'>
                   <div className='relative h-48 w-full overflow-hidden bg-gray-100'>
-                    {product.img && product.img[0] && product.img[0].img ? (
-                      // Vérifier si l'image est en base64 ou une URL
-                      product.img[0].img.startsWith('data:image') ? (
-                        // Image base64 - utiliser <img> HTML natif
-                        <img
-                          src={product.img[0].img}
-                          alt={product.name}
-                          className='w-full h-full object-cover group-hover:scale-110 transition-transform duration-300'
-                        />
-                      ) : (
-                        // Image URL - utiliser LazyImage avec Next.js Image
-                        <LazyImage
-                          src={product.img[0].img}
-                          alt={product.name}
-                          fill
-                          className='object-cover group-hover:scale-110 transition-transform duration-300'
-                          quality={80}
-                        />
-                      )
+                    {imageSrc ? (
+                      <img
+                        src={imageSrc}
+                        alt={product.name}
+                        className='w-full h-full object-cover group-hover:scale-110 transition-transform duration-300'
+                      />
                     ) : (
                       <div className='flex items-center justify-center h-full bg-gradient-to-br from-gray-100 to-gray-200'>
                         <Home className='w-16 h-16 text-gray-400' />
+                      </div>
+                    )}
+                    {/* Badge de promotion */}
+                    {activePromotion && (
+                      <div className='absolute top-3 left-3 z-10 bg-gradient-to-r from-red-500 to-pink-500 text-white px-3 py-1.5 rounded-full text-sm font-bold shadow-lg'>
+                        -{activePromotion.discountPercentage}%
                       </div>
                     )}
                   </div>
@@ -242,7 +262,19 @@ export default function HostDashboard() {
                     </div>
                     <div className='space-y-2'>
                       <p className='text-gray-600'>{getCityFromAddress(product.address)}</p>
-                      <p className='text-2xl font-bold text-blue-600'>{product.basePrice}€</p>
+                      {activePromotion ? (
+                        <div className='space-y-1'>
+                          <div className='flex items-center gap-2'>
+                            <span className='text-lg text-gray-400 line-through'>{basePrice.toFixed(2)}€</span>
+                            <span className='bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-semibold'>
+                              PROMO
+                            </span>
+                          </div>
+                          <p className='text-2xl font-bold text-green-600'>{effectivePrice.toFixed(2)}€</p>
+                        </div>
+                      ) : (
+                        <p className='text-2xl font-bold text-blue-600'>{product.basePrice}€</p>
+                      )}
                     </div>
                     <div className='flex justify-between items-center pt-4 border-t border-gray-100'>
                       <Button
@@ -291,7 +323,8 @@ export default function HostDashboard() {
                   </CardContent>
                 </Card>
               </motion.div>
-            ))}
+              )
+            })}
           </motion.div>
         )}
 

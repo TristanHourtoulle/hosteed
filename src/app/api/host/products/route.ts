@@ -30,10 +30,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ products: [], totalPages: 0, currentPage: page }, { status: 200 })
     }
 
-    // Fonction récursive pour convertir les BigInt en nombres
+    // Fonction récursive pour convertir les BigInt en nombres et les Date en ISO strings
     const convertBigIntToNumber = (obj: unknown): unknown => {
       if (obj === null || obj === undefined) return obj
       if (typeof obj === 'bigint') return Number(obj)
+      if (obj instanceof Date) return obj.toISOString()
       if (Array.isArray(obj)) return obj.map(convertBigIntToNumber)
       if (typeof obj === 'object') {
         return Object.fromEntries(

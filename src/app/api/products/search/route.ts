@@ -314,6 +314,21 @@ export async function GET(request: NextRequest) {
       type: {
         select: { name: true, id: true }
       },
+      // Include active promotions
+      promotions: {
+        where: {
+          isActive: true,
+          startDate: { lte: new Date() },
+          endDate: { gte: new Date() },
+        },
+        select: {
+          id: true,
+          discountPercentage: true,
+          startDate: true,
+          endDate: true,
+          isActive: true,
+        }
+      },
       // Only include these for popular sorting
       ...(popular ? {
         equipments: {

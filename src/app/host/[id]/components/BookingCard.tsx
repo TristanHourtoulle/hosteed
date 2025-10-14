@@ -29,6 +29,14 @@ interface Reviews {
   approved: boolean
 }
 
+interface ProductPromotion {
+  id: string
+  discountPercentage: number
+  startDate: Date
+  endDate: Date
+  isActive: boolean
+}
+
 interface Product {
   id: string
   name: string
@@ -62,6 +70,7 @@ interface Product {
   user: User[]
   typeId?: string // Property type ID for commission calculation
   type?: { id: string; name: string } // Property type relation
+  promotions?: ProductPromotion[]
 }
 
 interface FormData {
@@ -132,6 +141,25 @@ export default function BookingCard({
 
   const nights = calculateNights()
 
+  // Check for active promotion
+  const activePromotion = product.promotions && product.promotions.length > 0
+    ? product.promotions.find((promo) => {
+        const now = new Date()
+        return (
+          promo.isActive &&
+          new Date(promo.startDate) <= now &&
+          new Date(promo.endDate) >= now
+        )
+      })
+    : null
+
+  // Calculate price with promotion if applicable
+  const effectiveBasePrice = activePromotion
+    ? parseFloat(product.basePrice) * (1 - activePromotion.discountPercentage / 100)
+    : parseFloat(product.basePrice)
+
+  const originalBasePrice = activePromotion ? parseFloat(product.basePrice) : null
+
   // Effect to load default commission info on mount
   useEffect(() => {
     const loadCommissionInfo = async () => {
@@ -140,7 +168,7 @@ export default function BookingCard({
         if (!typeId) return
 
         const calculation = await calculateTotalRentPrice(
-          parseFloat(product.basePrice),
+          effectiveBasePrice,
           1, // 1 night for reference
           0, // no extras
           typeId
@@ -158,7 +186,7 @@ export default function BookingCard({
     }
 
     loadCommissionInfo()
-  }, [product.basePrice, product.type?.id, product.typeId])
+  }, [effectiveBasePrice, product.type?.id, product.typeId])
 
   // Effect to calculate prices when dates change
   useEffect(() => {
@@ -169,7 +197,7 @@ export default function BookingCard({
           const typeId = product.type?.id || product.typeId
 
           const calculation = await calculateTotalRentPrice(
-            parseFloat(product.basePrice),
+            effectiveBasePrice,
             nights,
             25, // cleaning fee
             typeId // Pass typeId for type-specific commission
@@ -185,9 +213,9 @@ export default function BookingCard({
     }
 
     updatePrices()
-  }, [nights, product.basePrice, product.type?.id, product.typeId])
+  }, [nights, effectiveBasePrice, product.type?.id, product.typeId])
 
-  const subtotal = parseFloat(product.basePrice) * nights
+  const subtotal = effectiveBasePrice * nights
   const serviceFee = priceCalculation ? Math.round(priceCalculation.clientCommission) : 0
   const total = priceCalculation ? Math.round(priceCalculation.clientPays) : subtotal + serviceFee
 
@@ -199,9 +227,21 @@ export default function BookingCard({
         <div className='flex flex-col gap-4 mb-6'>
           {/* Prix et notes sur la même ligne */}
           <div className='flex items-center justify-between'>
-            <div className='flex items-baseline gap-2'>
-              <span className='text-2xl font-semibold text-gray-900'>{product.basePrice}€</span>
-              <span className='text-gray-600'>par nuit</span>
+            <div className='flex flex-col gap-1'>
+              {activePromotion && originalBasePrice && (
+                <div className='flex items-center gap-2'>
+                  <span className='text-sm text-gray-400 line-through'>{originalBasePrice.toFixed(2)}€</span>
+                  <span className='bg-gradient-to-r from-red-500 to-pink-500 text-white px-2 py-0.5 rounded-full text-xs font-bold'>
+                    -{activePromotion.discountPercentage}%
+                  </span>
+                </div>
+              )}
+              <div className='flex items-baseline gap-2'>
+                <span className={`text-2xl font-semibold ${activePromotion ? 'text-green-600' : 'text-gray-900'}`}>
+                  {effectiveBasePrice.toFixed(2)}€
+                </span>
+                <span className='text-gray-600'>par nuit</span>
+              </div>
             </div>
             {product.reviews && product.reviews.length > 0 ? (
               <div className='flex items-center gap-1'>
@@ -217,8 +257,20 @@ export default function BookingCard({
             )}
           </div>
 
-          {/* Prix spécial si applicable */}
-          {product.specialPriceApplied && product.originalBasePrice && (
+          {/* Badge de promotion si active */}
+          {activePromotion && (
+            <div className='bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg px-3 py-2'>
+              <div className='flex flex-col gap-1'>
+                <span className='text-sm text-green-700 font-medium'>🎉 Promotion active!</span>
+                <span className='text-sm text-green-800 font-semibold'>
+                  Économisez {(originalBasePrice! - effectiveBasePrice).toFixed(2)}€ par nuit
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Prix spécial si applicable (pour la compatibilité) */}
+          {!activePromotion && product.specialPriceApplied && product.originalBasePrice && (
             <div className='bg-gradient-to-r from-orange-100 to-red-100 border border-orange-200 rounded-lg px-3 py-2'>
               <div className='flex items-center gap-2'>
                 <span className='text-sm text-orange-700 font-medium'>Prix de base:</span>
@@ -452,7 +504,12 @@ export default function BookingCard({
             <div className='space-y-3 text-sm'>
               <div className='flex justify-between items-center'>
                 <span className='text-gray-600 underline decoration-dotted cursor-help'>
-                  {product.basePrice}€ × {nights} nuit{nights > 1 ? 's' : ''}
+                  {effectiveBasePrice.toFixed(2)}€ × {nights} nuit{nights > 1 ? 's' : ''}
+                  {activePromotion && (
+                    <span className='ml-1 text-green-600 font-medium'>
+                      (avec promotion -{activePromotion.discountPercentage}%)
+                    </span>
+                  )}
                 </span>
                 <span className='text-gray-900 font-medium'>{subtotal.toFixed(0)}€</span>
               </div>

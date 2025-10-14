@@ -1,6 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
 import { ProductValidation } from '@prisma/client'
 
+interface ProductPromotion {
+  id: string
+  discountPercentage: number
+  startDate: Date
+  endDate: Date
+  isActive: boolean
+}
+
 interface Product {
   id: string
   name: string
@@ -11,6 +19,7 @@ interface Product {
   isDraft?: boolean
   originalProductId?: string | null
   img?: { img: string }[]
+  promotions?: ProductPromotion[]
 }
 
 interface HostProductsResponse {

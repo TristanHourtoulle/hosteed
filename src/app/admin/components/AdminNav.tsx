@@ -19,7 +19,6 @@ import {
   ChevronDown,
   Shield,
   TrendingUp,
-  Calendar,
   Menu,
   X,
   Settings,
@@ -29,6 +28,7 @@ import {
   BookOpen,
   Edit3,
   Wallet,
+  Tag,
 } from 'lucide-react'
 import { Button } from '@/components/ui/shadcnui/button'
 import {
@@ -156,6 +156,12 @@ const navGroups: NavGroup[] = [
         href: '/admin/promoted',
         icon: Star,
         requiredRoles: ['ADMIN'],
+      },
+      {
+        title: 'Promotions',
+        href: '/admin/promotions',
+        icon: Tag,
+        requiredRoles: ['ADMIN', 'HOST_MANAGER'],
       },
       {
         title: 'Commissions',
