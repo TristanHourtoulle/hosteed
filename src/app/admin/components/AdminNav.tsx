@@ -28,6 +28,7 @@ import {
   Highlighter,
   BookOpen,
   Edit3,
+  Wallet,
 } from 'lucide-react'
 import { Button } from '@/components/ui/shadcnui/button'
 import {
@@ -90,6 +91,11 @@ const navGroups: NavGroup[] = [
         icon: MessageSquare,
       },
       {
+        title: 'Évaluations utilisateurs',
+        href: '/admin/user-ratings',
+        icon: Star,
+      },
+      {
         title: 'Refus',
         href: '/admin/rejections',
         icon: XCircle,
@@ -126,12 +132,6 @@ const navGroups: NavGroup[] = [
         icon: Users,
         requiredRoles: ['ADMIN'],
       },
-      {
-        title: 'Réservations',
-        href: '/admin/reservations',
-        icon: Calendar,
-        requiredRoles: ['ADMIN'],
-      },
     ],
   },
   {
@@ -155,6 +155,12 @@ const navGroups: NavGroup[] = [
         title: 'Sponsorisés',
         href: '/admin/promoted',
         icon: Star,
+        requiredRoles: ['ADMIN'],
+      },
+      {
+        title: 'Commissions',
+        href: '/admin/commissions',
+        icon: Settings,
         requiredRoles: ['ADMIN'],
       },
     ],
@@ -199,10 +205,10 @@ const navGroups: NavGroup[] = [
         icon: Home,
       },
       {
-        title: 'Commissions',
-        href: '/admin/commission-settings',
-        icon: CreditCard,
-        requiredRoles: ['ADMIN'],
+        title: 'Retraits',
+        href: '/admin/withdrawals',
+        icon: Wallet,
+        requiredRoles: ['ADMIN', 'HOST_MANAGER'],
       },
     ],
   },

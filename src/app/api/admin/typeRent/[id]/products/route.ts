@@ -32,7 +32,13 @@ export async function GET(
       },
     })
 
-    return NextResponse.json(products)
+    // Convert BigInt fields to numbers for JSON serialization
+    const serializedProducts = products.map(product => ({
+      ...product,
+      maxPeople: product.maxPeople ? Number(product.maxPeople) : null,
+    }))
+
+    return NextResponse.json(serializedProducts)
   } catch (error) {
     console.error('Erreur lors de la récupération des produits:', error)
     return NextResponse.json(

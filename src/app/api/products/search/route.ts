@@ -27,24 +27,55 @@ export async function GET(request: NextRequest) {
     const maxPrice = searchParams.get('maxPrice')
     const minPeople = searchParams.get('minPeople')
     const maxPeople = searchParams.get('maxPeople')
+    const minRooms = searchParams.get('minRooms')
+    const maxRooms = searchParams.get('maxRooms')
+    const minBathrooms = searchParams.get('minBathrooms')
+    const maxBathrooms = searchParams.get('maxBathrooms')
+    const sizeMin = searchParams.get('sizeMin')
+    const sizeMax = searchParams.get('sizeMax')
     const certifiedOnly = searchParams.get('certifiedOnly') === 'true'
     const autoAcceptOnly = searchParams.get('autoAcceptOnly') === 'true'
+    const contractRequired = searchParams.get('contractRequired') === 'true'
+    // TODO: Implement date-based availability filtering
+    // const arrivingDate = searchParams.get('arrivingDate')
+    // const leavingDate = searchParams.get('leavingDate')
 
-    // Create cache filters object
+    // Array filters (comma-separated IDs)
+    const equipments = searchParams.get('equipments')?.split(',').filter(Boolean) || []
+    const services = searchParams.get('services')?.split(',').filter(Boolean) || []
+    const meals = searchParams.get('meals')?.split(',').filter(Boolean) || []
+    const securities = searchParams.get('securities')?.split(',').filter(Boolean) || []
+    const typeRooms = searchParams.get('typeRooms')?.split(',').filter(Boolean) || []
+
+    // Create cache filters object - MUST include ALL filter parameters
     const cacheFilters = {
       query: search,
       location,
       typeId: typeRentId,
       minPrice: minPrice ? parseInt(minPrice) : undefined,
       maxPrice: maxPrice ? parseInt(maxPrice) : undefined,
+      minPeople: minPeople ? parseInt(minPeople) : undefined,
+      maxPeople: maxPeople ? parseInt(maxPeople) : undefined,
+      minRooms: minRooms ? parseInt(minRooms) : undefined,
+      maxRooms: maxRooms ? parseInt(maxRooms) : undefined,
+      minBathrooms: minBathrooms ? parseInt(minBathrooms) : undefined,
+      maxBathrooms: maxBathrooms ? parseInt(maxBathrooms) : undefined,
+      sizeMin: sizeMin ? parseInt(sizeMin) : undefined,
+      sizeMax: sizeMax ? parseInt(sizeMax) : undefined,
       page,
       limit,
       sortBy: (featured ? 'featured' : popular ? 'popular' : recent ? 'recent' : promo ? 'promo' : 'created') as 'featured' | 'popular' | 'recent' | 'promo' | 'created',
-      guests: minPeople ? parseInt(minPeople) : undefined,
       // Include boolean filters in cache key
       featured: featured || undefined,
       certifiedOnly: certifiedOnly || undefined,
       autoAcceptOnly: autoAcceptOnly || undefined,
+      contractRequired: contractRequired || undefined,
+      // Include array filters in cache key (sorted for consistency)
+      equipments: equipments.length > 0 ? equipments.sort().join(',') : undefined,
+      services: services.length > 0 ? services.sort().join(',') : undefined,
+      meals: meals.length > 0 ? meals.sort().join(',') : undefined,
+      securities: securities.length > 0 ? securities.sort().join(',') : undefined,
+      typeRooms: typeRooms.length > 0 ? typeRooms.sort().join(',') : undefined,
     }
 
     // Check cache first for performance boost
@@ -115,27 +146,19 @@ export async function GET(request: NextRequest) {
       whereClause.typeId = typeRentId
     }
 
-    // Add price filters (string-based comparison for basePrice)
-    if (minPrice || maxPrice) {
-      const priceFilter: Record<string, string> = {}
-      if (minPrice) {
-        priceFilter.gte = minPrice
-      }
-      if (maxPrice) {
-        priceFilter.lte = maxPrice
-      }
-      whereClause.basePrice = priceFilter
-    }
+    // NOTE: basePrice is stored as String in DB, so we can't use Prisma comparison operators
+    // We'll filter by price in JavaScript after fetching results to ensure proper numeric comparison
+    // See price filtering logic after DB query (around line 280)
 
-    // Add people filters
+    // Add people filters (BigInt fields in DB, but Prisma accepts Number for comparison)
     if (minPeople) {
       whereClause.maxPeople = {
-        gte: parseInt(minPeople)
+        gte: BigInt(minPeople)
       }
     }
     if (maxPeople) {
       whereClause.minPeople = {
-        lte: parseInt(maxPeople)
+        lte: BigInt(maxPeople)
       }
     }
 
@@ -147,6 +170,108 @@ export async function GET(request: NextRequest) {
     // Add auto-accept filter
     if (autoAcceptOnly) {
       whereClause.autoAccept = true
+    }
+
+    // Add contract required filter
+    if (contractRequired) {
+      whereClause.contract = true
+    }
+
+    // Add rooms filters (BigInt field in DB)
+    if (minRooms || maxRooms) {
+      const roomsFilter: Record<string, unknown> = {}
+      if (minRooms) {
+        roomsFilter.gte = BigInt(minRooms)
+      }
+      if (maxRooms) {
+        roomsFilter.lte = BigInt(maxRooms)
+      }
+      whereClause.room = roomsFilter
+    }
+
+    // Add bathrooms filters (BigInt field in DB)
+    if (minBathrooms || maxBathrooms) {
+      const bathroomsFilter: Record<string, unknown> = {}
+      if (minBathrooms) {
+        bathroomsFilter.gte = BigInt(minBathrooms)
+      }
+      if (maxBathrooms) {
+        bathroomsFilter.lte = BigInt(maxBathrooms)
+      }
+      whereClause.bathroom = bathroomsFilter
+    }
+
+    // Add size filters
+    if (sizeMin || sizeMax) {
+      const sizeFilter: Record<string, number> = {}
+      if (sizeMin) {
+        sizeFilter.gte = parseInt(sizeMin)
+      }
+      if (sizeMax) {
+        sizeFilter.lte = parseInt(sizeMax)
+      }
+      whereClause.sizeRoom = sizeFilter
+    }
+
+    // NOTE: Date availability filtering is complex and requires checking Rents table
+    // The 'arriving' and 'leaving' fields in Product are check-in/check-out TIMES (hours), not dates
+    // For now, we skip date filtering - this should be implemented with a proper availability check
+    // that queries the Rents table to find conflicts with requested dates
+    // TODO: Implement proper date availability filtering using Rents table
+
+    // Add equipments filter (products must have ALL selected equipments)
+    if (equipments.length > 0) {
+      whereClause.AND = [
+        ...(Array.isArray(whereClause.AND) ? whereClause.AND : []),
+        ...equipments.map(equipmentId => ({
+          equipments: {
+            some: { id: equipmentId }
+          }
+        }))
+      ]
+    }
+
+    // Add services filter (products must have ALL selected services)
+    if (services.length > 0) {
+      whereClause.AND = [
+        ...(Array.isArray(whereClause.AND) ? whereClause.AND : []),
+        ...services.map(serviceId => ({
+          servicesList: {
+            some: { id: serviceId }
+          }
+        }))
+      ]
+    }
+
+    // Add meals filter (products must have ALL selected meals)
+    if (meals.length > 0) {
+      whereClause.AND = [
+        ...(Array.isArray(whereClause.AND) ? whereClause.AND : []),
+        ...meals.map(mealId => ({
+          mealsList: {
+            some: { id: mealId }
+          }
+        }))
+      ]
+    }
+
+    // Add securities filter (products must have ALL selected securities)
+    if (securities.length > 0) {
+      whereClause.AND = [
+        ...(Array.isArray(whereClause.AND) ? whereClause.AND : []),
+        ...securities.map(securityId => ({
+          securities: {
+            some: { id: securityId }
+          }
+        }))
+      ]
+    }
+
+    // Add type rooms filter (if typeRooms is used in the Product schema)
+    if (typeRooms.length > 0) {
+      // Note: This filter may need adjustment based on actual schema
+      // Assuming there's a typeRoomId field in Product
+      whereClause.typeRoomId = { in: typeRooms }
     }
 
     // Add promo filter at database level (products under 100 EUR)
@@ -224,7 +349,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Execute optimized query
-    console.log('[SEARCH API] Executing DB query with whereClause:', JSON.stringify(whereClause, null, 2))
+    // Custom JSON serializer for BigInt values
+    const serializeForLog = (obj: unknown): string => {
+      return JSON.stringify(obj, (key, value) =>
+        typeof value === 'bigint' ? value.toString() + 'n' : value
+      , 2)
+    }
+    console.log('[SEARCH API] Executing DB query with whereClause:', serializeForLog(whereClause))
     const [rawProducts, totalCount] = await Promise.all([
       prisma.product.findMany({
         where: whereClause,
@@ -255,7 +386,7 @@ export async function GET(request: NextRequest) {
 
     // Apply remaining client-side sorting only for popularity (promo is now handled at DB level)
     let sortedProducts = products
-    
+
     if (popular) {
       sortedProducts = products.sort((a, b) => {
         const aScore = (a.equipments?.length || 0) + (a.servicesList?.length || 0)
@@ -264,20 +395,36 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // Apply price filtering (client-side because basePrice is stored as String)
+    let filteredProducts = sortedProducts
+    if (minPrice || maxPrice) {
+      filteredProducts = sortedProducts.filter(product => {
+        const price = parseFloat(product.basePrice)
+        if (isNaN(price)) return false
+
+        if (minPrice && price < parseFloat(minPrice)) return false
+        if (maxPrice && price > parseFloat(maxPrice)) return false
+
+        return true
+      })
+    }
+
     // Promo filtering is now handled at database level
 
     // Build response with pagination metadata
+    // Note: We use filteredProducts.length for accurate count after client-side price filtering
+    const finalTotal = (minPrice || maxPrice) ? filteredProducts.length : totalCount
     const pagination = {
       page,
       limit,
-      total: totalCount,
-      totalPages: Math.ceil(totalCount / limit),
-      hasNext: page < Math.ceil(totalCount / limit),
+      total: finalTotal,
+      totalPages: Math.ceil(finalTotal / limit),
+      hasNext: page < Math.ceil(finalTotal / limit),
       hasPrev: page > 1
     }
 
     const result = {
-      products: sortedProducts,
+      products: filteredProducts,
       pagination,
       filters: {
         search,
@@ -305,11 +452,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Cache the search results for future requests (massive performance boost)
-    console.log(`[SEARCH API] Caching ${sortedProducts.length} products with pagination:`, pagination)
+    console.log(`[SEARCH API] Caching ${filteredProducts.length} products with pagination:`, pagination)
     try {
       await productCacheService.cacheProductSearch(
         cacheFilters,
-        sortedProducts,
+        filteredProducts,
         pagination
       )
       console.log('[SEARCH API] Successfully cached search results')

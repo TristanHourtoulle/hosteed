@@ -290,8 +290,35 @@ export function useProductSearchPaginated() {
       if (filters.maxPrice) searchURL.searchParams.set('maxPrice', filters.maxPrice)
       if (filters.minPeople) searchURL.searchParams.set('minPeople', filters.minPeople)
       if (filters.maxPeople) searchURL.searchParams.set('maxPeople', filters.maxPeople)
+      if (filters.minRooms) searchURL.searchParams.set('minRooms', filters.minRooms)
+      if (filters.maxRooms) searchURL.searchParams.set('maxRooms', filters.maxRooms)
+      if (filters.minBathrooms) searchURL.searchParams.set('minBathrooms', filters.minBathrooms)
+      if (filters.maxBathrooms) searchURL.searchParams.set('maxBathrooms', filters.maxBathrooms)
+      if (filters.sizeMin) searchURL.searchParams.set('sizeMin', filters.sizeMin)
+      if (filters.sizeMax) searchURL.searchParams.set('sizeMax', filters.sizeMax)
       if (filters.certifiedOnly) searchURL.searchParams.set('certifiedOnly', 'true')
       if (filters.autoAcceptOnly) searchURL.searchParams.set('autoAcceptOnly', 'true')
+      if (filters.contractRequired) searchURL.searchParams.set('contractRequired', 'true')
+      if (filters.arrivingDate) searchURL.searchParams.set('arrivingDate', filters.arrivingDate)
+      if (filters.leavingDate) searchURL.searchParams.set('leavingDate', filters.leavingDate)
+
+      // Array filters - send as comma-separated strings
+      if (filters.selectedEquipments.length > 0) {
+        searchURL.searchParams.set('equipments', filters.selectedEquipments.join(','))
+      }
+      if (filters.selectedServices.length > 0) {
+        searchURL.searchParams.set('services', filters.selectedServices.join(','))
+      }
+      if (filters.selectedMeals.length > 0) {
+        searchURL.searchParams.set('meals', filters.selectedMeals.join(','))
+      }
+      if (filters.selectedSecurities.length > 0) {
+        searchURL.searchParams.set('securities', filters.selectedSecurities.join(','))
+      }
+      if (filters.selectedTypeRooms.length > 0) {
+        searchURL.searchParams.set('typeRooms', filters.selectedTypeRooms.join(','))
+      }
+
       if (guests > 1) searchURL.searchParams.set('minPeople', guests.toString())
 
       // Call optimized search API

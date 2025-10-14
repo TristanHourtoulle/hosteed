@@ -24,6 +24,7 @@ import {
   Soup,
   BrushCleaning,
   Calculator,
+  Wallet,
 } from 'lucide-react'
 import { StatsOverview } from './components/StatsOverview'
 import { ActionCardGroup } from './components/ActionCardGroup'
@@ -220,9 +221,15 @@ export default function AdminDashboard() {
         },
         {
           title: 'Configuration des commissions',
-          description: 'Gérer les taux de commission et frais',
+          description: 'Gérer les taux de commission par type de logement',
           icon: Calculator,
-          href: '/admin/commission-settings',
+          href: '/admin/commissions',
+        },
+        {
+          title: 'Gestion des retraits',
+          description: 'Gérer les demandes de retrait des hôtes',
+          icon: Wallet,
+          href: '/admin/withdrawals',
         },
       ],
     },

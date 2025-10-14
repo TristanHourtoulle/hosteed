@@ -60,6 +60,8 @@ interface Product {
   longitude?: number
   latitude?: number
   user: User[]
+  typeId?: string // Property type ID for commission calculation
+  type?: { id: string; name: string } // Property type relation
 }
 
 interface FormData {
@@ -90,6 +92,10 @@ export default function BookingCard({
     to: formData.leavingDate ? new Date(formData.leavingDate) : undefined,
   })
   const [priceCalculation, setPriceCalculation] = useState<CommissionCalculation | null>(null)
+  const [defaultCommissionInfo, setDefaultCommissionInfo] = useState<{
+    clientRate: number
+    clientFixed: number
+  } | null>(null)
 
   // Update parent component when date range changes
   const handleDateRangeChange = (range: DateRange | undefined) => {
@@ -126,15 +132,47 @@ export default function BookingCard({
 
   const nights = calculateNights()
 
+  // Effect to load default commission info on mount
+  useEffect(() => {
+    const loadCommissionInfo = async () => {
+      try {
+        const typeId = product.type?.id || product.typeId
+        if (!typeId) return
+
+        const calculation = await calculateTotalRentPrice(
+          parseFloat(product.basePrice),
+          1, // 1 night for reference
+          0, // no extras
+          typeId
+        )
+
+        if (calculation.breakdown) {
+          setDefaultCommissionInfo({
+            clientRate: calculation.breakdown.clientCommissionRate * 100,
+            clientFixed: calculation.breakdown.clientCommissionFixed,
+          })
+        }
+      } catch (error) {
+        console.error('Error loading commission info:', error)
+      }
+    }
+
+    loadCommissionInfo()
+  }, [product.basePrice, product.type?.id, product.typeId])
+
   // Effect to calculate prices when dates change
   useEffect(() => {
     const updatePrices = async () => {
       if (nights > 0) {
         try {
+          // Use typeId from product.type relation, fallback to product.typeId field
+          const typeId = product.type?.id || product.typeId
+
           const calculation = await calculateTotalRentPrice(
             parseFloat(product.basePrice),
             nights,
-            25 // cleaning fee
+            25, // cleaning fee
+            typeId // Pass typeId for type-specific commission
           )
           setPriceCalculation(calculation)
         } catch (error) {
@@ -147,7 +185,7 @@ export default function BookingCard({
     }
 
     updatePrices()
-  }, [nights, product.basePrice])
+  }, [nights, product.basePrice, product.type?.id, product.typeId])
 
   const subtotal = parseFloat(product.basePrice) * nights
   const serviceFee = priceCalculation ? Math.round(priceCalculation.clientCommission) : 0
@@ -159,20 +197,11 @@ export default function BookingCard({
     <div className='sticky top-20'>
       <div className='bg-white border border-gray-200 rounded-2xl shadow-xl p-6'>
         <div className='flex flex-col gap-4 mb-6'>
+          {/* Prix et notes sur la même ligne */}
           <div className='flex items-center justify-between'>
-            <div className='flex flex-col gap-2'>
-              <div className='flex items-baseline gap-2'>
-                <span className='text-2xl font-semibold text-gray-900'>{product.basePrice}€</span>
-                <span className='text-gray-600'>par nuit</span>
-              </div>
-              {product.specialPriceApplied && product.originalBasePrice && (
-                <div className='bg-gradient-to-r from-orange-100 to-red-100 border border-orange-200 rounded-lg px-3 py-2'>
-                  <div className='flex items-center gap-2'>
-                    <span className='text-sm text-orange-700 font-medium'>Prix de base:</span>
-                    <span className='text-sm text-orange-800 font-semibold line-through'>{product.originalBasePrice}€</span>
-                  </div>
-                </div>
-              )}
+            <div className='flex items-baseline gap-2'>
+              <span className='text-2xl font-semibold text-gray-900'>{product.basePrice}€</span>
+              <span className='text-gray-600'>par nuit</span>
             </div>
             {product.reviews && product.reviews.length > 0 ? (
               <div className='flex items-center gap-1'>
@@ -187,6 +216,33 @@ export default function BookingCard({
               </div>
             )}
           </div>
+
+          {/* Prix spécial si applicable */}
+          {product.specialPriceApplied && product.originalBasePrice && (
+            <div className='bg-gradient-to-r from-orange-100 to-red-100 border border-orange-200 rounded-lg px-3 py-2'>
+              <div className='flex items-center gap-2'>
+                <span className='text-sm text-orange-700 font-medium'>Prix de base:</span>
+                <span className='text-sm text-orange-800 font-semibold line-through'>{product.originalBasePrice}€</span>
+              </div>
+            </div>
+          )}
+
+          {/* Frais de service - Toute la largeur */}
+          {defaultCommissionInfo && (
+            <div className='bg-blue-50 border border-blue-200 rounded-lg px-3 py-2.5'>
+              <div className='flex flex-col gap-1'>
+                <div className='flex items-center justify-between'>
+                  <span className='text-sm text-blue-700 font-medium'>Frais de service Hosteed</span>
+                  <span className='text-sm text-blue-800 font-semibold'>
+                    {defaultCommissionInfo.clientRate}% + {defaultCommissionInfo.clientFixed}€
+                  </span>
+                </div>
+                <span className='text-xs text-blue-600'>
+                  Ces frais permettent de faire vivre la plateforme et d&apos;assurer un service de qualité
+                </span>
+              </div>
+            </div>
+          )}
           <div className='flex items-center gap-2'>
             <div className='relative h-10 w-10 rounded-full overflow-hidden'>
               {(() => {

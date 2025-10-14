@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { saveImage, saveImages } from '@/lib/services/image.service'
+import { saveImages } from '@/lib/services/image.service'
 
 /**
  * POST /api/images/upload

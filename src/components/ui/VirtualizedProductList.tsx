@@ -91,7 +91,8 @@ interface GridItemProps {
   }
 }
 
-const GridItem: React.FC<GridItemProps> = ({ columnIndex, rowIndex, style, data }) => {
+// GridItem is reserved for future virtualization implementation
+/* const GridItemComponent: React.FC<GridItemProps> = ({ columnIndex, rowIndex, style, data }) => {
   const { products, columnCount, onItemVisible } = data
   const index = rowIndex * columnCount + columnIndex
   const product = products[index]
@@ -119,7 +120,7 @@ const GridItem: React.FC<GridItemProps> = ({ columnIndex, rowIndex, style, data 
       </div>
     </div>
   )
-}
+} */
 
 /**
  * Hook pour calculer les dimensions responsive
@@ -154,7 +155,7 @@ const VirtualizedProductGrid: React.FC<VirtualizedProductListProps> = ({
   width = '100%',
   columnCount: forcedColumnCount,
   columnWidth: forcedColumnWidth,
-  rowHeight = 380, // Hauteur optimisée pour ProductCard
+  rowHeight: _rowHeight = 380, // Hauteur optimisée pour ProductCard (reserved for future virtualization)
   onItemVisible,
 }) => {
   const [containerRef, { isIntersecting: isNearEnd }] = useIntersectionObserver<HTMLDivElement>({
@@ -168,11 +169,11 @@ const VirtualizedProductGrid: React.FC<VirtualizedProductListProps> = ({
   )
 
   const columnCount = forcedColumnCount || dimensions.columnCount
-  const columnWidth = forcedColumnWidth || dimensions.columnWidth
+  const _columnWidth = forcedColumnWidth || dimensions.columnWidth
   const rowCount = Math.ceil(products.length / columnCount)
 
-  // Données pour les items de la grille
-  const itemData = useMemo(() => ({
+  // Données pour les items de la grille (reserved for future virtualization)
+  const _itemData = useMemo(() => ({
     products,
     columnCount,
     onItemVisible,
@@ -240,7 +241,8 @@ interface ListItemProps {
   }
 }
 
-const ListItem: React.FC<ListItemProps> = ({ index, style, data }) => {
+// ListItem is reserved for future virtualization implementation
+/* const ListItemComponent: React.FC<ListItemProps> = ({ index, style, data }) => {
   const { products, onItemVisible } = data
   const product = products[index]
   
@@ -266,7 +268,7 @@ const ListItem: React.FC<ListItemProps> = ({ index, style, data }) => {
       </div>
     </div>
   )
-}
+} */
 
 const VirtualizedProductList: React.FC<VirtualizedProductListProps> = ({
   products,
@@ -275,7 +277,7 @@ const VirtualizedProductList: React.FC<VirtualizedProductListProps> = ({
   loadNextPage,
   height = 600,
   width = '100%',
-  rowHeight = 380,
+  rowHeight: _rowHeight2 = 380, // Reserved for future virtualization
   onItemVisible,
 }) => {
   const [containerRef, { isIntersecting: isNearEnd }] = useIntersectionObserver<HTMLDivElement>({
@@ -283,7 +285,7 @@ const VirtualizedProductList: React.FC<VirtualizedProductListProps> = ({
     rootMargin: '200px',
   })
 
-  const itemData = useMemo(() => ({
+  const _itemData2 = useMemo(() => ({
     products,
     onItemVisible,
   }), [products, onItemVisible])

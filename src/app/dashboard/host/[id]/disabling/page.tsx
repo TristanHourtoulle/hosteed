@@ -18,9 +18,11 @@ export default function DisablingRent() {
     const formData = new FormData(e.currentTarget)
     const startDate = new Date(formData.get('startDate') as string)
     const endDate = new Date(formData.get('endDate') as string)
+    const title = formData.get('title') as string
+    const description = formData.get('description') as string
 
     try {
-      await createUnavailableRent(params.id as string, startDate, endDate)
+      await createUnavailableRent(params.id as string, startDate, endDate, title, description || null)
       alert("Période d'indisponibilité créée avec succès")
       if (formRef.current) {
         formRef.current.reset()
@@ -53,6 +55,33 @@ export default function DisablingRent() {
         )}
 
         <div className='space-y-4'>
+          <div>
+            <label htmlFor='title' className='block text-sm font-medium text-gray-700 mb-1'>
+              Titre <span className='text-red-500'>*</span>
+            </label>
+            <input
+              type='text'
+              id='title'
+              name='title'
+              placeholder='Ex: Travaux de rénovation'
+              className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+              required
+            />
+          </div>
+
+          <div>
+            <label htmlFor='description' className='block text-sm font-medium text-gray-700 mb-1'>
+              Description <span className='text-gray-500 text-xs'>(optionnel)</span>
+            </label>
+            <textarea
+              id='description'
+              name='description'
+              placeholder='Détails supplémentaires...'
+              rows={3}
+              className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+            />
+          </div>
+
           <div>
             <label htmlFor='startDate' className='block text-sm font-medium text-gray-700 mb-1'>
               Date de début

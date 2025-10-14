@@ -56,7 +56,7 @@ export function useIntersectionObserver<T extends Element = Element>(
     return () => {
       observer.disconnect()
     }
-  }, [elementRef.current, threshold, root, rootMargin, frozen])
+  }, [threshold, root, rootMargin, frozen])
 
   return [elementRef as RefObject<T>, { isIntersecting, entry }]
 }

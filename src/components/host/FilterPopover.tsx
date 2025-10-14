@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { Filter, Users, Home, Euro, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react'
+import { Filter, Users, Home, Euro, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@/shadcnui'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/shadcnui/popover'
@@ -133,9 +133,6 @@ export default function FilterPopover({
     localFilters.maxBathrooms ? 1 : 0,
     localFilters.sizeMin ? 1 : 0,
     localFilters.sizeMax ? 1 : 0,
-    localFilters.autoAcceptOnly ? 1 : 0,
-    localFilters.certifiedOnly ? 1 : 0,
-    localFilters.contractRequired ? 1 : 0,
   ].reduce((sum, count) => sum + count, 0)
 
   return (
@@ -350,49 +347,6 @@ export default function FilterPopover({
                     className='w-full p-2 text-sm border border-gray-300 rounded-md focus:border-transparent'
                   />
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Options spéciales */}
-          <Card>
-            <CardHeader className='pb-3'>
-              <CardTitle className='flex items-center space-x-2 text-base'>
-                <CheckCircle className='h-4 w-4 text-green-600' />
-                <span>Options spéciales</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className='space-y-3'>
-                <label className='flex items-center space-x-2 cursor-pointer'>
-                  <input
-                    type='checkbox'
-                    checked={localFilters.autoAcceptOnly}
-                    onChange={e => handleInputChange('autoAcceptOnly', e.target.checked)}
-                    className='w-4 h-4 text-blue-600 rounded focus:ring-blue-500'
-                  />
-                  <span className='text-sm text-gray-700'>Acceptation automatique</span>
-                </label>
-
-                <label className='flex items-center space-x-2 cursor-pointer'>
-                  <input
-                    type='checkbox'
-                    checked={localFilters.certifiedOnly}
-                    onChange={e => handleInputChange('certifiedOnly', e.target.checked)}
-                    className='w-4 h-4 text-blue-600 rounded focus:ring-blue-500'
-                  />
-                  <span className='text-sm text-gray-700'>Hébergements certifiés</span>
-                </label>
-
-                <label className='flex items-center space-x-2 cursor-pointer'>
-                  <input
-                    type='checkbox'
-                    checked={localFilters.contractRequired}
-                    onChange={e => handleInputChange('contractRequired', e.target.checked)}
-                    className='w-4 h-4 text-blue-600 rounded focus:ring-blue-500'
-                  />
-                  <span className='text-sm text-gray-700'>Contrat requis</span>
-                </label>
               </div>
             </CardContent>
           </Card>

@@ -127,8 +127,11 @@ export default function PaymentDetailsPage({ params }: { params: Promise<{ id: s
   const getPaymentMethodLabel = (method: PaymentMethod) => {
     const labels: Record<PaymentMethod, string> = {
       SEPA_VIREMENT: 'Virement SEPA',
-      TAPTAP: 'Taptap',
+      PRIPEO: 'Pripeo',
+      MOBILE_MONEY: 'Mobile Money',
       PAYPAL: 'PayPal',
+      MONEYGRAM: 'MoneyGram',
+      TAPTAP: 'Taptap',
       INTERNATIONAL: 'Virement International',
       OTHER: 'Autre',
     }

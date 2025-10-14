@@ -37,7 +37,12 @@ export default function AdminUserRatingsPage() {
 
   const fetchPendingRatings = async () => {
     try {
-      const response = await fetch('/api/admin/user-ratings')
+      const response = await fetch('/api/admin/user-ratings', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      })
       const data = await response.json()
 
       if (!response.ok) {

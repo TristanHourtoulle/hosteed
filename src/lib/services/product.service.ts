@@ -615,6 +615,7 @@ export async function createProduct(data: CreateProductInput) {
         autoAccept: false,
         phone: data.phone || '',
         phoneCountry: data.phoneCountry || 'MG',
+        minPeople: data.minPeople ? BigInt(data.minPeople) : null,
         maxPeople: data.maxPeople ? BigInt(data.maxPeople) : null,
         categories: BigInt(0),
         validate: ProductValidation.NotVerified,

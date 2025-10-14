@@ -134,7 +134,12 @@ export default function CreateAdminReviewPage() {
     // Charger la liste des produits
     const fetchProducts = async () => {
       try {
-        const response = await fetch('/api/admin/products')
+        const response = await fetch('/api/admin/products', {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+        })
         if (response.ok) {
           const data = await response.json()
           setProducts(data.products || [])

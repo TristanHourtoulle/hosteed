@@ -53,7 +53,12 @@ export default function IncludedServicesPage() {
 
   const fetchServices = async () => {
     try {
-      const response = await fetch('/api/admin/included-services')
+      const response = await fetch('/api/admin/included-services', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      })
       if (response.ok) {
         const data = await response.json()
         setServices(data)

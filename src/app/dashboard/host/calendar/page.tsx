@@ -1,10 +1,13 @@
 'use client'
 
-import { useEffect, useState, Suspense } from 'react'
+import { useEffect, useState, Suspense, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { findAllReservationsByHostId, FormattedRent } from '@/lib/services/rent.service'
+import { FormattedUnavailability } from '@/lib/services/unavailableRent.service'
 import HostNavbar from '../components/HostNavbar'
+import UnavailabilityModal, { UnavailabilityData } from './UnavailabilityModal'
+import { toast } from 'sonner'
 
 function CalendarContent() {
   const router = useRouter()
@@ -13,7 +16,19 @@ function CalendarContent() {
   const propertyId = searchParams.get('property')
   const [currentDate, setCurrentDate] = useState(new Date())
   const [reservations, setReservations] = useState<FormattedRent[]>([])
+  const [unavailabilities, setUnavailabilities] = useState<FormattedUnavailability[]>([])
   const [loading, setLoading] = useState(true)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [selectedUnavailability, setSelectedUnavailability] = useState<{
+    id: string
+    title: string
+    description: string | null
+    startDate: Date
+    endDate: Date
+    productId: string
+  } | null>(null)
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create')
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear()
@@ -81,28 +96,144 @@ function CalendarContent() {
     })
   }
 
-  useEffect(() => {
-    const fetchReservations = async () => {
-      try {
-        if (!session?.user?.id) return
+  const getUnavailabilitiesForDay = (date: Date) => {
+    return unavailabilities.filter(unavail => {
+      const startDate = new Date(unavail.start)
+      const endDate = new Date(unavail.end)
+      return date >= startDate && date <= endDate
+    })
+  }
 
-        const data = await findAllReservationsByHostId(session.user.id)
+  const fetchReservations = useCallback(async () => {
+    try {
+      if (!session?.user?.id) return
 
-        // Filtrer par propriété si spécifié
-        const filteredReservations = propertyId
-          ? data.filter(reservation => reservation.propertyId === propertyId)
-          : data
+      const data = await findAllReservationsByHostId(session.user.id)
 
-        setReservations(filteredReservations)
-      } catch (error) {
-        console.error('Erreur lors du chargement des réservations:', error)
-      } finally {
-        setLoading(false)
+      // Filtrer par propriété si spécifié
+      const filteredReservations = propertyId
+        ? data.filter(reservation => reservation.propertyId === propertyId)
+        : data
+
+      setReservations(filteredReservations)
+    } catch (error) {
+      console.error('Erreur lors du chargement des réservations:', error)
+      toast.error('Erreur lors du chargement des réservations')
+    }
+  }, [session?.user?.id, propertyId])
+
+  const fetchUnavailabilities = useCallback(async () => {
+    try {
+      const params = propertyId ? `?productId=${propertyId}` : ''
+      const response = await fetch(`/api/host/unavailability${params}`)
+      if (response.ok) {
+        const data = await response.json()
+        setUnavailabilities(data)
+      } else {
+        toast.error('Erreur lors du chargement des indisponibilités')
       }
+    } catch (error) {
+      console.error('Erreur chargement indisponibilités:', error)
+      toast.error('Erreur lors du chargement des indisponibilités')
+    }
+  }, [propertyId])
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true)
+      await Promise.all([fetchReservations(), fetchUnavailabilities()])
+      setLoading(false)
+    }
+    loadData()
+  }, [fetchReservations, fetchUnavailabilities])
+
+  const handleCreateUnavailability = async (data: UnavailabilityData) => {
+    const response = await fetch('/api/host/unavailability', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        productId: data.productId,
+        startDate: data.startDate.toISOString(),
+        endDate: data.endDate.toISOString(),
+        title: data.title,
+        description: data.description || null,
+      }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Erreur lors de la création')
     }
 
-    fetchReservations()
-  }, [session?.user?.id, propertyId])
+    toast.success('Blocage créé avec succès')
+    await fetchUnavailabilities()
+  }
+
+  const handleUpdateUnavailability = async (data: UnavailabilityData) => {
+    if (!selectedUnavailability?.id) return
+
+    const response = await fetch(`/api/host/unavailability/${selectedUnavailability.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        startDate: data.startDate.toISOString(),
+        endDate: data.endDate.toISOString(),
+        title: data.title,
+        description: data.description || null,
+      }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Erreur lors de la modification')
+    }
+
+    toast.success('Blocage modifié avec succès')
+    await fetchUnavailabilities()
+  }
+
+  const handleDeleteUnavailability = async (id: string) => {
+    const response = await fetch(`/api/host/unavailability/${id}`, {
+      method: 'DELETE',
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Erreur lors de la suppression')
+    }
+
+    toast.success('Blocage supprimé avec succès')
+    await fetchUnavailabilities()
+    setModalOpen(false)
+  }
+
+  const handleDayClick = (
+    date: Date,
+    reservationsForDay: FormattedRent[],
+    unavailabilitiesForDay: FormattedUnavailability[]
+  ) => {
+    // Si clic sur date vide (pas de réservation ni d'indisponibilité), créer
+    if (reservationsForDay.length === 0 && unavailabilitiesForDay.length === 0) {
+      setSelectedDate(date)
+      setSelectedUnavailability(null)
+      setModalMode('create')
+      setModalOpen(true)
+    }
+  }
+
+  const handleUnavailabilityClick = (e: React.MouseEvent, unavail: FormattedUnavailability) => {
+    e.stopPropagation()
+    setSelectedUnavailability({
+      id: unavail.id,
+      title: unavail.title,
+      description: unavail.description,
+      startDate: new Date(unavail.start),
+      endDate: new Date(unavail.end),
+      productId: unavail.productId,
+    })
+    setModalMode('edit')
+    setModalOpen(true)
+  }
 
   const weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 
@@ -143,6 +274,11 @@ function CalendarContent() {
                 </button>
               </div>
             </div>
+            {!propertyId && (
+              <div className='mt-4 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-md text-sm'>
+                💡 Cliquez sur une date vide pour bloquer une propriété
+              </div>
+            )}
           </div>
 
           <div className='p-6'>
@@ -159,17 +295,24 @@ function CalendarContent() {
                 ))}
                 {getDaysInMonth(currentDate).map((date, index) => {
                   const reservationsForDay = getReservationsForDay(date)
+                  const unavailabilitiesForDay = getUnavailabilitiesForDay(date)
                   return (
                     <div
                       key={index}
+                      onClick={() => handleDayClick(date, reservationsForDay, unavailabilitiesForDay)}
                       className={`min-h-[100px] p-2 border border-gray-200 rounded-lg ${
                         !isCurrentMonth(date)
                           ? 'bg-gray-100 text-gray-400'
                           : 'bg-white text-gray-900'
-                      } ${isToday(date) ? 'bg-blue-100 border-blue-300' : ''}`}
+                      } ${isToday(date) ? 'bg-blue-100 border-blue-300' : ''} ${
+                        reservationsForDay.length === 0 && unavailabilitiesForDay.length === 0
+                          ? 'cursor-pointer hover:bg-gray-50'
+                          : ''
+                      }`}
                     >
                       <div className='text-sm font-medium mb-1'>{formatDate(date)}</div>
                       <div className='space-y-1'>
+                        {/* Réservations (bleu) */}
                         {reservationsForDay.map(reservation => (
                           <div
                             key={reservation.id}
@@ -182,6 +325,20 @@ function CalendarContent() {
                             <div className='text-blue-100 truncate'>{reservation.propertyName}</div>
                           </div>
                         ))}
+
+                        {/* Indisponibilités (rouge) */}
+                        {unavailabilitiesForDay.map(unavail => (
+                          <div
+                            key={unavail.id}
+                            onClick={(e) => handleUnavailabilityClick(e, unavail)}
+                            className='text-xs p-1 bg-red-500 text-white rounded cursor-pointer hover:bg-red-600 transition-colors'
+                          >
+                            <div className='font-medium truncate'>🚫 {unavail.title}</div>
+                            {unavail.propertyName && (
+                              <div className='text-red-100 truncate'>{unavail.propertyName}</div>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )
@@ -191,6 +348,18 @@ function CalendarContent() {
           </div>
         </div>
       </div>
+
+      {/* Modal */}
+      <UnavailabilityModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSave={modalMode === 'create' ? handleCreateUnavailability : handleUpdateUnavailability}
+        onDelete={modalMode === 'edit' ? handleDeleteUnavailability : undefined}
+        selectedDate={selectedDate || undefined}
+        existingUnavailability={selectedUnavailability}
+        mode={modalMode}
+        preselectedPropertyId={propertyId}
+      />
     </div>
   )
 }
