@@ -201,6 +201,9 @@ model Product {
 
   SpecialPrices SpecialPrices[]
 
+  // Promotions system
+  promotions ProductPromotion[] @relation("ProductPromotions")
+
   // Performance indexes
   @@index([validate])
   @@index([userManager])
@@ -540,6 +543,10 @@ model User {
   paymentAccounts      PaymentAccount[]    @relation("UserPaymentAccounts") // Comptes de paiement enregistrés
   withdrawalRequests   WithdrawalRequest[] @relation("UserWithdrawals") // Demandes de retrait
   processedWithdrawals WithdrawalRequest[] @relation("ProcessedWithdrawals") // Retraits traités par cet admin
+
+  // Relations pour le système de promotions
+  createdPromotions ProductPromotion[]   @relation("CreatedPromotions") // Promotions créées par cet utilisateur
+  pricingSettings   HostPricingSettings? @relation("HostPricingSettings") // Paramètres de tarification
 
   // Performance indexes
   @@index([roles])
@@ -955,4 +962,63 @@ enum WithdrawalStatus {
   PAID              // Payée
   REJECTED          // Refusée
   CANCELLED         // Annulée par l'hébergeur
+}
+
+// ============================================
+// PROMOTION SYSTEM MODELS
+// ============================================
+
+// Promotions sur les produits (réductions temporaires)
+model ProductPromotion {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation("ProductPromotions", fields: [productId], references: [id], onDelete: Cascade)
+
+  // Détails de la promotion
+  discountPercentage Float // Pourcentage de réduction (ex: 10 pour -10%)
+  startDate          DateTime
+  endDate            DateTime
+
+  // Gestion
+  isActive    Boolean @default(true)
+  createdById String // ID de l'ADMIN/HOST/HOST_MANAGER qui a créé
+  createdBy   User    @relation("CreatedPromotions", fields: [createdById], references: [id])
+
+  // Désactivation automatique (pour gestion des chevauchements)
+  replacedById       String?            @unique
+  replacedBy         ProductPromotion?  @relation("PromotionReplacement", fields: [replacedById], references: [id], onDelete: SetNull)
+  replacedPromotions ProductPromotion[] @relation("PromotionReplacement")
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Performance indexes
+  @@index([productId])
+  @@index([isActive])
+  @@index([startDate, endDate])
+  @@index([productId, isActive, startDate, endDate])
+}
+
+// Paramètres de tarification par hôte
+model HostPricingSettings {
+  id     String @id @default(cuid())
+  userId String @unique // Un seul setting par hôte
+  user   User   @relation("HostPricingSettings", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Gestion du chevauchement Promotions + SpecialPrices
+  promotionPriority PricingPriority @default(PROMOTION_FIRST)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// Priorité de tarification
+enum PricingPriority {
+  PROMOTION_FIRST     // Promo s'applique, SpecialPrice ignoré
+  SPECIAL_PRICE_FIRST // SpecialPrice remplace tout
+  MOST_ADVANTAGEOUS   // Le plus avantageux pour le client
+  STACK_DISCOUNTS     // Cumuler les deux réductions
 }
