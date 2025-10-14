@@ -606,8 +606,8 @@ export default function CreateProductPage() {
       const uploadData = await uploadResponse.json()
       console.log(`✅ Successfully uploaded ${uploadData.count} images`)
 
-      // Return thumb URLs (lightweight for DB)
-      return uploadData.images.map((img: {thumb: string, medium: string, full: string}) => img.thumb)
+      // Return full URLs (high quality for display)
+      return uploadData.images.map((img: {thumb: string, medium: string, full: string}) => img.full)
     } finally {
       setIsUploadingImages(false)
     }
