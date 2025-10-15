@@ -798,6 +798,8 @@ export default function EditProductPage() {
         isOpen={serviceModalOpen}
         onClose={() => setServiceModalOpen(false)}
         onServiceCreated={handleServiceCreated}
+        title="Ajouter un service inclus personnalisé"
+        description="Créez un service inclus spécifique à votre hébergement"
       />
       <CreateExtraModal
         isOpen={extraModalOpen}
@@ -811,12 +813,11 @@ export default function EditProductPage() {
       />
 
       {/* Gallery Preview */}
-      {showGalleryPreview && (
-        <ImageGalleryPreview
-          images={imageUpload.selectedFiles}
-          onClose={() => setShowGalleryPreview(false)}
-        />
-      )}
+      <ImageGalleryPreview
+        images={imageUpload.selectedFiles}
+        isOpen={showGalleryPreview}
+        onClose={() => setShowGalleryPreview(false)}
+      />
     </div>
   )
 }
