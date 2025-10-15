@@ -129,10 +129,12 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
   // Générer l'URL de l'image (DB contient déjà les URLs _full_ après migration)
   const thumbnailUrl = useMemo(() => {
     if (product.img && product.img.length > 0 && product.img[0].img) {
+      console.log(`[ProductCard ${product.id}] Image URL:`, product.img[0].img)
       return product.img[0].img
     }
+    console.log(`[ProductCard ${product.id}] NO IMAGE - hasImg:`, !!product.img, 'length:', product.img?.length)
     return ''
-  }, [product.img])
+  }, [product.img, product.id])
 
   const hasValidImages = hasImages
 
