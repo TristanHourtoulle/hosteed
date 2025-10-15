@@ -1,8 +1,8 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useAuth } from '@/hooks/useAuth'
 import { isFullAdmin } from '@/hooks/useAdminAuth'
 import { createUser } from '@/lib/services/user.service'
 import { User } from '@prisma/client'
@@ -81,9 +81,9 @@ const itemVariants: Variants = {
 }
 
 export default function UsersPage() {
-  const { data: session } = useSession()
+  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
-  
+
   // Use optimized pagination hook
   const {
     users,
@@ -214,22 +214,26 @@ export default function UsersPage() {
   }
 
   useEffect(() => {
-    if (!session?.user?.roles || !isFullAdmin(session.user.roles)) {
+    if (isAuthenticated && (!session?.user?.roles || !isFullAdmin(session.user.roles))) {
       router.push('/')
     }
-  }, [session, router])
+  }, [isAuthenticated, session, router])
 
   // Remove manual data fetching - handled by hook now
 
-  if (loading) {
+  if (isAuthLoading || loading) {
     return (
-      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center'>
-        <div className='flex items-center gap-3'>
-          <Loader2 className='h-8 w-8 animate-spin text-blue-600' />
-          <p className='text-gray-600 text-lg'>Chargement des utilisateurs...</p>
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='flex flex-col items-center gap-4'>
+          <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin'></div>
+          <p className='text-slate-600 text-lg'>Chargement...</p>
         </div>
       </div>
     )
+  }
+
+  if (!session) {
+    return null
   }
 
   if (error || hookError) {

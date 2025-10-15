@@ -1,8 +1,8 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useAuth } from '@/hooks/useAuth'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/shadcnui/button'
@@ -12,19 +12,23 @@ import { UserPersonalInfo } from './components/UserPersonalInfo'
 import {EquipmentInterface} from "@/lib/interface/equipmentInterface";
 
 export function UserDetailsClient({ id, name, icon }: EquipmentInterface) {
-  const { data: session } = useSession()
+  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
   const [loading] = useState(false)
 
   useEffect(() => {
-    if (!session?.user?.roles || session.user.roles !== 'ADMIN') {
+    if (isAuthenticated && (!session?.user?.roles || session.user.roles !== 'ADMIN')) {
       router.push('/')
       return
     }
-  }, [session, router])
+  }, [isAuthenticated, session, router])
 
-  if (loading) {
+  if (isAuthLoading || loading) {
     return <LoadingDisplay />
+  }
+
+  if (!session) {
+    return null
   }
 
   return (

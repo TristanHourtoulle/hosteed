@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 import { findRentByHostUserId, approveRent } from '@/lib/services/rents.service'
 import { PaymentStatus, RentStatus } from '@prisma/client'
 import HostNavbar from '../components/HostNavbar'
@@ -32,7 +32,7 @@ interface Rent {
 }
 
 export default function RentsPage() {
-  const { data: session } = useSession()
+  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
   const [rents, setRents] = useState<Rent[]>([])
   const [filteredRents, setFilteredRents] = useState<Rent[]>([])
   const [loading, setLoading] = useState(true)
@@ -55,10 +55,10 @@ export default function RentsPage() {
       }
     }
 
-    if (session) {
+    if (isAuthenticated) {
       fetchRents()
     }
-  }, [session])
+  }, [session, isAuthenticated])
 
   useEffect(() => {
     if (filterStatus === 'ALL') {
@@ -110,6 +110,21 @@ export default function RentsPage() {
     } catch (error) {
       console.error("Erreur lors de l'approbation de la réservation:", error)
     }
+  }
+
+  if (isAuthLoading) {
+    return (
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='flex flex-col items-center gap-4'>
+          <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin'></div>
+          <p className='text-slate-600 text-lg'>Chargement...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!session) {
+    return null
   }
 
   if (loading) {

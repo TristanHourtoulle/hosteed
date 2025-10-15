@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
 import { isFullAdmin } from '@/hooks/useAdminAuth'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Input } from '@/components/ui/input'
@@ -30,7 +30,7 @@ interface CommissionSettings {
 }
 
 export default function CommissionSettingsPage() {
-  const { data: session } = useSession()
+  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
   const [settings, setSettings] = useState<CommissionSettings | null>(null)
   const [loading, setLoading] = useState(true)
@@ -44,10 +44,10 @@ export default function CommissionSettingsPage() {
 
   // Security check - Only ADMIN can access commission settings
   useEffect(() => {
-    if (!session?.user?.roles || !isFullAdmin(session.user.roles)) {
+    if (isAuthenticated && (!session?.user?.roles || !isFullAdmin(session.user.roles))) {
       router.push('/')
     }
-  }, [session, router])
+  }, [isAuthenticated, session, router])
 
   useEffect(() => {
     fetchSettings()
@@ -120,14 +120,19 @@ export default function CommissionSettingsPage() {
     return `${value.toFixed(2)}€`
   }
 
-  if (loading) {
+  if (isAuthLoading || loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='flex flex-col items-center gap-4'>
+          <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin'></div>
+          <p className='text-slate-600 text-lg'>Chargement...</p>
         </div>
       </div>
     )
+  }
+
+  if (!session) {
+    return null
   }
 
   return (

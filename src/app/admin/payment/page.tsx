@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 import { isFullAdmin } from '@/hooks/useAdminAuth'
 import { getAllPaymentRequest } from '@/lib/services/payment.service'
 import { PaymentStatus, PaymentMethod, PaymentReqStatus } from '@prisma/client'
@@ -27,7 +27,7 @@ interface PayRequest {
 }
 
 export default function PaymentAdminPage() {
-  const { data: session } = useSession()
+  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
   const [payRequests, setPayRequests] = useState<PayRequest[]>([])
   const [filteredRequests, setFilteredRequests] = useState<PayRequest[]>([])
@@ -36,10 +36,10 @@ export default function PaymentAdminPage() {
 
   // Security check - Only ADMIN can access payment management
   useEffect(() => {
-    if (!session?.user?.roles || !isFullAdmin(session.user.roles)) {
+    if (isAuthenticated && (!session?.user?.roles || !isFullAdmin(session.user.roles))) {
       router.push('/')
     }
-  }, [session, router])
+  }, [isAuthenticated, session, router])
 
   useEffect(() => {
     fetchPayRequests()
@@ -138,17 +138,19 @@ export default function PaymentAdminPage() {
     }
   }
 
-  if (loading) {
+  if (isAuthLoading || loading) {
     return (
-      <div className='min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6'>
-        <div className='flex items-center justify-center min-h-[calc(100vh-4rem)]'>
-          <div className='text-center'>
-            <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4'></div>
-            <p className='text-gray-600'>Chargement des demandes de paiement...</p>
-          </div>
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='flex flex-col items-center gap-4'>
+          <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin'></div>
+          <p className='text-slate-600 text-lg'>Chargement...</p>
         </div>
       </div>
     )
+  }
+
+  if (!session) {
+    return null
   }
 
   return (

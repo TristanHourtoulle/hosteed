@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation'
 import { getCityFromAddress } from '@/lib/utils'
 import { Tag, Power, PowerOff } from 'lucide-react'
 import CreateSpecialPriceModal from '@/components/ui/CreateSpecialPriceModal'
+import MarkdownRenderer from '@/components/ui/MarkdownRenderer'
 
 interface ProductWithRelations extends Product {
   type?: {
@@ -323,7 +324,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             </div>
             <div>
               <h3 className='font-semibold text-gray-800'>Description</h3>
-              <p className='text-gray-700'>{product.description}</p>
+              <div className='text-gray-700 prose prose-slate max-w-none'>
+                <MarkdownRenderer content={product.description} />
+              </div>
             </div>
             <div>
               <h3 className='font-semibold text-gray-800'>Adresse</h3>

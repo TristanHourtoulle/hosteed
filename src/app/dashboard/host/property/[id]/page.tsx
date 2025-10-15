@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 import { useParams } from 'next/navigation'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
@@ -88,7 +88,7 @@ interface Rent {
 }
 
 export default function PropertyDashboard() {
-  const { data: session } = useSession()
+  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
   const params = useParams()
   const productId = params.id as string
 
@@ -226,25 +226,22 @@ export default function PropertyDashboard() {
     }
   }
 
-  if (!session) {
+  if (isAuthLoading) {
     return (
       <div className='min-h-screen flex items-center justify-center'>
-        <Card className='w-full max-w-md'>
-          <CardContent className='p-8 text-center'>
-            <h2 className='text-xl font-bold mb-4'>Connexion requise</h2>
-            <p className='text-gray-600 mb-4'>
-              Veuillez vous connecter pour accéder au tableau de bord
-            </p>
-            <Button asChild>
-              <Link href='/auth/signin'>Se connecter</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <div className='flex flex-col items-center gap-4'>
+          <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin'></div>
+          <p className='text-slate-600 text-lg'>Chargement...</p>
+        </div>
       </div>
     )
   }
 
-  if (loading) {
+  if (!session) {
+    return null
+  }
+
+  if ((isAuthLoading || loading)) {
     return (
       <div className='min-h-screen bg-gray-50 pt-20'>
         <div className='max-w-6xl mx-auto px-6 py-8'>

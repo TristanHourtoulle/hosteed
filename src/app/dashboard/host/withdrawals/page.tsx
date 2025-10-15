@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Input } from '@/components/ui/input'
@@ -71,7 +71,7 @@ type PaymentFormData = {
 }
 
 export default function WithdrawalsPage() {
-  const { status } = useSession()
+  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
 
   // States
@@ -100,16 +100,11 @@ export default function WithdrawalsPage() {
   })
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth')
-      return
-    }
-
-    if (status === 'authenticated') {
+    if (isAuthenticated) {
       fetchBalance()
       fetchRequests()
     }
-  }, [status, router])
+  }, [isAuthenticated])
 
   const fetchBalance = async () => {
     try {
@@ -310,12 +305,19 @@ export default function WithdrawalsPage() {
     return labels[method]
   }
 
-  if (loading || status === 'loading') {
+  if (isAuthLoading || loading) {
     return (
       <div className='min-h-screen flex items-center justify-center'>
-        <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600'></div>
+        <div className='flex flex-col items-center gap-4'>
+          <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin'></div>
+          <p className='text-slate-600 text-lg'>Chargement...</p>
+        </div>
       </div>
     )
+  }
+
+  if (!session) {
+    return null
   }
 
   const selectedAmount = balance

@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
 import { isAdmin } from '@/hooks/useAdminAuth'
 import { getAllRentRejections, resolveRentRejection } from '@/lib/services/rents.service'
 import { motion } from 'framer-motion'
@@ -55,7 +55,7 @@ interface RentRejection {
 }
 
 export default function RentRejectionsPage() {
-  const { data: session } = useSession()
+  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
   const [rejections, setRejections] = useState<RentRejection[]>([])
   const [filteredRejections, setFilteredRejections] = useState<RentRejection[]>([])
@@ -65,16 +65,16 @@ export default function RentRejectionsPage() {
   const [activeFilter, setActiveFilter] = useState<'all' | 'pending' | 'resolved'>('pending')
 
   useEffect(() => {
-    if (!session?.user?.roles || !isAdmin(session.user.roles)) {
+    if (isAuthenticated && (!session?.user?.roles || !isAdmin(session.user.roles))) {
       router.push('/')
     }
-  }, [session, router])
+  }, [isAuthenticated, session, router])
 
   useEffect(() => {
-    if (session?.user?.roles === 'ADMIN') {
+    if (isAuthenticated && session?.user?.roles === 'ADMIN') {
       fetchRejections()
     }
-  }, [session])
+  }, [isAuthenticated, session])
 
   const fetchRejections = async () => {
     try {
@@ -208,24 +208,19 @@ export default function RentRejectionsPage() {
     },
   ]
 
-  if (loading) {
+  if (isAuthLoading || loading) {
     return (
-      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-red-50 to-orange-50'>
-        <div className='max-w-7xl mx-auto p-6'>
-          <div className='animate-pulse space-y-8'>
-            <div className='space-y-4'>
-              <div className='h-8 bg-slate-200 rounded w-1/3'></div>
-              <div className='h-4 bg-slate-200 rounded w-1/2'></div>
-            </div>
-            <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className='bg-slate-200 rounded-lg h-24'></div>
-              ))}
-            </div>
-          </div>
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='flex flex-col items-center gap-4'>
+          <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin'></div>
+          <p className='text-slate-600 text-lg'>Chargement...</p>
         </div>
       </div>
     )
+  }
+
+  if (!session) {
+    return null
   }
 
   return (

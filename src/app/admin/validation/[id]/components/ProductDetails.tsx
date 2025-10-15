@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import MarkdownRenderer from '@/components/ui/MarkdownRenderer'
 import {
   MapPin,
   Euro,
@@ -285,7 +286,9 @@ export function ProductDetails({ product }: ProductDetailsProps) {
 
           <div>
             <h4 className='font-medium mb-2'>Description</h4>
-            <p className='text-sm text-gray-600 leading-relaxed'>{product.description}</p>
+            <div className='text-sm text-gray-600 leading-relaxed prose prose-sm max-w-none'>
+              <MarkdownRenderer content={product.description} />
+            </div>
           </div>
         </CardContent>
       </Card>

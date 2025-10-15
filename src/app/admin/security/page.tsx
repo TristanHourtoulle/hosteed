@@ -1,8 +1,8 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useAuth } from '@/hooks/useAuth'
 import { isAdmin } from '@/hooks/useAdminAuth'
 import Link from 'next/link'
 import { motion, Variants } from 'framer-motion'
@@ -64,7 +64,7 @@ const itemVariants: Variants = {
 }
 
 export default function SecurityPage() {
-  const { data: session } = useSession()
+  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
   const [security, setSecurity] = useState<SecurityInterface[]>([])
   const [loading, setLoading] = useState(true)
@@ -84,10 +84,10 @@ export default function SecurityPage() {
   const [deletingOption, setDeletingOption] = useState<SecurityInterface | null>(null)
 
   useEffect(() => {
-    if (!session?.user?.roles || !isAdmin(session.user.roles)) {
+    if (isAuthenticated && (!session?.user?.roles || !isAdmin(session.user.roles))) {
       router.push('/')
     }
-  }, [session, router])
+  }, [isAuthenticated, session, router])
 
   useEffect(() => {
     const fetchSecurity = async () => {
@@ -187,15 +187,19 @@ export default function SecurityPage() {
       setIsSubmitting(false)
     }
   }
-  if (loading) {
+  if (isAuthLoading || loading) {
     return (
-      <div className='min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8 flex items-center justify-center'>
-        <div className='flex items-center gap-3'>
-          <Loader2 className='h-6 w-6 animate-spin text-blue-600' />
-          <p className='text-gray-600 text-lg'>Chargement des options de sécurité...</p>
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='flex flex-col items-center gap-4'>
+          <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin'></div>
+          <p className='text-slate-600 text-lg'>Chargement...</p>
         </div>
       </div>
     )
+  }
+
+  if (!session) {
+    return null
   }
 
   if (error) {

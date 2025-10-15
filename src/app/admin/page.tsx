@@ -1,8 +1,8 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useAuth } from '@/hooks/useAuth'
 import { motion, Variants } from 'framer-motion'
 import { isAdmin, isFullAdmin } from '@/hooks/useAdminAuth'
 import { Separator } from '@/components/ui/shadcnui/separator'
@@ -61,16 +61,16 @@ interface Stats {
 }
 
 export default function AdminDashboard() {
-  const { data: session } = useSession()
+  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!session?.user?.roles || !isAdmin(session.user.roles)) {
+    if (isAuthenticated && (!session?.user?.roles || !isAdmin(session.user.roles))) {
       router.push('/')
     }
-  }, [session, router])
+  }, [isAuthenticated, session, router])
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -273,6 +273,21 @@ export default function AdminDashboard() {
     }
     return true
   })
+
+  if (isAuthLoading) {
+    return (
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='flex flex-col items-center gap-4'>
+          <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin'></div>
+          <p className='text-slate-600 text-lg'>Chargement...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!session) {
+    return null
+  }
 
   return (
     <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50'>

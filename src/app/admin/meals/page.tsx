@@ -1,8 +1,8 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useAuth } from '@/hooks/useAuth'
 import { isAdmin } from '@/hooks/useAdminAuth'
 import Link from 'next/link'
 import { motion, Variants } from 'framer-motion'
@@ -60,7 +60,7 @@ const itemVariants: Variants = {
 }
 
 export default function MealsPage() {
-  const { data: session } = useSession()
+  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
   const [meals, setMeals] = useState<MealsInterface[]>([])
   const [loading, setLoading] = useState(true)
@@ -80,10 +80,10 @@ export default function MealsPage() {
   const [deletingOption, setDeletingOption] = useState<MealsInterface | null>(null)
 
   useEffect(() => {
-    if (!session?.user?.roles || !isAdmin(session.user.roles)) {
+    if (isAuthenticated && (!session?.user?.roles || !isAdmin(session.user.roles))) {
       router.push('/')
     }
-  }, [session, router])
+  }, [isAuthenticated, session, router])
 
   useEffect(() => {
     const fetchMeals = async () => {
@@ -184,15 +184,19 @@ export default function MealsPage() {
     }
   }
 
-  if (loading) {
+  if (isAuthLoading || loading) {
     return (
-      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-8 flex items-center justify-center'>
-        <div className='flex items-center gap-3'>
-          <Loader2 className='h-6 w-6 animate-spin text-orange-600' />
-          <p className='text-slate-600 text-lg'>Chargement des options de repas...</p>
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='flex flex-col items-center gap-4'>
+          <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin'></div>
+          <p className='text-slate-600 text-lg'>Chargement...</p>
         </div>
       </div>
     )
+  }
+
+  if (!session) {
+    return null
   }
 
   if (error) {

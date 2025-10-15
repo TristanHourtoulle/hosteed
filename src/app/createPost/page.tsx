@@ -34,7 +34,7 @@ import {
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 import RichEditorGuide from '@/components/ui/RichEditorGuide'
 import SEOFieldsCard from '@/components/ui/SEOFieldsCard'
 
@@ -64,6 +64,7 @@ interface SEOData {
 }
 
 export default function CreatePostPage() {
+  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [images, setImages] = useState<File[]>([])
@@ -75,7 +76,6 @@ export default function CreatePostPage() {
     slug: ''
   })
   const router = useRouter()
-  const { data: session } = useSession()
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -138,6 +138,21 @@ export default function CreatePostPage() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  if (isAuthLoading) {
+    return (
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='flex flex-col items-center gap-4'>
+          <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin'></div>
+          <p className='text-slate-600 text-lg'>Chargement...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!session) {
+    return null
   }
 
   return (

@@ -1,5 +1,7 @@
 'use client'
 
+import MarkdownRenderer from '@/components/ui/MarkdownRenderer'
+
 interface Product {
   id: string
   name: string
@@ -45,6 +47,7 @@ interface DiffFieldProps {
   originalValue: string | number | boolean | null | undefined
   isDifferent?: boolean
   formatter?: (value: string | number | boolean | null | undefined) => string
+  isMarkdown?: boolean
 }
 
 export function ComparisonView({ draft, original }: ComparisonViewProps) {
@@ -57,12 +60,13 @@ export function ComparisonView({ draft, original }: ComparisonViewProps) {
     }
   }
 
-  const DiffField = ({ 
-    label, 
-    draftValue, 
-    originalValue, 
+  const DiffField = ({
+    label,
+    draftValue,
+    originalValue,
     isDifferent = false,
-    formatter = (v: string | number | boolean | null | undefined) => String(v || 'Non défini') 
+    formatter = (v: string | number | boolean | null | undefined) => String(v || 'Non défini'),
+    isMarkdown = false
   }: DiffFieldProps) => (
     <div className={`p-4 rounded-lg border-l-4 ${isDifferent ? 'border-orange-400 bg-orange-50' : 'border-gray-200 bg-gray-50'}`}>
       <div className="font-medium text-sm text-gray-700 mb-2">{label}</div>
@@ -70,13 +74,25 @@ export function ComparisonView({ draft, original }: ComparisonViewProps) {
         <div>
           <div className="text-xs text-gray-500 mb-1">Original</div>
           <div className={`text-sm ${isDifferent ? 'text-gray-600' : 'text-gray-800'}`}>
-            {formatter(originalValue)}
+            {isMarkdown && typeof originalValue === 'string' ? (
+              <div className="prose prose-sm max-w-none">
+                <MarkdownRenderer content={originalValue} />
+              </div>
+            ) : (
+              formatter(originalValue)
+            )}
           </div>
         </div>
         <div>
           <div className="text-xs text-green-600 mb-1">Modifié</div>
           <div className={`text-sm font-medium ${isDifferent ? 'text-green-700' : 'text-gray-800'}`}>
-            {formatter(draftValue)}
+            {isMarkdown && typeof draftValue === 'string' ? (
+              <div className="prose prose-sm max-w-none">
+                <MarkdownRenderer content={draftValue} />
+              </div>
+            ) : (
+              formatter(draftValue)
+            )}
           </div>
         </div>
       </div>
@@ -87,7 +103,7 @@ export function ComparisonView({ draft, original }: ComparisonViewProps) {
   const booleanFormatter = (value: string | number | boolean | null | undefined) => value === true ? 'Oui' : value === false ? 'Non' : 'Non défini'
   const numberFormatter = (value: string | number | boolean | null | undefined) => String(value || 0)
 
-  const differences: { label: string; diff: { isDifferent: boolean; draftValue: string | number | boolean | null | undefined; originalValue: string | number | boolean | null | undefined }; formatter?: (v: string | number | boolean | null | undefined) => string }[] = []
+  const differences: { label: string; diff: { isDifferent: boolean; draftValue: string | number | boolean | null | undefined; originalValue: string | number | boolean | null | undefined }; formatter?: (v: string | number | boolean | null | undefined) => string; isMarkdown?: boolean }[] = []
 
   // Check simple field differences
   if (draft.name !== original.name) {
@@ -97,7 +113,7 @@ export function ComparisonView({ draft, original }: ComparisonViewProps) {
 
   if (draft.description !== original.description) {
     const diff = getFieldDiff(draft.description, original.description)
-    differences.push({ label: 'Description', diff })
+    differences.push({ label: 'Description', diff, isMarkdown: true })
   }
 
   if (draft.address !== original.address) {
@@ -264,6 +280,7 @@ export function ComparisonView({ draft, original }: ComparisonViewProps) {
             originalValue={item.diff.originalValue}
             isDifferent={item.diff.isDifferent}
             formatter={item.formatter}
+            isMarkdown={item.isMarkdown}
           />
         ))}
       </div>

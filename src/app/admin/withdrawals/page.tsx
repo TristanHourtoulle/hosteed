@@ -13,8 +13,8 @@
  */
 
 import { useEffect, useState } from 'react'
-import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
 import { toast } from 'sonner'
 import {
   WithdrawalStatus,
@@ -55,7 +55,7 @@ type HostBalance = {
 }
 
 export default function AdminWithdrawalsPage() {
-  const { data: session, status } = useSession()
+  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
 
   const [requests, setRequests] = useState<WithdrawalRequest[]>([])
@@ -90,14 +90,9 @@ export default function AdminWithdrawalsPage() {
   })
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth')
-      return
-    }
-
-    if (status === 'authenticated') {
+    if (isAuthenticated) {
       // Vérifier les permissions
-      if (!session.user.roles || !['ADMIN', 'HOST_MANAGER'].includes(session.user.roles)) {
+      if (!session?.user.roles || !['ADMIN', 'HOST_MANAGER'].includes(session.user.roles)) {
         toast.error('Accès non autorisé')
         router.push('/dashboard')
         return
@@ -106,7 +101,7 @@ export default function AdminWithdrawalsPage() {
       fetchRequests()
       fetchHosts()
     }
-  }, [status, router, session])
+  }, [isAuthenticated, router, session])
 
   const fetchRequests = async () => {
     console.log('🔄 [fetchRequests] Début du chargement des demandes')
@@ -447,12 +442,19 @@ export default function AdminWithdrawalsPage() {
     return labels[method] || method
   }
 
-  if (loading || status === 'loading') {
+  if (isAuthLoading || loading) {
     return (
       <div className='min-h-screen flex items-center justify-center'>
-        <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600'></div>
+        <div className='flex flex-col items-center gap-4'>
+          <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin'></div>
+          <p className='text-slate-600 text-lg'>Chargement...</p>
+        </div>
       </div>
     )
+  }
+
+  if (!session) {
+    return null
   }
 
   return (

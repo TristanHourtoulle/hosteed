@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 import { getAllUserChats } from '@/lib/services/chat.service'
 import { Chat, Rent, User } from '@prisma/client'
 import { MessageCircle, ArrowLeft } from 'lucide-react'
@@ -30,7 +30,7 @@ interface GroupedChat {
 }
 
 export default function ChatIndexPage() {
-  const { data: session } = useSession()
+  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
   const [chats, setChats] = useState<GroupedChat[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -87,22 +87,19 @@ export default function ChatIndexPage() {
     return () => clearInterval(interval)
   }, [session])
 
-  if (!session) {
+  if (isAuthLoading) {
     return (
-      <div className='min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4'>
-        <Card className='w-full max-w-md'>
-          <CardContent className='p-8 text-center'>
-            <h2 className='text-2xl font-bold text-gray-900 mb-2'>Connexion requise</h2>
-            <p className='text-gray-600 mb-6'>
-              Veuillez vous connecter pour accéder à la messagerie
-            </p>
-            <Button asChild className='w-full'>
-              <a href='/auth/signin'>Se connecter</a>
-            </Button>
-          </CardContent>
-        </Card>
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='flex flex-col items-center gap-4'>
+          <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin'></div>
+          <p className='text-slate-600 text-lg'>Chargement...</p>
+        </div>
       </div>
     )
+  }
+
+  if (!session) {
+    return null
   }
 
   return (
