@@ -39,15 +39,23 @@ export async function PUT(
       return NextResponse.json({ error: 'Non autorisé' }, { status: 403 })
     }
 
-    // Créer les nouvelles images
-    await prisma.images.createMany({
-      data: imageUrls.map((url) => ({
-        img: url,
-        productId: productId,
-      })),
-    })
+    // Créer les nouvelles images et les lier au produit
+    // Note: Images utilise une relation many-to-many avec Product via _ImagesToProduct
+    // On doit donc créer les images puis les connecter au produit
+    const createdImages = await Promise.all(
+      imageUrls.map((url) =>
+        prisma.images.create({
+          data: {
+            img: url,
+            Product: {
+              connect: { id: productId }
+            }
+          }
+        })
+      )
+    )
 
-    console.log(`✅ Added ${imageUrls.length} images to product ${productId}`)
+    console.log(`✅ Added ${createdImages.length} images to product ${productId}`)
 
     return NextResponse.json({
       success: true,
