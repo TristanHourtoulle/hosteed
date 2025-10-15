@@ -4,11 +4,10 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { motion } from 'framer-motion'
-import { Button } from '@/components/ui/shadcnui/button'
-import { Input } from '@/components/ui/shadcnui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
-import MDEditor from '@uiw/react-md-editor'
-import RichEditorGuide from '@/components/ui/RichEditorGuide'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import {
   Home,
   MapPin,
@@ -28,23 +27,32 @@ import {
   Package,
   Highlighter,
 } from 'lucide-react'
-import React from 'react'
-import { findProductById, resubmitProductWithChange, createDraftProduct, getDraftProduct } from '@/lib/services/product.service'
+
+// Import section components
+import {
+  BasicInfoSection,
+  LocationContactSection,
+  ServiceSelectionSection,
+} from './components'
+
 import { findAllTypeRent } from '@/lib/services/typeRent.service'
 import { findAllEquipments } from '@/lib/services/equipments.service'
 import { findAllMeals } from '@/lib/services/meals.service'
 import { findAllServices } from '@/lib/services/services.service'
 import { findAllSecurity } from '@/lib/services/security.services'
+import { createProduct } from '@/lib/services/product.service'
+import { findAllUser } from '@/lib/services/user.service'
 import { compressImages, formatFileSize } from '@/lib/utils/imageCompression'
-import { ExtraPriceType } from '@prisma/client'
+import { googleSuggestionService } from '@/lib/services/GoogleSuggestion.service'
+import { ExtraPriceType, DayEnum } from '@prisma/client'
 import { TypeRentInterface } from '@/lib/interface/typeRentInterface'
 import CreateServiceModal from '@/components/ui/CreateServiceModal'
 import CreateExtraModal from '@/components/ui/CreateExtraModal'
 import CreateHighlightModal from '@/components/ui/CreateHighlightModal'
+import CreateSpecialPriceModal from '@/components/ui/CreateSpecialPriceModal'
 import BookingCostSummary from '@/components/ui/BookingCostSummary'
 import SortableImageGrid from '@/components/ui/SortableImageGrid'
 import ImageGalleryPreview from '@/components/ui/ImageGalleryPreview'
-import CommissionDisplay from '@/components/ui/CommissionDisplay'
 import PhoneInput from '@/components/ui/PhoneInput'
 import ErrorAlert, { ErrorDetails } from '@/components/ui/ErrorAlert'
 import { parseCreateProductError, createValidationError } from '@/lib/utils/errorHandler'
@@ -98,45 +106,15 @@ interface PropertyHighlight {
   userId: string | null
 }
 
-interface Product {
+interface SpecialPrice {
   id: string
-  name: string
-  description: string
-  address: string
-  longitude: number
-  latitude: number
-  basePrice: string
-  priceMGA: string
-  room: number | null
-  bathroom: number | null
-  arriving: number
-  leaving: number
-  phone: string
-  phoneCountry: string
-  maxPeople: number | null
-  surface: number | null
-  accessibility: boolean
-  petFriendly: boolean
-  transportation: string | null
-  typeId: string
-  img: { img: string }[]
-  equipments: { id: string }[]
-  servicesList: { id: string }[]
-  mealsList: { id: string }[]
-  securities: { id: string }[]
-  includedServices: { id: string }[]
-  extras: { id: string }[]
-  highlights: { id: string }[]
-  nearbyPlaces: { name: string; distance: number; unit: string }[]
-  autoAccept: boolean
-  isHotel: boolean
-  hotelName: string | null
-  availableRooms: number | null
-  validate: string
-  isDraft?: boolean
-  originalProductId?: string | null
+  pricesMga: string
+  pricesEuro: string
+  day: DayEnum[]
+  startDate: Date | null
+  endDate: Date | null
+  activate: boolean
 }
-
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -174,6 +152,7 @@ interface FormData {
   name: string
   description: string
   address: string
+  placeId?: string // ID Google Places pour récupérer les coordonnées
   phone: string
   phoneCountry: string
   room: string
@@ -197,20 +176,19 @@ interface FormData {
   petFriendly: boolean
   nearbyPlaces: NearbyPlace[]
   transportation: string
+  // Nouveaux champs pour les hôtels
   isHotel: boolean
   hotelName: string
   availableRooms: string
 }
 
-export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = React.use(params) as { id: string }
+export default function CreateProductPage() {
   const router = useRouter()
   const { data: session } = useSession()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isUploadingImages, setIsUploadingImages] = useState(false)
   const [error, setError] = useState<ErrorDetails | null>(null)
-  const [loading, setLoading] = useState(true)
   const [dragActive, setDragActive] = useState(false)
   const [selectedFiles, setSelectedFiles] = useState<ImageFile[]>([])
   const [showGalleryPreview, setShowGalleryPreview] = useState(false)
@@ -219,11 +197,14 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     distance: '',
     unit: 'mètres' as 'mètres' | 'kilomètres',
   })
+  const [userSelected, setUserSelected] = useState('')
+  const [assignToOtherUser, setAssignToOtherUser] = useState(false)
 
   // États pour les modaux de création personnalisée
   const [serviceModalOpen, setServiceModalOpen] = useState(false)
   const [extraModalOpen, setExtraModalOpen] = useState(false)
   const [highlightModalOpen, setHighlightModalOpen] = useState(false)
+  const [specialPriceModalOpen, setSpecialPriceModalOpen] = useState(false)
 
   // État pour simuler une réservation de test pour l'aperçu des coûts
   const [testBooking] = useState({
@@ -232,13 +213,12 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     guestCount: 2
   })
 
-  const [product, setProduct] = useState<Product | null>(null)
-
   // Form data
   const [formData, setFormData] = useState<FormData>({
     name: '',
     description: '',
     address: '',
+    placeId: '',
     phone: '',
     phoneCountry: 'MG',
     room: '',
@@ -262,6 +242,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     petFriendly: false,
     nearbyPlaces: [],
     transportation: '',
+    // Nouveaux champs pour les hôtels
     isHotel: false,
     hotelName: '',
     availableRooms: '',
@@ -276,18 +257,20 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   const [includedServices, setIncludedServices] = useState<IncludedService[]>([])
   const [extras, setExtras] = useState<ProductExtra[]>([])
   const [highlights, setHighlights] = useState<PropertyHighlight[]>([])
+  const [specialPrices, setSpecialPrices] = useState<SpecialPrice[]>([])
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [users, setUsers] = useState<any[]>([])
 
   // Handle input changes
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value, type } = e.target
-    
+
     // Si on change le type d'hébergement, vérifier si c'est un hôtel
     if (name === 'typeId') {
       const selectedType = types.find(t => t.id === value)
       const isHotelType = Boolean(selectedType?.isHotelType)
-      
       setFormData(prev => ({
         ...prev,
         [name]: value,
@@ -306,37 +289,25 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
   // Functions to load new data
   const loadIncludedServices = async (): Promise<IncludedService[]> => {
-    try {
-      const response = await fetch('/api/user/included-services')
-      if (response.ok) {
-        return await response.json()
-      }
-    } catch (error) {
-      console.error('Error loading included services:', error)
+    const response = await fetch('/api/user/included-services')
+    if (response.ok) {
+      return await response.json()
     }
     return []
   }
 
   const loadExtras = async (): Promise<ProductExtra[]> => {
-    try {
-      const response = await fetch('/api/user/extras')
-      if (response.ok) {
-        return await response.json()
-      }
-    } catch (error) {
-      console.error('Error loading extras:', error)
+    const response = await fetch('/api/user/extras')
+    if (response.ok) {
+      return await response.json()
     }
     return []
   }
 
   const loadHighlights = async (): Promise<PropertyHighlight[]> => {
-    try {
-      const response = await fetch('/api/user/highlights')
-      if (response.ok) {
-        return await response.json()
-      }
-    } catch (error) {
-      console.error('Error loading highlights:', error)
+    const response = await fetch('/api/user/highlights')
+    if (response.ok) {
+      return await response.json()
     }
     return []
   }
@@ -345,9 +316,8 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [productData, typesData, equipmentsData, mealsData, securitiesData, servicesData, includedServicesData, extrasData, highlightsData] =
+        const [typesData, equipmentsData, mealsData, securitiesData, servicesData, includedServicesData, extrasData, highlightsData, usersData] =
           await Promise.all([
-            findProductById(resolvedParams.id),
             findAllTypeRent(),
             findAllEquipments(),
             findAllMeals(),
@@ -356,68 +326,8 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
             loadIncludedServices(),
             loadExtras(),
             loadHighlights(),
+            findAllUser(),
           ])
-
-        if (productData) {
-          const convertedProduct = productData as unknown as Product
-          
-          // Check if this is an approved product with an existing draft
-          if (convertedProduct.validate === 'ModificationPending' && !convertedProduct.isDraft) {
-            // Find and redirect to the draft
-            const draft = await getDraftProduct(resolvedParams.id)
-            if (draft) {
-              router.push(`/dashboard/host/edit/${draft.id}`)
-              return
-            }
-          }
-          
-          setProduct(convertedProduct)
-          
-          // Convert existing images to ImageFile format
-          const existingImages = convertedProduct.img?.map((img, index) => ({
-            file: new File([], `existing-${index}.jpg`),
-            preview: img.img,
-            id: `existing-${index}-${Date.now()}`
-          })) || []
-          setSelectedFiles(existingImages)
-          
-          // Populate form data with existing product data
-          setFormData({
-            name: convertedProduct.name || '',
-            description: convertedProduct.description || '',
-            address: convertedProduct.address || '',
-            phone: convertedProduct.phone || '',
-            phoneCountry: convertedProduct.phoneCountry || 'MG',
-            room: convertedProduct.room?.toString() || '',
-            bathroom: convertedProduct.bathroom?.toString() || '',
-            arriving: convertedProduct.arriving?.toString() || '',
-            leaving: convertedProduct.leaving?.toString() || '',
-            basePrice: convertedProduct.basePrice || '',
-            priceMGA: convertedProduct.priceMGA || '',
-            autoAccept: convertedProduct.autoAccept || false,
-            typeId: convertedProduct.typeId || '',
-            equipmentIds: convertedProduct.equipments?.map(e => e.id) || [],
-            mealIds: convertedProduct.mealsList?.map(m => m.id) || [],
-            securityIds: convertedProduct.securities?.map(s => s.id) || [],
-            serviceIds: convertedProduct.servicesList?.map(s => s.id) || [],
-            includedServiceIds: convertedProduct.includedServices?.map(s => s.id) || [],
-            extraIds: convertedProduct.extras?.map(e => e.id) || [],
-            highlightIds: convertedProduct.highlights?.map(h => h.id) || [],
-            surface: convertedProduct.surface?.toString() || '',
-            maxPeople: convertedProduct.maxPeople?.toString() || '',
-            accessibility: convertedProduct.accessibility || false,
-            petFriendly: convertedProduct.petFriendly || false,
-            nearbyPlaces: convertedProduct.nearbyPlaces?.map(p => ({
-              name: p.name,
-              distance: p.distance.toString(),
-              unit: p.unit as 'mètres' | 'kilomètres'
-            })) || [],
-            transportation: convertedProduct.transportation || '',
-            isHotel: convertedProduct.isHotel || false,
-            hotelName: convertedProduct.hotelName || '',
-            availableRooms: convertedProduct.availableRooms?.toString() || '',
-          })
-        }
 
         setTypes(typesData || [])
         setEquipments(equipmentsData || [])
@@ -427,14 +337,15 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         setIncludedServices(includedServicesData || [])
         setExtras(extrasData || [])
         setHighlights(highlightsData || [])
-      } catch (err) {
-        console.error('Error loading data:', err)
+        setUsers(usersData || [])
+      } catch (error) {
+        console.error('Error loading data:', error)
         setError({
           type: 'network',
           title: 'Erreur de chargement',
-          message: 'Impossible de charger les données du produit.',
+          message: 'Impossible de charger les données nécessaires à la création d\'annonce.',
           details: [
-            'Échec du chargement des données du produit',
+            'Échec du chargement des types d\'hébergement, équipements ou services',
             'Vérifiez votre connexion internet'
           ],
           suggestions: [
@@ -444,15 +355,11 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           ],
           retryable: true
         })
-      } finally {
-        setLoading(false)
       }
     }
 
-    if (session?.user) {
-      loadData()
-    }
-  }, [session, resolvedParams.id, router])
+    loadData()
+  }, [])
 
   // Fonctions pour gérer les nouveaux services/extras/highlights créés
   const handleServiceCreated = (newService: IncludedService) => {
@@ -465,6 +372,14 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
   const handleHighlightCreated = (newHighlight: PropertyHighlight) => {
     setHighlights(prev => [...prev, newHighlight])
+  }
+
+  const handleSpecialPriceCreated = (newSpecialPrice: Omit<SpecialPrice, 'id'>) => {
+    const specialPriceWithId: SpecialPrice = {
+      ...newSpecialPrice,
+      id: `temp-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
+    }
+    setSpecialPrices(prev => [...prev, specialPriceWithId])
   }
 
   // Calcul mémorisé pour les extras sélectionnés avec leurs données complètes
@@ -577,7 +492,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           suggestions: [
             'Supprimez quelques images existantes avant d\'en ajouter de nouvelles',
             'Sélectionnez vos meilleures photos pour mettre en valeur votre hébergement',
-            'Vous pourrez ajouter d\'autres photos après la modification de l\'annonce'
+            'Vous pourrez ajouter d\'autres photos après la création de l\'annonce'
           ]
         })
         return
@@ -585,7 +500,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
       try {
         setIsUploadingImages(true)
-        setError(null)
+        setError(null) // Clear any previous errors
 
         // Compress images before adding them
         const compressedFiles = await compressImages(filesArray, {
@@ -603,7 +518,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         }))
 
         setSelectedFiles(prev => [...prev, ...imageFiles])
-        setError(null)
+        setError(null) // Clear any previous errors
 
         // Log compression results
         compressedFiles.forEach((file, index) => {
@@ -638,47 +553,73 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
   const removeFileById = (id: string) => {
     const imageFile = selectedFiles.find(img => img.id === id)
-    if (imageFile?.preview && !imageFile.preview.startsWith('data:') && !imageFile.preview.startsWith('http')) {
+    if (imageFile?.preview) {
       URL.revokeObjectURL(imageFile.preview)
     }
     setSelectedFiles(prev => prev.filter(img => img.id !== id))
   }
 
-  // Convert files to base64 with compression
-  const convertFilesToBase64 = async (imageFiles: ImageFile[]): Promise<string[]> => {
-    const results: string[] = []
-    
-    for (const imageFile of imageFiles) {
-      // If it's an existing image (URL), keep as is
-      if (imageFile.preview.startsWith('http') || imageFile.preview.startsWith('data:')) {
-        results.push(imageFile.preview)
-      } else {
-        // If it's a new file, compress and convert
-        try {
-          const compressedFiles = await compressImages([imageFile.file], {
-            maxSizeMB: 0.8,
-            maxWidthOrHeight: 1920,
-            useWebWorker: true,
-            quality: 0.8,
-          })
-          
-          const base64 = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader()
-            reader.onloadend = () => resolve(reader.result as string)
-            reader.onerror = () => reject(new Error(`Erreur de lecture de l'image: ${compressedFiles[0].name}`))
-            reader.readAsDataURL(compressedFiles[0])
-          })
-          
-          results.push(base64)
-        } catch (error) {
-          console.error('Error processing image:', error)
-          throw error
-        }
+  // Upload images via API (WebP conversion + 3 sizes)
+  const uploadImagesToServer = async (imageFiles: ImageFile[], productId: string): Promise<string[]> => {
+    const files = imageFiles.map(img => img.file)
+    setIsUploadingImages(true)
+    try {
+      // First compress the images
+      const compressedFiles = await compressImages(files, {
+        maxSizeMB: 0.8,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+        quality: 0.8,
+      })
+
+      // Convert to base64 for API upload
+      const base64Images: string[] = []
+      for (let i = 0; i < compressedFiles.length; i++) {
+        const file = compressedFiles[i]
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onloadend = () => {
+            console.log(
+              `Image ${i + 1} (${file.name}) compressed size: ${formatFileSize(file.size)}`
+            )
+            resolve(reader.result as string)
+          }
+          reader.onerror = () => reject(new Error(`Erreur de lecture de l'image: ${file.name}`))
+          reader.readAsDataURL(file)
+        })
+        base64Images.push(base64)
       }
+
+      // Upload to API (converts to WebP + generates 3 sizes)
+      console.log(`📤 Uploading ${base64Images.length} images to server...`)
+      const uploadResponse = await fetch('/api/images/upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          images: base64Images,
+          entityType: 'products',
+          entityId: productId,
+        }),
+      })
+
+      if (!uploadResponse.ok) {
+        const error = await uploadResponse.json()
+        throw new Error(error.error || 'Erreur lors de l\'upload des images')
+      }
+
+      const uploadData = await uploadResponse.json()
+      console.log(`✅ Successfully uploaded ${uploadData.count} images`)
+
+      // Return full URLs (high quality for display)
+      return uploadData.images.map((img: {thumb: string, medium: string, full: string}) => img.full)
+    } finally {
+      setIsUploadingImages(false)
     }
-    
-    return results
   }
+
+  // Note: Object URLs are cleaned up manually in removeFileById when images are removed
 
   // Nearby places management
   const addNearbyPlace = () => {
@@ -705,7 +646,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     setError(null)
 
     if (!session?.user?.id) {
-      setError(createValidationError('auth', 'Vous devez être connecté pour modifier une annonce'))
+      setError(createValidationError('auth', 'Vous devez être connecté pour créer une annonce'))
       setIsLoading(false)
       return
     }
@@ -736,7 +677,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         setIsLoading(false)
         return
       }
-      
+
       if (!formData.availableRooms || Number(formData.availableRooms) <= 0) {
         setError(createValidationError('availableRooms', 'Le nombre de chambres disponibles doit être supérieur à 0'))
         setIsLoading(false)
@@ -751,18 +692,42 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     }
 
     try {
-      // Convert images to base64
-      setIsUploadingImages(true)
-      const base64Images = await convertFilesToBase64(selectedFiles)
-      setIsUploadingImages(false)
+      // Récupérer les coordonnées géographiques si un placeId est disponible
+      let latitude = 0
+      let longitude = 0
 
-      // Préparer les données pour le service
+      if (formData.placeId) {
+        try {
+          const placeDetails = await googleSuggestionService.getPlaceDetails({
+            placeId: formData.placeId,
+            fields: ['geometry']
+          })
+
+          if (placeDetails?.geometry?.location) {
+            latitude = placeDetails.geometry.location.lat
+            longitude = placeDetails.geometry.location.lng
+            console.log('Coordonnées récupérées:', { latitude, longitude })
+          }
+        } catch (error) {
+          console.warn('Impossible de récupérer les coordonnées:', error)
+        }
+      }
+
+      // Déterminer l'utilisateur final (admin peut assigner à un autre utilisateur)
+      const finalUserId = assignToOtherUser && userSelected ? userSelected : session.user.id
+
+      // Debug: Vérifier les prix spéciaux
+      console.log('=== Frontend Debug ===')
+      console.log('specialPrices state:', specialPrices)
+      console.log('specialPrices length:', specialPrices.length)
+
+      // Étape 1: Créer le produit SANS les images pour obtenir un ID
       const productData = {
         name: formData.name,
         description: formData.description,
         address: formData.address,
-        longitude: 0, // Valeur par défaut
-        latitude: 0, // Valeur par défaut
+        longitude: longitude,
+        latitude: latitude,
         basePrice: formData.basePrice,
         priceMGA: formData.priceMGA,
         room: formData.room ? Number(formData.room) : null,
@@ -772,24 +737,20 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         phone: formData.phone,
         phoneCountry: formData.phoneCountry || 'MG',
         maxPeople: formData.maxPeople ? Number(formData.maxPeople) : null,
-        surface: formData.surface ? Number(formData.surface) : null,
-        accessibility: formData.accessibility,
-        petFriendly: formData.petFriendly,
-        transportation: formData.transportation,
-        autoAccept: formData.autoAccept,
         typeId: formData.typeId,
-        securities: formData.securityIds,
+        userId: [finalUserId],
         equipments: formData.equipmentIds,
         services: formData.serviceIds,
         meals: formData.mealIds,
+        securities: formData.securityIds,
         includedServices: formData.includedServiceIds,
         extras: formData.extraIds,
         highlights: formData.highlightIds,
-        images: base64Images,
+        images: [], // Créer sans images d'abord
         nearbyPlaces: formData.nearbyPlaces.map(place => ({
           name: place.name,
           distance: place.distance ? Number(place.distance) : 0,
-          duration: 0,
+          duration: 0, // TODO: Calculer la durée si nécessaire
           transport: place.unit === 'kilomètres' ? 'voiture' : 'à pied',
         })),
         // Données spécifiques aux hôtels
@@ -798,42 +759,44 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           name: formData.hotelName,
           availableRooms: Number(formData.availableRooms),
         } : null,
+        // Prix spéciaux
+        specialPrices: specialPrices.map(sp => ({
+          pricesMga: sp.pricesMga,
+          pricesEuro: sp.pricesEuro,
+          day: sp.day,
+          startDate: sp.startDate,
+          endDate: sp.endDate,
+          activate: sp.activate,
+        })),
       }
 
-      // Check if product is approved and needs draft creation
-      if (product?.validate === 'Approve') {
-        // Create a draft and redirect to edit the draft
-        const draft = await createDraftProduct(resolvedParams.id)
-        if (draft) {
-          // Update the draft with the new data
-          const result = await resubmitProductWithChange(
-            draft.id,
-            productData,
-            session.user.id
-          )
-          if (result) {
-            router.push('/dashboard/host?status=modification-pending')
-          } else {
-            throw new Error("Erreur lors de la mise à jour du brouillon")
-          }
-        } else {
-          throw new Error("Erreur lors de la création du brouillon")
-        }
-      } else {
-        // Normal update for non-approved products or drafts
-        const result = await resubmitProductWithChange(
-          resolvedParams.id,
-          productData,
-          session.user.id
-        )
-        if (result) {
-          router.push('/dashboard/host')
-        } else {
-          throw new Error("Erreur lors de la mise à jour de l'annonce")
-        }
+      const result = await createProduct(productData)
+
+      if (!result) {
+        throw new Error("Erreur lors de la création de l'annonce")
       }
+
+      // Étape 2: Upload les images vers le serveur (WebP conversion + 3 sizes)
+      setIsUploadingImages(true)
+      const imageUrls = await uploadImagesToServer(selectedFiles, result.id)
+
+      // Étape 3: Mettre à jour le produit avec les URLs des images
+      const updateResponse = await fetch(`/api/products/${result.id}/images`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ imageUrls }),
+      })
+
+      if (!updateResponse.ok) {
+        console.error('Erreur lors de la mise à jour des images, mais le produit a été créé')
+        // On continue quand même car le produit existe
+      }
+
+      router.push('/dashboard')
     } catch (error) {
-      console.error('Error updating product:', error)
+      console.error('Error creating product:', error)
       setError(parseCreateProductError(error))
     } finally {
       setIsLoading(false)
@@ -847,21 +810,10 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center'>
         <div className='text-center'>
           <h2 className='text-2xl font-bold text-slate-800 mb-4'>Connexion requise</h2>
-          <p className='text-slate-600 mb-6'>Vous devez être connecté pour modifier une annonce.</p>
+          <p className='text-slate-600 mb-6'>Vous devez être connecté pour créer une annonce.</p>
           <Button onClick={() => router.push('/auth')} className='bg-blue-600 hover:bg-blue-700'>
             Se connecter
           </Button>
-        </div>
-      </div>
-    )
-  }
-
-  if (loading) {
-    return (
-      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center'>
-        <div className='flex items-center space-x-2'>
-          <div className='w-4 h-4 border-2 border-blue-600/20 border-t-blue-600 rounded-full animate-spin' />
-          <span className='text-slate-600'>Chargement...</span>
         </div>
       </div>
     )
@@ -877,12 +829,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       >
         {/* Header with breadcrumb */}
         <motion.div className='flex items-center gap-4' variants={itemVariants}>
-          <Button 
-            variant='ghost' 
-            size='sm' 
-            className='text-slate-600 hover:text-slate-800'
-            onClick={() => router.push('/dashboard/host')}
-          >
+          <Button variant='ghost' size='sm' className='text-slate-600 hover:text-slate-800'>
             <ArrowLeft className='h-4 w-4 mr-2' />
             Retour
           </Button>
@@ -892,90 +839,15 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         <motion.div className='text-center space-y-4' variants={itemVariants}>
           <div className='inline-flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-medium'>
             <Home className='h-4 w-4' />
-            Modifier une annonce
+            Créer une annonce
           </div>
           <h1 className='text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 via-blue-700 to-indigo-700'>
-            Modifier votre annonce
+            Créer une nouvelle annonce
           </h1>
           <p className='text-slate-600 max-w-2xl mx-auto text-lg'>
-            Modifiez les informations de votre hébergement
+            Remplissez les informations ci-dessous pour créer votre annonce
           </p>
         </motion.div>
-
-        {/* Validation status notification */}
-        {product?.validate === 'Approve' && !product?.isDraft && (
-          <motion.div variants={itemVariants}>
-            <div className='bg-amber-50 border border-amber-200 rounded-lg p-4'>
-              <div className='flex items-start'>
-                <div className='flex-shrink-0'>
-                  <svg className='h-5 w-5 text-amber-400' viewBox='0 0 20 20' fill='currentColor'>
-                    <path fillRule='evenodd' d='M10 3a1 1 0 011 1v5.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 9.586V4a1 1 0 011-1z' clipRule='evenodd' />
-                  </svg>
-                </div>
-                <div className='ml-3'>
-                  <h3 className='text-sm font-medium text-amber-800'>
-                    Modification d&apos;une annonce approuvée
-                  </h3>
-                  <div className='mt-2 text-sm text-amber-700'>
-                    <p>
-                      Votre annonce est actuellement approuvée et active. Les modifications que vous apportez créeront une demande de validation qui sera examinée par un administrateur. 
-                      Votre annonce actuelle restera active pendant le processus de validation.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {product?.validate === 'ModificationPending' && !product?.isDraft && (
-          <motion.div variants={itemVariants}>
-            <div className='bg-blue-50 border border-blue-200 rounded-lg p-4'>
-              <div className='flex items-start'>
-                <div className='flex-shrink-0'>
-                  <svg className='h-5 w-5 text-blue-400' viewBox='0 0 20 20' fill='currentColor'>
-                    <path fillRule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z' clipRule='evenodd' />
-                  </svg>
-                </div>
-                <div className='ml-3'>
-                  <h3 className='text-sm font-medium text-blue-800'>
-                    Modification en attente
-                  </h3>
-                  <div className='mt-2 text-sm text-blue-700'>
-                    <p>
-                      Une demande de modification est déjà en cours d&apos;examen pour cette annonce. 
-                      Vous éditez actuellement le brouillon de modification.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {product?.isDraft && (
-          <motion.div variants={itemVariants}>
-            <div className='bg-indigo-50 border border-indigo-200 rounded-lg p-4'>
-              <div className='flex items-start'>
-                <div className='flex-shrink-0'>
-                  <svg className='h-5 w-5 text-indigo-400' viewBox='0 0 20 20' fill='currentColor'>
-                    <path d='M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z' />
-                  </svg>
-                </div>
-                <div className='ml-3'>
-                  <h3 className='text-sm font-medium text-indigo-800'>
-                    Brouillon de modification
-                  </h3>
-                  <div className='mt-2 text-sm text-indigo-700'>
-                    <p>
-                      Vous éditez un brouillon de modification. Ces changements seront soumis à validation une fois enregistrés.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
 
         {error && (
           <motion.div variants={itemVariants}>
@@ -984,6 +856,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               onClose={() => setError(null)}
               onRetry={error.retryable ? () => {
                 setError(null)
+                // Optionally trigger the last failed action again
               } : undefined}
             />
           </motion.div>
@@ -991,155 +864,23 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
         <form onSubmit={handleSubmit} className='space-y-8'>
           {/* Informations principales - Pleine largeur */}
+          <BasicInfoSection
+            formData={formData}
+            types={types}
+            handleInputChange={handleInputChange}
+            setFormData={setFormData}
+            itemVariants={itemVariants}
+          />
+
+          {/* Localisation et Contact - Pleine largeur */}
+          <LocationContactSection
+            formData={formData}
+            setFormData={setFormData}
+            itemVariants={itemVariants}
+          />
+
+          {/* Caractéristiques - Pleine largeur */}
           <motion.div variants={itemVariants}>
-            <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm'>
-              <CardHeader className='space-y-2'>
-                <div className='flex items-center gap-2'>
-                  <div className='p-2 bg-blue-50 rounded-lg'>
-                    <Home className='h-5 w-5 text-blue-600' />
-                  </div>
-                  <div>
-                    <CardTitle className='text-xl'>Informations principales</CardTitle>
-                    <p className='text-slate-600 text-sm mt-1'>
-                      Les informations essentielles de votre hébergement
-                    </p>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className='space-y-6'>
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-                  <div className='space-y-2'>
-                    <label htmlFor='name' className='text-sm font-medium text-slate-700'>
-                      Nom de l&apos;hébergement
-                    </label>
-                    <Input
-                      id='name'
-                      name='name'
-                      type='text'
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      placeholder='Ex: Villa avec vue sur mer'
-                      className='border-slate-200 focus:border-blue-300 focus:ring-blue-200'
-                    />
-                  </div>
-
-                  <div className='space-y-2'>
-                    <label htmlFor='typeId' className='text-sm font-medium text-slate-700'>
-                      Type d&apos;hébergement
-                    </label>
-                    <select
-                      id='typeId'
-                      name='typeId'
-                      value={formData.typeId}
-                      onChange={handleInputChange}
-                      required
-                      className='w-full px-3 py-2 border border-slate-200 rounded-md focus:border-blue-300 focus:ring-blue-200 focus:ring-2 focus:ring-opacity-50'
-                    >
-                      <option value=''>Sélectionnez un type</option>
-                      {types.map(type => (
-                        <option key={type.id} value={type.id}>
-                          {type.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className='space-y-2'>
-                  <label htmlFor='description' className='text-sm font-medium text-slate-700'>
-                    Description détaillée
-                  </label>
-                  <div
-                    data-color-mode="light"
-                    className="rounded-md border border-slate-200 overflow-hidden"
-                  >
-                    <MDEditor
-                      value={formData.description}
-                      onChange={(value) => setFormData({...formData, description: value || ''})}
-                      height={400}
-                      preview="edit"
-                      className="!border-none"
-                      data-color-mode="light"
-                      visibleDragbar={false}
-                      textareaProps={{
-                        placeholder: "Décrivez votre hébergement en détail...\n\n**Points forts:**\n- Avantage 1\n- Avantage 2\n\n**Environnement:**\nDécrivez l'environnement de votre hébergement...",
-                        required: true
-                      }}
-                    />
-                  </div>
-                  <RichEditorGuide />
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Reste du formulaire en 2 colonnes */}
-          <div className='grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch'>
-            {/* Colonne de gauche */}
-            <div className='space-y-6 h-full'>
-              {/* Localisation et Contact */}
-              <motion.div variants={itemVariants}>
-                <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm'>
-                  <CardHeader className='space-y-2'>
-                    <div className='flex items-center gap-2'>
-                      <div className='p-2 bg-green-50 rounded-lg'>
-                        <MapPin className='h-5 w-5 text-green-600' />
-                      </div>
-                      <div>
-                        <CardTitle className='text-xl'>Localisation et Contact</CardTitle>
-                        <p className='text-slate-600 text-sm mt-1'>
-                          Où se trouve votre hébergement et comment vous joindre
-                        </p>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className='space-y-6'>
-                    <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-                      <div className='space-y-2'>
-                        <label htmlFor='address' className='text-sm font-medium text-slate-700'>
-                          Adresse complète
-                        </label>
-                        <Input
-                          id='address'
-                          name='address'
-                          type='text'
-                          placeholder='Numéro, rue, code postal, ville'
-                          value={formData.address}
-                          onChange={handleInputChange}
-                          required
-                          className='border-slate-200 focus:border-green-300 focus:ring-green-200'
-                        />
-                      </div>
-
-                      <div className='space-y-2'>
-                        <label htmlFor='phone' className='text-sm font-medium text-slate-700'>
-                          Téléphone de contact
-                        </label>
-                        <PhoneInput
-                          value={formData.phone}
-                          defaultCountry={formData.phoneCountry}
-                          onChange={(phoneNumber, countryCode) => {
-                            setFormData(prev => ({
-                              ...prev,
-                              phone: phoneNumber,
-                              phoneCountry: countryCode
-                            }))
-                          }}
-                          placeholder="XX XX XX XX"
-                          required
-                          className="border-slate-200 focus:border-green-300 focus:ring-green-200"
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </div>
-
-            {/* Colonne de droite */}
-            <div className='space-y-6 h-full'>
-              {/* Caractéristiques */}
-              <motion.div variants={itemVariants}>
                 <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm'>
                   <CardHeader className='space-y-2'>
                     <div className='flex items-center gap-2'>
@@ -1260,6 +1001,9 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                             onChange={handleInputChange}
                             className='border-amber-200 focus:border-amber-400 focus:ring-amber-200 bg-white/80'
                           />
+                          <p className='text-xs text-amber-600'>
+                            Nom officiel de l&apos;établissement hôtelier
+                          </p>
                         </div>
 
                         <div className='space-y-2'>
@@ -1276,6 +1020,28 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                             onChange={handleInputChange}
                             className='border-amber-200 focus:border-amber-400 focus:ring-amber-200 bg-white/80'
                           />
+                          <p className='text-xs text-amber-600'>
+                            Nombre de chambres de ce type disponibles
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className='bg-amber-100 border border-amber-200 rounded-lg p-4'>
+                        <div className='flex items-start gap-3'>
+                          <div className='p-1.5 bg-amber-200 rounded-full'>
+                            <Home className='h-4 w-4 text-amber-700' />
+                          </div>
+                          <div className='flex-1'>
+                            <h4 className='text-sm font-semibold text-amber-800 mb-1'>
+                              Fonctionnement Hôtelier
+                            </h4>
+                            <p className='text-xs text-amber-700 leading-relaxed'>
+                              Cette chambre représente un type de chambre dans votre hôtel.
+                              Si vous avez <span className='font-semibold'>{formData.availableRooms || 'X'}</span> chambres
+                              de ce type, plusieurs clients pourront réserver en même temps sur les mêmes dates,
+                              tant que le nombre de chambres disponibles le permet.
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -1283,321 +1049,132 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                 </motion.div>
               )}
 
-              {/* Tarification */}
-              <motion.div variants={itemVariants}>
-                <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm'>
-                  <CardHeader className='space-y-2'>
-                    <div className='flex items-center gap-2'>
-                      <div className='p-2 bg-orange-50 rounded-lg'>
-                        <Euro className='h-5 w-5 text-orange-600' />
-                      </div>
-                      <div>
-                        <CardTitle className='text-xl'>Tarification</CardTitle>
-                        <p className='text-slate-600 text-sm mt-1'>
-                          Définissez vos prix et conditions
-                        </p>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className='space-y-6'>
-                    <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-                      <div className='space-y-2'>
-                        <label htmlFor='basePrice' className='text-sm font-medium text-slate-700'>
-                          Prix de base (€)
-                        </label>
-                        <Input
-                          id='basePrice'
-                          name='basePrice'
-                          type='number'
-                          min='0'
-                          step='0.01'
-                          placeholder='100.00'
-                          value={formData.basePrice}
-                          onChange={handleInputChange}
-                          required
-                          className='border-slate-200 focus:border-orange-300 focus:ring-orange-200'
-                        />
-                      </div>
-
-                      <div className='space-y-2'>
-                        <label htmlFor='priceMGA' className='text-sm font-medium text-slate-700'>
-                          Prix en MGA
-                        </label>
-                        <Input
-                          id='priceMGA'
-                          name='priceMGA'
-                          type='number'
-                          min='0'
-                          placeholder='400000'
-                          value={formData.priceMGA}
-                          onChange={handleInputChange}
-                          required
-                          className='border-slate-200 focus:border-orange-300 focus:ring-orange-200'
-                        />
-                      </div>
-                    </div>
-
-                    <div className='flex items-center space-x-2'>
-                      <input
-                        id='autoAccept'
-                        name='autoAccept'
-                        type='checkbox'
-                        checked={formData.autoAccept}
-                        onChange={handleInputChange}
-                        className='w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500'
-                      />
-                      <label htmlFor='autoAccept' className='text-sm font-medium text-slate-700'>
-                        Acceptation automatique des réservations
-                      </label>
-                    </div>
-
-                    {/* Calcul des commissions */}
-                    {formData.basePrice && (
-                      <CommissionDisplay 
-                        basePrice={parseFloat(formData.basePrice) || 0}
-                        className="border-orange-200 bg-orange-50/30"
-                      />
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </div>
-          </div>
-
-          {/* Équipements et Services */}
+          {/* Tarification - Pleine largeur */}
           <motion.div variants={itemVariants}>
             <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm'>
               <CardHeader className='space-y-2'>
                 <div className='flex items-center gap-2'>
-                  <div className='p-2 bg-emerald-50 rounded-lg'>
-                    <Wifi className='h-5 w-5 text-emerald-600' />
+                  <div className='p-2 bg-orange-50 rounded-lg'>
+                    <Euro className='h-5 w-5 text-orange-600' />
                   </div>
                   <div>
-                    <CardTitle className='text-xl'>Équipements et Services</CardTitle>
+                    <CardTitle className='text-xl'>Tarification</CardTitle>
                     <p className='text-slate-600 text-sm mt-1'>
-                      Sélectionnez les équipements disponibles dans votre hébergement
+                      Définissez vos prix et conditions
                     </p>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className='space-y-6'>
-                {/* Grille 2x2 avec hauteur uniforme */}
-                <div className='grid grid-cols-1 lg:grid-cols-2 grid-rows-2 gap-6 auto-rows-fr'>
-                  {/* Équipements - Position 1 */}
-                  <div className='border-2 border-slate-200 rounded-xl p-4 bg-white/50 backdrop-blur-sm flex flex-col h-full'>
-                    <h4 className='font-medium text-slate-700 flex items-center gap-2 mb-4'>
-                      <Zap className='h-4 w-4' />
-                      Équipements disponibles
-                    </h4>
-                    <div className='flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 content-start'>
-                      {equipments.map(equipment => (
-                        <label
-                          key={equipment.id}
-                          className={`relative flex items-center p-2 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-sm ${
-                            formData.equipmentIds.includes(equipment.id)
-                              ? 'border-emerald-500 bg-emerald-50'
-                              : 'border-slate-200 bg-white hover:border-emerald-300'
-                          }`}
-                        >
-                          <input
-                            type='checkbox'
-                            checked={formData.equipmentIds.includes(equipment.id)}
-                            onChange={() => handleCheckboxChange('equipmentIds', equipment.id)}
-                            className='sr-only'
-                          />
-                          <div className='flex items-center space-x-2 w-full'>
-                            <div
-                              className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                                formData.equipmentIds.includes(equipment.id)
-                                  ? 'border-emerald-500 bg-emerald-500'
-                                  : 'border-slate-300'
-                              }`}
-                            >
-                              {formData.equipmentIds.includes(equipment.id) && (
-                                <svg
-                                  className='w-2 h-2 text-white'
-                                  fill='currentColor'
-                                  viewBox='0 0 20 20'
-                                >
-                                  <path
-                                    fillRule='evenodd'
-                                    d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z'
-                                    clipRule='evenodd'
-                                  />
-                                </svg>
-                              )}
-                            </div>
-                            <span className='text-xs font-medium text-slate-700 truncate'>
-                              {equipment.name}
-                            </span>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+                  <div className='space-y-2'>
+                    <label htmlFor='basePrice' className='text-sm font-medium text-slate-700'>
+                      Prix de base (€)
+                    </label>
+                    <Input
+                      id='basePrice'
+                      name='basePrice'
+                      type='number'
+                      min='0'
+                      step='0.01'
+                      placeholder='100.00'
+                      value={formData.basePrice}
+                      onChange={handleInputChange}
+                      required
+                      className='border-slate-200 focus:border-orange-300 focus:ring-orange-200'
+                    />
                   </div>
 
-                  {/* Repas - Position 2 */}
-                  <div className='border-2 border-slate-200 rounded-xl p-4 bg-white/50 backdrop-blur-sm flex flex-col h-full'>
-                    <h4 className='font-medium text-slate-700 flex items-center gap-2 mb-4'>
-                      <UtensilsCrossed className='h-4 w-4' />
-                      Services de restauration
-                    </h4>
-                    <div className='flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 content-start'>
-                      {meals.map(meal => (
-                        <label
-                          key={meal.id}
-                          className={`relative flex items-center p-2 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-sm ${
-                            formData.mealIds.includes(meal.id)
-                              ? 'border-orange-500 bg-orange-50'
-                              : 'border-slate-200 bg-white hover:border-orange-300'
-                          }`}
-                        >
-                          <input
-                            type='checkbox'
-                            checked={formData.mealIds.includes(meal.id)}
-                            onChange={() => handleCheckboxChange('mealIds', meal.id)}
-                            className='sr-only'
-                          />
-                          <div className='flex items-center space-x-2 w-full'>
-                            <div
-                              className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                                formData.mealIds.includes(meal.id)
-                                  ? 'border-orange-500 bg-orange-500'
-                                  : 'border-slate-300'
-                              }`}
-                            >
-                              {formData.mealIds.includes(meal.id) && (
-                                <svg
-                                  className='w-2 h-2 text-white'
-                                  fill='currentColor'
-                                  viewBox='0 0 20 20'
-                                >
-                                  <path
-                                    fillRule='evenodd'
-                                    d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z'
-                                    clipRule='evenodd'
-                                  />
-                                </svg>
-                              )}
-                            </div>
-                            <span className='text-xs font-medium text-slate-700 truncate'>
-                              {meal.name}
-                            </span>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
+                  <div className='space-y-2'>
+                    <label htmlFor='priceMGA' className='text-sm font-medium text-slate-700'>
+                      Prix en MGA
+                    </label>
+                    <Input
+                      id='priceMGA'
+                      name='priceMGA'
+                      type='number'
+                      min='0'
+                      placeholder='400000'
+                      value={formData.priceMGA}
+                      onChange={handleInputChange}
+                      required
+                      className='border-slate-200 focus:border-orange-300 focus:ring-orange-200'
+                    />
                   </div>
+                </div>
 
-                  {/* Sécurité - Position 3 */}
-                  <div className='border-2 border-slate-200 rounded-xl p-4 bg-white/50 backdrop-blur-sm flex flex-col h-full'>
-                    <h4 className='font-medium text-slate-700 flex items-center gap-2 mb-4'>
-                      <Shield className='h-4 w-4' />
-                      Équipements de sécurité
-                    </h4>
-                    <div className='flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 content-start'>
-                      {securities.map(security => (
-                        <label
-                          key={security.id}
-                          className={`relative flex items-center p-2 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-sm ${
-                            formData.securityIds.includes(security.id)
-                              ? 'border-red-500 bg-red-50'
-                              : 'border-slate-200 bg-white hover:border-red-300'
-                          }`}
-                        >
-                          <input
-                            type='checkbox'
-                            checked={formData.securityIds.includes(security.id)}
-                            onChange={() => handleCheckboxChange('securityIds', security.id)}
-                            className='sr-only'
-                          />
-                          <div className='flex items-center space-x-2 w-full'>
-                            <div
-                              className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                                formData.securityIds.includes(security.id)
-                                  ? 'border-red-500 bg-red-500'
-                                  : 'border-slate-300'
-                              }`}
-                            >
-                              {formData.securityIds.includes(security.id) && (
-                                <svg
-                                  className='w-2 h-2 text-white'
-                                  fill='currentColor'
-                                  viewBox='0 0 20 20'
-                                >
-                                  <path
-                                    fillRule='evenodd'
-                                    d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z'
-                                    clipRule='evenodd'
-                                  />
-                                </svg>
-                              )}
-                            </div>
-                            <span className='text-xs font-medium text-slate-700 truncate'>
-                              {security.name}
-                            </span>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Services - Position 4 */}
-                  <div className='border-2 border-slate-200 rounded-xl p-4 bg-white/50 backdrop-blur-sm flex flex-col h-full'>
-                    <h4 className='font-medium text-slate-700 flex items-center gap-2 mb-4'>
-                      <Star className='h-4 w-4' />
-                      Services additionnels
-                    </h4>
-                    <div className='flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 content-start'>
-                      {services.map(service => (
-                        <label
-                          key={service.id}
-                          className={`relative flex items-center p-2 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-sm ${
-                            formData.serviceIds.includes(service.id)
-                              ? 'border-blue-500 bg-blue-50'
-                              : 'border-slate-200 bg-white hover:border-blue-300'
-                          }`}
-                        >
-                          <input
-                            type='checkbox'
-                            checked={formData.serviceIds.includes(service.id)}
-                            onChange={() => handleCheckboxChange('serviceIds', service.id)}
-                            className='sr-only'
-                          />
-                          <div className='flex items-center space-x-2 w-full'>
-                            <div
-                              className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                                formData.serviceIds.includes(service.id)
-                                  ? 'border-blue-500 bg-blue-500'
-                                  : 'border-slate-300'
-                              }`}
-                            >
-                              {formData.serviceIds.includes(service.id) && (
-                                <svg
-                                  className='w-2 h-2 text-white'
-                                  fill='currentColor'
-                                  viewBox='0 0 20 20'
-                                >
-                                  <path
-                                    fillRule='evenodd'
-                                    d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z'
-                                    clipRule='evenodd'
-                                  />
-                                </svg>
-                              )}
-                            </div>
-                            <span className='text-xs font-medium text-slate-700 truncate'>
-                              {service.name}
-                            </span>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
+                <div className='flex items-center space-x-2'>
+                  <input
+                    id='autoAccept'
+                    name='autoAccept'
+                    type='checkbox'
+                    checked={formData.autoAccept}
+                    onChange={handleInputChange}
+                    className='w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500'
+                  />
+                  <label htmlFor='autoAccept' className='text-sm font-medium text-slate-700'>
+                    Acceptation automatique des réservations
+                  </label>
                 </div>
               </CardContent>
             </Card>
           </motion.div>
+
+          {/* Équipements - Pleine largeur */}
+          <ServiceSelectionSection
+            title="Équipements disponibles"
+            description="Sélectionnez les équipements disponibles dans votre hébergement"
+            icon={Zap}
+            iconColor="text-emerald-600"
+            bgColor="bg-emerald-50"
+            borderColor="border-emerald-500"
+            services={equipments}
+            selectedServiceIds={formData.equipmentIds}
+            onServiceToggle={(id) => handleCheckboxChange('equipmentIds', id)}
+            itemVariants={itemVariants}
+          />
+
+          {/* Repas - Pleine largeur */}
+          <ServiceSelectionSection
+            title="Services de restauration"
+            description="Sélectionnez les services de repas proposés"
+            icon={UtensilsCrossed}
+            iconColor="text-orange-600"
+            bgColor="bg-orange-50"
+            borderColor="border-orange-500"
+            services={meals}
+            selectedServiceIds={formData.mealIds}
+            onServiceToggle={(id) => handleCheckboxChange('mealIds', id)}
+            itemVariants={itemVariants}
+          />
+
+          {/* Sécurité - Pleine largeur */}
+          <ServiceSelectionSection
+            title="Équipements de sécurité"
+            description="Sélectionnez les équipements de sécurité disponibles"
+            icon={Shield}
+            iconColor="text-red-600"
+            bgColor="bg-red-50"
+            borderColor="border-red-500"
+            services={securities}
+            selectedServiceIds={formData.securityIds}
+            onServiceToggle={(id) => handleCheckboxChange('securityIds', id)}
+            itemVariants={itemVariants}
+          />
+
+          {/* Services additionnels - Pleine largeur */}
+          <ServiceSelectionSection
+            title="Services additionnels"
+            description="Sélectionnez les services additionnels proposés"
+            icon={Star}
+            iconColor="text-blue-600"
+            bgColor="bg-blue-50"
+            borderColor="border-blue-500"
+            services={services}
+            selectedServiceIds={formData.serviceIds}
+            onServiceToggle={(id) => handleCheckboxChange('serviceIds', id)}
+            itemVariants={itemVariants}
+          />
 
           {/* Services inclus, Extras et Points forts */}
           <motion.div variants={itemVariants}>
@@ -1616,8 +1193,8 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                 </div>
               </CardHeader>
               <CardContent className='space-y-6'>
-                {/* Grille 1x3 pour les nouvelles options */}
-                <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
+                {/* Grille 1x4 pour les nouvelles options */}
+                <div className='grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6'>
                   {/* Services inclus */}
                   <div className='border-2 border-slate-200 rounded-xl p-4 bg-white/50 backdrop-blur-sm flex flex-col h-full'>
                     <div className='flex items-center justify-between mb-4'>
@@ -1857,6 +1434,77 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                       ))}
                     </div>
                   </div>
+
+                  {/* Prix spéciaux */}
+                  <div className='border-2 border-slate-200 rounded-xl p-4 bg-white/50 backdrop-blur-sm flex flex-col h-full'>
+                    <div className='flex items-center justify-between mb-4'>
+                      <h4 className='font-medium text-slate-700 flex items-center gap-2'>
+                        <Euro className='h-4 w-4' />
+                        Prix spéciaux
+                      </h4>
+                      <Button
+                        type='button'
+                        size='sm'
+                        variant='outline'
+                        onClick={() => setSpecialPriceModalOpen(true)}
+                        className='text-xs'
+                      >
+                        <Plus className='h-3 w-3 mr-1' />
+                        Ajouter
+                      </Button>
+                    </div>
+                    <div className='flex-1 space-y-2 content-start'>
+                      {specialPrices.map(specialPrice => (
+                        <div
+                          key={specialPrice.id}
+                          className='relative flex items-center p-2 border rounded-lg bg-orange-50 border-orange-200'
+                        >
+                          <div className='flex items-center space-x-2 w-full'>
+                            <div className='w-4 h-4 rounded-full border-2 border-orange-500 bg-orange-500 flex items-center justify-center flex-shrink-0'>
+                              <Euro className='w-2 h-2 text-white' />
+                            </div>
+                            <div className='flex-1 min-w-0'>
+                              <div className='flex items-center gap-1 mb-1'>
+                                <span className='text-xs font-medium text-slate-700 block truncate'>
+                                  {specialPrice.pricesEuro}€ / {specialPrice.pricesMga}Ar
+                                </span>
+                                <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
+                                  specialPrice.activate 
+                                    ? 'bg-green-100 text-green-700' 
+                                    : 'bg-gray-100 text-gray-700'
+                                }`}>
+                                  {specialPrice.activate ? 'Actif' : 'Inactif'}
+                                </span>
+                              </div>
+                              <div className='text-xs text-slate-500'>
+                                {specialPrice.day.length > 0 && (
+                                  <span className='block'>
+                                    {specialPrice.day.map(day => {
+                                      const dayNames: Record<DayEnum, string> = {
+                                        Monday: 'Lun', Tuesday: 'Mar', Wednesday: 'Mer',
+                                        Thursday: 'Jeu', Friday: 'Ven', Saturday: 'Sam', Sunday: 'Dim'
+                                      }
+                                      return dayNames[day]
+                                    }).join(', ')}
+                                  </span>
+                                )}
+                                {specialPrice.startDate && specialPrice.endDate && (
+                                  <span className='block'>
+                                    {new Date(specialPrice.startDate).toLocaleDateString('fr-FR')} - {new Date(specialPrice.endDate).toLocaleDateString('fr-FR')}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {specialPrices.length === 0 && (
+                        <div className='text-center py-4 text-slate-500 text-sm'>
+                          Aucun prix spécial défini
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Aperçu des coûts */}
@@ -1872,7 +1520,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                       startDate={testBooking.startDate}
                       endDate={testBooking.endDate}
                       className='max-w-md'
-                      showCommissions={true}
+                      showCommissions={false}
                     />
                     <p className='text-xs text-slate-500 mt-2'>
                       * Exemple calculé sur {numberOfDays} jour{numberOfDays > 1 ? 's' : ''} pour {testBooking.guestCount} personne{testBooking.guestCount > 1 ? 's' : ''}
@@ -2146,6 +1794,63 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
             </Card>
           </motion.div>
 
+          {/* Section Admin - Assigner à un autre utilisateur */}
+          {session?.user?.roles === 'ADMIN' && (
+            <motion.div variants={itemVariants}>
+              <Card className='border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50'>
+                <CardHeader>
+                  <CardTitle className='flex items-center gap-3 text-orange-800'>
+                    <Users className='h-5 w-5 text-orange-600' />
+                    Administration - Assigner l&apos;annonce
+                  </CardTitle>
+                  <p className='text-sm text-orange-600'>
+                    En tant qu&apos;administrateur, vous pouvez créer cette annonce pour un autre
+                    utilisateur
+                  </p>
+                </CardHeader>
+                <CardContent className='space-y-4'>
+                  <div className='flex items-center space-x-2'>
+                    <input
+                      type='checkbox'
+                      id='assignToOtherUser'
+                      checked={assignToOtherUser}
+                      onChange={e => setAssignToOtherUser(e.target.checked)}
+                      className='rounded border-orange-300 focus:ring-orange-200'
+                    />
+                    <label
+                      htmlFor='assignToOtherUser'
+                      className='text-sm font-medium text-orange-700'
+                    >
+                      Assigner cette annonce à un autre utilisateur
+                    </label>
+                  </div>
+
+                  {assignToOtherUser && (
+                    <div className='space-y-2'>
+                      <label htmlFor='userSelect' className='text-sm font-medium text-orange-700'>
+                        Sélectionner l&apos;utilisateur
+                      </label>
+                      <select
+                        id='userSelect'
+                        value={userSelected}
+                        onChange={e => setUserSelected(e.target.value)}
+                        className='w-full p-2 border border-orange-200 rounded-md focus:ring-orange-200 focus:border-orange-300'
+                        required={assignToOtherUser}
+                      >
+                        <option value=''>Choisir un utilisateur...</option>
+                        {users.map(user => (
+                          <option key={user.id} value={user.id}>
+                            {user.firstname} {user.lastname} ({user.email})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
           {/* Bouton de soumission */}
           <motion.div className='flex justify-center pt-8' variants={itemVariants}>
             <Button
@@ -2161,12 +1866,12 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               ) : isLoading ? (
                 <div className='flex items-center gap-2'>
                   <div className='w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin' />
-                  Modification en cours...
+                  Création en cours...
                 </div>
               ) : (
                 <div className='flex items-center gap-2'>
-                  <Home className='h-5 w-5' />
-                  Modifier l&apos;annonce
+                  <Plus className='h-5 w-5' />
+                  Créer l&apos;annonce
                 </div>
               )}
             </Button>
@@ -2192,6 +1897,12 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           isOpen={highlightModalOpen}
           onClose={() => setHighlightModalOpen(false)}
           onHighlightCreated={handleHighlightCreated}
+        />
+
+        <CreateSpecialPriceModal
+          isOpen={specialPriceModalOpen}
+          onClose={() => setSpecialPriceModalOpen(false)}
+          onSpecialPriceCreated={handleSpecialPriceCreated}
         />
       </motion.div>
     </div>

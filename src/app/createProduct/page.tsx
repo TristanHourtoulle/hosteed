@@ -1,44 +1,39 @@
 'use client'
 
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import {
   Home,
-  MapPin,
   Users,
   Euro,
-  Wifi,
   Camera,
-  FileText,
   ArrowLeft,
   Plus,
   Upload,
   X,
-  Zap,
-  UtensilsCrossed,
-  Shield,
-  Star,
   Package,
   Highlighter,
+  Star,
+  FileText,
+  UtensilsCrossed,
+  Shield,
+  Zap,
 } from 'lucide-react'
 
-import { findAllTypeRent } from '@/lib/services/typeRent.service'
-import { findAllEquipments } from '@/lib/services/equipments.service'
-import { findAllMeals } from '@/lib/services/meals.service'
-import { findAllServices } from '@/lib/services/services.service'
-import { findAllSecurity } from '@/lib/services/security.services'
+// Import section components
+import {
+  BasicInfoSection,
+  LocationContactSection,
+  ServiceSelectionSection,
+} from './components'
+
 import { createProduct } from '@/lib/services/product.service'
-import { findAllUser } from '@/lib/services/user.service'
-import { compressImages, formatFileSize } from '@/lib/utils/imageCompression'
 import { googleSuggestionService } from '@/lib/services/GoogleSuggestion.service'
-import { ExtraPriceType, DayEnum } from '@prisma/client'
-import { TypeRentInterface } from '@/lib/interface/typeRentInterface'
 import CreateServiceModal from '@/components/ui/CreateServiceModal'
 import CreateExtraModal from '@/components/ui/CreateExtraModal'
 import CreateHighlightModal from '@/components/ui/CreateHighlightModal'
@@ -46,331 +41,90 @@ import CreateSpecialPriceModal from '@/components/ui/CreateSpecialPriceModal'
 import BookingCostSummary from '@/components/ui/BookingCostSummary'
 import SortableImageGrid from '@/components/ui/SortableImageGrid'
 import ImageGalleryPreview from '@/components/ui/ImageGalleryPreview'
-import PhoneInput from '@/components/ui/PhoneInput'
 import ErrorAlert, { ErrorDetails } from '@/components/ui/ErrorAlert'
 import { parseCreateProductError, createValidationError } from '@/lib/utils/errorHandler'
 
-
-interface Equipment {
-  id: string
-  name: string
-}
-
-interface Meal {
-  id: string
-  name: string
-}
-
-interface Security {
-  id: string
-  name: string
-}
-
-interface Service {
-  id: string
-  name: string
-}
-
-interface IncludedService {
-  id: string
-  name: string
-  description: string | null
-  icon: string | null
-  userId: string | null
-}
-
-interface ProductExtra {
-  id: string
-  name: string
-  description: string | null
-  priceEUR: number
-  priceMGA: number
-  type: ExtraPriceType
-  userId: string | null
-  createdAt?: Date
-  updatedAt?: Date
-}
-
-interface PropertyHighlight {
-  id: string
-  name: string
-  description: string | null
-  icon: string | null
-  userId: string | null
-}
-
-interface SpecialPrice {
-  id: string
-  pricesMga: string
-  pricesEuro: string
-  day: DayEnum[]
-  startDate: Date | null
-  endDate: Date | null
-  activate: boolean
-}
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-    },
-  },
-}
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.5,
-    },
-  },
-}
-
-interface NearbyPlace {
-  name: string
-  distance: string
-  unit: 'mètres' | 'kilomètres'
-}
-
-interface ImageFile {
-  file: File
-  preview: string
-  id: string
-}
-
-interface FormData {
-  name: string
-  description: string
-  address: string
-  placeId?: string // ID Google Places pour récupérer les coordonnées
-  phone: string
-  phoneCountry: string
-  room: string
-  bathroom: string
-  arriving: string
-  leaving: string
-  basePrice: string
-  priceMGA: string
-  autoAccept: boolean
-  typeId: string
-  equipmentIds: string[]
-  mealIds: string[]
-  securityIds: string[]
-  serviceIds: string[]
-  includedServiceIds: string[]
-  extraIds: string[]
-  highlightIds: string[]
-  surface: string
-  maxPeople: string
-  accessibility: boolean
-  petFriendly: boolean
-  nearbyPlaces: NearbyPlace[]
-  transportation: string
-  // Nouveaux champs pour les hôtels
-  isHotel: boolean
-  hotelName: string
-  availableRooms: string
-}
+// Import types, utilities, and hooks
+import type { NearbyPlace, ImageFile, TestBooking, SpecialPrice, FormData } from './types'
+import { DayEnum } from '@prisma/client'
+import { containerVariants, itemVariants } from './utils'
+import {
+  useProductData,
+  useProductForm,
+  useImageUpload,
+} from './hooks'
 
 export default function CreateProductPage() {
   const router = useRouter()
-  const { data: session } = useSession()
+  const { session, isLoading: isAuthLoading } = useAuth({ required: true, redirectTo: '/auth' })
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Custom hooks - managing all state and logic
+  const productData = useProductData()
+  const productForm = useProductForm(productData.types)
+  const imageUpload = useImageUpload()
+
+  // Local UI state (not in hooks)
   const [isLoading, setIsLoading] = useState(false)
-  const [isUploadingImages, setIsUploadingImages] = useState(false)
   const [error, setError] = useState<ErrorDetails | null>(null)
-  const [dragActive, setDragActive] = useState(false)
-  const [selectedFiles, setSelectedFiles] = useState<ImageFile[]>([])
   const [showGalleryPreview, setShowGalleryPreview] = useState(false)
-  const [newPlace, setNewPlace] = useState({
+  const [newPlace, setNewPlace] = useState<NearbyPlace>({
     name: '',
     distance: '',
-    unit: 'mètres' as 'mètres' | 'kilomètres',
+    unit: 'mètres',
   })
   const [userSelected, setUserSelected] = useState('')
   const [assignToOtherUser, setAssignToOtherUser] = useState(false)
 
-  // États pour les modaux de création personnalisée
+  // Modal states
   const [serviceModalOpen, setServiceModalOpen] = useState(false)
   const [extraModalOpen, setExtraModalOpen] = useState(false)
   const [highlightModalOpen, setHighlightModalOpen] = useState(false)
   const [specialPriceModalOpen, setSpecialPriceModalOpen] = useState(false)
 
-  // État pour simuler une réservation de test pour l'aperçu des coûts
-  const [testBooking] = useState({
+  // Test booking for cost preview
+  const [testBooking] = useState<TestBooking>({
     startDate: new Date(),
-    endDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 jours plus tard
-    guestCount: 2
+    endDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+    guestCount: 2,
   })
 
-  // Form data
-  const [formData, setFormData] = useState<FormData>({
-    name: '',
-    description: '',
-    address: '',
-    placeId: '',
-    phone: '',
-    phoneCountry: 'MG',
-    room: '',
-    bathroom: '',
-    arriving: '',
-    leaving: '',
-    basePrice: '',
-    priceMGA: '',
-    autoAccept: false,
-    typeId: '',
-    equipmentIds: [],
-    mealIds: [],
-    securityIds: [],
-    serviceIds: [],
-    includedServiceIds: [],
-    extraIds: [],
-    highlightIds: [],
-    surface: '',
-    maxPeople: '',
-    accessibility: false,
-    petFriendly: false,
-    nearbyPlaces: [],
-    transportation: '',
-    // Nouveaux champs pour les hôtels
-    isHotel: false,
-    hotelName: '',
-    availableRooms: '',
-  })
+  // Destructure for easier access
+  const { formData, setFormData, handleInputChange } = productForm
+  const {
+    types,
+    equipments,
+    meals,
+    securities,
+    services,
+    includedServices,
+    extras,
+    highlights,
+    specialPrices,
+    users,
+    setSpecialPrices,
+    refreshIncludedServices,
+    refreshExtras,
+    refreshHighlights,
+  } = productData
 
-  // Data from services
-  const [types, setTypes] = useState<TypeRentInterface[]>([])
-  const [equipments, setEquipments] = useState<Equipment[]>([])
-  const [meals, setMeals] = useState<Meal[]>([])
-  const [securities, setSecurities] = useState<Security[]>([])
-  const [services, setServices] = useState<Service[]>([])
-  const [includedServices, setIncludedServices] = useState<IncludedService[]>([])
-  const [extras, setExtras] = useState<ProductExtra[]>([])
-  const [highlights, setHighlights] = useState<PropertyHighlight[]>([])
-  const [specialPrices, setSpecialPrices] = useState<SpecialPrice[]>([])
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [users, setUsers] = useState<any[]>([])
-
-  // Handle input changes
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
-    const { name, value, type } = e.target
-
-    // Si on change le type d'hébergement, vérifier si c'est un hôtel
-    if (name === 'typeId') {
-      const selectedType = types.find(t => t.id === value)
-      const isHotelType = Boolean(selectedType?.isHotelType)
-      setFormData(prev => ({
-        ...prev,
-        [name]: value,
-        isHotel: isHotelType,
-        // Réinitialiser les champs hôtel si ce n'est pas un hôtel
-        hotelName: isHotelType ? prev.hotelName : '',
-        availableRooms: isHotelType ? prev.availableRooms : '',
-      }))
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
-      }))
-    }
+  // Handlers for modals
+  const handleServiceCreated = () => {
+    refreshIncludedServices()
   }
 
-  // Functions to load new data
-  const loadIncludedServices = async (): Promise<IncludedService[]> => {
-    const response = await fetch('/api/user/included-services')
-    if (response.ok) {
-      return await response.json()
-    }
-    return []
+  const handleExtraCreated = () => {
+    refreshExtras()
   }
 
-  const loadExtras = async (): Promise<ProductExtra[]> => {
-    const response = await fetch('/api/user/extras')
-    if (response.ok) {
-      return await response.json()
-    }
-    return []
-  }
-
-  const loadHighlights = async (): Promise<PropertyHighlight[]> => {
-    const response = await fetch('/api/user/highlights')
-    if (response.ok) {
-      return await response.json()
-    }
-    return []
-  }
-
-  // Load data on component mount
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [typesData, equipmentsData, mealsData, securitiesData, servicesData, includedServicesData, extrasData, highlightsData, usersData] =
-          await Promise.all([
-            findAllTypeRent(),
-            findAllEquipments(),
-            findAllMeals(),
-            findAllSecurity(),
-            findAllServices(),
-            loadIncludedServices(),
-            loadExtras(),
-            loadHighlights(),
-            findAllUser(),
-          ])
-
-        setTypes(typesData || [])
-        setEquipments(equipmentsData || [])
-        setMeals(mealsData || [])
-        setSecurities(securitiesData || [])
-        setServices(servicesData || [])
-        setIncludedServices(includedServicesData || [])
-        setExtras(extrasData || [])
-        setHighlights(highlightsData || [])
-        setUsers(usersData || [])
-      } catch (error) {
-        console.error('Error loading data:', error)
-        setError({
-          type: 'network',
-          title: 'Erreur de chargement',
-          message: 'Impossible de charger les données nécessaires à la création d\'annonce.',
-          details: [
-            'Échec du chargement des types d\'hébergement, équipements ou services',
-            'Vérifiez votre connexion internet'
-          ],
-          suggestions: [
-            'Actualisez la page pour réessayer',
-            'Vérifiez votre connexion internet',
-            'Si le problème persiste, contactez le support'
-          ],
-          retryable: true
-        })
-      }
-    }
-
-    loadData()
-  }, [])
-
-  // Fonctions pour gérer les nouveaux services/extras/highlights créés
-  const handleServiceCreated = (newService: IncludedService) => {
-    setIncludedServices(prev => [...prev, newService])
-  }
-
-  const handleExtraCreated = (newExtra: ProductExtra) => {
-    setExtras(prev => [...prev, newExtra])
-  }
-
-  const handleHighlightCreated = (newHighlight: PropertyHighlight) => {
-    setHighlights(prev => [...prev, newHighlight])
+  const handleHighlightCreated = () => {
+    refreshHighlights()
   }
 
   const handleSpecialPriceCreated = (newSpecialPrice: Omit<SpecialPrice, 'id'>) => {
     const specialPriceWithId: SpecialPrice = {
       ...newSpecialPrice,
-      id: `temp-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
+      id: `temp-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
     }
     setSpecialPrices(prev => [...prev, specialPriceWithId])
   }
@@ -384,13 +138,6 @@ export default function CreateProductPage() {
   const numberOfDays = useMemo(() => {
     return Math.ceil((testBooking.endDate.getTime() - testBooking.startDate.getTime()) / (1000 * 60 * 60 * 24))
   }, [testBooking.startDate, testBooking.endDate])
-
-  // Redirection si non connecté
-  useEffect(() => {
-    if (!session) {
-      router.push('/auth')
-    }
-  }, [session, router])
 
   // Handle checkbox changes for arrays
   const handleCheckboxChange = (field: keyof FormData, id: string) => {
@@ -406,175 +153,26 @@ export default function CreateProductPage() {
   }
 
   // File handling
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true)
-    } else if (e.type === 'dragleave') {
-      setDragActive(false)
-    }
-  }
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(false)
-
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFiles({
-        target: { files: e.dataTransfer.files },
-      } as React.ChangeEvent<HTMLInputElement>)
-    }
-  }
-
+  // Image handling - using imageUpload hook
   const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const filesArray = Array.from(e.target.files)
-
-      // Validation des fichiers
-      for (const file of filesArray) {
-        if (!file.type.startsWith('image/')) {
-          setError({
-            type: 'file',
-            title: 'Format de fichier non supporté',
-            message: 'Seules les images sont acceptées.',
-            details: [
-              `Fichier rejeté: ${file.name}`,
-              `Type détecté: ${file.type || 'inconnu'}`
-            ],
-            suggestions: [
-              'Utilisez uniquement des fichiers image (JPEG, PNG, WebP, GIF)',
-              'Vérifiez l\'extension de vos fichiers',
-              'Évitez les documents ou vidéos'
-            ]
-          })
-          return
-        }
-        if (file.size > 50 * 1024 * 1024) {
-          setError({
-            type: 'file',
-            title: 'Image trop volumineuse',
-            message: 'La taille de chaque image ne doit pas dépasser 50MB.',
-            details: [
-              `Fichier: ${file.name}`,
-              `Taille: ${(file.size / (1024 * 1024)).toFixed(1)}MB`,
-              'Limite: 50MB par image'
-            ],
-            suggestions: [
-              'Réduisez la résolution de votre image',
-              'Utilisez un outil de compression d\'image en ligne',
-              'Choisissez le format JPEG pour des images de plus petite taille'
-            ]
-          })
-          return
-        }
-      }
-
-      if (selectedFiles.length + filesArray.length > 35) {
-        setError({
-          type: 'file',
-          title: 'Trop d\'images sélectionnées',
-          message: 'Vous pouvez ajouter maximum 35 photos par annonce.',
-          details: [
-            `Images actuelles: ${selectedFiles.length}`,
-            `Images à ajouter: ${filesArray.length}`,
-            `Total: ${selectedFiles.length + filesArray.length}`,
-            'Limite: 35 photos maximum'
-          ],
-          suggestions: [
-            'Supprimez quelques images existantes avant d\'en ajouter de nouvelles',
-            'Sélectionnez vos meilleures photos pour mettre en valeur votre hébergement',
-            'Vous pourrez ajouter d\'autres photos après la création de l\'annonce'
-          ]
-        })
-        return
-      }
-
-      try {
-        setIsUploadingImages(true)
-        setError(null) // Clear any previous errors
-
-        // Compress images before adding them
-        const compressedFiles = await compressImages(filesArray, {
-          maxSizeMB: 0.8,
-          maxWidthOrHeight: 1920,
-          useWebWorker: true,
-          quality: 0.8,
-        })
-
-        // Create ImageFile objects with previews and unique IDs
-        const imageFiles: ImageFile[] = compressedFiles.map((file, index) => ({
-          file,
-          preview: URL.createObjectURL(file),
-          id: `img-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 11)}`
-        }))
-
-        setSelectedFiles(prev => [...prev, ...imageFiles])
-        setError(null) // Clear any previous errors
-
-        // Log compression results
-        compressedFiles.forEach((file, index) => {
-          const originalSize = filesArray[index].size
-          console.log(
-            `Compressed ${file.name}: ${formatFileSize(originalSize)} → ${formatFileSize(file.size)}`
-          )
-        })
-      } catch (error) {
-        console.error('Image compression failed:', error)
-        setError({
-          type: 'file',
-          title: 'Erreur de compression',
-          message: 'La compression automatique des images a échoué.',
-          details: [
-            'Certaines images peuvent être corrompues ou dans un format non supporté',
-            `Erreur technique: ${error instanceof Error ? error.message : 'inconnue'}`
-          ],
-          suggestions: [
-            'Vérifiez que vos images ne sont pas corrompues',
-            'Essayez de compresser vos images manuellement avant de les télécharger',
-            'Utilisez des formats d\'image standards (JPEG, PNG)',
-            'Réduisez la résolution de vos images si elles sont très grandes'
-          ],
-          retryable: true
-        })
-      } finally {
-        setIsUploadingImages(false)
-      }
+      await imageUpload.handleFileSelect(Array.from(e.target.files))
     }
-  }
-
-  const removeFileById = (id: string) => {
-    const imageFile = selectedFiles.find(img => img.id === id)
-    if (imageFile?.preview) {
-      URL.revokeObjectURL(imageFile.preview)
-    }
-    setSelectedFiles(prev => prev.filter(img => img.id !== id))
   }
 
   // Upload images via API (WebP conversion + 3 sizes)
   const uploadImagesToServer = async (imageFiles: ImageFile[], productId: string): Promise<string[]> => {
     const files = imageFiles.map(img => img.file)
-    setIsUploadingImages(true)
-    try {
-      // First compress the images
-      const compressedFiles = await compressImages(files, {
-        maxSizeMB: 0.8,
-        maxWidthOrHeight: 1920,
-        useWebWorker: true,
-        quality: 0.8,
-      })
 
+    try {
       // Convert to base64 for API upload
       const base64Images: string[] = []
-      for (let i = 0; i < compressedFiles.length; i++) {
-        const file = compressedFiles[i]
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
         const base64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader()
           reader.onloadend = () => {
-            console.log(
-              `Image ${i + 1} (${file.name}) compressed size: ${formatFileSize(file.size)}`
-            )
+            console.log(`Image ${i + 1} (${file.name}) size: ${(file.size / 1024).toFixed(2)}KB`)
             resolve(reader.result as string)
           }
           reader.onerror = () => reject(new Error(`Erreur de lecture de l'image: ${file.name}`))
@@ -607,8 +205,9 @@ export default function CreateProductPage() {
 
       // Return full URLs (high quality for display)
       return uploadData.images.map((img: {thumb: string, medium: string, full: string}) => img.full)
-    } finally {
-      setIsUploadingImages(false)
+    } catch (error) {
+      console.error('Error uploading images:', error)
+      throw error
     }
   }
 
@@ -678,7 +277,7 @@ export default function CreateProductPage() {
       }
     }
 
-    if (selectedFiles.length === 0) {
+    if (imageUpload.selectedFiles.length === 0) {
       setError(createValidationError('images', 'Veuillez ajouter au moins une photo de votre hébergement'))
       setIsLoading(false)
       return
@@ -770,8 +369,7 @@ export default function CreateProductPage() {
       }
 
       // Étape 2: Upload les images vers le serveur (WebP conversion + 3 sizes)
-      setIsUploadingImages(true)
-      const imageUrls = await uploadImagesToServer(selectedFiles, result.id)
+      const imageUrls = await uploadImagesToServer(imageUpload.selectedFiles, result.id)
 
       // Étape 3: Mettre à jour le produit avec les URLs des images
       const updateResponse = await fetch(`/api/products/${result.id}/images`, {
@@ -793,23 +391,24 @@ export default function CreateProductPage() {
       setError(parseCreateProductError(error))
     } finally {
       setIsLoading(false)
-      setIsUploadingImages(false)
     }
   }
 
-  // Ne pas afficher le formulaire si l'utilisateur n'est pas connecté
-  if (!session) {
+  // Afficher le loader pendant la vérification de la session
+  if (isAuthLoading) {
     return (
       <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center'>
-        <div className='text-center'>
-          <h2 className='text-2xl font-bold text-slate-800 mb-4'>Connexion requise</h2>
-          <p className='text-slate-600 mb-6'>Vous devez être connecté pour créer une annonce.</p>
-          <Button onClick={() => router.push('/auth')} className='bg-blue-600 hover:bg-blue-700'>
-            Se connecter
-          </Button>
+        <div className='flex flex-col items-center gap-4'>
+          <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin'></div>
+          <p className='text-slate-600 text-lg'>Chargement...</p>
         </div>
       </div>
     )
+  }
+
+  // Ne pas afficher le formulaire si l'utilisateur n'est pas connecté (après vérification)
+  if (!session) {
+    return null // La redirection est gérée par useAuth
   }
 
   return (
@@ -856,150 +455,24 @@ export default function CreateProductPage() {
         )}
 
         <form onSubmit={handleSubmit} className='space-y-8'>
-          <div className='grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch'>
-            {/* Colonne de gauche */}
-            <div className='space-y-6 h-full'>
-              {/* Informations principales */}
-              <motion.div variants={itemVariants}>
-                <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm'>
-                  <CardHeader className='space-y-2'>
-                    <div className='flex items-center gap-2'>
-                      <div className='p-2 bg-blue-50 rounded-lg'>
-                        <Home className='h-5 w-5 text-blue-600' />
-                      </div>
-                      <div>
-                        <CardTitle className='text-xl'>Informations principales</CardTitle>
-                        <p className='text-slate-600 text-sm mt-1'>
-                          Les informations essentielles de votre hébergement
-                        </p>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className='space-y-6'>
-                    <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-                      <div className='space-y-2'>
-                        <label htmlFor='name' className='text-sm font-medium text-slate-700'>
-                          Nom de l&apos;hébergement
-                        </label>
-                        <Input
-                          id='name'
-                          name='name'
-                          type='text'
-                          value={formData.name}
-                          onChange={handleInputChange}
-                          placeholder='Ex: Villa avec vue sur mer'
-                          className='border-slate-200 focus:border-blue-300 focus:ring-blue-200'
-                        />
-                      </div>
+          {/* Informations principales - Pleine largeur */}
+          <BasicInfoSection
+            formData={formData as never}
+            types={types}
+            handleInputChange={handleInputChange}
+            setFormData={setFormData as never}
+            itemVariants={itemVariants}
+          />
 
-                      <div className='space-y-2'>
-                        <label htmlFor='typeId' className='text-sm font-medium text-slate-700'>
-                          Type d&apos;hébergement
-                        </label>
-                        <select
-                          id='typeId'
-                          name='typeId'
-                          value={formData.typeId}
-                          onChange={handleInputChange}
-                          required
-                          className='w-full px-3 py-2 border border-slate-200 rounded-md focus:border-blue-300 focus:ring-blue-200 focus:ring-2 focus:ring-opacity-50'
-                        >
-                          <option value=''>Sélectionnez un type</option>
-                          {types.map(type => (
-                            <option key={type.id} value={type.id}>
-                              {type.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
+          {/* Localisation et Contact - Pleine largeur */}
+          <LocationContactSection
+            formData={formData as never}
+            setFormData={setFormData as never}
+            itemVariants={itemVariants}
+          />
 
-                    <div className='space-y-2'>
-                      <label htmlFor='description' className='text-sm font-medium text-slate-700'>
-                        Description détaillée
-                      </label>
-                      <textarea
-                        id='description'
-                        name='description'
-                        rows={4}
-                        placeholder='Décrivez votre hébergement en détail...'
-                        value={formData.description}
-                        onChange={handleInputChange}
-                        required
-                        className='w-full px-3 py-2 border border-slate-200 rounded-md focus:border-blue-300 focus:ring-blue-200 focus:ring-2 focus:ring-opacity-50'
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              {/* Localisation et Contact */}
-              <motion.div variants={itemVariants} className="relative z-50">
-                <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm relative z-50'>
-                  <CardHeader className='space-y-2'>
-                    <div className='flex items-center gap-2'>
-                      <div className='p-2 bg-green-50 rounded-lg'>
-                        <MapPin className='h-5 w-5 text-green-600' />
-                      </div>
-                      <div>
-                        <CardTitle className='text-xl'>Localisation et Contact</CardTitle>
-                        <p className='text-slate-600 text-sm mt-1'>
-                          Où se trouve votre hébergement et comment vous joindre
-                        </p>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className='space-y-6'>
-                    <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-                      <div className='space-y-2'>
-                        <label htmlFor='address' className='text-sm font-medium text-slate-700'>
-                          Adresse complète
-                        </label>
-                        <AddressAutocomplete
-                          value={formData.address}
-                          onChange={(value) => setFormData(prev => ({ ...prev, address: value }))}
-                          placeholder='Numéro, rue, code postal, ville'
-                          className='border-slate-200 focus:border-green-300 focus:ring-green-200'
-                          countryFilter='MG'
-                          onAddressSelect={(address, placeId) => {
-                            setFormData(prev => ({
-                              ...prev,
-                              address: address,
-                              placeId: placeId || ''
-                            }))
-                          }}
-                        />
-                      </div>
-
-                      <div className='space-y-2'>
-                        <label htmlFor='phone' className='text-sm font-medium text-slate-700'>
-                          Téléphone de contact
-                        </label>
-                        <PhoneInput
-                          value={formData.phone}
-                          defaultCountry={formData.phoneCountry}
-                          onChange={(phoneNumber, countryCode) => {
-                            setFormData(prev => ({
-                              ...prev,
-                              phone: phoneNumber,
-                              phoneCountry: countryCode
-                            }))
-                          }}
-                          placeholder="XX XX XX XX"
-                          required
-                          className="border-slate-200 focus:border-green-300 focus:ring-green-200"
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </div>
-
-            {/* Colonne de droite */}
-            <div className='space-y-6 h-full'>
-              {/* Caractéristiques */}
-              <motion.div variants={itemVariants}>
+          {/* Caractéristiques - Pleine largeur */}
+          <motion.div variants={itemVariants}>
                 <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm'>
                   <CardHeader className='space-y-2'>
                     <div className='flex items-center gap-2'>
@@ -1168,313 +641,132 @@ export default function CreateProductPage() {
                 </motion.div>
               )}
 
-              {/* Tarification */}
-              <motion.div variants={itemVariants}>
-                <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm'>
-                  <CardHeader className='space-y-2'>
-                    <div className='flex items-center gap-2'>
-                      <div className='p-2 bg-orange-50 rounded-lg'>
-                        <Euro className='h-5 w-5 text-orange-600' />
-                      </div>
-                      <div>
-                        <CardTitle className='text-xl'>Tarification</CardTitle>
-                        <p className='text-slate-600 text-sm mt-1'>
-                          Définissez vos prix et conditions
-                        </p>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className='space-y-6'>
-                    <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-                      <div className='space-y-2'>
-                        <label htmlFor='basePrice' className='text-sm font-medium text-slate-700'>
-                          Prix de base (€)
-                        </label>
-                        <Input
-                          id='basePrice'
-                          name='basePrice'
-                          type='number'
-                          min='0'
-                          step='0.01'
-                          placeholder='100.00'
-                          value={formData.basePrice}
-                          onChange={handleInputChange}
-                          required
-                          className='border-slate-200 focus:border-orange-300 focus:ring-orange-200'
-                        />
-                      </div>
-
-                      <div className='space-y-2'>
-                        <label htmlFor='priceMGA' className='text-sm font-medium text-slate-700'>
-                          Prix en MGA
-                        </label>
-                        <Input
-                          id='priceMGA'
-                          name='priceMGA'
-                          type='number'
-                          min='0'
-                          placeholder='400000'
-                          value={formData.priceMGA}
-                          onChange={handleInputChange}
-                          required
-                          className='border-slate-200 focus:border-orange-300 focus:ring-orange-200'
-                        />
-                      </div>
-                    </div>
-
-                    <div className='flex items-center space-x-2'>
-                      <input
-                        id='autoAccept'
-                        name='autoAccept'
-                        type='checkbox'
-                        checked={formData.autoAccept}
-                        onChange={handleInputChange}
-                        className='w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500'
-                      />
-                      <label htmlFor='autoAccept' className='text-sm font-medium text-slate-700'>
-                        Acceptation automatique des réservations
-                      </label>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </div>
-          </div>
-
-          {/* Équipements et Services */}
+          {/* Tarification - Pleine largeur */}
           <motion.div variants={itemVariants}>
             <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm'>
               <CardHeader className='space-y-2'>
                 <div className='flex items-center gap-2'>
-                  <div className='p-2 bg-emerald-50 rounded-lg'>
-                    <Wifi className='h-5 w-5 text-emerald-600' />
+                  <div className='p-2 bg-orange-50 rounded-lg'>
+                    <Euro className='h-5 w-5 text-orange-600' />
                   </div>
                   <div>
-                    <CardTitle className='text-xl'>Équipements et Services</CardTitle>
+                    <CardTitle className='text-xl'>Tarification</CardTitle>
                     <p className='text-slate-600 text-sm mt-1'>
-                      Sélectionnez les équipements disponibles dans votre hébergement
+                      Définissez vos prix et conditions
                     </p>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className='space-y-6'>
-                {/* Grille 2x2 avec hauteur uniforme */}
-                <div className='grid grid-cols-1 lg:grid-cols-2 grid-rows-2 gap-6 auto-rows-fr'>
-                  {/* Équipements - Position 1 */}
-                  <div className='border-2 border-slate-200 rounded-xl p-4 bg-white/50 backdrop-blur-sm flex flex-col h-full'>
-                    <h4 className='font-medium text-slate-700 flex items-center gap-2 mb-4'>
-                      <Zap className='h-4 w-4' />
-                      Équipements disponibles
-                    </h4>
-                    <div className='flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 content-start'>
-                      {equipments.map(equipment => (
-                        <label
-                          key={equipment.id}
-                          className={`relative flex items-center p-2 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-sm ${
-                            formData.equipmentIds.includes(equipment.id)
-                              ? 'border-emerald-500 bg-emerald-50'
-                              : 'border-slate-200 bg-white hover:border-emerald-300'
-                          }`}
-                        >
-                          <input
-                            type='checkbox'
-                            checked={formData.equipmentIds.includes(equipment.id)}
-                            onChange={() => handleCheckboxChange('equipmentIds', equipment.id)}
-                            className='sr-only'
-                          />
-                          <div className='flex items-center space-x-2 w-full'>
-                            <div
-                              className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                                formData.equipmentIds.includes(equipment.id)
-                                  ? 'border-emerald-500 bg-emerald-500'
-                                  : 'border-slate-300'
-                              }`}
-                            >
-                              {formData.equipmentIds.includes(equipment.id) && (
-                                <svg
-                                  className='w-2 h-2 text-white'
-                                  fill='currentColor'
-                                  viewBox='0 0 20 20'
-                                >
-                                  <path
-                                    fillRule='evenodd'
-                                    d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z'
-                                    clipRule='evenodd'
-                                  />
-                                </svg>
-                              )}
-                            </div>
-                            <span className='text-xs font-medium text-slate-700 truncate'>
-                              {equipment.name}
-                            </span>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+                  <div className='space-y-2'>
+                    <label htmlFor='basePrice' className='text-sm font-medium text-slate-700'>
+                      Prix de base (€)
+                    </label>
+                    <Input
+                      id='basePrice'
+                      name='basePrice'
+                      type='number'
+                      min='0'
+                      step='0.01'
+                      placeholder='100.00'
+                      value={formData.basePrice}
+                      onChange={handleInputChange}
+                      required
+                      className='border-slate-200 focus:border-orange-300 focus:ring-orange-200'
+                    />
                   </div>
 
-                  {/* Repas - Position 2 */}
-                  <div className='border-2 border-slate-200 rounded-xl p-4 bg-white/50 backdrop-blur-sm flex flex-col h-full'>
-                    <h4 className='font-medium text-slate-700 flex items-center gap-2 mb-4'>
-                      <UtensilsCrossed className='h-4 w-4' />
-                      Services de restauration
-                    </h4>
-                    <div className='flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 content-start'>
-                      {meals.map(meal => (
-                        <label
-                          key={meal.id}
-                          className={`relative flex items-center p-2 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-sm ${
-                            formData.mealIds.includes(meal.id)
-                              ? 'border-orange-500 bg-orange-50'
-                              : 'border-slate-200 bg-white hover:border-orange-300'
-                          }`}
-                        >
-                          <input
-                            type='checkbox'
-                            checked={formData.mealIds.includes(meal.id)}
-                            onChange={() => handleCheckboxChange('mealIds', meal.id)}
-                            className='sr-only'
-                          />
-                          <div className='flex items-center space-x-2 w-full'>
-                            <div
-                              className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                                formData.mealIds.includes(meal.id)
-                                  ? 'border-orange-500 bg-orange-500'
-                                  : 'border-slate-300'
-                              }`}
-                            >
-                              {formData.mealIds.includes(meal.id) && (
-                                <svg
-                                  className='w-2 h-2 text-white'
-                                  fill='currentColor'
-                                  viewBox='0 0 20 20'
-                                >
-                                  <path
-                                    fillRule='evenodd'
-                                    d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z'
-                                    clipRule='evenodd'
-                                  />
-                                </svg>
-                              )}
-                            </div>
-                            <span className='text-xs font-medium text-slate-700 truncate'>
-                              {meal.name}
-                            </span>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
+                  <div className='space-y-2'>
+                    <label htmlFor='priceMGA' className='text-sm font-medium text-slate-700'>
+                      Prix en MGA
+                    </label>
+                    <Input
+                      id='priceMGA'
+                      name='priceMGA'
+                      type='number'
+                      min='0'
+                      placeholder='400000'
+                      value={formData.priceMGA}
+                      onChange={handleInputChange}
+                      required
+                      className='border-slate-200 focus:border-orange-300 focus:ring-orange-200'
+                    />
                   </div>
+                </div>
 
-                  {/* Sécurité - Position 3 */}
-                  <div className='border-2 border-slate-200 rounded-xl p-4 bg-white/50 backdrop-blur-sm flex flex-col h-full'>
-                    <h4 className='font-medium text-slate-700 flex items-center gap-2 mb-4'>
-                      <Shield className='h-4 w-4' />
-                      Équipements de sécurité
-                    </h4>
-                    <div className='flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 content-start'>
-                      {securities.map(security => (
-                        <label
-                          key={security.id}
-                          className={`relative flex items-center p-2 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-sm ${
-                            formData.securityIds.includes(security.id)
-                              ? 'border-red-500 bg-red-50'
-                              : 'border-slate-200 bg-white hover:border-red-300'
-                          }`}
-                        >
-                          <input
-                            type='checkbox'
-                            checked={formData.securityIds.includes(security.id)}
-                            onChange={() => handleCheckboxChange('securityIds', security.id)}
-                            className='sr-only'
-                          />
-                          <div className='flex items-center space-x-2 w-full'>
-                            <div
-                              className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                                formData.securityIds.includes(security.id)
-                                  ? 'border-red-500 bg-red-500'
-                                  : 'border-slate-300'
-                              }`}
-                            >
-                              {formData.securityIds.includes(security.id) && (
-                                <svg
-                                  className='w-2 h-2 text-white'
-                                  fill='currentColor'
-                                  viewBox='0 0 20 20'
-                                >
-                                  <path
-                                    fillRule='evenodd'
-                                    d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z'
-                                    clipRule='evenodd'
-                                  />
-                                </svg>
-                              )}
-                            </div>
-                            <span className='text-xs font-medium text-slate-700 truncate'>
-                              {security.name}
-                            </span>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Services - Position 4 */}
-                  <div className='border-2 border-slate-200 rounded-xl p-4 bg-white/50 backdrop-blur-sm flex flex-col h-full'>
-                    <h4 className='font-medium text-slate-700 flex items-center gap-2 mb-4'>
-                      <Star className='h-4 w-4' />
-                      Services additionnels
-                    </h4>
-                    <div className='flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 content-start'>
-                      {services.map(service => (
-                        <label
-                          key={service.id}
-                          className={`relative flex items-center p-2 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-sm ${
-                            formData.serviceIds.includes(service.id)
-                              ? 'border-blue-500 bg-blue-50'
-                              : 'border-slate-200 bg-white hover:border-blue-300'
-                          }`}
-                        >
-                          <input
-                            type='checkbox'
-                            checked={formData.serviceIds.includes(service.id)}
-                            onChange={() => handleCheckboxChange('serviceIds', service.id)}
-                            className='sr-only'
-                          />
-                          <div className='flex items-center space-x-2 w-full'>
-                            <div
-                              className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                                formData.serviceIds.includes(service.id)
-                                  ? 'border-blue-500 bg-blue-500'
-                                  : 'border-slate-300'
-                              }`}
-                            >
-                              {formData.serviceIds.includes(service.id) && (
-                                <svg
-                                  className='w-2 h-2 text-white'
-                                  fill='currentColor'
-                                  viewBox='0 0 20 20'
-                                >
-                                  <path
-                                    fillRule='evenodd'
-                                    d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z'
-                                    clipRule='evenodd'
-                                  />
-                                </svg>
-                              )}
-                            </div>
-                            <span className='text-xs font-medium text-slate-700 truncate'>
-                              {service.name}
-                            </span>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
+                <div className='flex items-center space-x-2'>
+                  <input
+                    id='autoAccept'
+                    name='autoAccept'
+                    type='checkbox'
+                    checked={formData.autoAccept}
+                    onChange={handleInputChange}
+                    className='w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500'
+                  />
+                  <label htmlFor='autoAccept' className='text-sm font-medium text-slate-700'>
+                    Acceptation automatique des réservations
+                  </label>
                 </div>
               </CardContent>
             </Card>
           </motion.div>
+
+          {/* Équipements - Pleine largeur */}
+          <ServiceSelectionSection
+            title="Équipements disponibles"
+            description="Sélectionnez les équipements disponibles dans votre hébergement"
+            icon={Zap}
+            iconColor="text-emerald-600"
+            bgColor="bg-emerald-50"
+            borderColor="border-emerald-500"
+            services={equipments}
+            selectedServiceIds={formData.equipmentIds}
+            onServiceToggle={(id) => handleCheckboxChange('equipmentIds', id)}
+            itemVariants={itemVariants}
+          />
+
+          {/* Repas - Pleine largeur */}
+          <ServiceSelectionSection
+            title="Services de restauration"
+            description="Sélectionnez les services de repas proposés"
+            icon={UtensilsCrossed}
+            iconColor="text-orange-600"
+            bgColor="bg-orange-50"
+            borderColor="border-orange-500"
+            services={meals}
+            selectedServiceIds={formData.mealIds}
+            onServiceToggle={(id) => handleCheckboxChange('mealIds', id)}
+            itemVariants={itemVariants}
+          />
+
+          {/* Sécurité - Pleine largeur */}
+          <ServiceSelectionSection
+            title="Équipements de sécurité"
+            description="Sélectionnez les équipements de sécurité disponibles"
+            icon={Shield}
+            iconColor="text-red-600"
+            bgColor="bg-red-50"
+            borderColor="border-red-500"
+            services={securities}
+            selectedServiceIds={formData.securityIds}
+            onServiceToggle={(id) => handleCheckboxChange('securityIds', id)}
+            itemVariants={itemVariants}
+          />
+
+          {/* Services additionnels - Pleine largeur */}
+          <ServiceSelectionSection
+            title="Services additionnels"
+            description="Sélectionnez les services additionnels proposés"
+            icon={Star}
+            iconColor="text-blue-600"
+            bgColor="bg-blue-50"
+            borderColor="border-blue-500"
+            services={services}
+            selectedServiceIds={formData.serviceIds}
+            onServiceToggle={(id) => handleCheckboxChange('serviceIds', id)}
+            itemVariants={itemVariants}
+          />
 
           {/* Services inclus, Extras et Points forts */}
           <motion.div variants={itemVariants}>
@@ -1493,8 +785,8 @@ export default function CreateProductPage() {
                 </div>
               </CardHeader>
               <CardContent className='space-y-6'>
-                {/* Grille 1x4 pour les nouvelles options */}
-                <div className='grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6'>
+                {/* Affichage en colonne pour les nouvelles options */}
+                <div className='flex flex-col gap-6'>
                   {/* Services inclus */}
                   <div className='border-2 border-slate-200 rounded-xl p-4 bg-white/50 backdrop-blur-sm flex flex-col h-full'>
                     <div className='flex items-center justify-between mb-4'>
@@ -1843,10 +1135,10 @@ export default function CreateProductPage() {
                     <CardTitle className='text-xl'>Photos de l&apos;hébergement</CardTitle>
                     <p className='text-slate-600 text-sm mt-1'>
                       Ajoutez des photos attrayantes de votre hébergement (maximum 35)
-                      {selectedFiles.length > 0 && (
+                      {imageUpload.selectedFiles.length > 0 && (
                         <span className='ml-2 font-medium text-blue-600'>
-                          {selectedFiles.length} photo{selectedFiles.length > 1 ? 's' : ''}{' '}
-                          sélectionnée{selectedFiles.length > 1 ? 's' : ''}
+                          {imageUpload.selectedFiles.length} photo{imageUpload.selectedFiles.length > 1 ? 's' : ''}{' '}
+                          sélectionnée{imageUpload.selectedFiles.length > 1 ? 's' : ''}
                         </span>
                       )}
                     </p>
@@ -1856,14 +1148,14 @@ export default function CreateProductPage() {
               <CardContent className='space-y-6'>
                 <div
                   className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                    dragActive
+                    imageUpload.dragActive
                       ? 'border-pink-400 bg-pink-50'
                       : 'border-slate-300 hover:border-pink-300 hover:bg-pink-25'
                   }`}
-                  onDragEnter={handleDrag}
-                  onDragLeave={handleDrag}
-                  onDragOver={handleDrag}
-                  onDrop={handleDrop}
+                  onDragEnter={e => imageUpload.handleDrag(e, true)}
+                  onDragLeave={e => imageUpload.handleDrag(e, false)}
+                  onDragOver={e => imageUpload.handleDrag(e, true)}
+                  onDrop={imageUpload.handleDrop}
                 >
                   <input
                     ref={fileInputRef}
@@ -1890,12 +1182,12 @@ export default function CreateProductPage() {
                       </p>
                       <p className='text-xs text-slate-500 mt-1'>
                         PNG, JPG, JPEG, WEBP jusqu&apos;à 50MB chacune (compressées automatiquement)
-                        {selectedFiles.length > 0 && (
+                        {imageUpload.selectedFiles.length > 0 && (
                           <span className='block mt-1 text-green-600 font-medium'>
-                            ✓ {selectedFiles.length}/35 photos sélectionnées
+                            ✓ {imageUpload.selectedFiles.length}/35 photos sélectionnées
                           </span>
                         )}
-                        {isUploadingImages && (
+                        {imageUpload.isUploadingImages && (
                           <span className='block mt-1 text-blue-600 font-medium animate-pulse'>
                             🔄 Compression en cours...
                           </span>
@@ -1906,14 +1198,14 @@ export default function CreateProductPage() {
                 </div>
 
                 <SortableImageGrid
-                  images={selectedFiles}
-                  onReorder={setSelectedFiles}
-                  onRemove={removeFileById}
+                  images={imageUpload.selectedFiles}
+                  onReorder={newOrder => imageUpload.setSelectedFiles(newOrder)}
+                  onRemove={imageUpload.deleteImage}
                   onPreview={() => setShowGalleryPreview(true)}
                 />
 
                 <ImageGalleryPreview
-                  images={selectedFiles}
+                  images={imageUpload.selectedFiles}
                   isOpen={showGalleryPreview}
                   onClose={() => setShowGalleryPreview(false)}
                 />
@@ -2140,7 +1432,7 @@ export default function CreateProductPage() {
                         <option value=''>Choisir un utilisateur...</option>
                         {users.map(user => (
                           <option key={user.id} value={user.id}>
-                            {user.firstname} {user.lastname} ({user.email})
+                            {user.name || user.email} ({user.email})
                           </option>
                         ))}
                       </select>
@@ -2155,10 +1447,10 @@ export default function CreateProductPage() {
           <motion.div className='flex justify-center pt-8' variants={itemVariants}>
             <Button
               type='submit'
-              disabled={isLoading || isUploadingImages}
+              disabled={isLoading || imageUpload.isUploadingImages}
               className='w-full max-w-md h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium text-lg shadow-lg hover:shadow-xl transition-all duration-200'
             >
-              {isUploadingImages ? (
+              {imageUpload.isUploadingImages ? (
                 <div className='flex items-center gap-2'>
                   <div className='w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin' />
                   Préparation des images...
