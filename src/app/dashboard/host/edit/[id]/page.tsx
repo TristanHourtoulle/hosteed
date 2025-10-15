@@ -757,9 +757,12 @@ export default function EditProductPage() {
           <motion.div variants={itemVariants}>
             <BookingCostSummary
               basePrice={parseFloat(formData.basePrice) || 0}
-              priceMGA={parseFloat(formData.priceMGA) || 0}
               numberOfDays={numberOfDays}
+              guestCount={testBooking.guestCount}
               selectedExtras={selectedExtras}
+              startDate={testBooking.startDate}
+              endDate={testBooking.endDate}
+              currency="EUR"
             />
           </motion.div>
 
