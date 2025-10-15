@@ -10,9 +10,11 @@ import ImageGalleryPreview from '@/components/ui/ImageGalleryPreview'
 import ErrorAlert, { ErrorDetails } from '@/components/ui/ErrorAlert'
 
 interface ImageFile {
-  file: File
+  file: File | null
   preview: string
   id: string
+  isExisting?: boolean
+  url?: string
 }
 
 interface ProductImageUploaderProps {

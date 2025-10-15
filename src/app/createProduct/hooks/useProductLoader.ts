@@ -115,10 +115,13 @@ export const useProductLoader = (productId?: string) => {
         }
 
         // Transform images to ImageFile format
+        // Mark existing images with isExisting flag to prevent re-upload
         const images: ImageFile[] = product.img?.map((img: ProductImage, index: number) => ({
           id: img.id,
-          file: null as unknown as File, // No file object for existing images
+          file: null, // No file object for existing images
           preview: img.img, // URL of the existing image
+          url: img.img, // Keep original URL
+          isExisting: true, // Flag to prevent re-upload
           order: index,
         })) || []
 

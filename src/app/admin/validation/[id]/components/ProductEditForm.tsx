@@ -99,9 +99,11 @@ interface NearbyPlace {
 }
 
 interface ImageFile {
-  file: File
+  file: File | null
   preview: string
   id: string
+  isExisting?: boolean
+  url?: string
 }
 
 const containerVariants = {
@@ -520,7 +522,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
 
   // Convert files to base64 with compression
   const convertFilesToBase64 = async (imageFiles: ImageFile[]): Promise<string[]> => {
-    const files = imageFiles.map(img => img.file)
+    const files = imageFiles.filter(img => img.file !== null).map(img => img.file!)
     setIsUploadingImages(true)
     try {
       // First compress the images

@@ -65,9 +65,11 @@ export interface NearbyPlace {
 }
 
 export interface ImageFile {
-  file: File
-  preview: string
+  file: File | null // null for existing images from DB
+  preview: string // URL for existing images, base64 for new images
   id: string
+  isExisting?: boolean // true if image already exists in DB
+  url?: string // Original URL for existing images
 }
 
 export interface FormData {

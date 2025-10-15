@@ -81,6 +81,7 @@ export const useImageUpload = (initialImages?: ImageFile[]) => {
             file,
             preview,
             id: generateImageId(),
+            isExisting: false, // Mark as new image
           }
         })
       )

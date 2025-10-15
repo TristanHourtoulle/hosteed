@@ -188,23 +188,34 @@ export default function EditProductPage() {
 
   // Upload new images via API
   const uploadImagesToServer = async (imageFiles: ImageFile[], productId: string): Promise<string[]> => {
-    const files = imageFiles.filter(img => img.file !== null).map(img => img.file)
+    // Filter only NEW images (with File objects, not existing URLs)
+    const files = imageFiles
+      .filter(img => img.file !== null && !img.isExisting)
+      .map(img => img.file!)
 
-    if (files.length === 0) return []
+    if (files.length === 0) {
+      console.log('⏭️  No new images to upload')
+      return []
+    }
 
     try {
+      console.log(`📤 Converting ${files.length} new images to base64...`)
       const base64Images: string[] = []
       for (let i = 0; i < files.length; i++) {
         const file = files[i]
         const base64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader()
-          reader.onloadend = () => resolve(reader.result as string)
+          reader.onloadend = () => {
+            console.log(`  ✓ Image ${i + 1}/${files.length} (${file.name}) - ${(file.size / 1024).toFixed(2)}KB`)
+            resolve(reader.result as string)
+          }
           reader.onerror = () => reject(new Error(`Erreur de lecture de l'image: ${file.name}`))
           reader.readAsDataURL(file)
         })
         base64Images.push(base64)
       }
 
+      console.log('📡 Uploading to server (WebP conversion + 3 sizes)...')
       const uploadResponse = await fetch('/api/images/upload', {
         method: 'POST',
         headers: {
@@ -223,9 +234,12 @@ export default function EditProductPage() {
       }
 
       const uploadResult = await uploadResponse.json()
-      return uploadResult.urls || []
+      console.log(`✅ Successfully uploaded ${uploadResult.count || files.length} new images`)
+
+      // Return full URLs (high quality)
+      return uploadResult.images?.map((img: {thumb: string, medium: string, full: string}) => img.full) || uploadResult.urls || []
     } catch (error) {
-      console.error('Error uploading images:', error)
+      console.error('❌ Error uploading images:', error)
       throw error
     }
   }
@@ -331,23 +345,39 @@ export default function EditProductPage() {
         throw new Error("Erreur lors de la mise à jour de l'annonce")
       }
 
-      // Étape 2: Upload les nouvelles images si nécessaire
-      const newImages = imageUpload.selectedFiles.filter(img => img.file !== null)
+      // Étape 2: Gérer les images (nouvelles + existantes)
+      // Séparer les images existantes (déjà en DB) des nouvelles images à uploader
+      const existingImages = imageUpload.selectedFiles.filter(img => img.isExisting && img.url)
+      const newImages = imageUpload.selectedFiles.filter(img => !img.isExisting && img.file !== null)
+
+      console.log(`📊 Images: ${existingImages.length} existantes, ${newImages.length} nouvelles`)
+
+      // Uploader uniquement les nouvelles images
+      let newImageUrls: string[] = []
       if (newImages.length > 0) {
-        const imageUrls = await uploadImagesToServer(newImages, productId)
+        console.log('📤 Upload des nouvelles images...')
+        newImageUrls = await uploadImagesToServer(newImages, productId)
+      }
 
-        // Mettre à jour le produit avec les URLs des images
-        const updateImagesResponse = await fetch(`/api/products/${productId}/images`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ imageUrls }),
-        })
+      // Combiner les URLs : images existantes + nouvelles images
+      const allImageUrls = [
+        ...existingImages.map(img => img.url!), // URLs des images existantes
+        ...newImageUrls // URLs des nouvelles images uploadées
+      ]
 
-        if (!updateImagesResponse.ok) {
-          console.error('Erreur lors de la mise à jour des images, mais le produit a été modifié')
-        }
+      console.log(`✅ Total images après mise à jour: ${allImageUrls.length}`)
+
+      // Mettre à jour le produit avec TOUTES les URLs (existantes + nouvelles)
+      const updateImagesResponse = await fetch(`/api/products/${productId}/images`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ imageUrls: allImageUrls }),
+      })
+
+      if (!updateImagesResponse.ok) {
+        console.error('Erreur lors de la mise à jour des images, mais le produit a été modifié')
       }
 
       toast.success('Annonce modifiée avec succès!')

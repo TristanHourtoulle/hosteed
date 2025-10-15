@@ -12,9 +12,11 @@ import {
 } from '@/components/ui/shadcnui/dialog'
 
 interface ImageFile {
-  file: File
+  file: File | null // null for existing images from DB
   preview: string
   id: string
+  isExisting?: boolean
+  url?: string
 }
 
 interface ImageGalleryPreviewProps {

@@ -1673,3 +1673,228 @@ export async function getDraftProduct(originalProductId: string) {
     },
   })
 }
+
+/**
+ * Interface for updating a product
+ */
+interface UpdateProductInput {
+  name?: string
+  description?: string
+  address?: string
+  longitude?: number | string
+  latitude?: number | string
+  basePrice?: string
+  priceMGA?: string
+  room?: number | string | null
+  bathroom?: number | string | null
+  arriving?: number | string
+  leaving?: number | string
+  phone?: string
+  phoneCountry?: string
+  maxPeople?: number | null
+  typeId?: string
+  equipmentIds?: string[]
+  serviceIds?: string[]
+  mealIds?: string[]
+  securityIds?: string[]
+  includedServiceIds?: string[]
+  extraIds?: string[]
+  highlightIds?: string[]
+  nearbyPlaces?: Array<{ name: string; distance: number; duration?: number; transport?: string }>
+  isHotel?: boolean
+  hotelInfo?: { name: string; availableRooms: number }
+}
+
+/**
+ * Update an existing product
+ */
+export async function updateProduct(productId: string, data: UpdateProductInput) {
+  try {
+    // Validate that related entities exist before connecting
+    const validationPromises = []
+
+    if (data.equipmentIds) {
+      validationPromises.push(
+        prisma.equipment.findMany({
+          where: { id: { in: data.equipmentIds } },
+          select: { id: true }
+        })
+      )
+    }
+
+    if (data.serviceIds) {
+      validationPromises.push(
+        prisma.services.findMany({
+          where: { id: { in: data.serviceIds } },
+          select: { id: true }
+        })
+      )
+    }
+
+    if (data.mealIds) {
+      validationPromises.push(
+        prisma.meals.findMany({
+          where: { id: { in: data.mealIds } },
+          select: { id: true }
+        })
+      )
+    }
+
+    if (data.securityIds) {
+      validationPromises.push(
+        prisma.security.findMany({
+          where: { id: { in: data.securityIds } },
+          select: { id: true }
+        })
+      )
+    }
+
+    if (data.includedServiceIds && data.includedServiceIds.length > 0) {
+      validationPromises.push(
+        prisma.includedService.findMany({
+          where: { id: { in: data.includedServiceIds } },
+          select: { id: true }
+        })
+      )
+    }
+
+    if (data.extraIds && data.extraIds.length > 0) {
+      validationPromises.push(
+        prisma.productExtra.findMany({
+          where: { id: { in: data.extraIds } },
+          select: { id: true }
+        })
+      )
+    }
+
+    if (data.highlightIds && data.highlightIds.length > 0) {
+      validationPromises.push(
+        prisma.propertyHighlight.findMany({
+          where: { id: { in: data.highlightIds } },
+          select: { id: true }
+        })
+      )
+    }
+
+    // Prepare update data
+    const updateData: Record<string, unknown> = {}
+
+    // Basic fields
+    if (data.name !== undefined) updateData.name = data.name
+    if (data.description !== undefined) updateData.description = data.description
+    if (data.address !== undefined) updateData.address = data.address
+    if (data.longitude !== undefined) updateData.longitude = Number(data.longitude)
+    if (data.latitude !== undefined) updateData.latitude = Number(data.latitude)
+    if (data.basePrice !== undefined) updateData.basePrice = data.basePrice
+    if (data.priceMGA !== undefined) updateData.priceMGA = data.priceMGA
+    if (data.room !== undefined) updateData.room = data.room ? BigInt(data.room) : null
+    if (data.bathroom !== undefined) updateData.bathroom = data.bathroom ? BigInt(data.bathroom) : null
+    if (data.arriving !== undefined) updateData.arriving = Number(data.arriving)
+    if (data.leaving !== undefined) updateData.leaving = Number(data.leaving)
+    if (data.phone !== undefined) updateData.phone = data.phone
+    if (data.phoneCountry !== undefined) updateData.phoneCountry = data.phoneCountry
+    if (data.maxPeople !== undefined) updateData.maxPeople = data.maxPeople ? BigInt(data.maxPeople) : null
+    if (data.typeId !== undefined) updateData.type = { connect: { id: data.typeId } }
+
+    // Relations - disconnect all and reconnect with new values
+    if (data.equipmentIds) {
+      updateData.equipments = {
+        set: [], // Disconnect all
+        connect: data.equipmentIds.map(id => ({ id }))
+      }
+    }
+
+    if (data.serviceIds) {
+      updateData.servicesList = {
+        set: [],
+        connect: data.serviceIds.map(id => ({ id }))
+      }
+    }
+
+    if (data.mealIds) {
+      updateData.mealsList = {
+        set: [],
+        connect: data.mealIds.map(id => ({ id }))
+      }
+    }
+
+    if (data.securityIds) {
+      updateData.securities = {
+        set: [],
+        connect: data.securityIds.map(id => ({ id }))
+      }
+    }
+
+    if (data.includedServiceIds) {
+      updateData.includedServices = {
+        set: [],
+        connect: data.includedServiceIds.map(id => ({ id }))
+      }
+    }
+
+    if (data.extraIds) {
+      updateData.extras = {
+        set: [],
+        connect: data.extraIds.map(id => ({ id }))
+      }
+    }
+
+    if (data.highlightIds) {
+      updateData.highlights = {
+        set: [],
+        connect: data.highlightIds.map(id => ({ id }))
+      }
+    }
+
+    // Nearby places
+    if (data.nearbyPlaces) {
+      // Delete existing and create new ones
+      await prisma.nearbyPlace.deleteMany({
+        where: { productId }
+      })
+
+      if (data.nearbyPlaces.length > 0) {
+        updateData.nearbyPlaces = {
+          create: data.nearbyPlaces.map((place: { name: string; distance: number; duration?: number; transport?: string }) => ({
+            name: place.name,
+            distance: place.distance,
+            duration: place.duration || 0,
+            transport: place.transport || 'voiture',
+          }))
+        }
+      }
+    }
+
+    // Hotel info - just update availableRooms on Product
+    if (data.isHotel !== undefined && data.isHotel && data.hotelInfo) {
+      updateData.availableRooms = data.hotelInfo.availableRooms
+    }
+
+    // Update product
+    const updatedProduct = await prisma.product.update({
+      where: { id: productId },
+      data: updateData,
+      include: {
+        img: true,
+        type: true,
+        equipments: true,
+        servicesList: true,
+        mealsList: true,
+        securities: true,
+        includedServices: true,
+        extras: true,
+        highlights: true,
+        nearbyPlaces: true,
+        hotel: true,
+      }
+    })
+
+    // Invalidate cache
+    await invalidateProductCache()
+
+    return updatedProduct
+  } catch (error) {
+    console.error('Error updating product:', error)
+    throw error
+  }
+}

@@ -162,7 +162,10 @@ export default function CreateProductPage() {
 
   // Upload images via API (WebP conversion + 3 sizes)
   const uploadImagesToServer = async (imageFiles: ImageFile[], productId: string): Promise<string[]> => {
-    const files = imageFiles.map(img => img.file)
+    // Filter only images with File objects (exclude potential null values)
+    const files = imageFiles
+      .filter(img => img.file !== null)
+      .map(img => img.file!)
 
     try {
       // Convert to base64 for API upload

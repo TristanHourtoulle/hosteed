@@ -6,9 +6,11 @@ import { X, GripVertical, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/shadcnui/button'
 
 interface ImageFile {
-  file: File
+  file: File | null // null for existing images from DB
   preview: string
   id: string
+  isExisting?: boolean
+  url?: string
 }
 
 interface SortableImageGridProps {
