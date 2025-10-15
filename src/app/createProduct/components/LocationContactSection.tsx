@@ -5,16 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { MapPin } from 'lucide-react'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import PhoneInput from '@/components/ui/PhoneInput'
+import type { FormData } from '../types'
 
 interface LocationContactSectionProps {
-  formData: {
-    address: string
-    phone: string
-    phoneCountry: string
-    placeId?: string
-    [key: string]: unknown
-  }
-  setFormData: React.Dispatch<React.SetStateAction<Record<string, unknown>>>
+  formData: FormData
+  setFormData: React.Dispatch<React.SetStateAction<FormData>>
   itemVariants: {
     hidden: { opacity: number; y: number }
     visible: { opacity: number; y: number; transition: { duration: number } }
@@ -50,13 +45,13 @@ export default function LocationContactSection({
               </label>
               <AddressAutocomplete
                 value={formData.address}
-                onChange={(value) => setFormData((prev) => ({ ...prev as Record<string, unknown>, address: value }))}
+                onChange={(value) => setFormData((prev) => ({ ...prev, address: value }))}
                 placeholder='Numéro, rue, code postal, ville'
                 className='border-slate-200 focus:border-green-300 focus:ring-green-200'
                 countryFilter='MG'
                 onAddressSelect={(address, placeId) => {
                   setFormData((prev) => ({
-                    ...prev as Record<string, unknown>,
+                    ...prev,
                     address: address,
                     placeId: placeId || ''
                   }))
@@ -73,7 +68,7 @@ export default function LocationContactSection({
                 defaultCountry={formData.phoneCountry}
                 onChange={(phoneNumber, countryCode) => {
                   setFormData((prev) => ({
-                    ...prev as Record<string, unknown>,
+                    ...prev,
                     phone: phoneNumber,
                     phoneCountry: countryCode
                   }))

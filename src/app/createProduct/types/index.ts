@@ -101,6 +101,7 @@ export interface FormData {
   isHotel: boolean
   hotelName: string
   availableRooms: string
+  [key: string]: unknown
 }
 
 export interface TestBooking {

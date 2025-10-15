@@ -35,8 +35,8 @@ const initialFormData: FormData = {
   availableRooms: '',
 }
 
-export const useProductForm = (types: TypeRentInterface[]) => {
-  const [formData, setFormData] = useState<FormData>(initialFormData)
+export const useProductForm = (types: TypeRentInterface[], initialData?: FormData) => {
+  const [formData, setFormData] = useState<FormData>(initialData || initialFormData)
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>

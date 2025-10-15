@@ -9,8 +9,8 @@ import { MAX_IMAGES } from '../utils/constants'
 /**
  * Custom hook for managing image uploads, compression, and reordering
  */
-export const useImageUpload = () => {
-  const [selectedFiles, setSelectedFiles] = useState<ImageFile[]>([])
+export const useImageUpload = (initialImages?: ImageFile[]) => {
+  const [selectedFiles, setSelectedFiles] = useState<ImageFile[]>(initialImages || [])
   const [dragActive, setDragActive] = useState(false)
   const [isUploadingImages, setIsUploadingImages] = useState(false)
 

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Home } from 'lucide-react'
 import MDEditor from '@uiw/react-md-editor'
 import RichEditorGuide from '@/components/ui/RichEditorGuide'
+import type { FormData } from '../types'
 
 interface Type {
   id: string
@@ -13,15 +14,10 @@ interface Type {
 }
 
 interface BasicInfoSectionProps {
-  formData: {
-    name: string
-    typeId: string
-    description: string
-    [key: string]: unknown
-  }
+  formData: FormData
   types: Type[]
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void
-  setFormData: React.Dispatch<React.SetStateAction<Record<string, unknown>>>
+  setFormData: React.Dispatch<React.SetStateAction<FormData>>
   itemVariants: {
     hidden: { opacity: number; y: number }
     visible: { opacity: number; y: number; transition: { duration: number } }
