@@ -654,6 +654,51 @@ export async function createProduct(data: CreateProductInput) {
       throw new Error('Aucun utilisateur assigné au produit')
     }
 
+    // Validate that related entities exist before connecting
+    const [
+      existingEquipments,
+      existingServices,
+      existingMeals,
+      existingSecurities,
+      existingIncludedServices,
+      existingExtras,
+      existingHighlights
+    ] = await Promise.all([
+      prisma.equipment.findMany({ where: { id: { in: data.equipments } }, select: { id: true } }),
+      prisma.services.findMany({ where: { id: { in: data.services } }, select: { id: true } }),
+      prisma.meals.findMany({ where: { id: { in: data.meals } }, select: { id: true } }),
+      prisma.security.findMany({ where: { id: { in: data.securities } }, select: { id: true } }),
+      data.includedServices && data.includedServices.length > 0
+        ? prisma.includedService.findMany({ where: { id: { in: data.includedServices } }, select: { id: true } })
+        : Promise.resolve([]),
+      data.extras && data.extras.length > 0
+        ? prisma.productExtra.findMany({ where: { id: { in: data.extras } }, select: { id: true } })
+        : Promise.resolve([]),
+      data.highlights && data.highlights.length > 0
+        ? prisma.propertyHighlight.findMany({ where: { id: { in: data.highlights } }, select: { id: true } })
+        : Promise.resolve([])
+    ])
+
+    // Extract valid IDs
+    const validEquipmentIds = existingEquipments.map(e => e.id)
+    const validServiceIds = existingServices.map(s => s.id)
+    const validMealIds = existingMeals.map(m => m.id)
+    const validSecurityIds = existingSecurities.map(s => s.id)
+    const validIncludedServiceIds = existingIncludedServices.map(s => s.id)
+    const validExtraIds = existingExtras.map(e => e.id)
+    const validHighlightIds = existingHighlights.map(h => h.id)
+
+    // Log warnings for invalid IDs
+    const invalidEquipments = data.equipments.filter(id => !validEquipmentIds.includes(id))
+    const invalidServices = data.services.filter(id => !validServiceIds.includes(id))
+    const invalidMeals = data.meals.filter(id => !validMealIds.includes(id))
+    const invalidSecurities = data.securities.filter(id => !validSecurityIds.includes(id))
+
+    if (invalidEquipments.length > 0) console.warn('Invalid equipment IDs:', invalidEquipments)
+    if (invalidServices.length > 0) console.warn('Invalid service IDs:', invalidServices)
+    if (invalidMeals.length > 0) console.warn('Invalid meal IDs:', invalidMeals)
+    if (invalidSecurities.length > 0) console.warn('Invalid security IDs:', invalidSecurities)
+
     // Créer d'abord le produit de base
     const createdProduct = await prisma.product.create({
       data: {
@@ -683,25 +728,25 @@ export async function createProduct(data: CreateProductInput) {
           connect: data.userId.map(id => ({ id })),
         },
         equipments: {
-          connect: data.equipments.map(equipmentId => ({ id: equipmentId })),
+          connect: validEquipmentIds.map(equipmentId => ({ id: equipmentId })),
         },
         servicesList: {
-          connect: data.services.map(serviceId => ({ id: serviceId })),
+          connect: validServiceIds.map(serviceId => ({ id: serviceId })),
         },
         mealsList: {
-          connect: data.meals.map(mealId => ({ id: mealId })),
+          connect: validMealIds.map(mealId => ({ id: mealId })),
         },
         securities: {
-          connect: data.securities.map(securityId => ({ id: securityId })),
+          connect: validSecurityIds.map(securityId => ({ id: securityId })),
         },
         includedServices: {
-          connect: data.includedServices?.map(serviceId => ({ id: serviceId })) || [],
+          connect: validIncludedServiceIds.map(serviceId => ({ id: serviceId })),
         },
         extras: {
-          connect: data.extras?.map(extraId => ({ id: extraId })) || [],
+          connect: validExtraIds.map(extraId => ({ id: extraId })),
         },
         highlights: {
-          connect: data.highlights?.map(highlightId => ({ id: highlightId })) || [],
+          connect: validHighlightIds.map(highlightId => ({ id: highlightId })),
         },
         img: {
           create: data.images.map(img => ({ img })),
