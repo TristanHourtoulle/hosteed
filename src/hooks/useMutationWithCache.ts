@@ -19,14 +19,20 @@ type MutationConfig = {
 /**
  * Hook pour les mutations avec invalidation automatique du cache
  */
-export function useMutationWithCache<TData, TError, TVariables, TContext>(
+export function useMutationWithCache<TData, TError, TVariables, TContext = unknown>(
   mutationFn: (variables: TVariables) => Promise<TData>,
   config: MutationConfig,
-  options?: UseMutationOptions<TData, TError, TVariables, TContext>
+  options?: Omit<UseMutationOptions<TData, TError, TVariables, TContext>, 'mutationFn'>
 ) {
+  const originalOnSuccess = options?.onSuccess
+  const originalOnError = options?.onError
+
   return useMutation({
+    ...options,
     mutationFn,
-    onSuccess: async (data, variables, context) => {
+    onSuccess: async (...args) => {
+      const [data, variables] = args
+
       // Invalidation automatique du cache
       if (config.invalidate) {
         await Promise.all(
@@ -66,26 +72,29 @@ export function useMutationWithCache<TData, TError, TVariables, TContext>(
       }
 
       // Callback utilisateur
-      options?.onSuccess?.(data, variables, context)
+      if (originalOnSuccess) {
+        await originalOnSuccess(...args)
+      }
     },
-    onError: (error, variables, context) => {
+    onError: (...args) => {
       // Message d'erreur
       if (config.errorMessage) {
         toast.error(config.errorMessage)
       }
 
       // Callback utilisateur
-      options?.onError?.(error, variables, context)
+      if (originalOnError) {
+        originalOnError(...args)
+      }
     },
-    ...options,
   })
 }
 
 // Helpers pour des cas d'usage courants
-export const useProductMutation = <TData, TError, TVariables, TContext>(
+export const useProductMutation = <TData, TError, TVariables, TContext = unknown>(
   mutationFn: (variables: TVariables) => Promise<TData>,
   productId?: string,
-  options?: UseMutationOptions<TData, TError, TVariables, TContext>
+  options?: Omit<UseMutationOptions<TData, TError, TVariables, TContext>, 'mutationFn'>
 ) => {
   return useMutationWithCache(
     mutationFn,
@@ -98,10 +107,10 @@ export const useProductMutation = <TData, TError, TVariables, TContext>(
   )
 }
 
-export const useStaticDataMutation = <TData, TError, TVariables, TContext>(
+export const useStaticDataMutation = <TData, TError, TVariables, TContext = unknown>(
   mutationFn: (variables: TVariables) => Promise<TData>,
   dataType: 'equipments' | 'meals' | 'services' | 'security' | 'typeRent',
-  options?: UseMutationOptions<TData, TError, TVariables, TContext>
+  options?: Omit<UseMutationOptions<TData, TError, TVariables, TContext>, 'mutationFn'>
 ) => {
   return useMutationWithCache(
     mutationFn,
@@ -114,10 +123,10 @@ export const useStaticDataMutation = <TData, TError, TVariables, TContext>(
   )
 }
 
-export const useUserMutation = <TData, TError, TVariables, TContext>(
+export const useUserMutation = <TData, TError, TVariables, TContext = unknown>(
   mutationFn: (variables: TVariables) => Promise<TData>,
   userId: string,
-  options?: UseMutationOptions<TData, TError, TVariables, TContext>
+  options?: Omit<UseMutationOptions<TData, TError, TVariables, TContext>, 'mutationFn'>
 ) => {
   return useMutationWithCache(
     mutationFn,

@@ -44,7 +44,8 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pat
     const contentType = mimeTypes[extension] || 'application/octet-stream'
 
     // Retourner l'image avec cache optimal
-    return new NextResponse(imageBuffer, {
+    // Convert Buffer to Uint8Array for Next.js 15 compatibility
+    return new NextResponse(new Uint8Array(imageBuffer), {
       headers: {
         'Content-Type': contentType,
         'Cache-Control': 'public, max-age=31536000, immutable', // 1 an

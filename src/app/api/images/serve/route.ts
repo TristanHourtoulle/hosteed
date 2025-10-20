@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
         if (mediumFile) {
           const mediumPath = path.join(uploadsDir, mediumFile)
           const imageBuffer = fs.readFileSync(mediumPath)
-          return new NextResponse(imageBuffer, {
+          return new NextResponse(new Uint8Array(imageBuffer), {
             headers: {
               'Content-Type': 'image/webp',
               'Cache-Control': 'public, max-age=31536000, immutable',
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
       if (thumbFile) {
         const thumbPath = path.join(uploadsDir, thumbFile)
         const imageBuffer = fs.readFileSync(thumbPath)
-        return new NextResponse(imageBuffer, {
+        return new NextResponse(new Uint8Array(imageBuffer), {
           headers: {
             'Content-Type': 'image/webp',
             'Cache-Control': 'public, max-age=31536000, immutable',
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
     const imagePath = path.join(uploadsDir, targetFile)
     const imageBuffer = fs.readFileSync(imagePath)
 
-    return new NextResponse(imageBuffer, {
+    return new NextResponse(new Uint8Array(imageBuffer), {
       headers: {
         'Content-Type': 'image/webp',
         'Cache-Control': 'public, max-age=31536000, immutable',

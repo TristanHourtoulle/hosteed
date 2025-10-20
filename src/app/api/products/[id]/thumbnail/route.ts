@@ -68,7 +68,8 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       .toBuffer()
 
     // Retourner l'image avec cache agressif
-    return new NextResponse(optimizedImage, {
+    // Convert Buffer to Uint8Array for Next.js 15 compatibility
+    return new NextResponse(new Uint8Array(optimizedImage), {
       headers: {
         'Content-Type': 'image/webp',
         // Cache pendant 1 an (les images ne changent pas souvent)
