@@ -26,11 +26,7 @@ import {
 } from 'lucide-react'
 
 // Import section components
-import {
-  BasicInfoSection,
-  LocationContactSection,
-  ServiceSelectionSection,
-} from './components'
+import { BasicInfoSection, LocationContactSection, ServiceSelectionSection } from './components'
 
 import { createProduct } from '@/lib/services/product.service'
 import { googleSuggestionService } from '@/lib/services/GoogleSuggestion.service'
@@ -42,17 +38,14 @@ import BookingCostSummary from '@/components/ui/BookingCostSummary'
 import SortableImageGrid from '@/components/ui/SortableImageGrid'
 import ImageGalleryPreview from '@/components/ui/ImageGalleryPreview'
 import ErrorAlert, { ErrorDetails } from '@/components/ui/ErrorAlert'
+import { UserCombobox } from '@/components/ui/UserCombobox'
 import { parseCreateProductError, createValidationError } from '@/lib/utils/errorHandler'
 
 // Import types, utilities, and hooks
 import type { NearbyPlace, ImageFile, TestBooking, SpecialPrice, FormData } from './types'
 import { DayEnum } from '@prisma/client'
 import { containerVariants, itemVariants } from './utils'
-import {
-  useProductData,
-  useProductForm,
-  useImageUpload,
-} from './hooks'
+import { useProductData, useProductForm, useImageUpload } from './hooks'
 
 export default function CreateProductPage() {
   const router = useRouter()
@@ -136,7 +129,9 @@ export default function CreateProductPage() {
 
   // Calcul mémorisé pour le nombre de jours de la réservation de test
   const numberOfDays = useMemo(() => {
-    return Math.ceil((testBooking.endDate.getTime() - testBooking.startDate.getTime()) / (1000 * 60 * 60 * 24))
+    return Math.ceil(
+      (testBooking.endDate.getTime() - testBooking.startDate.getTime()) / (1000 * 60 * 60 * 24)
+    )
   }, [testBooking.startDate, testBooking.endDate])
 
   // Handle checkbox changes for arrays
@@ -161,11 +156,12 @@ export default function CreateProductPage() {
   }
 
   // Upload images via API (WebP conversion + 3 sizes)
-  const uploadImagesToServer = async (imageFiles: ImageFile[], productId: string): Promise<string[]> => {
+  const uploadImagesToServer = async (
+    imageFiles: ImageFile[],
+    productId: string
+  ): Promise<string[]> => {
     // Filter only images with File objects (exclude potential null values)
-    const files = imageFiles
-      .filter(img => img.file !== null)
-      .map(img => img.file!)
+    const files = imageFiles.filter(img => img.file !== null).map(img => img.file!)
 
     try {
       // Convert to base64 for API upload
@@ -200,14 +196,16 @@ export default function CreateProductPage() {
 
       if (!uploadResponse.ok) {
         const error = await uploadResponse.json()
-        throw new Error(error.error || 'Erreur lors de l\'upload des images')
+        throw new Error(error.error || "Erreur lors de l'upload des images")
       }
 
       const uploadData = await uploadResponse.json()
       console.log(`✅ Successfully uploaded ${uploadData.count} images`)
 
       // Return full URLs (high quality for display)
-      return uploadData.images.map((img: {thumb: string, medium: string, full: string}) => img.full)
+      return uploadData.images.map(
+        (img: { thumb: string; medium: string; full: string }) => img.full
+      )
     } catch (error) {
       console.error('Error uploading images:', error)
       throw error
@@ -274,14 +272,21 @@ export default function CreateProductPage() {
       }
 
       if (!formData.availableRooms || Number(formData.availableRooms) <= 0) {
-        setError(createValidationError('availableRooms', 'Le nombre de chambres disponibles doit être supérieur à 0'))
+        setError(
+          createValidationError(
+            'availableRooms',
+            'Le nombre de chambres disponibles doit être supérieur à 0'
+          )
+        )
         setIsLoading(false)
         return
       }
     }
 
     if (imageUpload.selectedFiles.length === 0) {
-      setError(createValidationError('images', 'Veuillez ajouter au moins une photo de votre hébergement'))
+      setError(
+        createValidationError('images', 'Veuillez ajouter au moins une photo de votre hébergement')
+      )
       setIsLoading(false)
       return
     }
@@ -295,7 +300,7 @@ export default function CreateProductPage() {
         try {
           const placeDetails = await googleSuggestionService.getPlaceDetails({
             placeId: formData.placeId,
-            fields: ['geometry']
+            fields: ['geometry'],
           })
 
           if (placeDetails?.geometry?.location) {
@@ -350,10 +355,12 @@ export default function CreateProductPage() {
         })),
         // Données spécifiques aux hôtels
         isHotel: formData.isHotel,
-        hotelInfo: formData.isHotel ? {
-          name: formData.hotelName,
-          availableRooms: Number(formData.availableRooms),
-        } : null,
+        hotelInfo: formData.isHotel
+          ? {
+              name: formData.hotelName,
+              availableRooms: Number(formData.availableRooms),
+            }
+          : null,
         // Prix spéciaux
         specialPrices: specialPrices.map(sp => ({
           pricesMga: sp.pricesMga,
@@ -446,13 +453,17 @@ export default function CreateProductPage() {
 
         {error && (
           <motion.div variants={itemVariants}>
-            <ErrorAlert 
+            <ErrorAlert
               error={error}
               onClose={() => setError(null)}
-              onRetry={error.retryable ? () => {
-                setError(null)
-                // Optionally trigger the last failed action again
-              } : undefined}
+              onRetry={
+                error.retryable
+                  ? () => {
+                      setError(null)
+                      // Optionally trigger the last failed action again
+                    }
+                  : undefined
+              }
             />
           </motion.div>
         )}
@@ -476,173 +487,174 @@ export default function CreateProductPage() {
 
           {/* Caractéristiques - Pleine largeur */}
           <motion.div variants={itemVariants}>
-                <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm'>
-                  <CardHeader className='space-y-2'>
-                    <div className='flex items-center gap-2'>
-                      <div className='p-2 bg-purple-50 rounded-lg'>
-                        <Users className='h-5 w-5 text-purple-600' />
+            <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm'>
+              <CardHeader className='space-y-2'>
+                <div className='flex items-center gap-2'>
+                  <div className='p-2 bg-purple-50 rounded-lg'>
+                    <Users className='h-5 w-5 text-purple-600' />
+                  </div>
+                  <div>
+                    <CardTitle className='text-xl'>Caractéristiques</CardTitle>
+                    <p className='text-slate-600 text-sm mt-1'>Les détails de votre hébergement</p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className='space-y-6'>
+                <div className='grid grid-cols-2 gap-6'>
+                  <div className='space-y-2'>
+                    <label htmlFor='room' className='text-sm font-medium text-slate-700'>
+                      Chambres
+                    </label>
+                    <Input
+                      id='room'
+                      name='room'
+                      type='number'
+                      min='1'
+                      placeholder='1'
+                      value={formData.room}
+                      onChange={handleInputChange}
+                      className='border-slate-200 focus:border-purple-300 focus:ring-purple-200'
+                    />
+                  </div>
+
+                  <div className='space-y-2'>
+                    <label htmlFor='bathroom' className='text-sm font-medium text-slate-700'>
+                      Salles de bain
+                    </label>
+                    <Input
+                      id='bathroom'
+                      name='bathroom'
+                      type='number'
+                      min='1'
+                      placeholder='1'
+                      value={formData.bathroom}
+                      onChange={handleInputChange}
+                      className='border-slate-200 focus:border-purple-300 focus:ring-purple-200'
+                    />
+                  </div>
+                </div>
+
+                <div className='grid grid-cols-2 gap-6'>
+                  <div className='space-y-2'>
+                    <label htmlFor='arriving' className='text-sm font-medium text-slate-700'>
+                      Arrivée
+                    </label>
+                    <Input
+                      id='arriving'
+                      name='arriving'
+                      type='number'
+                      min='0'
+                      max='23'
+                      placeholder='14'
+                      value={formData.arriving}
+                      onChange={handleInputChange}
+                      className='border-slate-200 focus:border-purple-300 focus:ring-purple-200'
+                    />
+                  </div>
+
+                  <div className='space-y-2'>
+                    <label htmlFor='leaving' className='text-sm font-medium text-slate-700'>
+                      Départ
+                    </label>
+                    <Input
+                      id='leaving'
+                      name='leaving'
+                      type='number'
+                      min='0'
+                      max='23'
+                      placeholder='12'
+                      value={formData.leaving}
+                      onChange={handleInputChange}
+                      className='border-slate-200 focus:border-purple-300 focus:ring-purple-200'
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Configuration Hôtel - Affiché uniquement si c'est un hôtel */}
+          {formData.isHotel && (
+            <motion.div variants={itemVariants}>
+              <Card className='border-0 shadow-lg bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50'>
+                <CardHeader className='space-y-2'>
+                  <div className='flex items-center gap-2'>
+                    <div className='p-2 bg-amber-100 rounded-lg'>
+                      <Users className='h-5 w-5 text-amber-700' />
+                    </div>
+                    <div>
+                      <CardTitle className='text-xl text-amber-900'>Configuration Hôtel</CardTitle>
+                      <p className='text-amber-700 text-sm mt-1'>
+                        Configuration spécifique pour la gestion hôtelière
+                      </p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className='space-y-6'>
+                  <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+                    <div className='space-y-2'>
+                      <label htmlFor='hotelName' className='text-sm font-medium text-amber-800'>
+                        Nom de l&apos;hôtel
+                      </label>
+                      <Input
+                        id='hotelName'
+                        name='hotelName'
+                        type='text'
+                        placeholder='Ex: Hôtel des Jardins'
+                        value={formData.hotelName}
+                        onChange={handleInputChange}
+                        className='border-amber-200 focus:border-amber-400 focus:ring-amber-200 bg-white/80'
+                      />
+                      <p className='text-xs text-amber-600'>
+                        Nom officiel de l&apos;établissement hôtelier
+                      </p>
+                    </div>
+
+                    <div className='space-y-2'>
+                      <label
+                        htmlFor='availableRooms'
+                        className='text-sm font-medium text-amber-800'
+                      >
+                        Nombre de chambres disponibles
+                      </label>
+                      <Input
+                        id='availableRooms'
+                        name='availableRooms'
+                        type='number'
+                        min='1'
+                        placeholder='Ex: 5'
+                        value={formData.availableRooms}
+                        onChange={handleInputChange}
+                        className='border-amber-200 focus:border-amber-400 focus:ring-amber-200 bg-white/80'
+                      />
+                      <p className='text-xs text-amber-600'>
+                        Nombre de chambres de ce type disponibles
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className='bg-amber-100 border border-amber-200 rounded-lg p-4'>
+                    <div className='flex items-start gap-3'>
+                      <div className='p-1.5 bg-amber-200 rounded-full'>
+                        <Home className='h-4 w-4 text-amber-700' />
                       </div>
-                      <div>
-                        <CardTitle className='text-xl'>Caractéristiques</CardTitle>
-                        <p className='text-slate-600 text-sm mt-1'>
-                          Les détails de votre hébergement
+                      <div className='flex-1'>
+                        <h4 className='text-sm font-semibold text-amber-800 mb-1'>
+                          Fonctionnement Hôtelier
+                        </h4>
+                        <p className='text-xs text-amber-700 leading-relaxed'>
+                          Cette chambre représente un type de chambre dans votre hôtel. Si vous avez{' '}
+                          <span className='font-semibold'>{formData.availableRooms || 'X'}</span>{' '}
+                          chambres de ce type, plusieurs clients pourront réserver en même temps sur
+                          les mêmes dates, tant que le nombre de chambres disponibles le permet.
                         </p>
                       </div>
                     </div>
-                  </CardHeader>
-                  <CardContent className='space-y-6'>
-                    <div className='grid grid-cols-2 gap-6'>
-                      <div className='space-y-2'>
-                        <label htmlFor='room' className='text-sm font-medium text-slate-700'>
-                          Chambres
-                        </label>
-                        <Input
-                          id='room'
-                          name='room'
-                          type='number'
-                          min='1'
-                          placeholder='1'
-                          value={formData.room}
-                          onChange={handleInputChange}
-                          className='border-slate-200 focus:border-purple-300 focus:ring-purple-200'
-                        />
-                      </div>
-
-                      <div className='space-y-2'>
-                        <label htmlFor='bathroom' className='text-sm font-medium text-slate-700'>
-                          Salles de bain
-                        </label>
-                        <Input
-                          id='bathroom'
-                          name='bathroom'
-                          type='number'
-                          min='1'
-                          placeholder='1'
-                          value={formData.bathroom}
-                          onChange={handleInputChange}
-                          className='border-slate-200 focus:border-purple-300 focus:ring-purple-200'
-                        />
-                      </div>
-                    </div>
-
-                    <div className='grid grid-cols-2 gap-6'>
-                      <div className='space-y-2'>
-                        <label htmlFor='arriving' className='text-sm font-medium text-slate-700'>
-                          Arrivée
-                        </label>
-                        <Input
-                          id='arriving'
-                          name='arriving'
-                          type='number'
-                          min='0'
-                          max='23'
-                          placeholder='14'
-                          value={formData.arriving}
-                          onChange={handleInputChange}
-                          className='border-slate-200 focus:border-purple-300 focus:ring-purple-200'
-                        />
-                      </div>
-
-                      <div className='space-y-2'>
-                        <label htmlFor='leaving' className='text-sm font-medium text-slate-700'>
-                          Départ
-                        </label>
-                        <Input
-                          id='leaving'
-                          name='leaving'
-                          type='number'
-                          min='0'
-                          max='23'
-                          placeholder='12'
-                          value={formData.leaving}
-                          onChange={handleInputChange}
-                          className='border-slate-200 focus:border-purple-300 focus:ring-purple-200'
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              {/* Configuration Hôtel - Affiché uniquement si c'est un hôtel */}
-              {formData.isHotel && (
-                <motion.div variants={itemVariants}>
-                  <Card className='border-0 shadow-lg bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50'>
-                    <CardHeader className='space-y-2'>
-                      <div className='flex items-center gap-2'>
-                        <div className='p-2 bg-amber-100 rounded-lg'>
-                          <Users className='h-5 w-5 text-amber-700' />
-                        </div>
-                        <div>
-                          <CardTitle className='text-xl text-amber-900'>Configuration Hôtel</CardTitle>
-                          <p className='text-amber-700 text-sm mt-1'>
-                            Configuration spécifique pour la gestion hôtelière
-                          </p>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className='space-y-6'>
-                      <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-                        <div className='space-y-2'>
-                          <label htmlFor='hotelName' className='text-sm font-medium text-amber-800'>
-                            Nom de l&apos;hôtel
-                          </label>
-                          <Input
-                            id='hotelName'
-                            name='hotelName'
-                            type='text'
-                            placeholder='Ex: Hôtel des Jardins'
-                            value={formData.hotelName}
-                            onChange={handleInputChange}
-                            className='border-amber-200 focus:border-amber-400 focus:ring-amber-200 bg-white/80'
-                          />
-                          <p className='text-xs text-amber-600'>
-                            Nom officiel de l&apos;établissement hôtelier
-                          </p>
-                        </div>
-
-                        <div className='space-y-2'>
-                          <label htmlFor='availableRooms' className='text-sm font-medium text-amber-800'>
-                            Nombre de chambres disponibles
-                          </label>
-                          <Input
-                            id='availableRooms'
-                            name='availableRooms'
-                            type='number'
-                            min='1'
-                            placeholder='Ex: 5'
-                            value={formData.availableRooms}
-                            onChange={handleInputChange}
-                            className='border-amber-200 focus:border-amber-400 focus:ring-amber-200 bg-white/80'
-                          />
-                          <p className='text-xs text-amber-600'>
-                            Nombre de chambres de ce type disponibles
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className='bg-amber-100 border border-amber-200 rounded-lg p-4'>
-                        <div className='flex items-start gap-3'>
-                          <div className='p-1.5 bg-amber-200 rounded-full'>
-                            <Home className='h-4 w-4 text-amber-700' />
-                          </div>
-                          <div className='flex-1'>
-                            <h4 className='text-sm font-semibold text-amber-800 mb-1'>
-                              Fonctionnement Hôtelier
-                            </h4>
-                            <p className='text-xs text-amber-700 leading-relaxed'>
-                              Cette chambre représente un type de chambre dans votre hôtel.
-                              Si vous avez <span className='font-semibold'>{formData.availableRooms || 'X'}</span> chambres
-                              de ce type, plusieurs clients pourront réserver en même temps sur les mêmes dates,
-                              tant que le nombre de chambres disponibles le permet.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
 
           {/* Tarification - Pleine largeur */}
           <motion.div variants={itemVariants}>
@@ -654,9 +666,7 @@ export default function CreateProductPage() {
                   </div>
                   <div>
                     <CardTitle className='text-xl'>Tarification</CardTitle>
-                    <p className='text-slate-600 text-sm mt-1'>
-                      Définissez vos prix et conditions
-                    </p>
+                    <p className='text-slate-600 text-sm mt-1'>Définissez vos prix et conditions</p>
                   </div>
                 </div>
               </CardHeader>
@@ -717,57 +727,57 @@ export default function CreateProductPage() {
 
           {/* Équipements - Pleine largeur */}
           <ServiceSelectionSection
-            title="Équipements disponibles"
-            description="Sélectionnez les équipements disponibles dans votre hébergement"
+            title='Équipements disponibles'
+            description='Sélectionnez les équipements disponibles dans votre hébergement'
             icon={Zap}
-            iconColor="text-emerald-600"
-            bgColor="bg-emerald-50"
-            borderColor="border-emerald-500"
+            iconColor='text-emerald-600'
+            bgColor='bg-emerald-50'
+            borderColor='border-emerald-500'
             services={equipments}
             selectedServiceIds={formData.equipmentIds}
-            onServiceToggle={(id) => handleCheckboxChange('equipmentIds', id)}
+            onServiceToggle={id => handleCheckboxChange('equipmentIds', id)}
             itemVariants={itemVariants}
           />
 
           {/* Repas - Pleine largeur */}
           <ServiceSelectionSection
-            title="Services de restauration"
-            description="Sélectionnez les services de repas proposés"
+            title='Services de restauration'
+            description='Sélectionnez les services de repas proposés'
             icon={UtensilsCrossed}
-            iconColor="text-orange-600"
-            bgColor="bg-orange-50"
-            borderColor="border-orange-500"
+            iconColor='text-orange-600'
+            bgColor='bg-orange-50'
+            borderColor='border-orange-500'
             services={meals}
             selectedServiceIds={formData.mealIds}
-            onServiceToggle={(id) => handleCheckboxChange('mealIds', id)}
+            onServiceToggle={id => handleCheckboxChange('mealIds', id)}
             itemVariants={itemVariants}
           />
 
           {/* Sécurité - Pleine largeur */}
           <ServiceSelectionSection
-            title="Équipements de sécurité"
-            description="Sélectionnez les équipements de sécurité disponibles"
+            title='Équipements de sécurité'
+            description='Sélectionnez les équipements de sécurité disponibles'
             icon={Shield}
-            iconColor="text-red-600"
-            bgColor="bg-red-50"
-            borderColor="border-red-500"
+            iconColor='text-red-600'
+            bgColor='bg-red-50'
+            borderColor='border-red-500'
             services={securities}
             selectedServiceIds={formData.securityIds}
-            onServiceToggle={(id) => handleCheckboxChange('securityIds', id)}
+            onServiceToggle={id => handleCheckboxChange('securityIds', id)}
             itemVariants={itemVariants}
           />
 
           {/* Services additionnels - Pleine largeur */}
           <ServiceSelectionSection
-            title="Services additionnels"
-            description="Sélectionnez les services additionnels proposés"
+            title='Services additionnels'
+            description='Sélectionnez les services additionnels proposés'
             icon={Star}
-            iconColor="text-blue-600"
-            bgColor="bg-blue-50"
-            borderColor="border-blue-500"
+            iconColor='text-blue-600'
+            bgColor='bg-blue-50'
+            borderColor='border-blue-500'
             services={services}
             selectedServiceIds={formData.serviceIds}
-            onServiceToggle={(id) => handleCheckboxChange('serviceIds', id)}
+            onServiceToggle={id => handleCheckboxChange('serviceIds', id)}
             itemVariants={itemVariants}
           />
 
@@ -782,7 +792,8 @@ export default function CreateProductPage() {
                   <div>
                     <CardTitle className='text-xl'>Services et Options</CardTitle>
                     <p className='text-slate-600 text-sm mt-1'>
-                      Sélectionnez les services inclus, extras payants et points forts de votre hébergement
+                      Sélectionnez les services inclus, extras payants et points forts de votre
+                      hébergement
                     </p>
                   </div>
                 </div>
@@ -1063,29 +1074,39 @@ export default function CreateProductPage() {
                                 <span className='text-xs font-medium text-slate-700 block truncate'>
                                   {specialPrice.pricesEuro}€ / {specialPrice.pricesMga}Ar
                                 </span>
-                                <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
-                                  specialPrice.activate 
-                                    ? 'bg-green-100 text-green-700' 
-                                    : 'bg-gray-100 text-gray-700'
-                                }`}>
+                                <span
+                                  className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
+                                    specialPrice.activate
+                                      ? 'bg-green-100 text-green-700'
+                                      : 'bg-gray-100 text-gray-700'
+                                  }`}
+                                >
                                   {specialPrice.activate ? 'Actif' : 'Inactif'}
                                 </span>
                               </div>
                               <div className='text-xs text-slate-500'>
                                 {specialPrice.day.length > 0 && (
                                   <span className='block'>
-                                    {specialPrice.day.map(day => {
-                                      const dayNames: Record<DayEnum, string> = {
-                                        Monday: 'Lun', Tuesday: 'Mar', Wednesday: 'Mer',
-                                        Thursday: 'Jeu', Friday: 'Ven', Saturday: 'Sam', Sunday: 'Dim'
-                                      }
-                                      return dayNames[day]
-                                    }).join(', ')}
+                                    {specialPrice.day
+                                      .map(day => {
+                                        const dayNames: Record<DayEnum, string> = {
+                                          Monday: 'Lun',
+                                          Tuesday: 'Mar',
+                                          Wednesday: 'Mer',
+                                          Thursday: 'Jeu',
+                                          Friday: 'Ven',
+                                          Saturday: 'Sam',
+                                          Sunday: 'Dim',
+                                        }
+                                        return dayNames[day]
+                                      })
+                                      .join(', ')}
                                   </span>
                                 )}
                                 {specialPrice.startDate && specialPrice.endDate && (
                                   <span className='block'>
-                                    {new Date(specialPrice.startDate).toLocaleDateString('fr-FR')} - {new Date(specialPrice.endDate).toLocaleDateString('fr-FR')}
+                                    {new Date(specialPrice.startDate).toLocaleDateString('fr-FR')} -{' '}
+                                    {new Date(specialPrice.endDate).toLocaleDateString('fr-FR')}
                                   </span>
                                 )}
                               </div>
@@ -1103,7 +1124,7 @@ export default function CreateProductPage() {
                 </div>
 
                 {/* Aperçu des coûts */}
-                {(selectedExtras.length > 0 && formData.basePrice) && (
+                {selectedExtras.length > 0 && formData.basePrice && (
                   <div className='mt-6'>
                     <h3 className='text-lg font-semibold mb-4 text-slate-700'>Aperçu des coûts</h3>
                     <BookingCostSummary
@@ -1118,7 +1139,8 @@ export default function CreateProductPage() {
                       showCommissions={false}
                     />
                     <p className='text-xs text-slate-500 mt-2'>
-                      * Exemple calculé sur {numberOfDays} jour{numberOfDays > 1 ? 's' : ''} pour {testBooking.guestCount} personne{testBooking.guestCount > 1 ? 's' : ''}
+                      * Exemple calculé sur {numberOfDays} jour{numberOfDays > 1 ? 's' : ''} pour{' '}
+                      {testBooking.guestCount} personne{testBooking.guestCount > 1 ? 's' : ''}
                     </p>
                   </div>
                 )}
@@ -1140,8 +1162,9 @@ export default function CreateProductPage() {
                       Ajoutez des photos attrayantes de votre hébergement (maximum 35)
                       {imageUpload.selectedFiles.length > 0 && (
                         <span className='ml-2 font-medium text-blue-600'>
-                          {imageUpload.selectedFiles.length} photo{imageUpload.selectedFiles.length > 1 ? 's' : ''}{' '}
-                          sélectionnée{imageUpload.selectedFiles.length > 1 ? 's' : ''}
+                          {imageUpload.selectedFiles.length} photo
+                          {imageUpload.selectedFiles.length > 1 ? 's' : ''} sélectionnée
+                          {imageUpload.selectedFiles.length > 1 ? 's' : ''}
                         </span>
                       )}
                     </p>
@@ -1422,23 +1445,15 @@ export default function CreateProductPage() {
 
                   {assignToOtherUser && (
                     <div className='space-y-2'>
-                      <label htmlFor='userSelect' className='text-sm font-medium text-orange-700'>
+                      <label htmlFor='userCombobox' className='text-sm font-medium text-orange-700'>
                         Sélectionner l&apos;utilisateur
                       </label>
-                      <select
-                        id='userSelect'
+                      <UserCombobox
+                        users={users}
                         value={userSelected}
-                        onChange={e => setUserSelected(e.target.value)}
-                        className='w-full p-2 border border-orange-200 rounded-md focus:ring-orange-200 focus:border-orange-300'
-                        required={assignToOtherUser}
-                      >
-                        <option value=''>Choisir un utilisateur...</option>
-                        {users.map(user => (
-                          <option key={user.id} value={user.id}>
-                            {user.name || user.email} ({user.email})
-                          </option>
-                        ))}
-                      </select>
+                        onValueChange={setUserSelected}
+                        placeholder='Choisir un utilisateur...'
+                      />
                     </div>
                   )}
                 </CardContent>
@@ -1478,8 +1493,8 @@ export default function CreateProductPage() {
           isOpen={serviceModalOpen}
           onClose={() => setServiceModalOpen(false)}
           onServiceCreated={handleServiceCreated}
-          title="Ajouter un service inclus personnalisé"
-          description="Créez un service inclus spécifique à votre hébergement"
+          title='Ajouter un service inclus personnalisé'
+          description='Créez un service inclus spécifique à votre hébergement'
         />
 
         <CreateExtraModal
