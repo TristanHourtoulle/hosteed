@@ -55,6 +55,7 @@ export interface Product {
   mealsList: Meal[]
   transportOptions: Transport[]
   nearbyPlaces: NearbyPlace[]
+  proximityLandmarks: string[]
 }
 
 export interface Reservation {
