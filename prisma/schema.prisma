@@ -154,6 +154,7 @@ model Product {
   phoneCountry     String            @default("MG")
   latitude         Float
   longitude        Float
+  proximityLandmarks String[]        @default([]) // Points de repère pour aider à localiser (texte libre)
   certified        Boolean           @default(false)
   contract         Boolean           @default(false)
   sizeRoom         Int?

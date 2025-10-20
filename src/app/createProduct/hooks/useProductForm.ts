@@ -29,6 +29,7 @@ const initialFormData: FormData = {
   accessibility: false,
   petFriendly: false,
   nearbyPlaces: [],
+  proximityLandmarks: [],
   transportation: '',
   isHotel: false,
   hotelName: '',

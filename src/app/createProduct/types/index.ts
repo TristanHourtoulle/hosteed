@@ -99,6 +99,7 @@ export interface FormData {
   accessibility: boolean
   petFriendly: boolean
   nearbyPlaces: NearbyPlace[]
+  proximityLandmarks: string[] // Points de repère pour localisation (texte libre)
   transportation: string
   isHotel: boolean
   hotelName: string

@@ -734,6 +734,7 @@ export async function createProduct(data: CreateProductInput) {
         autoAccept: false,
         phone: data.phone || '',
         phoneCountry: data.phoneCountry || 'MG',
+        proximityLandmarks: data.proximityLandmarks || [],
         minPeople: data.minPeople ? BigInt(data.minPeople) : null,
         maxPeople: data.maxPeople ? BigInt(data.maxPeople) : null,
         categories: BigInt(0),
@@ -1708,6 +1709,7 @@ interface UpdateProductInput {
   leaving?: number | string
   phone?: string
   phoneCountry?: string
+  proximityLandmarks?: string[]
   maxPeople?: number | null
   typeId?: string
   equipmentIds?: string[]
@@ -1811,6 +1813,8 @@ export async function updateProduct(productId: string, data: UpdateProductInput)
     if (data.leaving !== undefined) updateData.leaving = Number(data.leaving)
     if (data.phone !== undefined) updateData.phone = data.phone
     if (data.phoneCountry !== undefined) updateData.phoneCountry = data.phoneCountry
+    if (data.proximityLandmarks !== undefined)
+      updateData.proximityLandmarks = data.proximityLandmarks
     if (data.maxPeople !== undefined)
       updateData.maxPeople = data.maxPeople ? BigInt(data.maxPeople) : null
     if (data.typeId !== undefined) updateData.type = { connect: { id: data.typeId } }
