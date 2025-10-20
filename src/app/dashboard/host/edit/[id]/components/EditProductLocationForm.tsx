@@ -6,12 +6,14 @@ import { Input } from '@/components/ui/input'
 import { MapPin, X } from 'lucide-react'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import PhoneInput from '@/components/ui/PhoneInput'
+import ProximityLandmarksField from '@/components/ui/ProximityLandmarksField'
 
 interface FormData {
   address: string
   latitude: number
   longitude: number
   phoneNumber: string
+  proximityLandmarks: string[]
   nearbyPlaces: Array<{
     name: string
     distance: string
@@ -24,6 +26,7 @@ interface EditProductLocationFormProps {
   onInputChange: (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => void
+  setFormData: React.Dispatch<React.SetStateAction<FormData>>
   newPlace: {
     name: string
     distance: string
@@ -44,6 +47,7 @@ interface EditProductLocationFormProps {
 export default function EditProductLocationForm({
   formData,
   onInputChange,
+  setFormData,
   newPlace,
   setNewPlace,
   addNearbyPlace,
@@ -83,6 +87,7 @@ export default function EditProductLocationForm({
                 } as React.ChangeEvent<HTMLInputElement>
                 onInputChange(event)
               }}
+              allowFreeInput={true}
               className='border-slate-200 focus:border-green-300 focus:ring-green-200'
             />
             {formData.latitude && formData.longitude && (
@@ -91,6 +96,13 @@ export default function EditProductLocationForm({
               </p>
             )}
           </div>
+
+          <ProximityLandmarksField
+            landmarks={formData.proximityLandmarks}
+            onChange={landmarks =>
+              setFormData(prev => ({ ...prev, proximityLandmarks: landmarks }))
+            }
+          />
 
           <div className='space-y-2'>
             <label htmlFor='phoneNumber' className='text-sm font-medium text-slate-700'>

@@ -53,6 +53,7 @@ interface AddressAutocompleteProps {
   className?: string
   countryFilter?: string
   onAddressSelect?: (address: string, placeId?: string) => void
+  allowFreeInput?: boolean // Allow manual text input as fallback
 }
 
 export default function AddressAutocomplete({
@@ -62,6 +63,7 @@ export default function AddressAutocomplete({
   className = '',
   countryFilter = 'MG',
   onAddressSelect,
+  allowFreeInput = false,
 }: AddressAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<GooglePlacePrediction[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
