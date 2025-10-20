@@ -32,7 +32,7 @@ export default function HostDashboard() {
   const { status } = useSession()
   const [currentPage, setCurrentPage] = useState(1)
   const productsPerPage = 20
-  
+
   const {
     data: hostProductsData,
     isLoading: loading,
@@ -135,11 +135,7 @@ export default function HostDashboard() {
               <p className='text-red-600'>
                 {error instanceof Error ? error.message : 'Erreur lors du chargement des annonces'}
               </p>
-              <Button 
-                onClick={() => window.location.reload()} 
-                className='mt-4'
-                variant='outline'
-              >
+              <Button onClick={() => window.location.reload()} className='mt-4' variant='outline'>
                 Réessayer
               </Button>
             </CardContent>
@@ -202,22 +198,23 @@ export default function HostDashboard() {
           >
             {products.map(product => {
               // Check for active promotion
-              const activePromotion = product.promotions && product.promotions.length > 0
-                ? product.promotions.find((promo) => {
-                    if (!promo.isActive) return false
+              const activePromotion =
+                product.promotions && product.promotions.length > 0
+                  ? product.promotions.find(promo => {
+                      if (!promo.isActive) return false
 
-                    const now = new Date()
-                    const startDate = new Date(promo.startDate)
-                    const endDate = new Date(promo.endDate)
+                      const now = new Date()
+                      const startDate = new Date(promo.startDate)
+                      const endDate = new Date(promo.endDate)
 
-                    return (
-                      !isNaN(startDate.getTime()) &&
-                      !isNaN(endDate.getTime()) &&
-                      startDate <= now &&
-                      endDate >= now
-                    )
-                  })
-                : null
+                      return (
+                        !isNaN(startDate.getTime()) &&
+                        !isNaN(endDate.getTime()) &&
+                        startDate <= now &&
+                        endDate >= now
+                      )
+                    })
+                  : null
 
               const basePrice = parseFloat(product.basePrice)
               const effectivePrice = activePromotion
@@ -228,101 +225,105 @@ export default function HostDashboard() {
               const imageSrc = product.img?.[0]?.img || null
 
               return (
-              <motion.div key={product.id} variants={itemVariants}>
-                <Card className='pt-0 pb-0 overflow-hidden group hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm'>
-                  <div className='relative h-48 w-full overflow-hidden bg-gray-100'>
-                    {imageSrc ? (
-                      <img
-                        src={imageSrc}
-                        alt={product.name}
-                        className='w-full h-full object-cover group-hover:scale-110 transition-transform duration-300'
-                      />
-                    ) : (
-                      <div className='flex items-center justify-center h-full bg-gradient-to-br from-gray-100 to-gray-200'>
-                        <Home className='w-16 h-16 text-gray-400' />
-                      </div>
-                    )}
-                    {/* Badge de promotion */}
-                    {activePromotion && (
-                      <div className='absolute top-3 left-3 z-10 bg-gradient-to-r from-red-500 to-pink-500 text-white px-3 py-1.5 rounded-full text-sm font-bold shadow-lg'>
-                        -{activePromotion.discountPercentage}%
-                      </div>
-                    )}
-                  </div>
-                  <CardContent className='p-6 space-y-4'>
-                    <div className='flex justify-between items-start'>
-                      <h2 className='text-xl font-semibold text-gray-800 line-clamp-1'>
-                        {product.name}
-                      </h2>
-                      <span
-                        className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeColor(product.validate, product.isDraft)}`}
-                      >
-                        {getStatusText(product.validate, product.isDraft)}
-                      </span>
-                    </div>
-                    <div className='space-y-2'>
-                      <p className='text-gray-600'>{getCityFromAddress(product.address)}</p>
-                      {activePromotion ? (
-                        <div className='space-y-1'>
-                          <div className='flex items-center gap-2'>
-                            <span className='text-lg text-gray-400 line-through'>{basePrice.toFixed(2)}€</span>
-                            <span className='bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-semibold'>
-                              PROMO
-                            </span>
-                          </div>
-                          <p className='text-2xl font-bold text-green-600'>{effectivePrice.toFixed(2)}€</p>
-                        </div>
+                <motion.div key={product.id} variants={itemVariants}>
+                  <Card className='pt-0 pb-0 overflow-hidden group hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm'>
+                    <div className='relative h-48 w-full overflow-hidden bg-gray-100'>
+                      {imageSrc ? (
+                        <img
+                          src={imageSrc}
+                          alt={product.name}
+                          className='w-full h-full object-cover group-hover:scale-110 transition-transform duration-300'
+                        />
                       ) : (
-                        <p className='text-2xl font-bold text-blue-600'>{product.basePrice}€</p>
+                        <div className='flex items-center justify-center h-full bg-gradient-to-br from-gray-100 to-gray-200'>
+                          <Home className='w-16 h-16 text-gray-400' />
+                        </div>
+                      )}
+                      {/* Badge de promotion */}
+                      {activePromotion && (
+                        <div className='absolute top-3 left-3 z-10 bg-gradient-to-r from-red-500 to-pink-500 text-white px-3 py-1.5 rounded-full text-sm font-bold shadow-lg'>
+                          -{activePromotion.discountPercentage}%
+                        </div>
                       )}
                     </div>
-                    <div className='flex justify-between items-center pt-4 border-t border-gray-100'>
-                      <Button
-                        asChild
-                        variant='ghost'
-                        className='hover:bg-blue-50 hover:text-blue-600 rounded-full px-4 py-2'
-                      >
-                        <Link href={`/host/${product.id}`}>
-                          <Eye className='w-4 h-4 mr-2' />
-                          Voir
-                        </Link>
-                      </Button>
-                      <div className='flex gap-2'>
-                        <Button
-                          asChild
-                          variant='ghost'
-                          className='hover:bg-blue-50 hover:text-blue-600 rounded-full px-4 py-2'
+                    <CardContent className='p-6 space-y-4'>
+                      <div className='flex justify-between items-start'>
+                        <h2 className='text-xl font-semibold text-gray-800 line-clamp-1'>
+                          {product.name}
+                        </h2>
+                        <span
+                          className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeColor(product.validate, product.isDraft)}`}
                         >
-                          <Link href={`/dashboard/host/calendar?property=${product.id}`}>
-                            <Calendar className='w-4 h-4 mr-2' />
-                            Calendrier
-                          </Link>
-                        </Button>
-                        <Button
-                          asChild
-                          variant='ghost'
-                          className='hover:bg-green-50 hover:text-green-600 rounded-full px-4 py-2'
-                        >
-                          <Link href={`/dashboard/host/property/${product.id}`}>
-                            <Home className='w-4 h-4 mr-2' />
-                            Tableau de bord
-                          </Link>
-                        </Button>
-                        <Button
-                          asChild
-                          variant='ghost'
-                          className='hover:bg-blue-50 hover:text-blue-600 rounded-full px-4 py-2'
-                        >
-                          <Link href={`/dashboard/host/edit/${product.id}`}>
-                            <Edit className='w-4 h-4 mr-2' />
-                            Modifier
-                          </Link>
-                        </Button>
+                          {getStatusText(product.validate, product.isDraft)}
+                        </span>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+                      <div className='space-y-2'>
+                        <p className='text-gray-600'>{getCityFromAddress(product.address)}</p>
+                        {activePromotion ? (
+                          <div className='space-y-1'>
+                            <div className='flex items-center gap-2'>
+                              <span className='text-lg text-gray-400 line-through'>
+                                {basePrice.toFixed(2)}€
+                              </span>
+                              <span className='bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-semibold'>
+                                PROMO
+                              </span>
+                            </div>
+                            <p className='text-2xl font-bold text-green-600'>
+                              {effectivePrice.toFixed(2)}€
+                            </p>
+                          </div>
+                        ) : (
+                          <p className='text-2xl font-bold text-blue-600'>{product.basePrice}€</p>
+                        )}
+                      </div>
+                      <div className='flex justify-between items-center pt-4 border-t border-gray-100'>
+                        <Button
+                          asChild
+                          variant='ghost'
+                          className='hover:bg-blue-50 hover:text-blue-600 rounded-full px-4 py-2'
+                        >
+                          <Link href={`/host/${product.id}`}>
+                            <Eye className='w-4 h-4 mr-2' />
+                            Voir
+                          </Link>
+                        </Button>
+                        <div className='flex gap-2'>
+                          <Button
+                            asChild
+                            variant='ghost'
+                            className='hover:bg-blue-50 hover:text-blue-600 rounded-full px-4 py-2'
+                          >
+                            <Link href={`/dashboard/host/calendar?property=${product.id}`}>
+                              <Calendar className='w-4 h-4 mr-2' />
+                              Calendrier
+                            </Link>
+                          </Button>
+                          <Button
+                            asChild
+                            variant='ghost'
+                            className='hover:bg-green-50 hover:text-green-600 rounded-full px-4 py-2'
+                          >
+                            <Link href={`/dashboard/host/property/${product.id}`}>
+                              <Home className='w-4 h-4 mr-2' />
+                              Tableau de bord
+                            </Link>
+                          </Button>
+                          <Button
+                            asChild
+                            variant='ghost'
+                            className='hover:bg-blue-50 hover:text-blue-600 rounded-full px-4 py-2'
+                          >
+                            <Link href={`/dashboard/host/edit/${product.id}`}>
+                              <Edit className='w-4 h-4 mr-2' />
+                              Modifier
+                            </Link>
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               )
             })}
           </motion.div>
@@ -346,7 +347,7 @@ export default function HostDashboard() {
               <ChevronLeft className='w-4 h-4 mr-1' />
               Précédent
             </Button>
-            
+
             <div className='flex space-x-1'>
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                 const pageNum = Math.max(1, Math.min(totalPages, currentPage - 2 + i))
@@ -357,14 +358,16 @@ export default function HostDashboard() {
                     size='sm'
                     onClick={() => setCurrentPage(pageNum)}
                     disabled={loading}
-                    className={pageNum === currentPage ? 'bg-blue-600 text-white' : 'hover:bg-blue-50'}
+                    className={
+                      pageNum === currentPage ? 'bg-blue-600 text-white' : 'hover:bg-blue-50'
+                    }
                   >
                     {pageNum}
                   </Button>
                 )
               })}
             </div>
-            
+
             <Button
               variant='outline'
               size='sm'
@@ -380,23 +383,16 @@ export default function HostDashboard() {
 
         {/* Indicateur de chargement pour les nouvelles pages */}
         {loading && products.length > 0 && (
-          <motion.div
-            className='flex justify-center items-center mt-4'
-            variants={itemVariants}
-          >
-            <div className='animate-pulse text-gray-500 text-sm'>
-              Chargement en cours...
-            </div>
+          <motion.div className='flex justify-center items-center mt-4' variants={itemVariants}>
+            <div className='animate-pulse text-gray-500 text-sm'>Chargement en cours...</div>
           </motion.div>
         )}
 
         {/* Informations sur la pagination */}
         {hostProductsData && products.length > 0 && (
-          <motion.div
-            className='text-center mt-6 text-gray-600 text-sm'
-            variants={itemVariants}
-          >
-            Affichage de {Math.min(productsPerPage, products.length)} sur {hostProductsData.totalCount} annonce{hostProductsData.totalCount > 1 ? 's' : ''}
+          <motion.div className='text-center mt-6 text-gray-600 text-sm' variants={itemVariants}>
+            Affichage de {Math.min(productsPerPage, products.length)} sur{' '}
+            {hostProductsData.totalCount} annonce{hostProductsData.totalCount > 1 ? 's' : ''}
             {totalPages > 1 && ` (page ${currentPage} sur ${totalPages})`}
           </motion.div>
         )}

@@ -19,7 +19,8 @@ export const CACHE_TAGS = {
   productValidation: (id: string) => ['product-validation', id] as const,
   productsValidation: ['products-validation'] as const,
   favorites: (userId: string) => ['favorites', userId] as const,
-  favoriteStatus: (userId: string, productId: string) => ['favorite-status', userId, productId] as const,
+  favoriteStatus: (userId: string, productId: string) =>
+    ['favorite-status', userId, productId] as const,
   reservations: (userId: string) => ['reservations', userId] as const,
   reservation: (id: string) => ['reservation', id] as const,
   reviews: (productId: string) => ['reviews', productId] as const,
@@ -37,9 +38,7 @@ export const CACHE_TAGS = {
 } as const
 
 export const invalidateCacheTags = async (tags: readonly unknown[][]) => {
-  await Promise.all(
-    tags.map(tag => queryClient.invalidateQueries({ queryKey: tag }))
-  )
+  await Promise.all(tags.map(tag => queryClient.invalidateQueries({ queryKey: tag })))
 }
 
 export const prefetchQuery = async <T>(

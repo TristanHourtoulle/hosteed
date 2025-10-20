@@ -221,7 +221,10 @@ export default function PostsPage() {
                       </div>
                     </div>
                   </div>
-                  <Link href={`/posts/article/${post.slug || post.id}`} className='absolute inset-0'>
+                  <Link
+                    href={`/posts/article/${post.slug || post.id}`}
+                    className='absolute inset-0'
+                  >
                     <span className='sr-only'>Lire l&apos;article</span>
                   </Link>
                 </article>

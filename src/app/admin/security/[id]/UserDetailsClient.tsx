@@ -9,10 +9,14 @@ import { Button } from '@/components/ui/shadcnui/button'
 import { ArrowLeft } from 'lucide-react'
 import { LoadingDisplay } from './components/LoadingDisplay'
 import { UserPersonalInfo } from './components/UserPersonalInfo'
-import {SecurityInterface} from "@/lib/interface/securityInterface";
+import { SecurityInterface } from '@/lib/interface/securityInterface'
 
 export function UserDetailsClient({ id, name }: SecurityInterface) {
-  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
   const [loading] = useState(false)
 

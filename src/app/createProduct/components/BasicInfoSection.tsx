@@ -91,20 +91,21 @@ export default function BasicInfoSection({
               Description détaillée
             </label>
             <div
-              data-color-mode="light"
-              className="rounded-md border border-slate-200 overflow-hidden"
+              data-color-mode='light'
+              className='rounded-md border border-slate-200 overflow-hidden'
             >
               <MDEditor
                 value={formData.description}
-                onChange={(value) => setFormData({...formData, description: value || ''})}
+                onChange={value => setFormData({ ...formData, description: value || '' })}
                 height={400}
-                preview="edit"
-                className="!border-none"
-                data-color-mode="light"
+                preview='edit'
+                className='!border-none'
+                data-color-mode='light'
                 visibleDragbar={false}
                 textareaProps={{
-                  placeholder: "Décrivez votre hébergement en détail...\n\n**Points forts:**\n- Avantage 1\n- Avantage 2\n\n**Environnement:**\nDécrivez l'environnement de votre hébergement...",
-                  required: true
+                  placeholder:
+                    "Décrivez votre hébergement en détail...\n\n**Points forts:**\n- Avantage 1\n- Avantage 2\n\n**Environnement:**\nDécrivez l'environnement de votre hébergement...",
+                  required: true,
                 }}
               />
             </div>

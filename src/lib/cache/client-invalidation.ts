@@ -9,15 +9,19 @@ import { queryClient, CACHE_TAGS } from './query-client'
 
 export const invalidateClientCache = {
   products: async (productId?: string) => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: CACHE_TAGS.products }),
-      productId && queryClient.invalidateQueries({ queryKey: CACHE_TAGS.product(productId) }),
-    ].filter(Boolean))
+    await Promise.all(
+      [
+        queryClient.invalidateQueries({ queryKey: CACHE_TAGS.products }),
+        productId && queryClient.invalidateQueries({ queryKey: CACHE_TAGS.product(productId) }),
+      ].filter(Boolean)
+    )
   },
 
   staticData: async (type?: 'equipments' | 'meals' | 'services' | 'security' | 'typeRent') => {
     if (type && type !== 'typeRent') {
-      await queryClient.invalidateQueries({ queryKey: CACHE_TAGS.staticData[type as keyof typeof CACHE_TAGS.staticData] })
+      await queryClient.invalidateQueries({
+        queryKey: CACHE_TAGS.staticData[type as keyof typeof CACHE_TAGS.staticData],
+      })
     } else if (type === 'typeRent') {
       await queryClient.invalidateQueries({ queryKey: CACHE_TAGS.staticData.typeRent })
     } else {
@@ -39,20 +43,25 @@ export const invalidateClientCache = {
   },
 
   favorites: async (userId: string, productId?: string) => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: CACHE_TAGS.favorites(userId) }),
-      productId && queryClient.invalidateQueries({ 
-        queryKey: CACHE_TAGS.favoriteStatus(userId, productId) 
-      }),
-    ].filter(Boolean))
+    await Promise.all(
+      [
+        queryClient.invalidateQueries({ queryKey: CACHE_TAGS.favorites(userId) }),
+        productId &&
+          queryClient.invalidateQueries({
+            queryKey: CACHE_TAGS.favoriteStatus(userId, productId),
+          }),
+      ].filter(Boolean)
+    )
   },
 
   reservations: async (userId: string, rentId?: string) => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: CACHE_TAGS.reservations(userId) }),
-      rentId && queryClient.invalidateQueries({ queryKey: CACHE_TAGS.reservation(rentId) }),
-      queryClient.invalidateQueries({ queryKey: ['rent-statistics', userId] }),
-    ].filter(Boolean))
+    await Promise.all(
+      [
+        queryClient.invalidateQueries({ queryKey: CACHE_TAGS.reservations(userId) }),
+        rentId && queryClient.invalidateQueries({ queryKey: CACHE_TAGS.reservation(rentId) }),
+        queryClient.invalidateQueries({ queryKey: ['rent-statistics', userId] }),
+      ].filter(Boolean)
+    )
   },
 
   reviews: async (productId: string) => {

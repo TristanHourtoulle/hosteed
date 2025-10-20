@@ -17,7 +17,7 @@ interface UseIntersectionObserverReturn {
 /**
  * Hook optimisé pour l'observation d'intersection - Phase 5 UX Optimizations
  * Détecte quand un élément entre dans le viewport pour le lazy loading
- * 
+ *
  * @param options Configuration de l'Intersection Observer
  * @returns Object avec isIntersecting status et entry détails
  */
@@ -73,11 +73,7 @@ export function useMultipleIntersectionObserver<T extends Element = Element>(
   intersecting: Set<string>
   entries: Map<string, IntersectionObserverEntry>
 } {
-  const {
-    threshold = 0.1,
-    root = null,
-    rootMargin = '50px',
-  } = options
+  const { threshold = 0.1, root = null, rootMargin = '50px' } = options
 
   const [intersecting, setIntersecting] = useState<Set<string>>(new Set())
   const [entries, setEntries] = useState<Map<string, IntersectionObserverEntry>>(new Map())
@@ -88,23 +84,26 @@ export function useMultipleIntersectionObserver<T extends Element = Element>(
     const hasIOSupport = !!window.IntersectionObserver
     if (!hasIOSupport) return
 
-    observerRef.current = new IntersectionObserver((observerEntries) => {
-      observerEntries.forEach((entry) => {
-        const id = elementsMapRef.current.get(entry.target)
-        if (!id) return
+    observerRef.current = new IntersectionObserver(
+      observerEntries => {
+        observerEntries.forEach(entry => {
+          const id = elementsMapRef.current.get(entry.target)
+          if (!id) return
 
-        setEntries((prev) => new Map(prev.set(id, entry)))
-        setIntersecting((prev) => {
-          const newSet = new Set(prev)
-          if (entry.isIntersecting) {
-            newSet.add(id)
-          } else {
-            newSet.delete(id)
-          }
-          return newSet
+          setEntries(prev => new Map(prev.set(id, entry)))
+          setIntersecting(prev => {
+            const newSet = new Set(prev)
+            if (entry.isIntersecting) {
+              newSet.add(id)
+            } else {
+              newSet.delete(id)
+            }
+            return newSet
+          })
         })
-      })
-    }, { threshold, root, rootMargin })
+      },
+      { threshold, root, rootMargin }
+    )
 
     return () => {
       observerRef.current?.disconnect()
@@ -113,7 +112,7 @@ export function useMultipleIntersectionObserver<T extends Element = Element>(
 
   const observe = (element: T, id: string) => {
     if (!observerRef.current) return
-    
+
     elementsMapRef.current.set(element, id)
     observerRef.current.observe(element)
   }
@@ -130,13 +129,13 @@ export function useMultipleIntersectionObserver<T extends Element = Element>(
       }
     }
 
-    setIntersecting((prev) => {
+    setIntersecting(prev => {
       const newSet = new Set(prev)
       newSet.delete(id)
       return newSet
     })
 
-    setEntries((prev) => {
+    setEntries(prev => {
       const newMap = new Map(prev)
       newMap.delete(id)
       return newMap
@@ -156,11 +155,7 @@ export function useLazyImageLoading<T extends Element = HTMLImageElement>(
     preloadMargin?: string
   } = {}
 ) {
-  const {
-    onVisible,
-    preloadMargin = '100px',
-    ...observerOptions
-  } = options
+  const { onVisible, preloadMargin = '100px', ...observerOptions } = options
 
   const [ref, { isIntersecting }] = useIntersectionObserver<T>({
     rootMargin: preloadMargin,

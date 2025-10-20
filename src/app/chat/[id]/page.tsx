@@ -43,7 +43,11 @@ interface RentInfo {
 }
 
 export default function ChatPage() {
-  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const params = useParams()
   const rentId = params.id as string
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -61,10 +65,10 @@ export default function ChatPage() {
       if (!session?.user?.id) return
       const rent = await getRentById(rentId)
       if (!rent || !rent.product?.user) return
-      
+
       // Stocker les informations de la réservation
       setRentInfo(rent)
-      
+
       const isUserHost = rent.product.user.some(
         (user: { id: string }) => user.id === session.user?.id
       )
@@ -156,8 +160,8 @@ export default function ChatPage() {
       {/* Sidebar - Simplified for chat view */}
       <div className='w-80 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col'>
         <div className='px-6 py-4 border-b border-gray-100 bg-gray-50/50'>
-          <Link 
-            href='/chat' 
+          <Link
+            href='/chat'
             className='flex items-center text-gray-600 hover:text-gray-900 transition-colors group mb-4'
           >
             <ArrowLeft className='w-4 h-4 mr-2 transition-transform group-hover:-translate-x-1' />
@@ -172,16 +176,16 @@ export default function ChatPage() {
                 {rentInfo?.product?.name || 'Discussion active'}
               </h1>
               <p className='text-xs text-gray-500'>
-                {rentInfo ? (
-                  isHost ? `Avec ${rentInfo.user?.name || 'l\'invité'}` : `Avec ${rentInfo.product?.user?.[0]?.name || 'l\'hôte'}`
-                ) : (
-                  'Chargement...'
-                )}
+                {rentInfo
+                  ? isHost
+                    ? `Avec ${rentInfo.user?.name || "l'invité"}`
+                    : `Avec ${rentInfo.product?.user?.[0]?.name || "l'hôte"}`
+                  : 'Chargement...'}
               </p>
             </div>
           </div>
         </div>
-        
+
         <div className='flex-1 p-6'>
           {rentInfo ? (
             <div className='space-y-6'>
@@ -215,19 +219,15 @@ export default function ChatPage() {
                 </h3>
                 <div className='flex items-center space-x-3'>
                   <div className='w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center text-white font-semibold'>
-                    {isHost ? (
-                      rentInfo.user?.name?.charAt(0)?.toUpperCase() || 'I'
-                    ) : (
-                      rentInfo.product?.user?.[0]?.name?.charAt(0)?.toUpperCase() || 'H'
-                    )}
+                    {isHost
+                      ? rentInfo.user?.name?.charAt(0)?.toUpperCase() || 'I'
+                      : rentInfo.product?.user?.[0]?.name?.charAt(0)?.toUpperCase() || 'H'}
                   </div>
                   <div>
                     <p className='font-medium text-gray-900'>
                       {isHost ? rentInfo.user?.name : rentInfo.product?.user?.[0]?.name}
                     </p>
-                    <p className='text-sm text-gray-600'>
-                      {isHost ? 'Voyageur' : 'Propriétaire'}
-                    </p>
+                    <p className='text-sm text-gray-600'>{isHost ? 'Voyageur' : 'Propriétaire'}</p>
                   </div>
                 </div>
               </div>
@@ -239,13 +239,17 @@ export default function ChatPage() {
                   <div className='flex justify-between'>
                     <span>Arrivée:</span>
                     <span className='font-medium'>
-                      {rentInfo.arrivingDate ? format(new Date(rentInfo.arrivingDate), 'dd/MM/yyyy', { locale: fr }) : 'N/A'}
+                      {rentInfo.arrivingDate
+                        ? format(new Date(rentInfo.arrivingDate), 'dd/MM/yyyy', { locale: fr })
+                        : 'N/A'}
                     </span>
                   </div>
                   <div className='flex justify-between'>
                     <span>Départ:</span>
                     <span className='font-medium'>
-                      {rentInfo.leavingDate ? format(new Date(rentInfo.leavingDate), 'dd/MM/yyyy', { locale: fr }) : 'N/A'}
+                      {rentInfo.leavingDate
+                        ? format(new Date(rentInfo.leavingDate), 'dd/MM/yyyy', { locale: fr })
+                        : 'N/A'}
                     </span>
                   </div>
                   <div className='flex justify-between'>
@@ -307,7 +311,7 @@ export default function ChatPage() {
                           )}
                         </div>
                       )}
-                      
+
                       <div className='flex flex-col max-w-xs md:max-w-md'>
                         <div
                           className={`px-4 py-3 rounded-2xl shadow-sm ${
@@ -318,20 +322,20 @@ export default function ChatPage() {
                         >
                           <p className='text-sm leading-relaxed'>{msg.message}</p>
                         </div>
-                        
-                        <div className={`text-xs text-gray-400 mt-1 px-2 ${
-                          isCurrentUser ? 'text-right' : 'text-left'
-                        }`}>
+
+                        <div
+                          className={`text-xs text-gray-400 mt-1 px-2 ${
+                            isCurrentUser ? 'text-right' : 'text-left'
+                          }`}
+                        >
                           <span className='font-medium'>
                             {msg.host ? 'Hébergeur' : isCurrentUser ? 'Vous' : 'Invité'}
                           </span>
                           <span className='mx-1'>•</span>
-                          <span>
-                            {format(new Date(msg.dateSended), 'HH:mm', { locale: fr })}
-                          </span>
+                          <span>{format(new Date(msg.dateSended), 'HH:mm', { locale: fr })}</span>
                         </div>
                       </div>
-                      
+
                       {isCurrentUser && (
                         <div className='w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center flex-shrink-0 mb-1'>
                           <UserIcon className='w-4 h-4 text-white' />
@@ -343,7 +347,7 @@ export default function ChatPage() {
               )}
               <div ref={messagesEndRef} />
             </div>
-            
+
             {/* Message Input */}
             <div className='border-t bg-white p-4'>
               <form onSubmit={handleSend} className='flex items-end space-x-3'>
@@ -364,13 +368,13 @@ export default function ChatPage() {
                     </div>
                   </div>
                 </div>
-                
-                <Button 
-                  type='submit' 
+
+                <Button
+                  type='submit'
                   disabled={sending || !newMessage.trim()}
                   className={`rounded-full w-12 h-12 p-0 transition-all duration-200 ${
-                    sending || !newMessage.trim() 
-                      ? 'bg-gray-300 hover:bg-gray-300' 
+                    sending || !newMessage.trim()
+                      ? 'bg-gray-300 hover:bg-gray-300'
                       : 'bg-blue-500 hover:bg-blue-600 hover:scale-105 shadow-lg'
                   }`}
                 >

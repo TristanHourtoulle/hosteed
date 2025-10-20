@@ -40,16 +40,17 @@ export function RejectedProductsTab({ products, onUpdate }: RejectedProductsTabP
   const [isDeletingBulk, setIsDeletingBulk] = useState(false)
 
   const rejectedProducts = products.filter(p => p.validate === ProductValidation.Refused)
-  
+
   console.log('RejectedProductsTab - Tous les produits:', products.length)
   console.log('RejectedProductsTab - Produits rejetés:', rejectedProducts.length)
-  console.log('RejectedProductsTab - Types de validation:', products.map(p => ({ id: p.id, validate: p.validate })))
+  console.log(
+    'RejectedProductsTab - Types de validation:',
+    products.map(p => ({ id: p.id, validate: p.validate }))
+  )
 
   const toggleProductSelection = (productId: string) => {
-    setSelectedProducts(prev => 
-      prev.includes(productId)
-        ? prev.filter(id => id !== productId)
-        : [...prev, productId]
+    setSelectedProducts(prev =>
+      prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]
     )
   }
 
@@ -67,13 +68,13 @@ export function RejectedProductsTab({ products, onUpdate }: RejectedProductsTabP
     const confirmed = window.confirm(
       `Êtes-vous sûr de vouloir supprimer définitivement ${selectedProducts.length} annonce(s) rejetée(s) ?\n\nCette action est irréversible et les hôtes recevront un email de notification.`
     )
-    
+
     if (!confirmed) return
 
     setIsDeletingBulk(true)
     try {
       const result = await deleteBulkRejectedProducts(selectedProducts)
-      
+
       if (result.success) {
         onUpdate()
         setSelectedProducts([])
@@ -93,13 +94,13 @@ export function RejectedProductsTab({ products, onUpdate }: RejectedProductsTabP
     const confirmed = window.confirm(
       `Êtes-vous sûr de vouloir supprimer définitivement l'annonce "${productName}" ?\n\nCette action est irréversible et l'hôte recevra un email de notification.`
     )
-    
+
     if (!confirmed) return
 
     setIsDeleting(true)
     try {
       const result = await deleteSingleRejectedProduct(productId)
-      
+
       if (result.success) {
         onUpdate()
       } else {
@@ -120,9 +121,7 @@ export function RejectedProductsTab({ products, onUpdate }: RejectedProductsTabP
         <CardContent className='flex flex-col items-center justify-center py-12'>
           <AlertTriangle className='h-12 w-12 text-gray-400 mb-4' />
           <h3 className='text-lg font-medium text-gray-900 mb-2'>Aucune annonce rejetée</h3>
-          <p className='text-gray-500 text-center'>
-            Aucune annonce rejetée pour le moment.
-          </p>
+          <p className='text-gray-500 text-center'>Aucune annonce rejetée pour le moment.</p>
         </CardContent>
       </Card>
     )
@@ -139,7 +138,10 @@ export function RejectedProductsTab({ products, onUpdate }: RejectedProductsTabP
               <div className='flex items-center gap-2'>
                 <Checkbox
                   id='select-all'
-                  checked={selectedProducts.length === rejectedProducts.length && rejectedProducts.length > 0}
+                  checked={
+                    selectedProducts.length === rejectedProducts.length &&
+                    rejectedProducts.length > 0
+                  }
                   onCheckedChange={toggleSelectAll}
                 />
                 <label htmlFor='select-all' className='text-sm text-gray-700'>
@@ -174,7 +176,7 @@ export function RejectedProductsTab({ products, onUpdate }: RejectedProductsTabP
       {/* Liste des produits rejetés */}
       <div className='grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6'>
         {rejectedProducts.map((product, index) => (
-          <motion.div 
+          <motion.div
             key={product.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -193,11 +195,11 @@ export function RejectedProductsTab({ products, onUpdate }: RejectedProductsTabP
               {/* Image du produit */}
               <div className='relative h-48 w-full'>
                 {product.img && product.img.length > 0 ? (
-                  <Image 
-                    src={product.img[0].img} 
-                    alt={product.name} 
-                    fill 
-                    className='object-cover' 
+                  <Image
+                    src={product.img[0].img}
+                    alt={product.name}
+                    fill
+                    className='object-cover'
                   />
                 ) : (
                   <div className='w-full h-full bg-gray-200 flex items-center justify-center'>
@@ -218,9 +220,7 @@ export function RejectedProductsTab({ products, onUpdate }: RejectedProductsTabP
                     <h3 className='font-semibold text-lg text-gray-900 line-clamp-1'>
                       {product.name}
                     </h3>
-                    <p className='text-gray-600 text-sm line-clamp-2 mt-1'>
-                      {product.description}
-                    </p>
+                    <p className='text-gray-600 text-sm line-clamp-2 mt-1'>{product.description}</p>
                   </div>
 
                   {/* Informations hôte */}
@@ -241,14 +241,14 @@ export function RejectedProductsTab({ products, onUpdate }: RejectedProductsTabP
                         Détails
                       </Link>
                     </Button>
-                    
+
                     <Button
                       variant='destructive'
                       size='sm'
                       onClick={() => handleDeleteSingle(product.id, product.name)}
                       disabled={isDeleting}
                       className='bg-red-600 hover:bg-red-700'
-                      title="Supprimer définitivement cette annonce"
+                      title='Supprimer définitivement cette annonce'
                     >
                       {isDeleting ? (
                         <Loader2 className='h-4 w-4 animate-spin' />

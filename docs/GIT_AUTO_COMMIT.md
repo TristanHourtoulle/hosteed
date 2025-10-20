@@ -14,47 +14,58 @@ Script automatisé pour grouper et commiter les modifications par type de change
 ## Fonctionnement
 
 ### 1. Vérification du Build
+
 ```bash
 pnpm build
 ```
+
 - Si le build échoue → arrêt du processus
 - Si le build réussit → continue
 
 ### 2. Analyse des Changements
+
 ```bash
 git status --porcelain
 ```
+
 - Liste tous les fichiers modifiés/non suivis
 - Les groupe par type de changement
 
 ### 3. Catégorisation Automatique
 
 #### `feat:` - Nouvelles fonctionnalités
+
 - Nouveaux composants (`src/components/ui/*`)
-- Nouvelles pages (`src/app/*/page.tsx`) 
+- Nouvelles pages (`src/app/*/page.tsx`)
 - Nouveaux hooks (`src/hooks/*`)
 - Fichiers ajoutés avec statut `A`
 
 #### `fix:` - Corrections de bugs
+
 - Fichiers contenant "fix", "bug", "error" dans le nom/chemin
 
 #### `refactor:` - Améliorations de code
+
 - Modifications des APIs (`src/app/api/*`)
 - Services (`src/lib/services/*`)
 - Composants existants modifiés
 
 #### `style:` - Changements visuels
+
 - Fichiers CSS (`*.css`, `*.scss`, `globals.css`)
 
 #### `docs:` - Documentation
+
 - Fichiers Markdown (`*.md`)
 - Dossier `docs/*`
 - README
 
 #### `test:` - Tests
+
 - Fichiers de test (`*test*`, `*spec*`, `__tests__/*`)
 
 #### `chore:` - Maintenance
+
 - Configuration (`package.json`, `*.config.*`)
 - Dépendances (`pnpm-lock.yaml`)
 - Variables d'environnement (`.env*`)
@@ -64,6 +75,7 @@ git status --porcelain
 ### 4. Création des Commits
 
 Pour chaque type détecté :
+
 ```bash
 git add <liste_des_fichiers>
 git commit -m "type: description claire"
@@ -104,6 +116,7 @@ git push origin main
 ## Personnalisation
 
 Pour modifier les règles de catégorisation, éditer le script dans :
+
 ```
 scripts/git-auto-commit.sh
 ```

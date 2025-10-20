@@ -37,13 +37,8 @@ export default function ShareButton({ title, description, url }: ShareButtonProp
   }
 
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={handleShare}
-      className="gap-2"
-    >
-      <Share2 className="w-4 h-4" />
+    <Button variant='outline' size='sm' onClick={handleShare} className='gap-2'>
+      <Share2 className='w-4 h-4' />
       Partager
     </Button>
   )

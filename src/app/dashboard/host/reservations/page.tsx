@@ -32,7 +32,11 @@ interface Rent {
 }
 
 export default function RentsPage() {
-  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const [rents, setRents] = useState<Rent[]>([])
   const [filteredRents, setFilteredRents] = useState<Rent[]>([])
   const [loading, setLoading] = useState(true)

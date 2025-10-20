@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { updateUnavailableRent, deleteUnavailableRent } from '@/lib/services/unavailableRent.service'
+import {
+  updateUnavailableRent,
+  deleteUnavailableRent,
+} from '@/lib/services/unavailableRent.service'
 import prisma from '@/lib/prisma'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -29,7 +32,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     // Vérifier que l'utilisateur est propriétaire
-    const isOwner = unavailability.product.user.some((u) => u.id === session.user.id)
+    const isOwner = unavailability.product.user.some(u => u.id === session.user.id)
     if (!isOwner) {
       return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })
     }
@@ -64,7 +67,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Indisponibilité non trouvée' }, { status: 404 })
     }
 
-    const isOwner = existing.product.user.some((u) => u.id === session.user.id)
+    const isOwner = existing.product.user.some(u => u.id === session.user.id)
     if (!isOwner) {
       return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })
     }
@@ -111,7 +114,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Indisponibilité non trouvée' }, { status: 404 })
     }
 
-    const isOwner = existing.product.user.some((u) => u.id === session.user.id)
+    const isOwner = existing.product.user.some(u => u.id === session.user.id)
     if (!isOwner) {
       return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })
     }

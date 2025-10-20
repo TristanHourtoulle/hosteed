@@ -162,9 +162,11 @@ export default function UnavailabilityModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className='max-w-md'>
         <DialogHeader>
-          <DialogTitle>{mode === 'create' ? 'Bloquer des dates' : 'Modifier le blocage'}</DialogTitle>
+          <DialogTitle>
+            {mode === 'create' ? 'Bloquer des dates' : 'Modifier le blocage'}
+          </DialogTitle>
           <DialogDescription>
             {mode === 'create'
               ? 'Créez un blocage pour rendre votre propriété indisponible pendant une période.'
@@ -173,33 +175,33 @@ export default function UnavailabilityModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
+          <div className='grid gap-4 py-4'>
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+              <div className='bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm'>
                 {error}
               </div>
             )}
 
             {/* Sélecteur de propriété */}
-            <div className="space-y-2">
-              <Label htmlFor="property">
-                Propriété <span className="text-red-500">*</span>
+            <div className='space-y-2'>
+              <Label htmlFor='property'>
+                Propriété <span className='text-red-500'>*</span>
               </Label>
               {loadingProducts ? (
-                <div className="flex items-center justify-center py-2 text-sm text-gray-500">
+                <div className='flex items-center justify-center py-2 text-sm text-gray-500'>
                   Chargement des propriétés...
                 </div>
               ) : (
                 <select
-                  id="property"
+                  id='property'
                   value={formData.productId}
-                  onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
-                  className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50"
+                  onChange={e => setFormData({ ...formData, productId: e.target.value })}
+                  className='flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50'
                   disabled={mode === 'edit'}
                   required
                 >
-                  <option value="">Sélectionnez une propriété</option>
-                  {products.map((product) => (
+                  <option value=''>Sélectionnez une propriété</option>
+                  {products.map(product => (
                     <option key={product.id} value={product.id}>
                       {product.name}
                     </option>
@@ -207,58 +209,58 @@ export default function UnavailabilityModal({
                 </select>
               )}
               {mode === 'edit' && (
-                <p className="text-xs text-gray-500">
+                <p className='text-xs text-gray-500'>
                   La propriété ne peut pas être modifiée après création
                 </p>
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="title">
-                Titre <span className="text-red-500">*</span>
+            <div className='space-y-2'>
+              <Label htmlFor='title'>
+                Titre <span className='text-red-500'>*</span>
               </Label>
               <Input
-                id="title"
+                id='title'
                 value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="Ex: Travaux de rénovation"
+                onChange={e => setFormData({ ...formData, title: e.target.value })}
+                placeholder='Ex: Travaux de rénovation'
                 required
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="description">
-                Description <span className="text-gray-500 text-xs">(optionnel)</span>
+            <div className='space-y-2'>
+              <Label htmlFor='description'>
+                Description <span className='text-gray-500 text-xs'>(optionnel)</span>
               </Label>
               <textarea
-                id="description"
+                id='description'
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="flex w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 min-h-[80px]"
-                placeholder="Détails supplémentaires..."
+                onChange={e => setFormData({ ...formData, description: e.target.value })}
+                className='flex w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 min-h-[80px]'
+                placeholder='Détails supplémentaires...'
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="startDate">Date de début</Label>
+            <div className='grid grid-cols-2 gap-4'>
+              <div className='space-y-2'>
+                <Label htmlFor='startDate'>Date de début</Label>
                 <Input
-                  id="startDate"
-                  type="date"
+                  id='startDate'
+                  type='date'
                   value={formData.startDate.toISOString().split('T')[0]}
-                  onChange={(e) => setFormData({ ...formData, startDate: new Date(e.target.value) })}
+                  onChange={e => setFormData({ ...formData, startDate: new Date(e.target.value) })}
                   min={new Date().toISOString().split('T')[0]}
                   required
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="endDate">Date de fin</Label>
+              <div className='space-y-2'>
+                <Label htmlFor='endDate'>Date de fin</Label>
                 <Input
-                  id="endDate"
-                  type="date"
+                  id='endDate'
+                  type='date'
                   value={formData.endDate.toISOString().split('T')[0]}
-                  onChange={(e) => setFormData({ ...formData, endDate: new Date(e.target.value) })}
+                  onChange={e => setFormData({ ...formData, endDate: new Date(e.target.value) })}
                   min={formData.startDate.toISOString().split('T')[0]}
                   required
                 />
@@ -266,31 +268,27 @@ export default function UnavailabilityModal({
             </div>
           </div>
 
-          <DialogFooter className="flex items-center justify-between sm:justify-between">
+          <DialogFooter className='flex items-center justify-between sm:justify-between'>
             {mode === 'edit' && onDelete ? (
               <Button
-                type="button"
-                variant="destructive"
+                type='button'
+                variant='destructive'
                 onClick={handleDelete}
                 disabled={isDeleting}
-                className="mr-auto"
+                className='mr-auto'
               >
-                <Trash2 className="w-4 h-4 mr-2" />
+                <Trash2 className='w-4 h-4 mr-2' />
                 {isDeleting ? 'Suppression...' : 'Supprimer'}
               </Button>
             ) : (
               <div />
             )}
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" onClick={onClose}>
+            <div className='flex items-center gap-2'>
+              <Button type='button' variant='outline' onClick={onClose}>
                 Annuler
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting
-                  ? 'Enregistrement...'
-                  : mode === 'create'
-                    ? 'Créer'
-                    : 'Modifier'}
+              <Button type='submit' disabled={isSubmitting}>
+                {isSubmitting ? 'Enregistrement...' : mode === 'create' ? 'Créer' : 'Modifier'}
               </Button>
             </div>
           </DialogFooter>

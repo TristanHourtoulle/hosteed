@@ -100,7 +100,7 @@ import {
   Store,
   Award,
   Crown,
-  Trophy
+  Trophy,
 } from 'lucide-react'
 
 // Create icon mapping object for dynamic lookups
@@ -203,18 +203,18 @@ export const ICON_MAP = {
   Store,
   Award,
   Crown,
-  Trophy
+  Trophy,
 } as const
 
 // Type for available icon names
 export type IconName = keyof typeof ICON_MAP
 
 // Dynamic icon component that falls back to CheckCircle if icon not found
-export function DynamicIcon({ 
-  name, 
-  className = '', 
-  fallback = CheckCircle 
-}: { 
+export function DynamicIcon({
+  name,
+  className = '',
+  fallback = CheckCircle,
+}: {
   name: string
   className?: string
   fallback?: React.ComponentType<{ className?: string }>

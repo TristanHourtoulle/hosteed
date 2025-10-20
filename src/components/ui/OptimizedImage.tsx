@@ -12,41 +12,41 @@ import { OptimizedImageData } from '@/lib/services/image-optimization.service'
 
 interface OptimizedImageProps {
   // Image data (supports both legacy base64 and new optimized format)
-  src?: string                          // Legacy base64 or URL
-  optimizedData?: OptimizedImageData    // New optimized format
+  src?: string // Legacy base64 or URL
+  optimizedData?: OptimizedImageData // New optimized format
   alt: string
-  
+
   // Display options
   width?: number
   height?: number
   fill?: boolean
-  priority?: boolean                    // Load immediately (above fold)
-  
+  priority?: boolean // Load immediately (above fold)
+
   // Responsive behavior
-  sizes?: string                        // Responsive sizes attribute
-  quality?: number                      // Image quality (1-100)
-  
+  sizes?: string // Responsive sizes attribute
+  quality?: number // Image quality (1-100)
+
   // Performance options
-  lazy?: boolean                        // Lazy loading (default: true)
-  placeholder?: 'blur' | 'empty'        // Placeholder strategy
-  blurDataURL?: string                  // Custom blur placeholder
-  
-  // Visual options  
+  lazy?: boolean // Lazy loading (default: true)
+  placeholder?: 'blur' | 'empty' // Placeholder strategy
+  blurDataURL?: string // Custom blur placeholder
+
+  // Visual options
   objectFit?: 'contain' | 'cover' | 'fill' | 'none' | 'scale-down'
   objectPosition?: string
   className?: string
-  
+
   // Accessibility
   loading?: 'lazy' | 'eager'
   fetchPriority?: 'high' | 'low' | 'auto'
-  
+
   // Event handlers
   onLoad?: () => void
   onError?: () => void
-  
+
   // Progressive enhancement
-  showDominantColor?: boolean           // Show dominant color while loading
-  enableModernFormats?: boolean         // Use WebP/AVIF when available
+  showDominantColor?: boolean // Show dominant color while loading
+  enableModernFormats?: boolean // Use WebP/AVIF when available
 }
 
 export function OptimizedImage({
@@ -94,7 +94,7 @@ export function OptimizedImage({
       },
       {
         rootMargin: '50px', // Start loading 50px before visible
-        threshold: 0.1
+        threshold: 0.1,
       }
     )
 
@@ -135,18 +135,22 @@ export function OptimizedImage({
     if (blurDataURL) return blurDataURL
     if (optimizedData?.blurhash) {
       // Convert blurhash to data URL (simplified)
-      return `data:image/svg+xml;base64,${Buffer.from(`
+      return `data:image/svg+xml;base64,${Buffer.from(
+        `
         <svg width="${width || 400}" height="${height || 300}" xmlns="http://www.w3.org/2000/svg">
           <rect width="100%" height="100%" fill="${optimizedData.dominantColor || '#f3f4f6'}"/>
         </svg>
-      `).toString('base64')}`
+      `
+      ).toString('base64')}`
     }
     // Generate simple gray placeholder
-    return `data:image/svg+xml;base64,${Buffer.from(`
+    return `data:image/svg+xml;base64,${Buffer.from(
+      `
       <svg width="${width || 400}" height="${height || 300}" xmlns="http://www.w3.org/2000/svg">
         <rect width="100%" height="100%" fill="#f3f4f6"/>
       </svg>
-    `).toString('base64')}`
+    `
+    ).toString('base64')}`
   }
 
   // Error fallback component
@@ -154,17 +158,14 @@ export function OptimizedImage({
     return (
       <div
         ref={imgRef}
-        className={cn(
-          'bg-gray-100 flex items-center justify-center text-gray-400',
-          className
-        )}
+        className={cn('bg-gray-100 flex items-center justify-center text-gray-400', className)}
         style={{ width, height }}
-        role="img"
+        role='img'
         aria-label={`Image failed to load: ${alt}`}
       >
-        <div className="text-center p-4">
-          <div className="w-12 h-12 mx-auto mb-2 bg-gray-200 rounded" />
-          <p className="text-xs">Image non disponible</p>
+        <div className='text-center p-4'>
+          <div className='w-12 h-12 mx-auto mb-2 bg-gray-200 rounded' />
+          <p className='text-xs'>Image non disponible</p>
         </div>
       </div>
     )
@@ -186,7 +187,7 @@ export function OptimizedImage({
   }
 
   const imageSource = getImageSource()
-  
+
   if (!imageSource || (!isInView && !priority)) {
     // Placeholder while not in view
     return (
@@ -208,22 +209,14 @@ export function OptimizedImage({
         <picture>
           {/* AVIF for modern browsers (best compression) */}
           {optimizedData.avifUrl && (
-            <source
-              srcSet={optimizedData.avifUrl}
-              type="image/avif"
-              sizes={sizes}
-            />
+            <source srcSet={optimizedData.avifUrl} type='image/avif' sizes={sizes} />
           )}
-          
+
           {/* WebP for good browser support */}
           {optimizedData.webpUrl && (
-            <source
-              srcSet={optimizedData.webpUrl}
-              type="image/webp"
-              sizes={sizes}
-            />
+            <source srcSet={optimizedData.webpUrl} type='image/webp' sizes={sizes} />
           )}
-          
+
           {/* Fallback to original format */}
           <Image
             src={imageSource!}
@@ -271,10 +264,7 @@ export function OptimizedImage({
         blurDataURL={getBlurPlaceholder()}
         loading={loading || (priority ? 'eager' : 'lazy')}
         fetchPriority={fetchPriority}
-        className={cn(
-          'transition-opacity duration-300',
-          isLoading ? 'opacity-0' : 'opacity-100'
-        )}
+        className={cn('transition-opacity duration-300', isLoading ? 'opacity-0' : 'opacity-100')}
         style={{
           objectFit,
           objectPosition,
@@ -309,7 +299,7 @@ export function ProductCardImage({
       optimizedData={optimizedData}
       alt={alt}
       fill
-      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+      sizes='(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw'
       className={cn('aspect-[4/3] rounded-lg overflow-hidden', className)}
       priority={false} // Grid images shouldn't be priority
       quality={75} // Slightly lower quality for list views
@@ -334,7 +324,7 @@ export function HeroImage({
       optimizedData={optimizedData}
       alt={alt}
       priority={true} // Always priority for hero images
-      fetchPriority="high"
+      fetchPriority='high'
       quality={90} // Higher quality for hero images
       className={cn('w-full h-full', className)}
       {...props}
@@ -357,7 +347,7 @@ export function ThumbnailImage({
 }) {
   // Use thumbnail URL if available
   const thumbnailSrc = optimizedData?.thumbnailUrl || src
-  
+
   return (
     <OptimizedImage
       src={thumbnailSrc}
@@ -388,7 +378,7 @@ export function GalleryImage({
       optimizedData={optimizedData}
       alt={alt}
       quality={95} // High quality for gallery viewing
-      sizes="(max-width: 768px) 100vw, 80vw"
+      sizes='(max-width: 768px) 100vw, 80vw'
       className={cn('max-w-full max-h-full object-contain', className)}
       {...props}
     />
@@ -404,7 +394,7 @@ export function GalleryImage({
  */
 export function preloadImage(src: string, priority: 'high' | 'low' = 'low') {
   if (typeof window === 'undefined') return
-  
+
   const link = document.createElement('link')
   link.rel = 'preload'
   link.as = 'image'

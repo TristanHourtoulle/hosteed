@@ -2,15 +2,18 @@
 
 import { revalidatePath } from 'next/cache'
 import { validationService } from '@/lib/services/validation-simple.service'
-import { deleteRejectedProduct, deleteMultipleRejectedProducts } from '@/lib/services/product.service'
+import {
+  deleteRejectedProduct,
+  deleteMultipleRejectedProducts,
+} from '@/lib/services/product.service'
 import prisma from '@/lib/prisma'
 
 export async function getProductsForValidation() {
   try {
-    const result = await validationService.getProductsForValidationPaginated({ 
-      page: 1, 
-      limit: 20,        // ✅ Réduit de 100 à 20 produits
-      includeLightweight: true  // ✅ Mode léger = 1 image seulement
+    const result = await validationService.getProductsForValidationPaginated({
+      page: 1,
+      limit: 20, // ✅ Réduit de 100 à 20 produits
+      includeLightweight: true, // ✅ Mode léger = 1 image seulement
     })
     return { success: true, data: result.products }
   } catch (error) {
@@ -22,7 +25,13 @@ export async function getProductsForValidation() {
 export async function getValidationStats() {
   try {
     const stats = await validationService.getValidationStats()
-    const total = stats.pending + stats.approved + stats.rejected + stats.recheckRequest + stats.modificationPending + stats.drafts
+    const total =
+      stats.pending +
+      stats.approved +
+      stats.rejected +
+      stats.recheckRequest +
+      stats.modificationPending +
+      stats.drafts
     return { success: true, data: { ...stats, total } }
   } catch (error) {
     console.error('Error fetching validation stats:', error)
@@ -178,12 +187,12 @@ export async function getProductForValidation(productId: string) {
       })
     }
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       data: {
         ...product,
-        originalProduct: originalProduct
-      }
+        originalProduct: originalProduct,
+      },
     }
   } catch (error) {
     console.error('Error fetching product for validation:', error)
@@ -288,4 +297,3 @@ export async function deleteBulkRejectedProducts(productIds: string[]) {
     return { success: false, error: 'Erreur lors de la suppression des produits rejetés' }
   }
 }
-

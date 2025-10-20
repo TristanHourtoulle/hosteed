@@ -45,7 +45,13 @@ import ErrorAlert, { ErrorDetails } from '@/components/ui/ErrorAlert'
 import { parseCreateProductError, createValidationError } from '@/lib/utils/errorHandler'
 
 // Import types, utilities, and hooks from createProduct
-import type { NearbyPlace, ImageFile, TestBooking, SpecialPrice, FormData } from '@/app/createProduct/types'
+import type {
+  NearbyPlace,
+  ImageFile,
+  TestBooking,
+  SpecialPrice,
+  FormData,
+} from '@/app/createProduct/types'
 import { DayEnum } from '@prisma/client'
 import { containerVariants, itemVariants } from '@/app/createProduct/utils'
 import {
@@ -64,7 +70,13 @@ export default function EditProductPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Load existing product data
-  const { formData: loadedFormData, images: loadedImages, specialPrices: loadedSpecialPrices, isLoading: isLoadingProduct, error: loadError } = useProductLoader(productId)
+  const {
+    formData: loadedFormData,
+    images: loadedImages,
+    specialPrices: loadedSpecialPrices,
+    isLoading: isLoadingProduct,
+    error: loadError,
+  } = useProductLoader(productId)
 
   // Custom hooks - managing all state and logic
   const productData = useProductData()
@@ -163,7 +175,9 @@ export default function EditProductPage() {
 
   // Calcul mémorisé pour le nombre de jours de la réservation de test
   const numberOfDays = useMemo(() => {
-    return Math.ceil((testBooking.endDate.getTime() - testBooking.startDate.getTime()) / (1000 * 60 * 60 * 24))
+    return Math.ceil(
+      (testBooking.endDate.getTime() - testBooking.startDate.getTime()) / (1000 * 60 * 60 * 24)
+    )
   }, [testBooking.startDate, testBooking.endDate])
 
   // Handle checkbox changes for arrays
@@ -187,7 +201,10 @@ export default function EditProductPage() {
   }
 
   // Upload new images via API
-  const uploadImagesToServer = async (imageFiles: ImageFile[], productId: string): Promise<string[]> => {
+  const uploadImagesToServer = async (
+    imageFiles: ImageFile[],
+    productId: string
+  ): Promise<string[]> => {
     // Filter only NEW images (with File objects, not existing URLs)
     const files = imageFiles
       .filter(img => img.file !== null && !img.isExisting)
@@ -206,7 +223,9 @@ export default function EditProductPage() {
         const base64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader()
           reader.onloadend = () => {
-            console.log(`  ✓ Image ${i + 1}/${files.length} (${file.name}) - ${(file.size / 1024).toFixed(2)}KB`)
+            console.log(
+              `  ✓ Image ${i + 1}/${files.length} (${file.name}) - ${(file.size / 1024).toFixed(2)}KB`
+            )
             resolve(reader.result as string)
           }
           reader.onerror = () => reject(new Error(`Erreur de lecture de l'image: ${file.name}`))
@@ -230,14 +249,20 @@ export default function EditProductPage() {
 
       if (!uploadResponse.ok) {
         const error = await uploadResponse.json()
-        throw new Error(error.error || 'Erreur lors de l\'upload des images')
+        throw new Error(error.error || "Erreur lors de l'upload des images")
       }
 
       const uploadResult = await uploadResponse.json()
       console.log(`✅ Successfully uploaded ${uploadResult.count || files.length} new images`)
 
       // Return full URLs (high quality)
-      return uploadResult.images?.map((img: {thumb: string, medium: string, full: string}) => img.full) || uploadResult.urls || []
+      return (
+        uploadResult.images?.map(
+          (img: { thumb: string; medium: string; full: string }) => img.full
+        ) ||
+        uploadResult.urls ||
+        []
+      )
     } catch (error) {
       console.error('❌ Error uploading images:', error)
       throw error
@@ -284,7 +309,7 @@ export default function EditProductPage() {
         try {
           const placeDetails = await googleSuggestionService.getPlaceDetails({
             placeId: formData.placeId,
-            fields: ['geometry']
+            fields: ['geometry'],
           })
 
           if (placeDetails?.geometry?.location) {
@@ -327,10 +352,12 @@ export default function EditProductPage() {
           transport: place.unit === 'kilomètres' ? 'voiture' : 'à pied',
         })),
         isHotel: formData.isHotel,
-        hotelInfo: formData.isHotel ? {
-          name: formData.hotelName,
-          availableRooms: Number(formData.availableRooms),
-        } : null,
+        hotelInfo: formData.isHotel
+          ? {
+              name: formData.hotelName,
+              availableRooms: Number(formData.availableRooms),
+            }
+          : null,
       }
 
       const response = await fetch(`/api/products/${productId}`, {
@@ -348,7 +375,9 @@ export default function EditProductPage() {
       // Étape 2: Gérer les images (nouvelles + existantes)
       // Séparer les images existantes (déjà en DB) des nouvelles images à uploader
       const existingImages = imageUpload.selectedFiles.filter(img => img.isExisting && img.url)
-      const newImages = imageUpload.selectedFiles.filter(img => !img.isExisting && img.file !== null)
+      const newImages = imageUpload.selectedFiles.filter(
+        img => !img.isExisting && img.file !== null
+      )
 
       console.log(`📊 Images: ${existingImages.length} existantes, ${newImages.length} nouvelles`)
 
@@ -362,7 +391,7 @@ export default function EditProductPage() {
       // Combiner les URLs : images existantes + nouvelles images
       const allImageUrls = [
         ...existingImages.map(img => img.url!), // URLs des images existantes
-        ...newImageUrls // URLs des nouvelles images uploadées
+        ...newImageUrls, // URLs des nouvelles images uploadées
       ]
 
       console.log(`✅ Total images après mise à jour: ${allImageUrls.length}`)
@@ -447,12 +476,8 @@ export default function EditProductPage() {
             <ArrowLeft className='mr-2 h-4 w-4' />
             Retour
           </Button>
-          <h1 className='text-4xl font-bold text-slate-900 mb-2'>
-            Modifier votre annonce
-          </h1>
-          <p className='text-slate-600'>
-            Mettez à jour les informations de votre hébergement
-          </p>
+          <h1 className='text-4xl font-bold text-slate-900 mb-2'>Modifier votre annonce</h1>
+          <p className='text-slate-600'>Mettez à jour les informations de votre hébergement</p>
         </motion.div>
 
         {/* Error Alert */}
@@ -498,7 +523,9 @@ export default function EditProductPage() {
               <CardContent>
                 <div
                   className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                    imageUpload.dragActive ? 'border-blue-500 bg-blue-50' : 'border-slate-300 hover:border-blue-400'
+                    imageUpload.dragActive
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-slate-300 hover:border-blue-400'
                   }`}
                   onDragEnter={e => imageUpload.handleDrag(e, true)}
                   onDragLeave={e => imageUpload.handleDrag(e, false)}
@@ -506,9 +533,7 @@ export default function EditProductPage() {
                   onDrop={imageUpload.handleDrop}
                 >
                   <Upload className='mx-auto h-12 w-12 text-slate-400' />
-                  <p className='mt-2 text-sm text-slate-600'>
-                    Glissez-déposez vos images ici, ou
-                  </p>
+                  <p className='mt-2 text-sm text-slate-600'>Glissez-déposez vos images ici, ou</p>
                   <Button
                     type='button'
                     variant='outline'
@@ -559,7 +584,7 @@ export default function EditProductPage() {
                     </div>
                     <SortableImageGrid
                       images={imageUpload.selectedFiles}
-                      onReorder={(newImages) => imageUpload.setSelectedFiles(newImages)}
+                      onReorder={newImages => imageUpload.setSelectedFiles(newImages)}
                       onRemove={imageUpload.deleteImage}
                     />
                   </div>
@@ -632,9 +657,7 @@ export default function EditProductPage() {
                     </div>
                     <div>
                       <CardTitle className='text-xl'>Services inclus</CardTitle>
-                      <p className='text-slate-600 text-sm mt-1'>
-                        Services inclus dans le prix
-                      </p>
+                      <p className='text-slate-600 text-sm mt-1'>Services inclus dans le prix</p>
                     </div>
                   </div>
                   <Button
@@ -740,9 +763,7 @@ export default function EditProductPage() {
                     </div>
                     <div>
                       <CardTitle className='text-xl'>Points forts</CardTitle>
-                      <p className='text-slate-600 text-sm mt-1'>
-                        Les atouts de votre hébergement
-                      </p>
+                      <p className='text-slate-600 text-sm mt-1'>Les atouts de votre hébergement</p>
                     </div>
                   </div>
                   <Button
@@ -792,7 +813,7 @@ export default function EditProductPage() {
               selectedExtras={selectedExtras}
               startDate={testBooking.startDate}
               endDate={testBooking.endDate}
-              currency="EUR"
+              currency='EUR'
             />
           </motion.div>
 
@@ -828,8 +849,8 @@ export default function EditProductPage() {
         isOpen={serviceModalOpen}
         onClose={() => setServiceModalOpen(false)}
         onServiceCreated={handleServiceCreated}
-        title="Ajouter un service inclus personnalisé"
-        description="Créez un service inclus spécifique à votre hébergement"
+        title='Ajouter un service inclus personnalisé'
+        description='Créez un service inclus spécifique à votre hébergement'
       />
       <CreateExtraModal
         isOpen={extraModalOpen}

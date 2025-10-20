@@ -59,9 +59,7 @@ async function ensureUploadDir(dirPath: string): Promise<void> {
  */
 function base64ToBuffer(base64String: string): Buffer {
   // Gérer les deux formats: avec ou sans préfixe data:image
-  const base64Data = base64String.includes(',')
-    ? base64String.split(',')[1]
-    : base64String
+  const base64Data = base64String.includes(',') ? base64String.split(',')[1] : base64String
 
   return Buffer.from(base64Data, 'base64')
 }
@@ -111,9 +109,7 @@ export async function saveImage(
   const { entityType, entityId, imageIndex = 0 } = options
 
   // Convertir en Buffer si nécessaire
-  const buffer = typeof imageData === 'string'
-    ? base64ToBuffer(imageData)
-    : imageData
+  const buffer = typeof imageData === 'string' ? base64ToBuffer(imageData) : imageData
 
   // Créer le répertoire pour cette entité
   const entityDir = path.join(UPLOAD_BASE_DIR, entityType, entityId)
@@ -150,9 +146,7 @@ export async function saveImages(
   options: Omit<SaveImageOptions, 'imageIndex'>
 ): Promise<ImageUrls[]> {
   const results = await Promise.all(
-    imagesData.map((imageData, index) =>
-      saveImage(imageData, { ...options, imageIndex: index })
-    )
+    imagesData.map((imageData, index) => saveImage(imageData, { ...options, imageIndex: index }))
   )
 
   return results

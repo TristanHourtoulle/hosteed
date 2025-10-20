@@ -52,7 +52,9 @@ export default function PaymentDetailsCard({ paymentDetails }: PaymentDetailsCar
         </div>
 
         <div className='bg-orange-50 rounded-xl p-4 border border-orange-100'>
-          <p className='text-sm font-medium text-orange-700 mb-2'>Prix disponible pour l&apos;hôte</p>
+          <p className='text-sm font-medium text-orange-700 mb-2'>
+            Prix disponible pour l&apos;hôte
+          </p>
           <p className='text-xl font-bold text-orange-900'>
             {formatCurrency(paymentDetails.availablePrice)}
           </p>
@@ -66,7 +68,9 @@ export default function PaymentDetailsCard({ paymentDetails }: PaymentDetailsCar
         </div>
 
         <div className='bg-green-50 rounded-xl p-4 border border-green-100'>
-          <p className='text-sm font-medium text-green-700 mb-2'>Prix déjà viré à l&apos;hébergeur</p>
+          <p className='text-sm font-medium text-green-700 mb-2'>
+            Prix déjà viré à l&apos;hébergeur
+          </p>
           <p className='text-xl font-bold text-green-900'>
             {formatCurrency(paymentDetails.transferredPrice)}
           </p>
@@ -79,8 +83,9 @@ export default function PaymentDetailsCard({ paymentDetails }: PaymentDetailsCar
 
         <div className='mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200'>
           <p className='text-sm text-blue-800'>
-            <strong>Note :</strong> Ces informations vous permettent de suivre l&apos;état du paiement à votre hôte.
-            Le prix viré correspond au montant déjà transféré à l&apos;hébergeur après déduction de la commission plateforme.
+            <strong>Note :</strong> Ces informations vous permettent de suivre l&apos;état du
+            paiement à votre hôte. Le prix viré correspond au montant déjà transféré à
+            l&apos;hébergeur après déduction de la commission plateforme.
           </p>
         </div>
       </div>

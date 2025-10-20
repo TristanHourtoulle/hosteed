@@ -14,10 +14,7 @@ import sharp from 'sharp'
  * - Base64 dans JSON: ~500KB par image
  * - Cette route: ~10-20KB par image (-95%)
  */
-export async function GET(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const params = await context.params
     const productId = params.id
@@ -28,9 +25,9 @@ export async function GET(
       select: {
         img: {
           take: 1,
-          select: { img: true }
-        }
-      }
+          select: { img: true },
+        },
+      },
     })
 
     if (!product?.img?.[0]?.img) {
@@ -65,7 +62,7 @@ export async function GET(
     const optimizedImage = await sharp(buffer)
       .resize(300, 200, {
         fit: 'cover',
-        position: 'center'
+        position: 'center',
       })
       .webp({ quality: 80 })
       .toBuffer()

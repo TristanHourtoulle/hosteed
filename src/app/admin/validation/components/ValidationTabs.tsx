@@ -82,44 +82,53 @@ function ValidationTabs({ products, stats, currentUserId, onUpdate }: Validation
   }, [products])
 
   // Memoize messages object to prevent recreation
-  const emptyStateMessages = useMemo(() => ({
-    all: "Aucune annonce n'a été soumise pour le moment.",
-    pending: 'Aucune annonce en attente de validation.',
-    new: 'Aucune nouvelle annonce soumise.',
-    resubmitted: 'Aucune annonce modifiée en attente.',
-    approved: 'Aucune annonce validée pour le moment.',
-    rejected: 'Aucune annonce rejetée pour le moment.',
-  }), [])
+  const emptyStateMessages = useMemo(
+    () => ({
+      all: "Aucune annonce n'a été soumise pour le moment.",
+      pending: 'Aucune annonce en attente de validation.',
+      new: 'Aucune nouvelle annonce soumise.',
+      resubmitted: 'Aucune annonce modifiée en attente.',
+      approved: 'Aucune annonce validée pour le moment.',
+      rejected: 'Aucune annonce rejetée pour le moment.',
+    }),
+    []
+  )
 
   // Memoized empty state renderer
-  const renderEmptyState = useCallback((activeTab: string) => {
-    return (
-      <Card>
-        <CardContent className='flex flex-col items-center justify-center py-12'>
-          <Home className='h-12 w-12 text-gray-400 mb-4' />
-          <h3 className='text-lg font-medium text-gray-900 mb-2'>Aucune annonce trouvée</h3>
-          <p className='text-gray-500 text-center'>
-            {emptyStateMessages[activeTab as keyof typeof emptyStateMessages]}
-          </p>
-        </CardContent>
-      </Card>
-    )
-  }, [emptyStateMessages])
+  const renderEmptyState = useCallback(
+    (activeTab: string) => {
+      return (
+        <Card>
+          <CardContent className='flex flex-col items-center justify-center py-12'>
+            <Home className='h-12 w-12 text-gray-400 mb-4' />
+            <h3 className='text-lg font-medium text-gray-900 mb-2'>Aucune annonce trouvée</h3>
+            <p className='text-gray-500 text-center'>
+              {emptyStateMessages[activeTab as keyof typeof emptyStateMessages]}
+            </p>
+          </CardContent>
+        </Card>
+      )
+    },
+    [emptyStateMessages]
+  )
 
   // Memoized product grid renderer with useCallback to prevent recreation
-  const renderProductGrid = useCallback((productList: Product[]) => (
-    <div className='grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6'>
-      {productList.map((product, index) => (
-        <motion.div key={product.id} variants={itemVariants} transition={{ delay: index * 0.1 }}>
-          <ProductValidationCard
-            product={product}
-            currentUserId={currentUserId}
-            onUpdate={onUpdate}
-          />
-        </motion.div>
-      ))}
-    </div>
-  ), [currentUserId, onUpdate])
+  const renderProductGrid = useCallback(
+    (productList: Product[]) => (
+      <div className='grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6'>
+        {productList.map((product, index) => (
+          <motion.div key={product.id} variants={itemVariants} transition={{ delay: index * 0.1 }}>
+            <ProductValidationCard
+              product={product}
+              currentUserId={currentUserId}
+              onUpdate={onUpdate}
+            />
+          </motion.div>
+        ))}
+      </div>
+    ),
+    [currentUserId, onUpdate]
+  )
 
   return (
     <Tabs defaultValue='all' className='w-full'>
@@ -139,38 +148,33 @@ function ValidationTabs({ products, stats, currentUserId, onUpdate }: Validation
       </TabsList>
 
       <TabsContent value='all' className='mt-6'>
-        {filteredProducts.all.length === 0 
-          ? renderEmptyState('all') 
-          : renderProductGrid(filteredProducts.all)
-        }
+        {filteredProducts.all.length === 0
+          ? renderEmptyState('all')
+          : renderProductGrid(filteredProducts.all)}
       </TabsContent>
 
       <TabsContent value='pending' className='mt-6'>
         {filteredProducts.pending.length === 0
           ? renderEmptyState('pending')
-          : renderProductGrid(filteredProducts.pending)
-        }
+          : renderProductGrid(filteredProducts.pending)}
       </TabsContent>
 
       <TabsContent value='new' className='mt-6'>
         {filteredProducts.new.length === 0
           ? renderEmptyState('new')
-          : renderProductGrid(filteredProducts.new)
-        }
+          : renderProductGrid(filteredProducts.new)}
       </TabsContent>
 
       <TabsContent value='resubmitted' className='mt-6'>
         {filteredProducts.resubmitted.length === 0
           ? renderEmptyState('resubmitted')
-          : renderProductGrid(filteredProducts.resubmitted)
-        }
+          : renderProductGrid(filteredProducts.resubmitted)}
       </TabsContent>
 
       <TabsContent value='approved' className='mt-6'>
         {filteredProducts.approved.length === 0
           ? renderEmptyState('approved')
-          : renderProductGrid(filteredProducts.approved)
-        }
+          : renderProductGrid(filteredProducts.approved)}
       </TabsContent>
 
       <TabsContent value='rejected' className='mt-6'>

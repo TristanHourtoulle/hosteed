@@ -5,13 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import {
-  Loader2,
-  CheckCircle,
-  XCircle,
-  AlertTriangle,
-  User,
-} from 'lucide-react'
+import { Loader2, CheckCircle, XCircle, AlertTriangle, User } from 'lucide-react'
 import { ProductValidation } from '@prisma/client'
 
 interface Product {
@@ -51,13 +45,13 @@ export function ProductSidebar({
     if (!product.user || product.user.length === 0) {
       return 'Hôte non défini'
     }
-    
+
     const user = product.user[0]
     if (!user) return 'Hôte non défini'
-    
+
     const firstName = user.name?.trim()
     const lastName = user.lastname?.trim()
-    
+
     if (firstName && lastName) {
       return `${firstName} ${lastName}`
     } else if (firstName) {
@@ -80,10 +74,18 @@ export function ProductSidebar({
         </CardHeader>
         <CardContent>
           <div className='flex items-center space-x-3'>
-            {product.user && product.user.length > 0 && 
-             (product.user[0]?.image || product.user[0]?.profilePicture || product.user[0]?.profilePictureBase64) ? (
+            {product.user &&
+            product.user.length > 0 &&
+            (product.user[0]?.image ||
+              product.user[0]?.profilePicture ||
+              product.user[0]?.profilePictureBase64) ? (
               <Image
-                src={product.user[0].image || product.user[0].profilePicture || product.user[0].profilePictureBase64 || ''}
+                src={
+                  product.user[0].image ||
+                  product.user[0].profilePicture ||
+                  product.user[0].profilePictureBase64 ||
+                  ''
+                }
                 alt='Photo de profil'
                 width={48}
                 height={48}
@@ -97,7 +99,11 @@ export function ProductSidebar({
             )}
             <div>
               <p className='font-medium'>{getHostName()}</p>
-              <p className='text-sm text-gray-500'>{product.user && product.user.length > 0 ? product.user[0].email : 'Email non disponible'}</p>
+              <p className='text-sm text-gray-500'>
+                {product.user && product.user.length > 0
+                  ? product.user[0].email
+                  : 'Email non disponible'}
+              </p>
             </div>
           </div>
         </CardContent>

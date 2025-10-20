@@ -19,7 +19,7 @@ async function deleteImageFiles(imageUrl: string) {
     // Try to delete from both locations (one will fail silently)
     const pathsToTry = [
       path.join(publicDir, urlPath),
-      path.join(uploadsDir, urlPath.replace('/uploads/', ''))
+      path.join(uploadsDir, urlPath.replace('/uploads/', '')),
     ]
 
     for (const filePath of pathsToTry) {
@@ -59,10 +59,7 @@ async function deleteImageFiles(imageUrl: string) {
  *
  * Replace all product images (deletes old ones, adds new ones)
  */
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await auth()
     if (!session?.user?.id) {
@@ -81,7 +78,7 @@ export async function PUT(
       where: { id: productId },
       include: {
         user: true,
-        img: true // Récupérer les images existantes
+        img: true, // Récupérer les images existantes
       },
     })
 
@@ -89,7 +86,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Produit non trouvé' }, { status: 404 })
     }
 
-    const isOwner = product.user.some((u) => u.id === session.user.id)
+    const isOwner = product.user.some(u => u.id === session.user.id)
     if (!isOwner) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 403 })
     }
@@ -98,22 +95,22 @@ export async function PUT(
     const currentImageUrls = product.img.map(img => img.img)
     const imagesToDelete = product.img.filter(img => !imageUrls.includes(img.img))
 
-    console.log(`📊 Images: ${currentImageUrls.length} actuelles, ${imageUrls.length} nouvelles, ${imagesToDelete.length} à supprimer`)
+    console.log(
+      `📊 Images: ${currentImageUrls.length} actuelles, ${imageUrls.length} nouvelles, ${imagesToDelete.length} à supprimer`
+    )
 
     // Étape 2: Supprimer physiquement les fichiers des images retirées
     if (imagesToDelete.length > 0) {
       console.log('🗑️  Suppression des images retirées...')
-      await Promise.all(
-        imagesToDelete.map(img => deleteImageFiles(img.img))
-      )
+      await Promise.all(imagesToDelete.map(img => deleteImageFiles(img.img)))
 
       // Étape 3: Supprimer les entrées en DB
       await prisma.images.deleteMany({
         where: {
           id: {
-            in: imagesToDelete.map(img => img.id)
-          }
-        }
+            in: imagesToDelete.map(img => img.id),
+          },
+        },
       })
       console.log(`✅ Deleted ${imagesToDelete.length} images from DB`)
     }
@@ -124,14 +121,14 @@ export async function PUT(
     if (newImageUrls.length > 0) {
       console.log(`📤 Adding ${newImageUrls.length} new images...`)
       const createdImages = await Promise.all(
-        newImageUrls.map((url) =>
+        newImageUrls.map(url =>
           prisma.images.create({
             data: {
               img: url,
               Product: {
-                connect: { id: productId }
-              }
-            }
+                connect: { id: productId },
+              },
+            },
           })
         )
       )
@@ -147,7 +144,10 @@ export async function PUT(
   } catch (error) {
     console.error('❌ Error updating product images:', error)
     return NextResponse.json(
-      { error: 'Erreur serveur', details: error instanceof Error ? error.message : 'Unknown error' },
+      {
+        error: 'Erreur serveur',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
       { status: 500 }
     )
   }

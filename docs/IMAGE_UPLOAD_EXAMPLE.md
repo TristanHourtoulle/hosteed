@@ -172,7 +172,7 @@ export async function createProductWithImages(formData: FormData) {
   await prisma.image.createMany({
     data: uploadedImages.map(({ thumb, medium, full }, index) => ({
       productId: product.id,
-      img: thumb,  // URL du thumbnail
+      img: thumb, // URL du thumbnail
       // Si vous avez les champs dans le schéma:
       // thumbUrl: thumb,
       // mediumUrl: medium,
@@ -202,28 +202,25 @@ interface ImageUrls {
   full: string
 }
 
-export function ProductImage({ images, alt }: {
-  images: ImageUrls
-  alt: string
-}) {
+export function ProductImage({ images, alt }: { images: ImageUrls; alt: string }) {
   const [isFullscreen, setIsFullscreen] = useState(false)
 
   return (
     <>
       {/* Thumbnail pour la liste */}
-      <div className="md:hidden">
+      <div className='md:hidden'>
         <Image
           src={images.thumb}
           alt={alt}
           width={300}
           height={200}
-          loading="lazy"
+          loading='lazy'
           onClick={() => setIsFullscreen(true)}
         />
       </div>
 
       {/* Medium pour tablette */}
-      <div className="hidden md:block lg:hidden">
+      <div className='hidden md:block lg:hidden'>
         <Image
           src={images.medium}
           alt={alt}
@@ -234,7 +231,7 @@ export function ProductImage({ images, alt }: {
       </div>
 
       {/* Full pour desktop */}
-      <div className="hidden lg:block">
+      <div className='hidden lg:block'>
         <Image
           src={images.full}
           alt={alt}
@@ -248,7 +245,7 @@ export function ProductImage({ images, alt }: {
       {/* Modal Fullscreen */}
       {isFullscreen && (
         <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+          className='fixed inset-0 z-50 bg-black/90 flex items-center justify-center'
           onClick={() => setIsFullscreen(false)}
         >
           <Image
@@ -256,7 +253,7 @@ export function ProductImage({ images, alt }: {
             alt={alt}
             width={1920}
             height={1440}
-            className="max-w-full max-h-full object-contain"
+            className='max-w-full max-h-full object-contain'
           />
         </div>
       )}
@@ -287,12 +284,7 @@ async function migrateSingleProduct(productId: string) {
   for (let i = 0; i < product.img.length; i++) {
     const image = product.img[i]
 
-    const urls = await migrateBase64ToFileSystem(
-      image.img,
-      'products',
-      product.id,
-      i
-    )
+    const urls = await migrateBase64ToFileSystem(image.img, 'products', product.id, i)
 
     await prisma.image.update({
       where: { id: image.id },
@@ -349,9 +341,7 @@ export function useImageUpload() {
 
     try {
       // Convertir en base64
-      const base64Images = await Promise.all(
-        files.map(file => fileToBase64(file))
-      )
+      const base64Images = await Promise.all(files.map(file => fileToBase64(file)))
 
       // Upload
       const response = await fetch('/api/images/upload', {
@@ -376,7 +366,7 @@ export function useImageUpload() {
       return data.images
     } catch (error) {
       console.error('Upload error:', error)
-      toast.error('Erreur lors de l\'upload')
+      toast.error("Erreur lors de l'upload")
       throw error
     } finally {
       setUploading(false)
@@ -425,8 +415,8 @@ function CreateProductForm() {
   return (
     <form>
       <input
-        type="file"
-        accept="image/*"
+        type='file'
+        accept='image/*'
         multiple
         onChange={handleFileSelect}
         disabled={uploading}
@@ -457,9 +447,9 @@ async function batchMigrateAll() {
     where: {
       img: {
         some: {
-          img: { not: { startsWith: '/uploads/' } }
-        }
-      }
+          img: { not: { startsWith: '/uploads/' } },
+        },
+      },
     },
     include: { img: true },
   })
@@ -469,12 +459,7 @@ async function batchMigrateAll() {
   const tasks = products.map(product =>
     limit(async () => {
       for (let i = 0; i < product.img.length; i++) {
-        const urls = await migrateBase64ToFileSystem(
-          product.img[i].img,
-          'products',
-          product.id,
-          i
-        )
+        const urls = await migrateBase64ToFileSystem(product.img[i].img, 'products', product.id, i)
 
         await prisma.image.update({
           where: { id: product.img[i].id },

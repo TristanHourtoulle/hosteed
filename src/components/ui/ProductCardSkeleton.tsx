@@ -47,32 +47,29 @@ const ProductCardSkeleton: React.FC<ProductCardSkeletonProps> = ({
         <div className='relative aspect-[4/3] w-full'>
           {/* Image placeholder principale */}
           <Skeleton className='w-full h-full bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200' />
-          
+
           {/* Badge Sponsorisé placeholder - Top left */}
           <div className='absolute top-3 left-3 z-10'>
             <Skeleton className='h-6 w-20 rounded-full bg-gradient-to-r from-gray-300 to-gray-200' />
           </div>
-          
+
           {/* Bouton favoris placeholder - Top right */}
           <div className='absolute top-3 right-3 z-10'>
             <Skeleton className='h-8 w-8 rounded-full bg-white/80' />
           </div>
-          
+
           {/* Rating placeholder - Top left, par-dessus sponsored */}
           <div className='absolute top-3 left-3 z-20 mt-8'>
             <Skeleton className='h-7 w-24 rounded-lg bg-black/20' />
           </div>
-          
+
           {/* Image dots placeholder - Bottom center */}
           <div className='absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-1.5'>
             {Array.from({ length: 3 }).map((_, index) => (
-              <Skeleton 
-                key={index} 
-                className='h-2 w-2 rounded-full bg-white/60' 
-              />
+              <Skeleton key={index} className='h-2 w-2 rounded-full bg-white/60' />
             ))}
           </div>
-          
+
           {/* Navigation arrows placeholder - Sides, only visible on hover simulation */}
           <div className='absolute left-3 top-1/2 -translate-y-1/2 z-20 opacity-0 group-hover:opacity-100 transition-opacity'>
             <Skeleton className='h-8 w-8 rounded-full bg-white/80' />
@@ -88,11 +85,11 @@ const ProductCardSkeleton: React.FC<ProductCardSkeletonProps> = ({
           <div className='space-y-1'>
             {/* Titre principal (ville) */}
             <Skeleton className='h-5 w-3/4 bg-gray-200' />
-            
+
             {/* Sous-titre (nom propriété) */}
             <Skeleton className='h-4 w-full bg-gray-150' />
           </div>
-          
+
           {/* Section prix et badges */}
           <div className='flex items-center justify-between pt-1'>
             <div className='flex flex-col gap-1'>
@@ -101,7 +98,7 @@ const ProductCardSkeleton: React.FC<ProductCardSkeletonProps> = ({
                 <Skeleton className='h-6 w-16 bg-gray-200' />
                 <Skeleton className='h-4 w-10 bg-gray-150' />
               </div>
-              
+
               {/* Prix spécial placeholder (20% de chance d'apparaître) */}
               {Math.random() > 0.8 && (
                 <div className='bg-gradient-to-r from-orange-50 to-red-50 border border-orange-100 rounded-lg px-2 py-1'>
@@ -112,11 +109,9 @@ const ProductCardSkeleton: React.FC<ProductCardSkeletonProps> = ({
                 </div>
               )}
             </div>
-            
+
             {/* Badge "Certifié" placeholder (30% de chance d'apparaître) */}
-            {Math.random() > 0.7 && (
-              <Skeleton className='h-6 w-16 rounded-full bg-green-100' />
-            )}
+            {Math.random() > 0.7 && <Skeleton className='h-6 w-16 rounded-full bg-green-100' />}
           </div>
         </div>
       </div>

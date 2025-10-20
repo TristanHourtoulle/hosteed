@@ -27,7 +27,9 @@ interface FormData {
 interface AdminProductCharacteristicsFormProps {
   formData: FormData
   typeRent: TypeRentInterface[]
-  onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void
+  onInputChange: (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => void
   onCheckboxChange: (name: string, checked: boolean) => void
   itemVariants: Variants
 }
@@ -37,7 +39,7 @@ export default function AdminProductCharacteristicsForm({
   typeRent,
   onInputChange,
   onCheckboxChange,
-  itemVariants
+  itemVariants,
 }: AdminProductCharacteristicsFormProps) {
   const isHotel = typeRent.find(t => t.id === formData.typeRentId)?.name === 'Hôtel'
 
@@ -147,10 +149,13 @@ export default function AdminProductCharacteristicsForm({
           {isHotel && (
             <div className='space-y-6 border-t border-slate-200 pt-6'>
               <h3 className='font-medium text-slate-800 text-lg'>Configuration Hôtel</h3>
-              
+
               <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
                 <div className='space-y-2'>
-                  <label htmlFor='numberOfRoomsHotel' className='text-sm font-medium text-slate-700'>
+                  <label
+                    htmlFor='numberOfRoomsHotel'
+                    className='text-sm font-medium text-slate-700'
+                  >
                     Nombre total de chambres dans l&apos;hôtel
                   </label>
                   <Input
@@ -166,7 +171,10 @@ export default function AdminProductCharacteristicsForm({
                 </div>
 
                 <div className='space-y-2'>
-                  <label htmlFor='numberOfFloorsHotel' className='text-sm font-medium text-slate-700'>
+                  <label
+                    htmlFor='numberOfFloorsHotel'
+                    className='text-sm font-medium text-slate-700'
+                  >
                     Nombre d&apos;étages de l&apos;hôtel
                   </label>
                   <Input

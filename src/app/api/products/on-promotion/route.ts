@@ -15,18 +15,14 @@ export async function GET(request: NextRequest) {
         ? parseFloat(searchParams.get('minDiscount')!)
         : undefined,
       sortBy: (searchParams.get('sortBy') as 'discount' | 'endDate' | 'price') || 'discount',
-      limit: searchParams.get('limit')
-        ? parseInt(searchParams.get('limit')!)
-        : 50,
-      offset: searchParams.get('offset')
-        ? parseInt(searchParams.get('offset')!)
-        : 0
+      limit: searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 50,
+      offset: searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : 0,
     }
 
     const promotions = await getProductsWithActivePromotions(filters)
 
     // Formater les résultats
-    const formatted = promotions.map((promo) => ({
+    const formatted = promotions.map(promo => ({
       id: promo.id,
       discountPercentage: promo.discountPercentage,
       startDate: promo.startDate,
@@ -39,28 +35,26 @@ export async function GET(request: NextRequest) {
           parseFloat(promo.product.basePrice) *
           (1 - promo.discountPercentage / 100)
         ).toFixed(2),
-        savings: (
-          parseFloat(promo.product.basePrice) *
-          (promo.discountPercentage / 100)
-        ).toFixed(2),
+        savings: (parseFloat(promo.product.basePrice) * (promo.discountPercentage / 100)).toFixed(
+          2
+        ),
         img: promo.product.img,
         reviews: promo.product.reviews,
-        averageRating: promo.product.reviews.length > 0
-          ? promo.product.reviews.reduce((sum, r) => sum + r.grade, 0) / promo.product.reviews.length
-          : null,
-        type: promo.product.type
-      }
+        averageRating:
+          promo.product.reviews.length > 0
+            ? promo.product.reviews.reduce((sum, r) => sum + r.grade, 0) /
+              promo.product.reviews.length
+            : null,
+        type: promo.product.type,
+      },
     }))
 
     return NextResponse.json({
       promotions: formatted,
-      total: formatted.length
+      total: formatted.length,
     })
   } catch (error) {
     console.error('Erreur lors de la récupération des produits en promotion:', error)
-    return NextResponse.json(
-      { error: 'Erreur interne du serveur' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Erreur interne du serveur' }, { status: 500 })
   }
 }

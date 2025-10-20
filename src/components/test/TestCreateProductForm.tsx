@@ -17,16 +17,8 @@ import {
 import { Label } from '@/components/ui/label'
 
 export default function TestCreateProductForm() {
-  const {
-    form,
-    formState,
-    register,
-    isLoading,
-    globalError,
-    onSubmit,
-    clearGlobalError,
-    errors,
-  } = useCreateProductForm()
+  const { form, formState, register, isLoading, globalError, onSubmit, clearGlobalError, errors } =
+    useCreateProductForm()
 
   return (
     <div className='container mx-auto p-6 max-w-4xl'>
@@ -106,7 +98,7 @@ export default function TestCreateProductForm() {
               <Input
                 id='address'
                 {...register('address')}
-                placeholder="Adresse complète de l&apos;hébergement"
+                placeholder="Adresse complète de l'hébergement"
                 className={errors.address ? 'border-red-500' : ''}
               />
               {errors.address && <p className='text-sm text-red-600'>{errors.address.message}</p>}
@@ -274,7 +266,7 @@ export default function TestCreateProductForm() {
                 disabled={isLoading || !formState.isValid}
                 className='min-w-[120px]'
               >
-                {isLoading ? 'Création...' : "Créer l&apos;annonce"}
+                {isLoading ? 'Création...' : 'Créer l&apos;annonce'}
               </Button>
             </div>
           </form>

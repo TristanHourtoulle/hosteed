@@ -43,21 +43,21 @@ interface ProductWithSpecialPrice {
 // Fonction utilitaire pour filtrer les prix spéciaux par dates et jour
 function filterActiveSpecialPrices(specialPrices: SpecialPrice[], currentDate: Date = new Date()) {
   const currentDay = currentDate.toLocaleDateString('en-US', { weekday: 'long' }) // Ex: "Monday", "Tuesday", etc.
-  
+
   return specialPrices.filter(sp => {
     // Vérifier si le prix spécial est activé
     if (!sp.activate) return false
-    
+
     // Vérifier si le jour actuel est dans la liste des jours du prix spécial
     if (!sp.day || !sp.day.includes(currentDay)) return false
-    
+
     // Si pas de dates définies, inclure le prix spécial
     if (!sp.startDate && !sp.endDate) return true
-    
+
     // Vérifier si la date actuelle est dans la plage
     const startDate = sp.startDate ? new Date(sp.startDate) : null
     const endDate = sp.endDate ? new Date(sp.endDate) : null
-    
+
     if (startDate && endDate) {
       return currentDate >= startDate && currentDate <= endDate
     } else if (startDate) {
@@ -65,7 +65,7 @@ function filterActiveSpecialPrices(specialPrices: SpecialPrice[], currentDate: D
     } else if (endDate) {
       return currentDate <= endDate
     }
-    
+
     return true
   })
 }
@@ -75,8 +75,8 @@ async function getSpecialPricesForProduct(productId: string) {
   try {
     const specialPrices = await prisma.specialPrices.findMany({
       where: {
-        productId: productId
-      }
+        productId: productId,
+      },
     })
     return specialPrices
   } catch (error) {
@@ -86,14 +86,17 @@ async function getSpecialPricesForProduct(productId: string) {
 }
 
 // Fonction pour appliquer le prix spécial au produit
-function applySpecialPriceToProduct(product: ProductWithSpecialPrice, specialPrices: SpecialPrice[]) {
+function applySpecialPriceToProduct(
+  product: ProductWithSpecialPrice,
+  specialPrices: SpecialPrice[]
+) {
   if (!specialPrices || specialPrices.length === 0) {
     return product
   }
-  
+
   // Prendre le premier prix spécial valide (on pourrait aussi prendre le plus récent ou le plus avantageux)
   const activeSpecialPrice = specialPrices[0]
-  
+
   if (activeSpecialPrice && activeSpecialPrice.pricesEuro) {
     // Remplacer le basePrice par le prix spécial en euros
     return {
@@ -106,11 +109,11 @@ function applySpecialPriceToProduct(product: ProductWithSpecialPrice, specialPri
         pricesEuro: activeSpecialPrice.pricesEuro,
         day: activeSpecialPrice.day,
         startDate: activeSpecialPrice.startDate,
-        endDate: activeSpecialPrice.endDate
-      }
+        endDate: activeSpecialPrice.endDate,
+      },
     }
   }
-  
+
   return product
 }
 
@@ -137,7 +140,7 @@ export async function findProductById(id: string) {
         },
         rents: {
           take: 5, // ✅ Limite les réservations récentes
-          orderBy: { id: 'desc' }
+          orderBy: { id: 'desc' },
         },
         discount: {
           take: 5, // ✅ Limite les réductions
@@ -183,7 +186,7 @@ export async function findProductById(id: string) {
             startDate: true,
             endDate: true,
             isActive: true,
-          }
+          },
         },
         reviews: {
           where: {
@@ -211,14 +214,14 @@ export async function findProductById(id: string) {
       // Récupérer et filtrer les prix spéciaux activés et dans les dates actuelles
       const specialPrices = await getSpecialPricesForProduct(product.id)
       const filteredSpecialPrices = filterActiveSpecialPrices(specialPrices)
-      
+
       // Appliquer le prix spécial au produit si applicable
       const productWithSpecialPrice = applySpecialPriceToProduct(product, filteredSpecialPrices)
-      
+
       // Ajouter les prix spéciaux filtrés au produit
       return {
         ...productWithSpecialPrice,
-        specialPrices: filteredSpecialPrices
+        specialPrices: filteredSpecialPrices,
       }
     }
     return null
@@ -230,10 +233,10 @@ export async function findProductById(id: string) {
 
 // Legacy function - use findAllProductsPaginated instead
 export async function findAllProducts() {
-  return findAllProductsPaginated({ 
-    page: 1, 
-    limit: 50, 
-    imageMode: 'medium' // Max 5 images for better performance
+  return findAllProductsPaginated({
+    page: 1,
+    limit: 50,
+    imageMode: 'medium', // Max 5 images for better performance
   })
 }
 
@@ -241,18 +244,18 @@ export async function findAllProducts() {
 export async function findAllProductsForPublic({
   page = 1,
   limit = 20,
-  includeSpecialPrices = false
+  includeSpecialPrices = false,
 }: {
   page?: number
   limit?: number
   includeSpecialPrices?: boolean
 } = {}) {
-  return findAllProductsPaginated({ 
-    page, 
-    limit, 
+  return findAllProductsPaginated({
+    page,
+    limit,
     includeSpecialPrices,
     imageMode: 'medium', // CRITICAL: Only 5 images per product for public views
-    includeLightweight: false 
+    includeLightweight: false,
   })
 }
 
@@ -261,7 +264,7 @@ export async function findAllProductsPaginated({
   limit = 20,
   includeSpecialPrices = false,
   includeLightweight = false,
-  imageMode = 'medium' // 'lightweight' (1 image), 'medium' (5 images), 'full' (all images)
+  imageMode = 'medium', // 'lightweight' (1 image), 'medium' (5 images), 'full' (all images)
 }: {
   page?: number
   limit?: number
@@ -276,13 +279,13 @@ export async function findAllProductsPaginated({
     const lightweightIncludes = {
       img: {
         take: 1, // Only first image for list views
-        select: { 
+        select: {
           id: true,
-          img: true 
-        }
+          img: true,
+        },
       },
       type: {
-        select: { name: true, id: true }
+        select: { name: true, id: true },
       },
       equipments: false,
       securities: false,
@@ -297,13 +300,13 @@ export async function findAllProductsPaginated({
     const mediumIncludes = {
       img: {
         take: 5, // Maximum 5 images for public product lists
-        select: { 
+        select: {
           id: true,
-          img: true 
-        }
+          img: true,
+        },
       },
       type: {
-        select: { name: true, id: true }
+        select: { name: true, id: true },
       },
       equipments: false,
       securities: false,
@@ -363,23 +366,23 @@ export async function findAllProductsPaginated({
       prisma.product.findMany({
         where: {
           validate: {
-            in: [ProductValidation.Approve, ProductValidation.ModificationPending]
+            in: [ProductValidation.Approve, ProductValidation.ModificationPending],
           },
           isDraft: false,
         },
         include: selectedIncludes,
         skip,
         take: limit,
-        orderBy: { id: 'desc' } // Latest first
+        orderBy: { id: 'desc' }, // Latest first
       }),
       prisma.product.count({
         where: {
           validate: {
-            in: [ProductValidation.Approve, ProductValidation.ModificationPending]
+            in: [ProductValidation.Approve, ProductValidation.ModificationPending],
           },
           isDraft: false,
-        }
-      })
+        },
+      }),
     ])
 
     // Only process special prices if requested and not lightweight
@@ -390,26 +393,29 @@ export async function findAllProductsPaginated({
       const allSpecialPrices = await prisma.specialPrices.findMany({
         where: {
           productId: { in: productIds },
-          activate: true
-        }
+          activate: true,
+        },
       })
-      
+
       // Group by productId for efficient lookup
-      const specialPricesByProduct = allSpecialPrices.reduce((acc, sp) => {
-        if (!acc[sp.productId]) acc[sp.productId] = []
-        acc[sp.productId].push(sp)
-        return acc
-      }, {} as Record<string, typeof allSpecialPrices>)
+      const specialPricesByProduct = allSpecialPrices.reduce(
+        (acc, sp) => {
+          if (!acc[sp.productId]) acc[sp.productId] = []
+          acc[sp.productId].push(sp)
+          return acc
+        },
+        {} as Record<string, typeof allSpecialPrices>
+      )
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       productsWithSpecialPrices = (products as any[]).map((product: any) => {
         const specialPrices = specialPricesByProduct[product.id] || []
         const filteredSpecialPrices = filterActiveSpecialPrices(specialPrices)
         const productWithSpecialPrice = applySpecialPriceToProduct(product, filteredSpecialPrices)
-        
+
         return {
           ...productWithSpecialPrice,
-          specialPrices: filteredSpecialPrices
+          specialPrices: filteredSpecialPrices,
         }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       }) as any
@@ -423,8 +429,8 @@ export async function findAllProductsPaginated({
         total: totalCount,
         totalPages: Math.ceil(totalCount / limit),
         hasNext: page < Math.ceil(totalCount / limit),
-        hasPrev: page > 1
-      }
+        hasPrev: page > 1,
+      },
     }
   } catch (error) {
     console.error('Erreur lors de la recherche des produits:', error)
@@ -445,7 +451,7 @@ export async function findAllProductByHostIdPaginated(
     limit = 20,
     includeSpecialPrices = false,
     includeLightweight = false,
-    imageMode = 'medium'
+    imageMode = 'medium',
   }: {
     page?: number
     limit?: number
@@ -460,10 +466,10 @@ export async function findAllProductByHostIdPaginated(
     const lightweightIncludes = {
       img: {
         take: 1, // Only 1 image for lightweight mode
-        select: { id: true, img: true }
+        select: { id: true, img: true },
       },
       type: {
-        select: { name: true, id: true }
+        select: { name: true, id: true },
       },
       user: {
         select: {
@@ -484,17 +490,17 @@ export async function findAllProductByHostIdPaginated(
           startDate: true,
           endDate: true,
           isActive: true,
-        }
+        },
       },
     }
 
     const mediumIncludes = {
       img: {
         take: 5, // Max 5 images for host dashboard
-        select: { id: true, img: true }
+        select: { id: true, img: true },
       },
       type: {
-        select: { name: true, id: true }
+        select: { name: true, id: true },
       },
       user: {
         select: {
@@ -515,7 +521,7 @@ export async function findAllProductByHostIdPaginated(
           startDate: true,
           endDate: true,
           isActive: true,
-        }
+        },
       },
     }
 
@@ -546,7 +552,7 @@ export async function findAllProductByHostIdPaginated(
           startDate: true,
           endDate: true,
           isActive: true,
-        }
+        },
       },
     }
 
@@ -562,12 +568,15 @@ export async function findAllProductByHostIdPaginated(
           },
           isDraft: false,
         },
-        include: includeLightweight || imageMode === 'lightweight' ? lightweightIncludes 
-                : imageMode === 'medium' ? mediumIncludes 
-                : fullIncludes,
+        include:
+          includeLightweight || imageMode === 'lightweight'
+            ? lightweightIncludes
+            : imageMode === 'medium'
+              ? mediumIncludes
+              : fullIncludes,
         skip,
         take: limit,
-        orderBy: { id: 'desc' }
+        orderBy: { id: 'desc' },
       }),
       prisma.product.count({
         where: {
@@ -579,8 +588,8 @@ export async function findAllProductByHostIdPaginated(
             },
           },
           isDraft: false,
-        }
-      })
+        },
+      }),
     ])
 
     let productsWithSpecialPrices = products
@@ -590,25 +599,28 @@ export async function findAllProductByHostIdPaginated(
       const allSpecialPrices = await prisma.specialPrices.findMany({
         where: {
           productId: { in: productIds },
-          activate: true
-        }
+          activate: true,
+        },
       })
-      
-      const specialPricesByProduct = allSpecialPrices.reduce((acc, sp) => {
-        if (!acc[sp.productId]) acc[sp.productId] = []
-        acc[sp.productId].push(sp)
-        return acc
-      }, {} as Record<string, typeof allSpecialPrices>)
+
+      const specialPricesByProduct = allSpecialPrices.reduce(
+        (acc, sp) => {
+          if (!acc[sp.productId]) acc[sp.productId] = []
+          acc[sp.productId].push(sp)
+          return acc
+        },
+        {} as Record<string, typeof allSpecialPrices>
+      )
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       productsWithSpecialPrices = (products as any[]).map((product: any) => {
         const specialPrices = specialPricesByProduct[product.id] || []
         const filteredSpecialPrices = filterActiveSpecialPrices(specialPrices)
         const productWithSpecialPrice = applySpecialPriceToProduct(product, filteredSpecialPrices)
-        
+
         return {
           ...productWithSpecialPrice,
-          specialPrices: filteredSpecialPrices
+          specialPrices: filteredSpecialPrices,
         }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       }) as any
@@ -622,8 +634,8 @@ export async function findAllProductByHostIdPaginated(
         total: totalCount,
         totalPages: Math.ceil(totalCount / limit),
         hasNext: page < Math.ceil(totalCount / limit),
-        hasPrev: page > 1
-      }
+        hasPrev: page > 1,
+      },
     }
   } catch (error) {
     console.error("Erreur lors de la recherche des produits de l'hôte:", error)
@@ -662,21 +674,27 @@ export async function createProduct(data: CreateProductInput) {
       existingSecurities,
       existingIncludedServices,
       existingExtras,
-      existingHighlights
+      existingHighlights,
     ] = await Promise.all([
       prisma.equipment.findMany({ where: { id: { in: data.equipments } }, select: { id: true } }),
       prisma.services.findMany({ where: { id: { in: data.services } }, select: { id: true } }),
       prisma.meals.findMany({ where: { id: { in: data.meals } }, select: { id: true } }),
       prisma.security.findMany({ where: { id: { in: data.securities } }, select: { id: true } }),
       data.includedServices && data.includedServices.length > 0
-        ? prisma.includedService.findMany({ where: { id: { in: data.includedServices } }, select: { id: true } })
+        ? prisma.includedService.findMany({
+            where: { id: { in: data.includedServices } },
+            select: { id: true },
+          })
         : Promise.resolve([]),
       data.extras && data.extras.length > 0
         ? prisma.productExtra.findMany({ where: { id: { in: data.extras } }, select: { id: true } })
         : Promise.resolve([]),
       data.highlights && data.highlights.length > 0
-        ? prisma.propertyHighlight.findMany({ where: { id: { in: data.highlights } }, select: { id: true } })
-        : Promise.resolve([])
+        ? prisma.propertyHighlight.findMany({
+            where: { id: { in: data.highlights } },
+            select: { id: true },
+          })
+        : Promise.resolve([]),
     ])
 
     // Extract valid IDs
@@ -828,7 +846,7 @@ export async function createProduct(data: CreateProductInput) {
     console.log('=== Special Prices Debug ===')
     console.log('data.specialPrices:', data.specialPrices)
     console.log('data.specialPrices length:', data.specialPrices?.length)
-    
+
     if (data.specialPrices && data.specialPrices.length > 0) {
       console.log('Creating special prices...')
       for (const specialPrice of data.specialPrices) {
@@ -877,21 +895,21 @@ export async function createProduct(data: CreateProductInput) {
         // Vérifier si l'utilisateur a déjà un hôtel avec ce nom
         const managerId = data.userId[0] // Premier utilisateur comme manager
         const existingHotels = await findHotelByManagerId({ id: managerId })
-        
+
         let hotelId: string | null = null
-        
+
         if (existingHotels && Array.isArray(existingHotels)) {
           // Chercher un hôtel existant avec le même nom
-          const existingHotel = existingHotels.find(hotel => 
-            hotel.name.toLowerCase() === data.hotelInfo!.name.toLowerCase()
+          const existingHotel = existingHotels.find(
+            hotel => hotel.name.toLowerCase() === data.hotelInfo!.name.toLowerCase()
           )
-          
+
           if (existingHotel) {
             hotelId = existingHotel.id
             console.log(`Hôtel existant trouvé: ${existingHotel.name} (ID: ${hotelId})`)
           }
         }
-        
+
         // Si aucun hôtel existant, en créer un nouveau
         if (!hotelId) {
           const newHotel = await createHotel({
@@ -900,13 +918,13 @@ export async function createProduct(data: CreateProductInput) {
             adress: data.address,
             manager: managerId,
           })
-          
+
           if (newHotel && typeof newHotel === 'object' && 'id' in newHotel) {
             hotelId = newHotel.id
             console.log(`Nouvel hôtel créé: ${data.hotelInfo.name} (ID: ${hotelId})`)
           }
         }
-        
+
         // Associer le produit (chambre) à l'hôtel
         if (hotelId) {
           await prisma.product.update({
@@ -919,9 +937,8 @@ export async function createProduct(data: CreateProductInput) {
           })
           console.log(`Produit associé à l'hôtel: ${hotelId}`)
         }
-        
       } catch (hotelError) {
-        console.error('Erreur lors de la gestion de l\'hôtel:', hotelError)
+        console.error("Erreur lors de la gestion de l'hôtel:", hotelError)
         // Ne pas faire échouer la création du produit pour un problème d'hôtel
       }
     }
@@ -978,7 +995,7 @@ export async function createProduct(data: CreateProductInput) {
 
     // Invalider le cache après création
     await invalidateProductCache()
-    
+
     return finalProduct
   } catch (error) {
     console.error('Error creating product:', error)
@@ -1033,10 +1050,10 @@ export async function validateProduct(id: string) {
         )
       })
     }
-    
+
     // Invalider le cache après validation
     await invalidateProductCache(id)
-    
+
     return product
   } catch (error) {
     console.error('Erreur lors de la validation du produit:', error)
@@ -1070,7 +1087,7 @@ export async function rejectProduct(id: string) {
         )
       })
     }
-    
+
     // Invalider le cache après rejet
     await invalidateProductCache(id)
 
@@ -1118,9 +1135,9 @@ export async function deleteMultipleRejectedProducts(ids: string[]) {
   try {
     // Récupérer tous les produits avec leurs utilisateurs avant suppression
     const products = await prisma.product.findMany({
-      where: { 
+      where: {
         id: { in: ids },
-        validate: ProductValidation.Refused // Sécurité supplémentaire
+        validate: ProductValidation.Refused, // Sécurité supplémentaire
       },
       include: {
         user: true,
@@ -1146,11 +1163,11 @@ export async function deleteMultipleRejectedProducts(ids: string[]) {
     const cachePromises = products.map(p => invalidateProductCache(p.id))
     await Promise.allSettled(cachePromises)
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       deletedCount: deletedCount.count,
       productNames: products.map(p => p.name),
-      userEmails: [...new Set(products.flatMap(p => p.user.map(u => u.email)))] // Emails uniques
+      userEmails: [...new Set(products.flatMap(p => p.user.map(u => u.email)))], // Emails uniques
     }
   } catch (error) {
     console.error('Erreur lors de la suppression en masse:', error)
@@ -1366,11 +1383,11 @@ export async function createDraftProduct(originalProductId: string) {
         contract: originalProduct.contract,
         sizeRoom: originalProduct.sizeRoom,
         availableRooms: originalProduct.availableRooms,
-        
+
         // Mark as draft and link to original
         isDraft: true,
         originalProductId: originalProductId,
-        
+
         // Copy relationships
         img: {
           create: originalProduct.img.map(img => ({ img: img.img })),
@@ -1518,7 +1535,7 @@ export async function applyDraftChanges(draftId: string) {
         contract: draft.contract,
         sizeRoom: draft.sizeRoom,
         availableRooms: draft.availableRooms,
-        
+
         // Update relationships
         img: {
           deleteMany: {},
@@ -1717,7 +1734,7 @@ export async function updateProduct(productId: string, data: UpdateProductInput)
       validationPromises.push(
         prisma.equipment.findMany({
           where: { id: { in: data.equipmentIds } },
-          select: { id: true }
+          select: { id: true },
         })
       )
     }
@@ -1726,7 +1743,7 @@ export async function updateProduct(productId: string, data: UpdateProductInput)
       validationPromises.push(
         prisma.services.findMany({
           where: { id: { in: data.serviceIds } },
-          select: { id: true }
+          select: { id: true },
         })
       )
     }
@@ -1735,7 +1752,7 @@ export async function updateProduct(productId: string, data: UpdateProductInput)
       validationPromises.push(
         prisma.meals.findMany({
           where: { id: { in: data.mealIds } },
-          select: { id: true }
+          select: { id: true },
         })
       )
     }
@@ -1744,7 +1761,7 @@ export async function updateProduct(productId: string, data: UpdateProductInput)
       validationPromises.push(
         prisma.security.findMany({
           where: { id: { in: data.securityIds } },
-          select: { id: true }
+          select: { id: true },
         })
       )
     }
@@ -1753,7 +1770,7 @@ export async function updateProduct(productId: string, data: UpdateProductInput)
       validationPromises.push(
         prisma.includedService.findMany({
           where: { id: { in: data.includedServiceIds } },
-          select: { id: true }
+          select: { id: true },
         })
       )
     }
@@ -1762,7 +1779,7 @@ export async function updateProduct(productId: string, data: UpdateProductInput)
       validationPromises.push(
         prisma.productExtra.findMany({
           where: { id: { in: data.extraIds } },
-          select: { id: true }
+          select: { id: true },
         })
       )
     }
@@ -1771,7 +1788,7 @@ export async function updateProduct(productId: string, data: UpdateProductInput)
       validationPromises.push(
         prisma.propertyHighlight.findMany({
           where: { id: { in: data.highlightIds } },
-          select: { id: true }
+          select: { id: true },
         })
       )
     }
@@ -1788,61 +1805,63 @@ export async function updateProduct(productId: string, data: UpdateProductInput)
     if (data.basePrice !== undefined) updateData.basePrice = data.basePrice
     if (data.priceMGA !== undefined) updateData.priceMGA = data.priceMGA
     if (data.room !== undefined) updateData.room = data.room ? BigInt(data.room) : null
-    if (data.bathroom !== undefined) updateData.bathroom = data.bathroom ? BigInt(data.bathroom) : null
+    if (data.bathroom !== undefined)
+      updateData.bathroom = data.bathroom ? BigInt(data.bathroom) : null
     if (data.arriving !== undefined) updateData.arriving = Number(data.arriving)
     if (data.leaving !== undefined) updateData.leaving = Number(data.leaving)
     if (data.phone !== undefined) updateData.phone = data.phone
     if (data.phoneCountry !== undefined) updateData.phoneCountry = data.phoneCountry
-    if (data.maxPeople !== undefined) updateData.maxPeople = data.maxPeople ? BigInt(data.maxPeople) : null
+    if (data.maxPeople !== undefined)
+      updateData.maxPeople = data.maxPeople ? BigInt(data.maxPeople) : null
     if (data.typeId !== undefined) updateData.type = { connect: { id: data.typeId } }
 
     // Relations - disconnect all and reconnect with new values
     if (data.equipmentIds) {
       updateData.equipments = {
         set: [], // Disconnect all
-        connect: data.equipmentIds.map(id => ({ id }))
+        connect: data.equipmentIds.map(id => ({ id })),
       }
     }
 
     if (data.serviceIds) {
       updateData.servicesList = {
         set: [],
-        connect: data.serviceIds.map(id => ({ id }))
+        connect: data.serviceIds.map(id => ({ id })),
       }
     }
 
     if (data.mealIds) {
       updateData.mealsList = {
         set: [],
-        connect: data.mealIds.map(id => ({ id }))
+        connect: data.mealIds.map(id => ({ id })),
       }
     }
 
     if (data.securityIds) {
       updateData.securities = {
         set: [],
-        connect: data.securityIds.map(id => ({ id }))
+        connect: data.securityIds.map(id => ({ id })),
       }
     }
 
     if (data.includedServiceIds) {
       updateData.includedServices = {
         set: [],
-        connect: data.includedServiceIds.map(id => ({ id }))
+        connect: data.includedServiceIds.map(id => ({ id })),
       }
     }
 
     if (data.extraIds) {
       updateData.extras = {
         set: [],
-        connect: data.extraIds.map(id => ({ id }))
+        connect: data.extraIds.map(id => ({ id })),
       }
     }
 
     if (data.highlightIds) {
       updateData.highlights = {
         set: [],
-        connect: data.highlightIds.map(id => ({ id }))
+        connect: data.highlightIds.map(id => ({ id })),
       }
     }
 
@@ -1850,17 +1869,19 @@ export async function updateProduct(productId: string, data: UpdateProductInput)
     if (data.nearbyPlaces) {
       // Delete existing and create new ones
       await prisma.nearbyPlace.deleteMany({
-        where: { productId }
+        where: { productId },
       })
 
       if (data.nearbyPlaces.length > 0) {
         updateData.nearbyPlaces = {
-          create: data.nearbyPlaces.map((place: { name: string; distance: number; duration?: number; transport?: string }) => ({
-            name: place.name,
-            distance: place.distance,
-            duration: place.duration || 0,
-            transport: place.transport || 'voiture',
-          }))
+          create: data.nearbyPlaces.map(
+            (place: { name: string; distance: number; duration?: number; transport?: string }) => ({
+              name: place.name,
+              distance: place.distance,
+              duration: place.duration || 0,
+              transport: place.transport || 'voiture',
+            })
+          ),
         }
       }
     }
@@ -1886,7 +1907,7 @@ export async function updateProduct(productId: string, data: UpdateProductInput)
         highlights: true,
         nearbyPlaces: true,
         hotel: true,
-      }
+      },
     })
 
     // Invalidate cache

@@ -30,7 +30,11 @@ interface GroupedChat {
 }
 
 export default function ChatIndexPage() {
-  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const [chats, setChats] = useState<GroupedChat[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -109,8 +113,8 @@ export default function ChatIndexPage() {
         {/* Sidebar Header */}
         <div className='px-6 py-4 border-b border-gray-100 bg-gray-50/50'>
           <div className='flex items-center justify-between mb-4'>
-            <Link 
-              href='/dashboard/host' 
+            <Link
+              href='/dashboard/host'
               className='flex items-center text-gray-600 hover:text-gray-900 transition-colors group'
             >
               <ArrowLeft className='w-4 h-4 mr-2 transition-transform group-hover:-translate-x-1' />
@@ -123,7 +127,9 @@ export default function ChatIndexPage() {
             </div>
             <div>
               <h1 className='text-lg font-bold text-gray-900'>Messages</h1>
-              <p className='text-xs text-gray-500'>{chats.length} conversation{chats.length !== 1 ? 's' : ''}</p>
+              <p className='text-xs text-gray-500'>
+                {chats.length} conversation{chats.length !== 1 ? 's' : ''}
+              </p>
             </div>
           </div>
         </div>
@@ -147,35 +153,35 @@ export default function ChatIndexPage() {
             ) : (
               <div className='space-y-1 py-2'>
                 {chats.map((chat, index) => (
-                  <Link 
-                    key={chat.rentId} 
-                    href={`/chat/${chat.rentId}`}
-                    className='group block'
-                  >
+                  <Link key={chat.rentId} href={`/chat/${chat.rentId}`} className='group block'>
                     <div className='px-4 py-3 hover:bg-blue-50 transition-colors duration-150 border-b border-gray-50 last:border-b-0'>
                       <div className='flex items-center space-x-3'>
                         {/* Avatar */}
                         <div className='relative flex-shrink-0'>
-                          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold shadow-sm ${
-                            index % 4 === 0 
-                              ? 'bg-gradient-to-br from-blue-500 to-blue-600'
-                              : index % 4 === 1 
-                                ? 'bg-gradient-to-br from-purple-500 to-purple-600'
-                                : index % 4 === 2
-                                  ? 'bg-gradient-to-br from-green-500 to-green-600'
-                                  : 'bg-gradient-to-br from-orange-500 to-orange-600'
-                          }`}>
+                          <div
+                            className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold shadow-sm ${
+                              index % 4 === 0
+                                ? 'bg-gradient-to-br from-blue-500 to-blue-600'
+                                : index % 4 === 1
+                                  ? 'bg-gradient-to-br from-purple-500 to-purple-600'
+                                  : index % 4 === 2
+                                    ? 'bg-gradient-to-br from-green-500 to-green-600'
+                                    : 'bg-gradient-to-br from-orange-500 to-orange-600'
+                            }`}
+                          >
                             <span className='text-sm'>
                               {chat.otherUserName.charAt(0).toUpperCase()}
                             </span>
                           </div>
                           {chat.unreadCount > 0 && (
                             <div className='absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center'>
-                              <span className='text-xs font-bold text-white'>{Math.min(chat.unreadCount, 9)}</span>
+                              <span className='text-xs font-bold text-white'>
+                                {Math.min(chat.unreadCount, 9)}
+                              </span>
                             </div>
                           )}
                         </div>
-                        
+
                         {/* Content */}
                         <div className='flex-1 min-w-0'>
                           <div className='flex items-center justify-between mb-1'>
@@ -186,16 +192,17 @@ export default function ChatIndexPage() {
                               {format(new Date(chat.lastMessageDate), 'HH:mm', { locale: fr })}
                             </span>
                           </div>
-                          
+
                           <div className='flex items-center justify-between'>
                             <p className='text-xs text-gray-600 truncate pr-2'>
-                              <span className='font-medium'>{chat.otherUserName}:</span> {chat.lastMessage}
+                              <span className='font-medium'>{chat.otherUserName}:</span>{' '}
+                              {chat.lastMessage}
                             </p>
                             {chat.unreadCount > 0 && (
                               <div className='w-2 h-2 bg-blue-500 rounded-full flex-shrink-0'></div>
                             )}
                           </div>
-                          
+
                           <div className='text-xs text-gray-400 mt-1'>
                             {format(new Date(chat.lastMessageDate), 'dd/MM', { locale: fr })}
                           </div>
@@ -209,16 +216,19 @@ export default function ChatIndexPage() {
           </div>
         </div>
       </div>
-      
+
       {/* Main Content Area - Placeholder when no chat selected */}
       <div className='flex-1 flex items-center justify-center bg-gray-50'>
         <div className='text-center max-w-md mx-auto px-6'>
           <div className='w-20 h-20 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6'>
             <MessageCircle className='w-10 h-10 text-blue-500' />
           </div>
-          <h2 className='text-xl font-semibold text-gray-900 mb-2'>Sélectionnez une conversation</h2>
+          <h2 className='text-xl font-semibold text-gray-900 mb-2'>
+            Sélectionnez une conversation
+          </h2>
           <p className='text-gray-500 text-sm leading-relaxed'>
-            Choisissez une conversation dans la liste pour commencer à échanger avec vos hôtes ou invités.
+            Choisissez une conversation dans la liste pour commencer à échanger avec vos hôtes ou
+            invités.
           </p>
           <div className='mt-8 text-xs text-gray-400'>
             <div className='flex items-center justify-center space-x-4'>

@@ -3,7 +3,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useBlogAuth } from '@/hooks/useMultiRoleAuth'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/shadcnui/card'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Input } from '@/components/ui/shadcnui/input'
 import { Badge } from '@/components/ui/shadcnui/badge'
@@ -32,12 +38,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/shadcnui/dropdown-menu'
-import { 
-  BookOpen, 
-  Plus, 
-  Edit3, 
-  Trash2, 
-  Eye, 
+import {
+  BookOpen,
+  Plus,
+  Edit3,
+  Trash2,
+  Eye,
   MoreHorizontal,
   Search,
   Calendar,
@@ -64,13 +70,13 @@ const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { duration: 0.3, staggerChildren: 0.1 }
-  }
+    transition: { duration: 0.3, staggerChildren: 0.1 },
+  },
 }
 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0 }
+  visible: { opacity: 1, y: 0 },
 }
 
 export default function BlogManagementPage() {
@@ -139,12 +145,12 @@ export default function BlogManagementPage() {
 
       const result = await response.json()
       toast.success(result.message || 'Article supprimé avec succès')
-      
+
       // Remove from local state
       setPosts(posts.filter(post => post.id !== postId))
     } catch (error) {
       console.error('Error deleting post:', error)
-      toast.error('Erreur lors de la suppression de l\'article')
+      toast.error("Erreur lors de la suppression de l'article")
     } finally {
       setDeletingPostId(null)
     }
@@ -162,14 +168,10 @@ export default function BlogManagementPage() {
 
   if (isLoading || !isAuthorized) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-center"
-        >
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Chargement...</p>
+      <div className='flex items-center justify-center min-h-screen'>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className='text-center'>
+          <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4'></div>
+          <p className='text-gray-600'>Chargement...</p>
         </motion.div>
       </div>
     )
@@ -178,77 +180,78 @@ export default function BlogManagementPage() {
   return (
     <motion.div
       variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="space-y-6 p-6"
+      initial='hidden'
+      animate='visible'
+      className='space-y-6 p-6'
     >
       {/* Header */}
-      <motion.div variants={itemVariants} className="flex items-center justify-between">
+      <motion.div variants={itemVariants} className='flex items-center justify-between'>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <BookOpen className="h-8 w-8 text-blue-600" />
+          <h1 className='text-3xl font-bold text-gray-900 flex items-center gap-3'>
+            <BookOpen className='h-8 w-8 text-blue-600' />
             Gestion des articles
           </h1>
-          <p className="text-gray-600 mt-2">
-            {session?.user?.roles === 'ADMIN' 
-              ? 'Gérer tous les articles du blog' 
+          <p className='text-gray-600 mt-2'>
+            {session?.user?.roles === 'ADMIN'
+              ? 'Gérer tous les articles du blog'
               : 'Gérer vos articles de blog'}
           </p>
         </div>
-        <Button asChild className="bg-blue-600 hover:bg-blue-700">
-          <Link href="/createPost">
-            <Plus className="h-4 w-4 mr-2" />
+        <Button asChild className='bg-blue-600 hover:bg-blue-700'>
+          <Link href='/createPost'>
+            <Plus className='h-4 w-4 mr-2' />
             Créer un article
           </Link>
         </Button>
       </motion.div>
 
       {/* Stats Cards */}
-      <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <motion.div variants={itemVariants} className='grid grid-cols-1 md:grid-cols-3 gap-6'>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Articles</CardTitle>
-            <BookOpen className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+            <CardTitle className='text-sm font-medium'>Total Articles</CardTitle>
+            <BookOpen className='h-4 w-4 text-muted-foreground' />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{posts.length}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className='text-2xl font-bold'>{posts.length}</div>
+            <p className='text-xs text-muted-foreground'>
               {session?.user?.roles === 'ADMIN' ? 'Tous les articles' : 'Vos articles'}
             </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Publiés ce mois</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+            <CardTitle className='text-sm font-medium'>Publiés ce mois</CardTitle>
+            <Calendar className='h-4 w-4 text-muted-foreground' />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {posts.filter(post => {
-                const postDate = new Date(post.createdAt)
-                const now = new Date()
-                return postDate.getMonth() === now.getMonth() && postDate.getFullYear() === now.getFullYear()
-              }).length}
+            <div className='text-2xl font-bold'>
+              {
+                posts.filter(post => {
+                  const postDate = new Date(post.createdAt)
+                  const now = new Date()
+                  return (
+                    postDate.getMonth() === now.getMonth() &&
+                    postDate.getFullYear() === now.getFullYear()
+                  )
+                }).length
+              }
             </div>
-            <p className="text-xs text-muted-foreground">
-              Ce mois-ci
-            </p>
+            <p className='text-xs text-muted-foreground'>Ce mois-ci</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Dernière publication</CardTitle>
-            <User className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+            <CardTitle className='text-sm font-medium'>Dernière publication</CardTitle>
+            <User className='h-4 w-4 text-muted-foreground' />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className='text-2xl font-bold'>
               {posts.length > 0 ? formatDate(posts[0]?.createdAt).split(' ')[0] : 'Aucun'}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Dernier article
-            </p>
+            <p className='text-xs text-muted-foreground'>Dernier article</p>
           </CardContent>
         </Card>
       </motion.div>
@@ -258,39 +261,39 @@ export default function BlogManagementPage() {
         <Card>
           <CardHeader>
             <CardTitle>Articles</CardTitle>
-            <CardDescription>
-              Gérez vos articles de blog
-            </CardDescription>
+            <CardDescription>Gérez vos articles de blog</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center space-x-2 mb-6">
-              <div className="relative flex-1">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <div className='flex items-center space-x-2 mb-6'>
+              <div className='relative flex-1'>
+                <Search className='absolute left-2 top-2.5 h-4 w-4 text-muted-foreground' />
                 <Input
-                  placeholder="Rechercher un article..."
+                  placeholder='Rechercher un article...'
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8"
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className='pl-8'
                 />
               </div>
             </div>
 
             {isLoadingPosts ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                <span className="ml-2">Chargement des articles...</span>
+              <div className='flex items-center justify-center py-8'>
+                <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600'></div>
+                <span className='ml-2'>Chargement des articles...</span>
               </div>
             ) : filteredPosts.length === 0 ? (
-              <div className="text-center py-8">
-                <BookOpen className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">Aucun article</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  {searchTerm ? 'Aucun article trouvé pour cette recherche.' : 'Commencez par créer votre premier article.'}
+              <div className='text-center py-8'>
+                <BookOpen className='mx-auto h-12 w-12 text-gray-400' />
+                <h3 className='mt-2 text-sm font-medium text-gray-900'>Aucun article</h3>
+                <p className='mt-1 text-sm text-gray-500'>
+                  {searchTerm
+                    ? 'Aucun article trouvé pour cette recherche.'
+                    : 'Commencez par créer votre premier article.'}
                 </p>
-                <div className="mt-6">
+                <div className='mt-6'>
                   <Button asChild>
-                    <Link href="/createPost">
-                      <Plus className="h-4 w-4 mr-2" />
+                    <Link href='/createPost'>
+                      <Plus className='h-4 w-4 mr-2' />
                       Créer un article
                     </Link>
                   </Button>
@@ -304,27 +307,25 @@ export default function BlogManagementPage() {
                     {session?.user?.roles === 'ADMIN' && <TableHead>Auteur</TableHead>}
                     <TableHead>Créé le</TableHead>
                     <TableHead>Modifié le</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className='text-right'>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPosts.map((post) => (
+                  {filteredPosts.map(post => (
                     <TableRow key={post.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex flex-col">
-                          <span className="truncate max-w-xs">{post.title}</span>
-                          {post.slug && (
-                            <span className="text-xs text-gray-500">/{post.slug}</span>
-                          )}
+                      <TableCell className='font-medium'>
+                        <div className='flex flex-col'>
+                          <span className='truncate max-w-xs'>{post.title}</span>
+                          {post.slug && <span className='text-xs text-gray-500'>/{post.slug}</span>}
                         </div>
                       </TableCell>
                       {session?.user?.roles === 'ADMIN' && (
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary">
+                          <div className='flex items-center gap-2'>
+                            <Badge variant='secondary'>
                               {post.author.roles === 'ADMIN' ? '👑 Admin' : '✍️ Rédacteur'}
                             </Badge>
-                            <span className="text-sm text-gray-600">
+                            <span className='text-sm text-gray-600'>
                               {post.author.name || post.author.email}
                             </span>
                           </div>
@@ -332,30 +333,30 @@ export default function BlogManagementPage() {
                       )}
                       <TableCell>{formatDate(post.createdAt)}</TableCell>
                       <TableCell>{formatDate(post.updatedAt)}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className='text-right'>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
+                            <Button variant='ghost' className='h-8 w-8 p-0'>
+                              <MoreHorizontal className='h-4 w-4' />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
+                          <DropdownMenuContent align='end'>
                             <DropdownMenuItem asChild>
                               <Link href={`/posts/article/${post.slug || post.id}`}>
-                                <Eye className="mr-2 h-4 w-4" />
+                                <Eye className='mr-2 h-4 w-4' />
                                 Voir
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
                               <Link href={`/admin/blog/edit/${post.id}`}>
-                                <Edit3 className="mr-2 h-4 w-4" />
+                                <Edit3 className='mr-2 h-4 w-4' />
                                 Modifier
                               </Link>
                             </DropdownMenuItem>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                  <Trash2 className="mr-2 h-4 w-4" />
+                                <DropdownMenuItem onSelect={e => e.preventDefault()}>
+                                  <Trash2 className='mr-2 h-4 w-4' />
                                   Supprimer
                                 </DropdownMenuItem>
                               </AlertDialogTrigger>
@@ -363,8 +364,8 @@ export default function BlogManagementPage() {
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Êtes-vous sûr de vouloir supprimer l&apos;article &quot;{post.title}&quot; ? 
-                                    Cette action est irréversible.
+                                    Êtes-vous sûr de vouloir supprimer l&apos;article &quot;
+                                    {post.title}&quot; ? Cette action est irréversible.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
@@ -372,7 +373,7 @@ export default function BlogManagementPage() {
                                   <AlertDialogAction
                                     onClick={() => handleDeletePost(post.id)}
                                     disabled={deletingPostId === post.id}
-                                    className="bg-red-600 hover:bg-red-700"
+                                    className='bg-red-600 hover:bg-red-700'
                                   >
                                     {deletingPostId === post.id ? 'Suppression...' : 'Supprimer'}
                                   </AlertDialogAction>

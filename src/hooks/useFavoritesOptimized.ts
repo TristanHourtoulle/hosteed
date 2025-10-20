@@ -49,8 +49,8 @@ export function useFavoritesOptimized(productId: string) {
     },
     onMutate: async () => {
       // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ 
-        queryKey: CACHE_TAGS.favoriteStatus(userId || '', productId) 
+      await queryClient.cancelQueries({
+        queryKey: CACHE_TAGS.favoriteStatus(userId || '', productId),
       })
 
       // Snapshot the previous value
@@ -59,10 +59,7 @@ export function useFavoritesOptimized(productId: string) {
       )
 
       // Optimistically update to the new value
-      queryClient.setQueryData(
-        CACHE_TAGS.favoriteStatus(userId || '', productId),
-        !isFavorite
-      )
+      queryClient.setQueryData(CACHE_TAGS.favoriteStatus(userId || '', productId), !isFavorite)
 
       // Return a context object with the snapshotted value
       return { previousFavorite }
@@ -77,12 +74,12 @@ export function useFavoritesOptimized(productId: string) {
       }
       toast.error(err instanceof Error ? err.message : 'Erreur lors de la mise à jour des favoris')
     },
-    onSuccess: (data) => {
+    onSuccess: data => {
       if (data.success) {
         toast.success(data.newState ? 'Ajouté aux favoris' : 'Retiré des favoris')
         // Invalidate user's favorites list
-        queryClient.invalidateQueries({ 
-          queryKey: CACHE_TAGS.favorites(userId || '') 
+        queryClient.invalidateQueries({
+          queryKey: CACHE_TAGS.favorites(userId || ''),
         })
       } else if (data.message) {
         toast.info(data.message)
@@ -125,7 +122,7 @@ export function useBulkFavoriteStatus(productIds: string[]) {
     queryKey: ['bulk-favorites', userId, ...productIds],
     queryFn: async () => {
       if (!userId || productIds.length === 0) return {}
-      
+
       // This would require a new API endpoint to check multiple products at once
       const response = await fetch('/api/favorites/bulk', {
         method: 'POST',
@@ -134,7 +131,7 @@ export function useBulkFavoriteStatus(productIds: string[]) {
         },
         body: JSON.stringify({ productIds }),
       })
-      
+
       if (!response.ok) throw new Error('Failed to fetch bulk favorite status')
       return response.json() as Promise<Record<string, boolean>>
     },

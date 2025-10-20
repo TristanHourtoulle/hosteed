@@ -9,10 +9,14 @@ import { Button } from '@/components/ui/shadcnui/button'
 import { ArrowLeft } from 'lucide-react'
 import { LoadingDisplay } from './components/LoadingDisplay'
 import { UserPersonalInfo } from './components/UserPersonalInfo'
-import {EquipmentInterface} from "@/lib/interface/equipmentInterface";
+import { EquipmentInterface } from '@/lib/interface/equipmentInterface'
 
 export function UserDetailsClient({ id, name, icon }: EquipmentInterface) {
-  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
   const [loading] = useState(false)
 
@@ -52,7 +56,7 @@ export function UserDetailsClient({ id, name, icon }: EquipmentInterface) {
         </div>
 
         <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
-          <UserPersonalInfo id={id} name={name} icon={icon}/>
+          <UserPersonalInfo id={id} name={name} icon={icon} />
         </div>
       </motion.div>
     </div>

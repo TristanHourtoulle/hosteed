@@ -12,7 +12,11 @@ import { toast } from 'sonner'
 function CalendarContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const propertyId = searchParams.get('property')
   const [currentDate, setCurrentDate] = useState(new Date())
   const [reservations, setReservations] = useState<FormattedRent[]>([])
@@ -297,7 +301,7 @@ function CalendarContent() {
           </div>
 
           <div className='p-6'>
-            {(isAuthLoading || loading) ? (
+            {isAuthLoading || loading ? (
               <div className='flex items-center justify-center h-[600px]'>
                 <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600'></div>
               </div>
@@ -314,7 +318,9 @@ function CalendarContent() {
                   return (
                     <div
                       key={index}
-                      onClick={() => handleDayClick(date, reservationsForDay, unavailabilitiesForDay)}
+                      onClick={() =>
+                        handleDayClick(date, reservationsForDay, unavailabilitiesForDay)
+                      }
                       className={`min-h-[100px] p-2 border border-gray-200 rounded-lg ${
                         !isCurrentMonth(date)
                           ? 'bg-gray-100 text-gray-400'
@@ -345,7 +351,7 @@ function CalendarContent() {
                         {unavailabilitiesForDay.map(unavail => (
                           <div
                             key={unavail.id}
-                            onClick={(e) => handleUnavailabilityClick(e, unavail)}
+                            onClick={e => handleUnavailabilityClick(e, unavail)}
                             className='text-xs p-1 bg-red-500 text-white rounded cursor-pointer hover:bg-red-600 transition-colors'
                           >
                             <div className='font-medium truncate'>🚫 {unavail.title}</div>

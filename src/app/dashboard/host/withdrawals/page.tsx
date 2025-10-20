@@ -11,7 +11,13 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/shadcnui/card'
 import { Badge } from '@/components/ui/shadcnui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/shadcnui/tabs'
 import { toast } from 'sonner'
@@ -26,7 +32,7 @@ import {
   Clock,
   XCircle,
   AlertCircle,
-  Plus
+  Plus,
 } from 'lucide-react'
 
 type WithdrawalRequest = {
@@ -71,7 +77,11 @@ type PaymentFormData = {
 }
 
 export default function WithdrawalsPage() {
-  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
 
   // States
@@ -144,9 +154,8 @@ export default function WithdrawalsPage() {
 
     if (!balance) return
 
-    const amount = withdrawalType === 'PARTIAL_50'
-      ? balance.amount50Percent
-      : balance.amount100Percent
+    const amount =
+      withdrawalType === 'PARTIAL_50' ? balance.amount50Percent : balance.amount100Percent
 
     if (amount <= 0) {
       toast.error('Montant insuffisant')
@@ -167,7 +176,7 @@ export default function WithdrawalsPage() {
       if (!paymentForm.accountHolderName) errors.push('Nom associé au compte')
       if (!paymentForm.mobileNumber) errors.push('Numéro de téléphone')
     } else if (paymentMethod === 'PAYPAL') {
-      if (!paymentForm.paypalUsername) errors.push('Nom d\'utilisateur PayPal')
+      if (!paymentForm.paypalUsername) errors.push("Nom d'utilisateur PayPal")
       if (!paymentForm.paypalEmail) errors.push('Email PayPal')
       if (!paymentForm.paypalPhone) errors.push('Téléphone PayPal')
       if (!paymentForm.paypalIban) errors.push('IBAN PayPal')
@@ -263,19 +272,19 @@ export default function WithdrawalsPage() {
   const getStatusIcon = (status: WithdrawalStatus) => {
     switch (status) {
       case 'PENDING':
-        return <Clock className="h-4 w-4 text-orange-500" />
+        return <Clock className='h-4 w-4 text-orange-500' />
       case 'ACCOUNT_VALIDATION':
-        return <AlertCircle className="h-4 w-4 text-yellow-500" />
+        return <AlertCircle className='h-4 w-4 text-yellow-500' />
       case 'APPROVED':
-        return <CheckCircle2 className="h-4 w-4 text-green-500" />
+        return <CheckCircle2 className='h-4 w-4 text-green-500' />
       case 'PAID':
-        return <CheckCircle2 className="h-4 w-4 text-blue-500" />
+        return <CheckCircle2 className='h-4 w-4 text-blue-500' />
       case 'REJECTED':
-        return <XCircle className="h-4 w-4 text-red-500" />
+        return <XCircle className='h-4 w-4 text-red-500' />
       case 'CANCELLED':
-        return <XCircle className="h-4 w-4 text-gray-500" />
+        return <XCircle className='h-4 w-4 text-gray-500' />
       default:
-        return <Clock className="h-4 w-4" />
+        return <Clock className='h-4 w-4' />
     }
   }
 
@@ -321,7 +330,9 @@ export default function WithdrawalsPage() {
   }
 
   const selectedAmount = balance
-    ? (withdrawalType === 'PARTIAL_50' ? balance.amount50Percent : balance.amount100Percent)
+    ? withdrawalType === 'PARTIAL_50'
+      ? balance.amount50Percent
+      : balance.amount100Percent
     : 0
 
   return (
@@ -355,15 +366,21 @@ export default function WithdrawalsPage() {
             <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
               <div className='bg-blue-50 rounded-lg p-4'>
                 <p className='text-sm text-blue-600 font-medium mb-1'>Total gagné</p>
-                <p className='text-3xl font-bold text-blue-900'>{balance.totalEarned.toFixed(2)}€</p>
+                <p className='text-3xl font-bold text-blue-900'>
+                  {balance.totalEarned.toFixed(2)}€
+                </p>
               </div>
               <div className='bg-gray-50 rounded-lg p-4'>
                 <p className='text-sm text-gray-600 font-medium mb-1'>Déjà retiré</p>
-                <p className='text-3xl font-bold text-gray-900'>{balance.totalWithdrawn.toFixed(2)}€</p>
+                <p className='text-3xl font-bold text-gray-900'>
+                  {balance.totalWithdrawn.toFixed(2)}€
+                </p>
               </div>
               <div className='bg-green-50 rounded-lg p-4'>
                 <p className='text-sm text-green-600 font-medium mb-1'>Disponible</p>
-                <p className='text-3xl font-bold text-green-900'>{balance.availableBalance.toFixed(2)}€</p>
+                <p className='text-3xl font-bold text-green-900'>
+                  {balance.availableBalance.toFixed(2)}€
+                </p>
                 <div className='mt-2 text-xs text-gray-500 space-y-1'>
                   <p>• 50% maintenant: {balance.amount50Percent.toFixed(2)}€</p>
                   <p>• 100% (J+3): {balance.amount100Percent.toFixed(2)}€</p>
@@ -395,7 +412,7 @@ export default function WithdrawalsPage() {
                   <p className='text-center text-gray-500 py-8'>Aucune demande de retrait</p>
                 ) : (
                   <div className='space-y-4'>
-                    {requests.map((request) => (
+                    {requests.map(request => (
                       <div
                         key={request.id}
                         className='flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50'
@@ -408,7 +425,8 @@ export default function WithdrawalsPage() {
                             </p>
                             <p className='text-sm text-gray-500'>
                               {getPaymentMethodLabel(request.paymentMethod)}
-                              {request.paymentAccount && ` - ${request.paymentAccount.accountHolderName}`}
+                              {request.paymentAccount &&
+                                ` - ${request.paymentAccount.accountHolderName}`}
                             </p>
                             <p className='text-xs text-gray-400'>
                               {new Date(request.createdAt).toLocaleDateString('fr-FR')}
@@ -437,22 +455,30 @@ export default function WithdrawalsPage() {
                 <CardTitle>Demandes en attente</CardTitle>
               </CardHeader>
               <CardContent>
-                {requests.filter((r) => r.status === 'PENDING' || r.status === 'ACCOUNT_VALIDATION').length === 0 ? (
+                {requests.filter(r => r.status === 'PENDING' || r.status === 'ACCOUNT_VALIDATION')
+                  .length === 0 ? (
                   <p className='text-center text-gray-500 py-8'>Aucune demande en attente</p>
                 ) : (
                   <div className='space-y-4'>
-                    {requests.filter((r) => r.status === 'PENDING' || r.status === 'ACCOUNT_VALIDATION').map((request) => (
-                      <div key={request.id} className='flex items-center justify-between p-4 border rounded-lg'>
-                        <div className='flex items-center gap-4'>
-                          {getStatusIcon(request.status)}
-                          <div>
-                            <p className='font-semibold'>{request.amount.toFixed(2)}€</p>
-                            <p className='text-sm text-gray-500'>{getPaymentMethodLabel(request.paymentMethod)}</p>
+                    {requests
+                      .filter(r => r.status === 'PENDING' || r.status === 'ACCOUNT_VALIDATION')
+                      .map(request => (
+                        <div
+                          key={request.id}
+                          className='flex items-center justify-between p-4 border rounded-lg'
+                        >
+                          <div className='flex items-center gap-4'>
+                            {getStatusIcon(request.status)}
+                            <div>
+                              <p className='font-semibold'>{request.amount.toFixed(2)}€</p>
+                              <p className='text-sm text-gray-500'>
+                                {getPaymentMethodLabel(request.paymentMethod)}
+                              </p>
+                            </div>
                           </div>
+                          <Badge>{getStatusLabel(request.status)}</Badge>
                         </div>
-                        <Badge>{getStatusLabel(request.status)}</Badge>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 )}
               </CardContent>
@@ -465,22 +491,29 @@ export default function WithdrawalsPage() {
                 <CardTitle>Demandes approuvées</CardTitle>
               </CardHeader>
               <CardContent>
-                {requests.filter((r) => r.status === 'APPROVED').length === 0 ? (
+                {requests.filter(r => r.status === 'APPROVED').length === 0 ? (
                   <p className='text-center text-gray-500 py-8'>Aucune demande approuvée</p>
                 ) : (
                   <div className='space-y-4'>
-                    {requests.filter((r) => r.status === 'APPROVED').map((request) => (
-                      <div key={request.id} className='flex items-center justify-between p-4 border rounded-lg'>
-                        <div className='flex items-center gap-4'>
-                          {getStatusIcon(request.status)}
-                          <div>
-                            <p className='font-semibold'>{request.amount.toFixed(2)}€</p>
-                            <p className='text-sm text-gray-500'>{getPaymentMethodLabel(request.paymentMethod)}</p>
+                    {requests
+                      .filter(r => r.status === 'APPROVED')
+                      .map(request => (
+                        <div
+                          key={request.id}
+                          className='flex items-center justify-between p-4 border rounded-lg'
+                        >
+                          <div className='flex items-center gap-4'>
+                            {getStatusIcon(request.status)}
+                            <div>
+                              <p className='font-semibold'>{request.amount.toFixed(2)}€</p>
+                              <p className='text-sm text-gray-500'>
+                                {getPaymentMethodLabel(request.paymentMethod)}
+                              </p>
+                            </div>
                           </div>
+                          <Badge variant='default'>{getStatusLabel(request.status)}</Badge>
                         </div>
-                        <Badge variant='default'>{getStatusLabel(request.status)}</Badge>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 )}
               </CardContent>
@@ -493,22 +526,29 @@ export default function WithdrawalsPage() {
                 <CardTitle>Retraits effectués</CardTitle>
               </CardHeader>
               <CardContent>
-                {requests.filter((r) => r.status === 'PAID').length === 0 ? (
+                {requests.filter(r => r.status === 'PAID').length === 0 ? (
                   <p className='text-center text-gray-500 py-8'>Aucun retrait effectué</p>
                 ) : (
                   <div className='space-y-4'>
-                    {requests.filter((r) => r.status === 'PAID').map((request) => (
-                      <div key={request.id} className='flex items-center justify-between p-4 border rounded-lg'>
-                        <div className='flex items-center gap-4'>
-                          {getStatusIcon(request.status)}
-                          <div>
-                            <p className='font-semibold'>{request.amount.toFixed(2)}€</p>
-                            <p className='text-sm text-gray-500'>{getPaymentMethodLabel(request.paymentMethod)}</p>
+                    {requests
+                      .filter(r => r.status === 'PAID')
+                      .map(request => (
+                        <div
+                          key={request.id}
+                          className='flex items-center justify-between p-4 border rounded-lg'
+                        >
+                          <div className='flex items-center gap-4'>
+                            {getStatusIcon(request.status)}
+                            <div>
+                              <p className='font-semibold'>{request.amount.toFixed(2)}€</p>
+                              <p className='text-sm text-gray-500'>
+                                {getPaymentMethodLabel(request.paymentMethod)}
+                              </p>
+                            </div>
                           </div>
+                          <Badge variant='default'>{getStatusLabel(request.status)}</Badge>
                         </div>
-                        <Badge variant='default'>{getStatusLabel(request.status)}</Badge>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 )}
               </CardContent>
@@ -526,9 +566,7 @@ export default function WithdrawalsPage() {
                 <form onSubmit={handleSubmit} className='space-y-6'>
                   {/* Choix du montant */}
                   <div>
-                    <Label className='text-base font-semibold mb-3 block'>
-                      Montant à retirer
-                    </Label>
+                    <Label className='text-base font-semibold mb-3 block'>Montant à retirer</Label>
                     <div className='grid grid-cols-2 gap-4'>
                       <button
                         type='button'
@@ -565,17 +603,40 @@ export default function WithdrawalsPage() {
 
                   {/* Choix du moyen de paiement */}
                   <div>
-                    <Label className='text-base font-semibold mb-3 block'>
-                      Moyen de paiement
-                    </Label>
+                    <Label className='text-base font-semibold mb-3 block'>Moyen de paiement</Label>
                     <div className='grid grid-cols-1 gap-2'>
                       {[
-                        { value: 'SEPA_VIREMENT', label: 'Virement SEPA', icon: Building2, desc: 'Réservé aux comptes bancaires en euros' },
-                        { value: 'PRIPEO', label: 'Pripeo', icon: CreditCard, desc: 'Carte VISA prépayée (frais: 1,50€)' },
-                        { value: 'MOBILE_MONEY', label: 'Mobile Money', icon: Smartphone, desc: 'Transfert mobile' },
-                        { value: 'PAYPAL', label: 'PayPal', icon: Wallet, desc: 'Frais de transfert possibles' },
-                        { value: 'MONEYGRAM', label: 'MoneyGram', icon: DollarSign, desc: 'Transfert international' },
-                      ].map((method) => (
+                        {
+                          value: 'SEPA_VIREMENT',
+                          label: 'Virement SEPA',
+                          icon: Building2,
+                          desc: 'Réservé aux comptes bancaires en euros',
+                        },
+                        {
+                          value: 'PRIPEO',
+                          label: 'Pripeo',
+                          icon: CreditCard,
+                          desc: 'Carte VISA prépayée (frais: 1,50€)',
+                        },
+                        {
+                          value: 'MOBILE_MONEY',
+                          label: 'Mobile Money',
+                          icon: Smartphone,
+                          desc: 'Transfert mobile',
+                        },
+                        {
+                          value: 'PAYPAL',
+                          label: 'PayPal',
+                          icon: Wallet,
+                          desc: 'Frais de transfert possibles',
+                        },
+                        {
+                          value: 'MONEYGRAM',
+                          label: 'MoneyGram',
+                          icon: DollarSign,
+                          desc: 'Transfert international',
+                        },
+                      ].map(method => (
                         <button
                           key={method.value}
                           type='button'
@@ -601,9 +662,7 @@ export default function WithdrawalsPage() {
 
                   {/* Champs spécifiques selon le moyen de paiement */}
                   <div className='space-y-4 border-t pt-4'>
-                    <h3 className='font-semibold text-gray-900'>
-                      Informations de paiement
-                    </h3>
+                    <h3 className='font-semibold text-gray-900'>Informations de paiement</h3>
 
                     {/* SEPA VIREMENT */}
                     {paymentMethod === 'SEPA_VIREMENT' && (
@@ -613,7 +672,9 @@ export default function WithdrawalsPage() {
                           <Input
                             id='accountHolderName'
                             value={paymentForm.accountHolderName}
-                            onChange={(e) => setPaymentForm({ ...paymentForm, accountHolderName: e.target.value })}
+                            onChange={e =>
+                              setPaymentForm({ ...paymentForm, accountHolderName: e.target.value })
+                            }
                             placeholder='Jean Dupont'
                             required
                           />
@@ -623,7 +684,7 @@ export default function WithdrawalsPage() {
                           <Input
                             id='iban'
                             value={paymentForm.iban}
-                            onChange={(e) => setPaymentForm({ ...paymentForm, iban: e.target.value })}
+                            onChange={e => setPaymentForm({ ...paymentForm, iban: e.target.value })}
                             placeholder='FR76 1234 5678 9012 3456 7890 123'
                             required
                           />
@@ -639,7 +700,9 @@ export default function WithdrawalsPage() {
                           <Input
                             id='accountHolderName'
                             value={paymentForm.accountHolderName}
-                            onChange={(e) => setPaymentForm({ ...paymentForm, accountHolderName: e.target.value })}
+                            onChange={e =>
+                              setPaymentForm({ ...paymentForm, accountHolderName: e.target.value })
+                            }
                             placeholder='Jean Dupont'
                             required
                           />
@@ -649,7 +712,9 @@ export default function WithdrawalsPage() {
                           <Input
                             id='cardNumber'
                             value={paymentForm.cardNumber}
-                            onChange={(e) => setPaymentForm({ ...paymentForm, cardNumber: e.target.value })}
+                            onChange={e =>
+                              setPaymentForm({ ...paymentForm, cardNumber: e.target.value })
+                            }
                             placeholder='1234 5678 9012 3456'
                             required
                           />
@@ -660,7 +725,9 @@ export default function WithdrawalsPage() {
                             id='cardEmail'
                             type='email'
                             value={paymentForm.cardEmail}
-                            onChange={(e) => setPaymentForm({ ...paymentForm, cardEmail: e.target.value })}
+                            onChange={e =>
+                              setPaymentForm({ ...paymentForm, cardEmail: e.target.value })
+                            }
                             placeholder='jean@example.com'
                             required
                           />
@@ -681,17 +748,23 @@ export default function WithdrawalsPage() {
                           <Input
                             id='accountHolderName'
                             value={paymentForm.accountHolderName}
-                            onChange={(e) => setPaymentForm({ ...paymentForm, accountHolderName: e.target.value })}
+                            onChange={e =>
+                              setPaymentForm({ ...paymentForm, accountHolderName: e.target.value })
+                            }
                             placeholder='Jean Dupont'
                             required
                           />
                         </div>
                         <div>
-                          <Label htmlFor='mobileNumber'>Numéro (Format: +261 XX XX XX XXXX XX) *</Label>
+                          <Label htmlFor='mobileNumber'>
+                            Numéro (Format: +261 XX XX XX XXXX XX) *
+                          </Label>
                           <Input
                             id='mobileNumber'
                             value={paymentForm.mobileNumber}
-                            onChange={(e) => setPaymentForm({ ...paymentForm, mobileNumber: e.target.value })}
+                            onChange={e =>
+                              setPaymentForm({ ...paymentForm, mobileNumber: e.target.value })
+                            }
                             placeholder='+261 34 12 345 67'
                             required
                           />
@@ -707,7 +780,9 @@ export default function WithdrawalsPage() {
                           <Input
                             id='paypalUsername'
                             value={paymentForm.paypalUsername}
-                            onChange={(e) => setPaymentForm({ ...paymentForm, paypalUsername: e.target.value })}
+                            onChange={e =>
+                              setPaymentForm({ ...paymentForm, paypalUsername: e.target.value })
+                            }
                             placeholder='jeandupont'
                             required
                           />
@@ -718,17 +793,23 @@ export default function WithdrawalsPage() {
                             id='paypalEmail'
                             type='email'
                             value={paymentForm.paypalEmail}
-                            onChange={(e) => setPaymentForm({ ...paymentForm, paypalEmail: e.target.value })}
+                            onChange={e =>
+                              setPaymentForm({ ...paymentForm, paypalEmail: e.target.value })
+                            }
                             placeholder='jean@example.com'
                             required
                           />
                         </div>
                         <div>
-                          <Label htmlFor='paypalPhone'>Numéro de téléphone (format avec code Pays) *</Label>
+                          <Label htmlFor='paypalPhone'>
+                            Numéro de téléphone (format avec code Pays) *
+                          </Label>
                           <Input
                             id='paypalPhone'
                             value={paymentForm.paypalPhone}
-                            onChange={(e) => setPaymentForm({ ...paymentForm, paypalPhone: e.target.value })}
+                            onChange={e =>
+                              setPaymentForm({ ...paymentForm, paypalPhone: e.target.value })
+                            }
                             placeholder='+33 6 12 34 56 78'
                             required
                           />
@@ -738,7 +819,9 @@ export default function WithdrawalsPage() {
                           <Input
                             id='paypalIban'
                             value={paymentForm.paypalIban}
-                            onChange={(e) => setPaymentForm({ ...paymentForm, paypalIban: e.target.value })}
+                            onChange={e =>
+                              setPaymentForm({ ...paymentForm, paypalIban: e.target.value })
+                            }
                             placeholder='FR76 1234 5678 9012 3456 7890 123'
                             required
                           />
@@ -759,17 +842,23 @@ export default function WithdrawalsPage() {
                           <Input
                             id='moneygramFullName'
                             value={paymentForm.moneygramFullName}
-                            onChange={(e) => setPaymentForm({ ...paymentForm, moneygramFullName: e.target.value })}
+                            onChange={e =>
+                              setPaymentForm({ ...paymentForm, moneygramFullName: e.target.value })
+                            }
                             placeholder='Jean Dupont'
                             required
                           />
                         </div>
                         <div>
-                          <Label htmlFor='moneygramPhone'>Numéro de téléphone (Format: +261 XX XX XXX XX) *</Label>
+                          <Label htmlFor='moneygramPhone'>
+                            Numéro de téléphone (Format: +261 XX XX XXX XX) *
+                          </Label>
                           <Input
                             id='moneygramPhone'
                             value={paymentForm.moneygramPhone}
-                            onChange={(e) => setPaymentForm({ ...paymentForm, moneygramPhone: e.target.value })}
+                            onChange={e =>
+                              setPaymentForm({ ...paymentForm, moneygramPhone: e.target.value })
+                            }
                             placeholder='+261 34 12 345 67'
                             required
                           />
@@ -783,7 +872,7 @@ export default function WithdrawalsPage() {
                         type='checkbox'
                         id='savePaymentMethod'
                         checked={savePaymentMethod}
-                        onChange={(e) => setSavePaymentMethod(e.target.checked)}
+                        onChange={e => setSavePaymentMethod(e.target.checked)}
                         className='h-4 w-4 text-blue-600 rounded border-gray-300'
                       />
                       <Label htmlFor='savePaymentMethod' className='text-sm cursor-pointer'>
@@ -796,9 +885,19 @@ export default function WithdrawalsPage() {
                   <div className='bg-blue-50 border border-blue-200 rounded-lg p-4'>
                     <h4 className='font-semibold text-blue-900 mb-2'>Résumé de votre demande</h4>
                     <div className='space-y-1 text-sm text-blue-800'>
-                      <p>• Montant: <span className='font-bold'>{selectedAmount.toFixed(2)}€</span></p>
-                      <p>• Type: <span className='font-bold'>{withdrawalType === 'PARTIAL_50' ? '50% immédiat' : '100% (J+3)'}</span></p>
-                      <p>• Moyen: <span className='font-bold'>{getPaymentMethodLabel(paymentMethod)}</span></p>
+                      <p>
+                        • Montant: <span className='font-bold'>{selectedAmount.toFixed(2)}€</span>
+                      </p>
+                      <p>
+                        • Type:{' '}
+                        <span className='font-bold'>
+                          {withdrawalType === 'PARTIAL_50' ? '50% immédiat' : '100% (J+3)'}
+                        </span>
+                      </p>
+                      <p>
+                        • Moyen:{' '}
+                        <span className='font-bold'>{getPaymentMethodLabel(paymentMethod)}</span>
+                      </p>
                     </div>
                   </div>
 

@@ -100,7 +100,11 @@ function RatingInput({
 
 export default function CreateAdminReviewPage() {
   const router = useRouter()
-  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const [products, setProducts] = useState<Array<{ id: string; name: string }>>([])
   const [loading, setLoading] = useState(true)
 
@@ -126,7 +130,10 @@ export default function CreateAdminReviewPage() {
 
   useEffect(() => {
     // Vérifier les permissions
-    if (isAuthenticated && (!session?.user?.roles || !['ADMIN', 'HOST_MANAGER'].includes(session.user.roles))) {
+    if (
+      isAuthenticated &&
+      (!session?.user?.roles || !['ADMIN', 'HOST_MANAGER'].includes(session.user.roles))
+    ) {
       router.push('/admin')
       return
     }

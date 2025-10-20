@@ -9,16 +9,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/shadcn
 import { Badge } from '@/components/ui/shadcnui/badge'
 import { findProductById } from '@/lib/services/product.service'
 import { findAllRentByProductId } from '@/lib/services/rents.service'
-import { findSpecialsPricesByProduct, createSpecialPrices, updateSpecialPrices, toggleSpecialPriceStatus, deleteSpecialsPricesByProduct } from '@/lib/services/specialPrices.service'
+import {
+  findSpecialsPricesByProduct,
+  createSpecialPrices,
+  updateSpecialPrices,
+  toggleSpecialPriceStatus,
+  deleteSpecialsPricesByProduct,
+} from '@/lib/services/specialPrices.service'
 import { DayEnum } from '@prisma/client'
 import CreateSpecialPriceModal from '@/components/ui/CreateSpecialPriceModal'
-import { 
-  ArrowLeft, 
-  Home, 
-  Star, 
-  Calendar, 
-  Users, 
-  Euro, 
+import {
+  ArrowLeft,
+  Home,
+  Star,
+  Calendar,
+  Users,
+  Euro,
   TrendingUp,
   MessageCircle,
   Settings,
@@ -30,7 +36,7 @@ import {
   Eye,
   Tag,
   Power,
-  PowerOff
+  PowerOff,
 } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
@@ -88,7 +94,11 @@ interface Rent {
 }
 
 export default function PropertyDashboard() {
-  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const params = useParams()
   const productId = params.id as string
 
@@ -103,13 +113,13 @@ export default function PropertyDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       if (!session?.user?.id) return
-      
+
       try {
         setLoading(true)
         const [productData, reservationsData, specialPricesData] = await Promise.all([
           findProductById(productId),
           findAllRentByProductId(productId),
-          findSpecialsPricesByProduct(productId)
+          findSpecialsPricesByProduct(productId),
         ])
 
         if (productData) {
@@ -137,7 +147,7 @@ export default function PropertyDashboard() {
   const handleSpecialPriceCreated = async (specialPriceData: SpecialPriceData) => {
     try {
       let result
-      
+
       if (editingSpecialPrice) {
         // Mode modification
         result = await updateSpecialPrices(
@@ -171,10 +181,10 @@ export default function PropertyDashboard() {
         setSpecialPriceModalOpen(false)
         setEditingSpecialPrice(null)
       } else {
-        console.error('Erreur lors de l\'opération sur le prix spécial')
+        console.error("Erreur lors de l'opération sur le prix spécial")
       }
     } catch (error) {
-      console.error('Erreur lors de l\'opération sur le prix spécial:', error)
+      console.error("Erreur lors de l'opération sur le prix spécial:", error)
     }
   }
 
@@ -241,7 +251,7 @@ export default function PropertyDashboard() {
     return null
   }
 
-  if ((isAuthLoading || loading)) {
+  if (isAuthLoading || loading) {
     return (
       <div className='min-h-screen bg-gray-50 pt-20'>
         <div className='max-w-6xl mx-auto px-6 py-8'>
@@ -276,9 +286,10 @@ export default function PropertyDashboard() {
   const totalRevenue = reservations
     .filter(r => r.confirmed)
     .reduce((sum, r) => sum + Number(r.prices), 0)
-  const averageRating = product.reviews?.length > 0 
-    ? product.reviews.reduce((sum, r) => sum + r.grade, 0) / product.reviews.length 
-    : 0
+  const averageRating =
+    product.reviews?.length > 0
+      ? product.reviews.reduce((sum, r) => sum + r.grade, 0) / product.reviews.length
+      : 0
   const totalReviews = product.reviews?.length || 0
 
   // Réservations récentes
@@ -287,29 +298,42 @@ export default function PropertyDashboard() {
     .slice(0, 5)
 
   // Avis récents
-  const recentReviews = product.reviews
-    ?.sort((a, b) => new Date(b.publishDate).getTime() - new Date(a.publishDate).getTime())
-    .slice(0, 3) || []
+  const recentReviews =
+    product.reviews
+      ?.sort((a, b) => new Date(b.publishDate).getTime() - new Date(a.publishDate).getTime())
+      .slice(0, 3) || []
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'WAITING': return 'bg-yellow-100 text-yellow-800'
-      case 'RESERVED': return 'bg-blue-100 text-blue-800'
-      case 'CHECKIN': return 'bg-green-100 text-green-800'
-      case 'CHECKOUT': return 'bg-gray-100 text-gray-800'
-      case 'CANCEL': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'WAITING':
+        return 'bg-yellow-100 text-yellow-800'
+      case 'RESERVED':
+        return 'bg-blue-100 text-blue-800'
+      case 'CHECKIN':
+        return 'bg-green-100 text-green-800'
+      case 'CHECKOUT':
+        return 'bg-gray-100 text-gray-800'
+      case 'CANCEL':
+        return 'bg-red-100 text-red-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
     }
   }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'WAITING': return <Clock className='h-4 w-4' />
-      case 'RESERVED': return <CheckCircle className='h-4 w-4' />
-      case 'CHECKIN': return <Users className='h-4 w-4' />
-      case 'CHECKOUT': return <CheckCircle className='h-4 w-4' />
-      case 'CANCEL': return <XCircle className='h-4 w-4' />
-      default: return <AlertCircle className='h-4 w-4' />
+      case 'WAITING':
+        return <Clock className='h-4 w-4' />
+      case 'RESERVED':
+        return <CheckCircle className='h-4 w-4' />
+      case 'CHECKIN':
+        return <Users className='h-4 w-4' />
+      case 'CHECKOUT':
+        return <CheckCircle className='h-4 w-4' />
+      case 'CANCEL':
+        return <XCircle className='h-4 w-4' />
+      default:
+        return <AlertCircle className='h-4 w-4' />
     }
   }
 
@@ -326,7 +350,7 @@ export default function PropertyDashboard() {
               </Link>
             </Button>
           </div>
-          
+
           <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-4'>
             <div className='flex items-center gap-4'>
               <div className='w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center'>
@@ -337,7 +361,7 @@ export default function PropertyDashboard() {
                 <p className='text-gray-600'>{product.address}</p>
               </div>
             </div>
-            
+
             <div className='flex items-center gap-2'>
               <Button asChild size='sm'>
                 <Link href={`/host/${product.id}`} className='flex items-center gap-2'>
@@ -346,7 +370,10 @@ export default function PropertyDashboard() {
                 </Link>
               </Button>
               <Button variant='outline' asChild size='sm'>
-                <Link href={`/dashboard/host/edit/${product.id}`} className='flex items-center gap-2'>
+                <Link
+                  href={`/dashboard/host/edit/${product.id}`}
+                  className='flex items-center gap-2'
+                >
                   <Settings className='h-4 w-4' />
                   Modifier
                 </Link>
@@ -440,9 +467,7 @@ export default function PropertyDashboard() {
                 <div className='flex items-center justify-between'>
                   <CardTitle>Réservations récentes</CardTitle>
                   <Button asChild size='sm'>
-                    <Link href='/dashboard/host/reservations'>
-                      Voir toutes les réservations
-                    </Link>
+                    <Link href='/dashboard/host/reservations'>Voir toutes les réservations</Link>
                   </Button>
                 </div>
               </CardHeader>
@@ -455,7 +480,10 @@ export default function PropertyDashboard() {
                 ) : (
                   <div className='space-y-4'>
                     {recentReservations.map(reservation => (
-                      <div key={reservation.id} className='flex items-center justify-between p-4 border rounded-lg'>
+                      <div
+                        key={reservation.id}
+                        className='flex items-center justify-between p-4 border rounded-lg'
+                      >
                         <div className='flex items-center gap-4'>
                           <div className='w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center'>
                             <Users className='h-5 w-5 text-blue-600' />
@@ -465,8 +493,11 @@ export default function PropertyDashboard() {
                               {reservation.user.name || reservation.user.email}
                             </p>
                             <p className='text-sm text-gray-500'>
-                              {format(new Date(reservation.arrivingDate), 'dd MMM', { locale: fr })} - {' '}
-                              {format(new Date(reservation.leavingDate), 'dd MMM yyyy', { locale: fr })}
+                              {format(new Date(reservation.arrivingDate), 'dd MMM', { locale: fr })}{' '}
+                              -{' '}
+                              {format(new Date(reservation.leavingDate), 'dd MMM yyyy', {
+                                locale: fr,
+                              })}
                             </p>
                           </div>
                         </div>
@@ -506,25 +537,30 @@ export default function PropertyDashboard() {
                 ) : (
                   <div className='space-y-6'>
                     {recentReviews.map(review => (
-                      <div key={review.id} className='border-b border-gray-200 pb-6 last:border-b-0'>
+                      <div
+                        key={review.id}
+                        className='border-b border-gray-200 pb-6 last:border-b-0'
+                      >
                         <div className='flex items-start justify-between mb-3'>
                           <div>
                             <h4 className='font-semibold text-gray-900'>{review.title}</h4>
                             <div className='flex items-center gap-2 mt-1'>
                               <div className='flex items-center gap-1'>
                                 {[...Array(5)].map((_, i) => (
-                                  <Star 
+                                  <Star
                                     key={i}
                                     className={`h-4 w-4 ${
-                                      i < review.grade 
-                                        ? 'fill-yellow-400 text-yellow-400' 
+                                      i < review.grade
+                                        ? 'fill-yellow-400 text-yellow-400'
                                         : 'fill-gray-200 text-gray-200'
                                     }`}
                                   />
                                 ))}
                               </div>
                               <span className='text-sm text-gray-500'>
-                                {format(new Date(review.publishDate), 'dd MMM yyyy', { locale: fr })}
+                                {format(new Date(review.publishDate), 'dd MMM yyyy', {
+                                  locale: fr,
+                                })}
                               </span>
                             </div>
                           </div>
@@ -532,12 +568,10 @@ export default function PropertyDashboard() {
                         <p className='text-gray-700 leading-relaxed'>{review.text}</p>
                       </div>
                     ))}
-                    
+
                     <div className='pt-4 border-t'>
                       <Button asChild variant='outline' className='w-full'>
-                        <Link href={`/host/${product.id}#reviews`}>
-                          Voir tous les avis
-                        </Link>
+                        <Link href={`/host/${product.id}#reviews`}>Voir tous les avis</Link>
                       </Button>
                     </div>
                   </div>
@@ -580,16 +614,20 @@ export default function PropertyDashboard() {
                               <p className='font-medium text-gray-900'>
                                 {price.pricesEuro}€ / nuit
                               </p>
-                              <p className='text-sm text-gray-500'>
-                                Prix MGA: {price.pricesMga}
-                              </p>
+                              <p className='text-sm text-gray-500'>Prix MGA: {price.pricesMga}</p>
                             </div>
                           </div>
-                          <Badge className={price.activate ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                          <Badge
+                            className={
+                              price.activate
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }
+                          >
                             {price.activate ? 'Actif' : 'Inactif'}
                           </Badge>
                         </div>
-                        
+
                         <div className='grid grid-cols-1 md:grid-cols-3 gap-4 text-sm'>
                           <div>
                             <p className='text-gray-600 mb-1'>Jours applicables</p>
@@ -601,13 +639,13 @@ export default function PropertyDashboard() {
                               ))}
                             </div>
                           </div>
-                          
+
                           <div>
                             <p className='text-gray-600 mb-1'>Période</p>
                             <p className='text-gray-900'>
                               {price.startDate && price.endDate ? (
                                 <>
-                                  {format(new Date(price.startDate), 'dd MMM', { locale: fr })} - {' '}
+                                  {format(new Date(price.startDate), 'dd MMM', { locale: fr })} -{' '}
                                   {format(new Date(price.endDate), 'dd MMM yyyy', { locale: fr })}
                                 </>
                               ) : price.startDate ? (
@@ -615,24 +653,30 @@ export default function PropertyDashboard() {
                               ) : price.endDate ? (
                                 `Jusqu'au ${format(new Date(price.endDate), 'dd MMM yyyy', { locale: fr })}`
                               ) : (
-                                'Toute l\'année'
+                                "Toute l'année"
                               )}
                             </p>
                           </div>
-                          
+
                           <div className='flex items-end justify-end gap-2'>
-                            <Button 
-                              size='sm' 
+                            <Button
+                              size='sm'
                               variant='outline'
                               onClick={() => handleEditSpecialPrice(price)}
                             >
                               Modifier
                             </Button>
-                            <Button 
-                              size='sm' 
+                            <Button
+                              size='sm'
                               variant='outline'
-                              className={price.activate ? 'text-orange-600 hover:text-orange-700' : 'text-green-600 hover:text-green-700'}
-                              onClick={() => handleToggleSpecialPriceStatus(price.id, price.activate)}
+                              className={
+                                price.activate
+                                  ? 'text-orange-600 hover:text-orange-700'
+                                  : 'text-green-600 hover:text-green-700'
+                              }
+                              onClick={() =>
+                                handleToggleSpecialPriceStatus(price.id, price.activate)
+                              }
                             >
                               {price.activate ? (
                                 <>
@@ -646,9 +690,9 @@ export default function PropertyDashboard() {
                                 </>
                               )}
                             </Button>
-                            <Button 
-                              size='sm' 
-                              variant='outline' 
+                            <Button
+                              size='sm'
+                              variant='outline'
                               className='text-red-600 hover:text-red-700'
                               onClick={() => handleDeleteSpecialPrice(price.id)}
                             >
@@ -697,20 +741,17 @@ export default function PropertyDashboard() {
                     <div className='flex items-center gap-3 p-3 bg-yellow-50 rounded-lg'>
                       <AlertCircle className='h-5 w-5 text-yellow-600' />
                       <span className='text-sm'>
-                        {pendingReservations} réservation{pendingReservations > 1 ? 's' : ''} en attente
+                        {pendingReservations} réservation{pendingReservations > 1 ? 's' : ''} en
+                        attente
                       </span>
                     </div>
                     <div className='flex items-center gap-3 p-3 bg-blue-50 rounded-lg'>
                       <MessageCircle className='h-5 w-5 text-blue-600' />
-                      <span className='text-sm'>
-                        Répondre aux messages clients
-                      </span>
+                      <span className='text-sm'>Répondre aux messages clients</span>
                     </div>
                     <div className='flex items-center gap-3 p-3 bg-green-50 rounded-lg'>
                       <TrendingUp className='h-5 w-5 text-green-600' />
-                      <span className='text-sm'>
-                        Optimiser les prix pour la haute saison
-                      </span>
+                      <span className='text-sm'>Optimiser les prix pour la haute saison</span>
                     </div>
                   </div>
                 </CardContent>

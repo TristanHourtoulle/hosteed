@@ -14,18 +14,18 @@ export default function PromotionBadge({
   discountPercentage,
   size = 'md',
   className = '',
-  animated = true
+  animated = true,
 }: PromotionBadgeProps) {
   const sizeClasses = {
     sm: 'px-2 py-0.5 text-xs',
     md: 'px-2.5 py-1 text-sm sm:px-3 sm:py-1.5 sm:text-base',
-    lg: 'px-3 py-1.5 text-base sm:px-4 sm:py-2 sm:text-lg'
+    lg: 'px-3 py-1.5 text-base sm:px-4 sm:py-2 sm:text-lg',
   }
 
   const iconSizes = {
     sm: 'w-2.5 h-2.5',
     md: 'w-3 h-3 sm:w-4 sm:h-4',
-    lg: 'w-4 h-4 sm:w-5 sm:h-5'
+    lg: 'w-4 h-4 sm:w-5 sm:h-5',
   }
 
   const Badge = (

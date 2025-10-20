@@ -47,7 +47,7 @@ export function calculateExtrasCost(
         multiplier = 1
     }
 
-    return total + (basePrice * multiplier)
+    return total + basePrice * multiplier
   }, 0)
 }
 
@@ -59,7 +59,7 @@ export function getExtraCostPreview(
 ): { cost: number; description: string } {
   const basePrice = currency === 'EUR' ? extra.priceEUR : extra.priceMGA
   const currencySymbol = currency === 'EUR' ? '€' : 'Ar'
-  
+
   let cost = basePrice
   let description = `${basePrice}${currencySymbol}`
 
@@ -103,6 +103,6 @@ export function calculateTotalBookingCost(
   return {
     baseTotal,
     extrasTotal,
-    grandTotal
+    grandTotal,
   }
 }

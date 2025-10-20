@@ -29,32 +29,20 @@ export async function POST(request: NextRequest) {
 
     // Validation
     if (!images || !Array.isArray(images) || images.length === 0) {
-      return NextResponse.json(
-        { error: 'No images provided' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'No images provided' }, { status: 400 })
     }
 
     if (!entityType || !['products', 'users', 'posts'].includes(entityType)) {
-      return NextResponse.json(
-        { error: 'Invalid entity type' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Invalid entity type' }, { status: 400 })
     }
 
     if (!entityId || typeof entityId !== 'string') {
-      return NextResponse.json(
-        { error: 'Invalid entity ID' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Invalid entity ID' }, { status: 400 })
     }
 
     // Limiter à 20 images max pour éviter les abus
     if (images.length > 20) {
-      return NextResponse.json(
-        { error: 'Too many images (max 20)' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Too many images (max 20)' }, { status: 400 })
     }
 
     console.log(`📤 Uploading ${images.length} images for ${entityType}/${entityId}`)
@@ -72,7 +60,10 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('❌ Error uploading images:', error)
     return NextResponse.json(
-      { error: 'Failed to upload images', details: error instanceof Error ? error.message : 'Unknown error' },
+      {
+        error: 'Failed to upload images',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
       { status: 500 }
     )
   }

@@ -15,7 +15,7 @@ export async function findAllUserPaginated({
   page = 1,
   limit = 20,
   includeRelations = false,
-  role
+  role,
 }: {
   page?: number
   limit?: number
@@ -32,9 +32,9 @@ export async function findAllUserPaginated({
       _count: {
         select: {
           Rent: true,
-          Product: true
-        }
-      }
+          Product: true,
+        },
+      },
     }
 
     // Full includes only when needed
@@ -44,15 +44,15 @@ export async function findAllUserPaginated({
           id: true,
           status: true,
           arrivingDate: true,
-          leavingDate: true
-        }
+          leavingDate: true,
+        },
       },
       Product: {
         select: {
           id: true,
           name: true,
-          validate: true
-        }
+          validate: true,
+        },
       },
     }
 
@@ -66,11 +66,11 @@ export async function findAllUserPaginated({
         },
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'desc' },
       }),
       prisma.user.count({
-        where: whereClause
-      })
+        where: whereClause,
+      }),
     ])
 
     return {
@@ -81,8 +81,8 @@ export async function findAllUserPaginated({
         total: totalCount,
         totalPages: Math.ceil(totalCount / limit),
         hasNext: page < Math.ceil(totalCount / limit),
-        hasPrev: page > 1
-      }
+        hasPrev: page > 1,
+      },
     }
   } catch (e) {
     console.error('Error in findAllUserPaginated:', e)
@@ -93,7 +93,7 @@ export async function findAllUserPaginated({
 export async function findUserById(id: string) {
   try {
     console.log('findUserById', id)
-    
+
     if (!id || typeof id !== 'string') {
       throw new Error('ID utilisateur invalide')
     }
@@ -129,12 +129,12 @@ export async function findUserById(id: string) {
     return user
   } catch (e) {
     console.error('Error in findUserById:', e)
-    
+
     // Re-throw the error with more context for the client to handle
     if (e instanceof Error) {
       throw new Error(`Erreur lors de la récupération des données utilisateur: ${e.message}`)
     }
-    
+
     throw new Error('Erreur de base de données')
   }
 }
@@ -264,9 +264,15 @@ export async function sendEmailVerification(userId: string) {
         emailToken: token,
       },
     })
-    await sendTemplatedMail(user.email, 'Verifier votre email !', 'checkEmail.html', {
-      verificationUrl: process.env.NEXTAUTH_URL + '/checkEmail/' + token,
-    }, true)
+    await sendTemplatedMail(
+      user.email,
+      'Verifier votre email !',
+      'checkEmail.html',
+      {
+        verificationUrl: process.env.NEXTAUTH_URL + '/checkEmail/' + token,
+      },
+      true
+    )
   } catch (e) {
     console.error('=== ERROR IN EMAIL VERIFICATION ===')
     console.error('Error:', e)

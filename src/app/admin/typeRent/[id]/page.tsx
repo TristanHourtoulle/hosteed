@@ -35,10 +35,7 @@ import {
   CheckCircle,
   Hotel,
 } from 'lucide-react'
-import { 
-  findTypeById, 
-  updateTypeRent,
-} from '@/lib/services/typeRent.service'
+import { findTypeById, updateTypeRent } from '@/lib/services/typeRent.service'
 import { TypeRentInterface } from '@/lib/interface/typeRentInterface'
 import DeleteTypeModal from '../components/DeleteTypeModal'
 
@@ -65,14 +62,14 @@ export default function TypeRentDetailPage({ params }: { params: Promise<{ id: s
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  
+
   // États pour l'édition
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [editTypeName, setEditTypeName] = useState('')
   const [editTypeDescription, setEditTypeDescription] = useState('')
   const [editIsHotelType, setEditIsHotelType] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  
+
   // États pour la suppression
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
 
@@ -123,7 +120,12 @@ export default function TypeRentDetailPage({ params }: { params: Promise<{ id: s
 
     setIsSubmitting(true)
     try {
-      const updatedType = await updateTypeRent(typeRent.id, editTypeName, editTypeDescription, editIsHotelType)
+      const updatedType = await updateTypeRent(
+        typeRent.id,
+        editTypeName,
+        editTypeDescription,
+        editIsHotelType
+      )
 
       if (updatedType) {
         setTypeRent(updatedType)
@@ -218,7 +220,7 @@ export default function TypeRentDetailPage({ params }: { params: Promise<{ id: s
         transition={{ duration: 0.5 }}
       >
         {/* Header with breadcrumb */}
-        <motion.div 
+        <motion.div
           className='flex items-center gap-4'
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -232,7 +234,7 @@ export default function TypeRentDetailPage({ params }: { params: Promise<{ id: s
         </motion.div>
 
         {/* Type Info Header */}
-        <motion.div 
+        <motion.div
           className='bg-white/70 backdrop-blur-sm rounded-2xl p-8 border-0 shadow-lg'
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -251,7 +253,10 @@ export default function TypeRentDetailPage({ params }: { params: Promise<{ id: s
               </div>
               <div className='flex items-center gap-4 flex-wrap'>
                 {typeRent.isHotelType && (
-                  <Badge variant='secondary' className='bg-purple-50 text-purple-700 border-purple-200 px-3 py-1'>
+                  <Badge
+                    variant='secondary'
+                    className='bg-purple-50 text-purple-700 border-purple-200 px-3 py-1'
+                  >
                     <Hotel className='h-3 w-3 mr-1' />
                     Type Hôtel
                   </Badge>
@@ -261,7 +266,8 @@ export default function TypeRentDetailPage({ params }: { params: Promise<{ id: s
                   {products.length} logement{products.length > 1 ? 's' : ''}
                 </Badge>
                 <Badge variant='secondary' className='bg-green-50 text-green-700 px-3 py-1'>
-                  {products.filter(p => p.validate === 'Verified').length} validé{products.filter(p => p.validate === 'Verified').length > 1 ? 's' : ''}
+                  {products.filter(p => p.validate === 'Verified').length} validé
+                  {products.filter(p => p.validate === 'Verified').length > 1 ? 's' : ''}
                 </Badge>
                 <Badge variant='secondary' className='bg-yellow-50 text-yellow-700 px-3 py-1'>
                   {products.filter(p => p.validate === 'NotVerified').length} en attente
@@ -273,8 +279,8 @@ export default function TypeRentDetailPage({ params }: { params: Promise<{ id: s
                 <Edit className='h-4 w-4 mr-2' />
                 Modifier
               </Button>
-              <Button 
-                variant='outline' 
+              <Button
+                variant='outline'
                 className='hover:bg-red-50 hover:text-red-600 hover:border-red-200'
                 onClick={() => setIsDeleteModalOpen(true)}
               >
@@ -286,7 +292,7 @@ export default function TypeRentDetailPage({ params }: { params: Promise<{ id: s
         </motion.div>
 
         {/* Search bar */}
-        <motion.div 
+        <motion.div
           className='bg-white/70 backdrop-blur-sm rounded-2xl p-6 border-0 shadow-lg'
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -304,11 +310,7 @@ export default function TypeRentDetailPage({ params }: { params: Promise<{ id: s
         </motion.div>
 
         {/* Products Grid */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-        >
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
           {filteredProducts.length === 0 ? (
             <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm'>
               <CardContent className='text-center py-12'>
@@ -345,7 +347,9 @@ export default function TypeRentDetailPage({ params }: { params: Promise<{ id: s
                       <div className='space-y-2 text-sm text-slate-600'>
                         <div className='flex items-center gap-2'>
                           <MapPin className='h-4 w-4 text-slate-400' />
-                          <span className='line-clamp-1'>{product.address || 'Adresse non renseignée'}</span>
+                          <span className='line-clamp-1'>
+                            {product.address || 'Adresse non renseignée'}
+                          </span>
                         </div>
                         <div className='flex items-center gap-4'>
                           <div className='flex items-center gap-1'>
@@ -430,10 +434,10 @@ export default function TypeRentDetailPage({ params }: { params: Promise<{ id: s
                 <Checkbox
                   id='editIsHotelType'
                   checked={editIsHotelType}
-                  onCheckedChange={(checked) => setEditIsHotelType(checked as boolean)}
+                  onCheckedChange={checked => setEditIsHotelType(checked as boolean)}
                 />
-                <Label 
-                  htmlFor='editIsHotelType' 
+                <Label
+                  htmlFor='editIsHotelType'
                   className='text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer'
                 >
                   <div className='flex items-center gap-2'>

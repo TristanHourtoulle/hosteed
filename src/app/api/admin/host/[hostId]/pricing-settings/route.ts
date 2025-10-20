@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import {
-  getHostPricingSettings,
-  updateHostPricingSettings
-} from '@/lib/services/promotion.service'
+import { getHostPricingSettings, updateHostPricingSettings } from '@/lib/services/promotion.service'
 import { PricingPriority } from '@prisma/client'
 
 /**
@@ -30,10 +27,7 @@ export async function GET(
     return NextResponse.json(settings)
   } catch (error) {
     console.error('Erreur lors de la récupération des paramètres:', error)
-    return NextResponse.json(
-      { error: 'Erreur interne du serveur' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Erreur interne du serveur' }, { status: 500 })
   }
 }
 
@@ -60,10 +54,7 @@ export async function PUT(
     const { promotionPriority } = body
 
     if (!promotionPriority) {
-      return NextResponse.json(
-        { error: 'promotionPriority requis' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'promotionPriority requis' }, { status: 400 })
     }
 
     // Valider que la priorité est valide
@@ -71,26 +62,20 @@ export async function PUT(
       'PROMOTION_FIRST',
       'SPECIAL_PRICE_FIRST',
       'MOST_ADVANTAGEOUS',
-      'STACK_DISCOUNTS'
+      'STACK_DISCOUNTS',
     ]
 
     if (!validPriorities.includes(promotionPriority)) {
-      return NextResponse.json(
-        { error: 'Priorité de tarification invalide' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Priorité de tarification invalide' }, { status: 400 })
     }
 
     const updated = await updateHostPricingSettings(hostId, {
-      promotionPriority
+      promotionPriority,
     })
 
     return NextResponse.json(updated)
   } catch (error) {
     console.error('Erreur lors de la mise à jour des paramètres:', error)
-    return NextResponse.json(
-      { error: 'Erreur interne du serveur' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Erreur interne du serveur' }, { status: 500 })
   }
 }

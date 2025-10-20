@@ -109,12 +109,12 @@ export default function ModernSearchBar({
 
   // Gérer la sélection d'une ville depuis les suggestions (optionnel)
   const handleCitySelect = (city: GooglePlacePrediction) => {
-    setLocation(city.description);
+    setLocation(city.description)
   }
 
   // Gérer la saisie libre de localisation
   const handleLocationChange = (value: string) => {
-    setLocation(value);
+    setLocation(value)
   }
 
   return (

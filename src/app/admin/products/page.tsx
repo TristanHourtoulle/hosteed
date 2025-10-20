@@ -14,19 +14,16 @@ import { useAdminProductsPaginated } from '@/hooks/useAdminPaginated'
 import Pagination from '@/components/ui/Pagination'
 
 export default function ProductsPage() {
-  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
 
   // Use optimized pagination hook
-  const {
-    products,
-    pagination,
-    loading,
-    error,
-    searchTerm,
-    handleSearch,
-    goToPage,
-  } = useAdminProductsPaginated()
+  const { products, pagination, loading, error, searchTerm, handleSearch, goToPage } =
+    useAdminProductsPaginated()
 
   // Security check - Only ADMIN and HOST_MANAGER can access products management
   useEffect(() => {
@@ -117,7 +114,7 @@ export default function ProductsPage() {
         {/* Results summary */}
         {products.length > 0 && (
           <div className='mt-4 text-center text-sm text-gray-500'>
-            Affichage de {((pagination.currentPage - 1) * pagination.itemsPerPage) + 1} à{' '}
+            Affichage de {(pagination.currentPage - 1) * pagination.itemsPerPage + 1} à{' '}
             {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} sur{' '}
             {pagination.totalItems} hébergements
           </div>

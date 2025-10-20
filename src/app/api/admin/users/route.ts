@@ -48,14 +48,11 @@ export async function GET(request: NextRequest) {
           createdAt: true,
           emailVerified: true,
         },
-        orderBy: [
-          { createdAt: 'desc' },
-          { email: 'asc' },
-        ],
+        orderBy: [{ createdAt: 'desc' }, { email: 'asc' }],
         skip: offset,
         take: limit,
       }),
-      prisma.user.count({ where: whereClause })
+      prisma.user.count({ where: whereClause }),
     ])
 
     const totalPages = Math.ceil(totalItems / limit)
@@ -80,9 +77,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(response, { headers })
   } catch (error) {
     console.error('Error in admin users API:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

@@ -37,7 +37,11 @@ interface Review {
 
 export default function ReviewsPage() {
   const router = useRouter()
-  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const [searchTerm, setSearchTerm] = useState('')
   const [reviews, setReviews] = useState<Review[]>([])
   const [adminReviews, setAdminReviews] = useState<Review[]>([])
@@ -52,7 +56,11 @@ export default function ReviewsPage() {
         }
 
         // Charger aussi les avis administratifs
-        if (isAuthenticated && session?.user?.roles && ['ADMIN', 'HOST_MANAGER'].includes(session.user.roles)) {
+        if (
+          isAuthenticated &&
+          session?.user?.roles &&
+          ['ADMIN', 'HOST_MANAGER'].includes(session.user.roles)
+        ) {
           const adminResponse = await fetch('/api/admin/reviews')
           if (adminResponse.ok) {
             const adminData = await adminResponse.json()

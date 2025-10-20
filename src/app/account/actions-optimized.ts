@@ -26,10 +26,10 @@ export const getUserDataOptimized = unstable_cache(
           select: {
             Rent: {
               where: {
-                status: 'CHECKOUT'
-              }
-            }
-          }
+                status: 'CHECKOUT',
+              },
+            },
+          },
         },
         Rent: {
           include: {
@@ -40,9 +40,9 @@ export const getUserDataOptimized = unstable_cache(
             },
           },
           orderBy: {
-            arrivingDate: 'desc'
+            arrivingDate: 'desc',
           },
-          take: 10 // Limit to recent 10 rentals for performance
+          take: 10, // Limit to recent 10 rentals for performance
         },
         favorites: {
           include: {
@@ -53,19 +53,19 @@ export const getUserDataOptimized = unstable_cache(
             },
           },
           orderBy: {
-            id: 'desc'
+            id: 'desc',
           },
-          take: 20 // Limit to 20 favorites for performance
+          take: 20, // Limit to 20 favorites for performance
         },
         // Get ratings in the same query
         receivedRatings: {
           where: {
-            approved: true
+            approved: true,
           },
           select: {
-            rating: true
-          }
-        }
+            rating: true,
+          },
+        },
       },
     })
 
@@ -75,29 +75,33 @@ export const getUserDataOptimized = unstable_cache(
 
     // Calculate statistics from the fetched data
     const completedRents = user._count.Rent
-    const averageRating = user.receivedRatings.length > 0
-      ? user.receivedRatings.reduce((sum, r) => sum + r.rating, 0) / user.receivedRatings.length
-      : null
+    const averageRating =
+      user.receivedRatings.length > 0
+        ? user.receivedRatings.reduce((sum, r) => sum + r.rating, 0) / user.receivedRatings.length
+        : null
     const totalRatings = user.receivedRatings.length
 
     // Only update if stats have changed
-    const needsUpdate = 
+    const needsUpdate =
       user.totalTrips !== completedRents ||
       user.averageRating !== averageRating ||
       user.totalRatings !== totalRatings
 
     if (needsUpdate) {
       // Update stats asynchronously without blocking the response
-      prisma.user.update({
-        where: { id: user.id },
-        data: {
-          totalTrips: completedRents,
-          averageRating: averageRating,
-          totalRatings: totalRatings,
-        },
-      }).then(() => {
-        revalidateTag(`user-${user.id}`)
-      }).catch(console.error)
+      prisma.user
+        .update({
+          where: { id: user.id },
+          data: {
+            totalTrips: completedRents,
+            averageRating: averageRating,
+            totalRatings: totalRatings,
+          },
+        })
+        .then(() => {
+          revalidateTag(`user-${user.id}`)
+        })
+        .catch(console.error)
     }
 
     // Remove internal fields from response

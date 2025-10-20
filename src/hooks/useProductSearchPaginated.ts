@@ -153,7 +153,7 @@ export function useProductSearchPaginated() {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(20) // Optimized for performance
-  
+
   // Search state
   const [searchTerm, setSearchTerm] = useState(searchQuery)
   const [location, setLocation] = useState(searchQuery)
@@ -234,43 +234,43 @@ export function useProductSearchPaginated() {
   const services = Array.isArray(servicesQuery.data) ? servicesQuery.data : []
 
   // Create optimized search parameters for backend filtering
-  const searchParams_backend = useMemo(() => ({
-    page: currentPage,
-    limit: itemsPerPage,
-    search: searchTerm,
-    typeRentId: selectedType,
-    location: location,
-    featured,
-    popular,
-    recent,
-    promo,
-    ...filters,
-    // Convert guests to filter format
-    ...(guests > 1 && { minPeople: guests.toString() })
-  }), [
-    currentPage, 
-    itemsPerPage, 
-    searchTerm, 
-    selectedType, 
-    location, 
-    featured, 
-    popular, 
-    recent, 
-    promo, 
-    filters, 
-    guests
-  ])
+  const searchParams_backend = useMemo(
+    () => ({
+      page: currentPage,
+      limit: itemsPerPage,
+      search: searchTerm,
+      typeRentId: selectedType,
+      location: location,
+      featured,
+      popular,
+      recent,
+      promo,
+      ...filters,
+      // Convert guests to filter format
+      ...(guests > 1 && { minPeople: guests.toString() }),
+    }),
+    [
+      currentPage,
+      itemsPerPage,
+      searchTerm,
+      selectedType,
+      location,
+      featured,
+      popular,
+      recent,
+      promo,
+      filters,
+      guests,
+    ]
+  )
 
   // Use React Query for paginated products with optimized backend search
   const {
     data: productResult,
     isLoading: productsLoading,
-    error: productsError
+    error: productsError,
   } = useQuery<ProductSearchResult | null>({
-    queryKey: [
-      'products-search',
-      searchParams_backend
-    ],
+    queryKey: ['products-search', searchParams_backend],
     queryFn: async () => {
       // Build search URL with all parameters
       const searchURL = new URL('/api/products/search', window.location.origin)
@@ -336,7 +336,7 @@ export function useProductSearchPaginated() {
       // Server already handles most filtering, just return the result
       return {
         products: result.products,
-        pagination: result.pagination
+        pagination: result.pagination,
       }
     },
     // ✅ PERFORMANCE FIX: Cache optimisé pour éviter les re-fetch
@@ -378,26 +378,24 @@ export function useProductSearchPaginated() {
     setCurrentPage(1) // Reset to first page on search
   }, [])
 
-  const handleModernSearch = useCallback((data: {
-    location: string
-    checkIn: string
-    checkOut: string
-    guests: number
-  }) => {
-    setLocation(data.location)
-    setSearchTerm(data.location) // Also search by location term
-    if (data.checkIn) {
-      setFilters(prev => ({ ...prev, arrivingDate: data.checkIn }))
-    }
-    if (data.checkOut) {
-      setFilters(prev => ({ ...prev, leavingDate: data.checkOut }))
-    }
-    if (data.guests) {
-      setGuests(data.guests)
-    }
-    setShowSuggestions(false)
-    setCurrentPage(1) // Reset to first page on search
-  }, [])
+  const handleModernSearch = useCallback(
+    (data: { location: string; checkIn: string; checkOut: string; guests: number }) => {
+      setLocation(data.location)
+      setSearchTerm(data.location) // Also search by location term
+      if (data.checkIn) {
+        setFilters(prev => ({ ...prev, arrivingDate: data.checkIn }))
+      }
+      if (data.checkOut) {
+        setFilters(prev => ({ ...prev, leavingDate: data.checkOut }))
+      }
+      if (data.guests) {
+        setGuests(data.guests)
+      }
+      setShowSuggestions(false)
+      setCurrentPage(1) // Reset to first page on search
+    },
+    []
+  )
 
   // Pagination functions
   const goToPage = useCallback((page: number) => {
@@ -461,9 +459,10 @@ export function useProductSearchPaginated() {
   }, [])
 
   const loading = staticQueries.some(q => q.isLoading) || productsLoading
-  const error = staticQueries.some(q => q.isError) || productsError 
-    ? 'Erreur lors du chargement des données' 
-    : null
+  const error =
+    staticQueries.some(q => q.isError) || productsError
+      ? 'Erreur lors du chargement des données'
+      : null
 
   return {
     // Data
@@ -471,7 +470,7 @@ export function useProductSearchPaginated() {
     pagination: productResult?.pagination,
     loading,
     error,
-    
+
     // Search state
     searchTerm,
     location,
@@ -503,7 +502,7 @@ export function useProductSearchPaginated() {
     handleModernSearch,
     handleFilterChange,
     resetFilters,
-    
+
     // Pagination actions
     goToPage,
     goToNextPage,

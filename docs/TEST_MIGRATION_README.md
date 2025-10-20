@@ -13,6 +13,7 @@ pnpm test:images:migrate
 ```
 
 **Ce que ça fait**:
+
 - ✅ Vérifie que vous êtes en LOCAL (pas de risque pour la prod)
 - 🔍 Trouve 1 produit avec des images base64
 - 🖼️ Convertit ses images en WebP (3 tailles: thumb, medium, full)
@@ -61,6 +62,7 @@ ls -lh public/uploads/products/cmdx7825k0001l1046mwhxg8w/
 ```
 
 **Vérifications**:
+
 - ✅ Les images s'ouvrent correctement
 - ✅ La qualité visuelle est bonne
 - ✅ Les tailles sont correctes:
@@ -127,6 +129,7 @@ Le test crée les fichiers WebP mais ne modifie **JAMAIS** la base de données. 
 ```
 
 **Note sur l'économie**:
+
 - Peut être **négative** si l'image full est plus lourde que le base64
 - Ce n'est **pas un problème** car:
   - Le thumbnail (utilisé dans les listes) est -97% plus léger ✅
@@ -140,6 +143,7 @@ Le test crée les fichiers WebP mais ne modifie **JAMAIS** la base de données. 
 ```
 
 **Exemples**:
+
 - Image simple: +50% économie (bien compressible)
 - Image complexe: -20% économie (mais gain en performance grâce au cache)
 
@@ -152,6 +156,7 @@ Le test crée les fichiers WebP mais ne modifie **JAMAIS** la base de données. 
 **Cause**: Tous les produits ont déjà été migrés (ou il n'y a pas de produits).
 
 **Solution**:
+
 ```bash
 # Vérifier dans Prisma Studio
 pnpm prisma studio
@@ -165,6 +170,7 @@ psql $DATABASE_URL -c "SELECT COUNT(*) FROM images WHERE img LIKE 'data:image%';
 **Cause**: Pas les droits d'écriture sur `/public/uploads/`.
 
 **Solution**:
+
 ```bash
 chmod -R 755 public/uploads/
 ```
@@ -174,6 +180,7 @@ chmod -R 755 public/uploads/
 **Cause**: La librairie Sharp n'est pas installée correctement.
 
 **Solution**:
+
 ```bash
 pnpm install --force
 ```
@@ -188,7 +195,7 @@ pnpm install --force
 // ❌ Ce code N'EST PAS exécuté dans le test
 await prisma.images.update({
   where: { id },
-  data: { img: newUrl }
+  data: { img: newUrl },
 })
 ```
 
@@ -229,6 +236,7 @@ open public/uploads/products/cmdx7825k0001l1046mwhxg8w/img_0_thumb_*.webp
 ```
 
 **Checklist**:
+
 - [ ] L'image s'ouvre correctement
 - [ ] Les couleurs sont bonnes (pas de distorsion)
 - [ ] La netteté est acceptable
@@ -238,14 +246,14 @@ open public/uploads/products/cmdx7825k0001l1046mwhxg8w/img_0_thumb_*.webp
 
 ## 📝 Comparaison Avant/Après
 
-| Critère | Avant (Base64) | Après (WebP) | Gain |
-|---------|----------------|--------------|------|
-| Format | JPEG/PNG | WebP | +30% compression |
-| Stockage | PostgreSQL | File system | -95% charge DB |
-| Cache | ❌ Aucun | ✅ 1 an | ♾️ |
-| Taille (list) | 300 KB | 10 KB | **-97%** |
-| Taille (detail) | 300 KB | 250 KB | -17% |
-| Responsive | ❌ Non | ✅ 3 sizes | ✨ |
+| Critère         | Avant (Base64) | Après (WebP) | Gain             |
+| --------------- | -------------- | ------------ | ---------------- |
+| Format          | JPEG/PNG       | WebP         | +30% compression |
+| Stockage        | PostgreSQL     | File system  | -95% charge DB   |
+| Cache           | ❌ Aucun       | ✅ 1 an      | ♾️               |
+| Taille (list)   | 300 KB         | 10 KB        | **-97%**         |
+| Taille (detail) | 300 KB         | 250 KB       | -17%             |
+| Responsive      | ❌ Non         | ✅ 3 sizes   | ✨               |
 
 ---
 
@@ -256,12 +264,14 @@ Une fois les tests validés en local:
 1. **Lire le guide complet**: [docs/MIGRATION_IMAGES_GUIDE.md](./MIGRATION_IMAGES_GUIDE.md)
 
 2. **Créer un backup de production**:
+
    ```bash
    # Sur le VPS
    pg_dump $DATABASE_URL > backup_pre_migration.sql
    ```
 
 3. **Migration progressive** (recommandé):
+
    ```bash
    # Sur le VPS
    pnpm images:migrate --limit 10    # 10 produits d'abord

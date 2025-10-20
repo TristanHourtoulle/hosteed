@@ -7,17 +7,20 @@ Quick setup guide for enabling Redis caching in development.
 ### 1. Install Redis
 
 **macOS (Homebrew):**
+
 ```bash
 brew install redis
 brew services start redis
 ```
 
 **Docker (Recommended):**
+
 ```bash
 docker run -d --name hosteed-redis -p 6379:6379 redis:alpine
 ```
 
 **Ubuntu/Debian:**
+
 ```bash
 sudo apt-get update
 sudo apt-get install redis-server
@@ -56,11 +59,12 @@ curl http://localhost:3000/api/cache/health
 ## 🧪 Testing Cache Performance
 
 ### Check Cache Status
+
 ```bash
 # Health check
 curl http://localhost:3000/api/cache/health | jq
 
-# Detailed metrics  
+# Detailed metrics
 curl http://localhost:3000/api/cache/metrics | jq
 
 # Performance test
@@ -70,6 +74,7 @@ curl -X POST http://localhost:3000/api/cache/performance | jq
 ### Verify Caching is Working
 
 1. **Search Performance Test:**
+
 ```bash
 # First request (cache miss)
 time curl "http://localhost:3000/api/products/search?q=villa"
@@ -79,6 +84,7 @@ time curl "http://localhost:3000/api/products/search?q=villa"
 ```
 
 2. **Static Data Test:**
+
 ```bash
 # Check equipment loading
 time curl "http://localhost:3000/api/equipments"
@@ -88,6 +94,7 @@ time curl "http://localhost:3000/api/equipments"
 ```
 
 3. **Monitor Cache Headers:**
+
 ```bash
 curl -I "http://localhost:3000/api/products/search?q=villa"
 # Look for: X-Cache: HIT or X-Cache: MISS
@@ -146,15 +153,16 @@ watch -n 2 'curl -s http://localhost:3000/api/cache/metrics | jq ".performance.h
 
 ## 📊 Expected Performance Improvements
 
-| Operation | Without Cache | With Cache | Improvement |
-|-----------|---------------|------------|-------------|
-| Product Search | ~800ms | ~80ms | **90%** |
-| Equipment List | ~200ms | ~10ms | **95%** |
-| Availability Check | ~300ms | ~30ms | **90%** |
+| Operation          | Without Cache | With Cache | Improvement |
+| ------------------ | ------------- | ---------- | ----------- |
+| Product Search     | ~800ms        | ~80ms      | **90%**     |
+| Equipment List     | ~200ms        | ~10ms      | **95%**     |
+| Availability Check | ~300ms        | ~30ms      | **90%**     |
 
 ## 🐛 Common Issues
 
 ### Redis Connection Failed
+
 ```bash
 # Check if Redis is running
 brew services list | grep redis
@@ -163,16 +171,18 @@ docker ps | grep redis
 
 # Restart Redis
 brew services restart redis
-# or  
+# or
 docker restart hosteed-redis
 ```
 
 ### Low Cache Hit Rate
+
 - Clear cache and test with fresh data
 - Check TTL values are appropriate
 - Verify cache keys are being generated correctly
 
 ### Memory Issues
+
 ```bash
 # Check Redis memory usage
 redis-cli info memory | grep used_memory_human

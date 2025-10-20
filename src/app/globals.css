@@ -306,7 +306,8 @@
   }
 
   @keyframes skeleton-pulse {
-    0%, 100% {
+    0%,
+    100% {
       opacity: 1;
     }
     50% {
@@ -328,7 +329,7 @@
     .image-fade-in {
       animation: none;
     }
-    
+
     .perf-transition {
       transition: none;
     }

@@ -15,7 +15,9 @@ interface FormData {
 interface ProductBasicInfoFormProps {
   formData: FormData
   typeRent: TypeRentInterface[]
-  onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void
+  onInputChange: (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => void
   itemVariants: Variants
 }
 
@@ -23,7 +25,7 @@ export default function ProductBasicInfoForm({
   formData,
   typeRent,
   onInputChange,
-  itemVariants
+  itemVariants,
 }: ProductBasicInfoFormProps) {
   return (
     <motion.div variants={itemVariants}>

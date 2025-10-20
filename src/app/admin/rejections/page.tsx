@@ -55,7 +55,11 @@ interface RentRejection {
 }
 
 export default function RentRejectionsPage() {
-  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
   const [rejections, setRejections] = useState<RentRejection[]>([])
   const [filteredRejections, setFilteredRejections] = useState<RentRejection[]>([])

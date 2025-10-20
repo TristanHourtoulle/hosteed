@@ -12,18 +12,18 @@ import prisma from '@/lib/prisma'
 // ================================
 
 export interface OptimizedProductFilters {
-  query?: string                    // Search query
-  location?: string                 // Location filter
-  typeId?: string                   // Product type
-  minPrice?: number                 // Price range
+  query?: string // Search query
+  location?: string // Location filter
+  typeId?: string // Product type
+  minPrice?: number // Price range
   maxPrice?: number
-  guests?: number                   // Guest capacity
-  validate?: ProductValidation[]    // Validation status
-  certified?: boolean               // Certification filter
-  latitude?: number                 // Geolocation
+  guests?: number // Guest capacity
+  validate?: ProductValidation[] // Validation status
+  certified?: boolean // Certification filter
+  latitude?: number // Geolocation
   longitude?: number
-  radius?: number                   // Search radius in km
-  page?: number                     // Pagination
+  radius?: number // Search radius in km
+  page?: number // Pagination
   limit?: number
   sortBy?: 'price' | 'rating' | 'distance' | 'created' | 'updated'
   sortOrder?: 'asc' | 'desc'
@@ -64,8 +64,8 @@ export interface OptimizedProduct {
   // Optimized image loading - only essential data
   primaryImage?: {
     id: string
-    url?: string  // Will be CDN URL when migrated
-    img: string   // Current base64 - to be deprecated
+    url?: string // Will be CDN URL when migrated
+    img: string // Current base64 - to be deprecated
   }
   // Aggregated data to avoid N+1 queries
   imageCount: number
@@ -123,63 +123,75 @@ export async function searchProductsOptimized(
     AND: [
       // Validation filter
       { validate: { in: validate } },
-      
+
       // Text search - use database full-text search instead of client filtering
-      query ? {
-        OR: [
-          { name: { contains: query, mode: 'insensitive' as const } },
-          { description: { contains: query, mode: 'insensitive' as const } },
-          { address: { contains: query, mode: 'insensitive' as const } },
-        ]
-      } : {},
-      
-      // Location filter  
-      location ? {
-        address: { contains: location, mode: 'insensitive' as const }
-      } : {},
-      
+      query
+        ? {
+            OR: [
+              { name: { contains: query, mode: 'insensitive' as const } },
+              { description: { contains: query, mode: 'insensitive' as const } },
+              { address: { contains: query, mode: 'insensitive' as const } },
+            ],
+          }
+        : {},
+
+      // Location filter
+      location
+        ? {
+            address: { contains: location, mode: 'insensitive' as const },
+          }
+        : {},
+
       // Type filter
       typeId ? { typeId } : {},
-      
+
       // Price range filter - convert string to number for comparison
-      minPrice ? {
-        basePrice: { gte: minPrice.toString() }
-      } : {},
-      maxPrice ? {
-        basePrice: { lte: maxPrice.toString() }
-      } : {},
-      
+      minPrice
+        ? {
+            basePrice: { gte: minPrice.toString() },
+          }
+        : {},
+      maxPrice
+        ? {
+            basePrice: { lte: maxPrice.toString() },
+          }
+        : {},
+
       // Guest capacity filter
-      guests ? {
-        maxPeople: { gte: BigInt(guests) }
-      } : {},
-      
+      guests
+        ? {
+            maxPeople: { gte: BigInt(guests) },
+          }
+        : {},
+
       // Certification filter
       typeof certified === 'boolean' ? { certified } : {},
-      
+
       // Geolocation filter - use database spatial queries
-      (latitude && longitude) ? {
-        AND: [
-          {
-            latitude: {
-              gte: latitude - (radius / 111), // Rough lat conversion
-              lte: latitude + (radius / 111),
-            }
-          },
-          {
-            longitude: {
-              gte: longitude - (radius / (111 * Math.cos(latitude * Math.PI / 180))),
-              lte: longitude + (radius / (111 * Math.cos(latitude * Math.PI / 180))),
-            }
+      latitude && longitude
+        ? {
+            AND: [
+              {
+                latitude: {
+                  gte: latitude - radius / 111, // Rough lat conversion
+                  lte: latitude + radius / 111,
+                },
+              },
+              {
+                longitude: {
+                  gte: longitude - radius / (111 * Math.cos((latitude * Math.PI) / 180)),
+                  lte: longitude + radius / (111 * Math.cos((latitude * Math.PI) / 180)),
+                },
+              },
+            ],
           }
-        ]
-      } : {},
-    ].filter(condition => Object.keys(condition).length > 0)
+        : {},
+    ].filter(condition => Object.keys(condition).length > 0),
   }
 
   // Build ORDER BY clause
   let orderBy: Prisma.ProductOrderByWithRelationInput = {}
-  
+
   switch (sortBy) {
     case 'price':
       orderBy = { basePrice: sortOrder }
@@ -205,7 +217,7 @@ export async function searchProductsOptimized(
 
   // Pagination
   const skip = (page - 1) * limit
-  
+
   try {
     // Execute optimized queries in parallel
     const [products, totalCount] = await Promise.all([
@@ -226,7 +238,7 @@ export async function searchProductsOptimized(
           validate: true,
           certified: true,
           isDraft: true,
-          
+
           // Optimized image loading - only first image
           img: {
             take: 1,
@@ -234,24 +246,24 @@ export async function searchProductsOptimized(
               id: true,
               img: true,
             },
-            orderBy: { id: 'asc' }
+            orderBy: { id: 'asc' },
           },
-          
+
           // Count remaining images efficiently
           _count: {
             select: {
-              img: true
-            }
+              img: true,
+            },
           },
-          
+
           // Essential related data only
           type: {
             select: {
               id: true,
-              name: true
-            }
+              name: true,
+            },
           },
-          
+
           // Host info with verification status
           user: {
             take: 1, // Assuming single host per product
@@ -259,44 +271,41 @@ export async function searchProductsOptimized(
               id: true,
               name: true,
               lastname: true,
-              isVerifiedTraveler: true
-            }
-          }
+              isVerifiedTraveler: true,
+            },
+          },
         },
         orderBy,
         skip,
         take: limit,
       }),
-      
-      prisma.product.count({ where: whereClause })
+
+      prisma.product.count({ where: whereClause }),
     ])
 
     // Transform results with computed fields
     const optimizedProducts: OptimizedProduct[] = await Promise.all(
-      products.map(async (product) => {
+      products.map(async product => {
         // Calculate distance if coordinates provided
         let distanceKm: number | undefined
         if (latitude && longitude) {
-          distanceKm = calculateDistance(
-            latitude, longitude,
-            product.latitude, product.longitude
-          )
+          distanceKm = calculateDistance(latitude, longitude, product.latitude, product.longitude)
         }
 
         // Get special prices efficiently (cached)
         const hasSpecialPrice = await checkSpecialPriceActive(product.id)
-        
+
         return {
           ...product,
           primaryImage: product.img[0] || undefined,
           imageCount: product._count.img,
           avgRating: 0, // TODO: Calculate from reviews efficiently
-          reviewCount: 0, // TODO: Count reviews efficiently  
+          reviewCount: 0, // TODO: Count reviews efficiently
           host: {
             id: product.user[0]?.id || '',
             name: product.user[0]?.name || null,
             lastname: product.user[0]?.lastname || null,
-            isVerified: product.user[0]?.isVerifiedTraveler || false
+            isVerified: product.user[0]?.isVerifiedTraveler || false,
           },
           distanceKm,
           specialPriceActive: hasSpecialPrice,
@@ -307,7 +316,7 @@ export async function searchProductsOptimized(
 
     // Calculate pagination
     const totalPages = Math.ceil(totalCount / limit)
-    
+
     return {
       products: optimizedProducts,
       pagination: {
@@ -317,9 +326,8 @@ export async function searchProductsOptimized(
         totalPages,
         hasNext: page < totalPages,
         hasPrev: page > 1,
-      }
+      },
     }
-    
   } catch (error) {
     console.error('Optimized product search error:', error)
     throw new Error('Failed to search products')
@@ -340,12 +348,12 @@ export async function getHostProductsOptimized(
   } = {}
 ): Promise<OptimizedProductResponse> {
   const { page = 1, limit = 20, includeImages = false, includeDrafts = true } = options
-  
+
   const whereClause: Prisma.ProductWhereInput = {
     user: {
-      some: { id: hostId }
+      some: { id: hostId },
     },
-    ...(includeDrafts ? {} : { isDraft: false })
+    ...(includeDrafts ? {} : { isDraft: false }),
   }
 
   try {
@@ -367,27 +375,29 @@ export async function getHostProductsOptimized(
           validate: true,
           isDraft: true,
           certified: true,
-          
+
           // Conditional image loading
-          ...(includeImages ? {
-            img: {
-              take: 1,
-              select: { id: true, img: true }
-            }
-          } : {}),
-          
+          ...(includeImages
+            ? {
+                img: {
+                  take: 1,
+                  select: { id: true, img: true },
+                },
+              }
+            : {}),
+
           _count: { select: { img: true } },
-          
+
           type: {
-            select: { id: true, name: true }
-          }
+            select: { id: true, name: true },
+          },
         },
         orderBy: { id: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
       }),
-      
-      prisma.product.count({ where: whereClause })
+
+      prisma.product.count({ where: whereClause }),
     ])
 
     const optimizedProducts: OptimizedProduct[] = products.map(product => ({
@@ -400,9 +410,9 @@ export async function getHostProductsOptimized(
         id: hostId,
         name: null,
         lastname: null,
-        isVerified: false
+        isVerified: false,
       },
-      type: product.type
+      type: product.type,
     }))
 
     return {
@@ -414,9 +424,8 @@ export async function getHostProductsOptimized(
         totalPages: Math.ceil(totalCount / limit),
         hasNext: page < Math.ceil(totalCount / limit),
         hasPrev: page > 1,
-      }
+      },
     }
-    
   } catch (error) {
     console.error('Optimized host products error:', error)
     throw new Error('Failed to get host products')
@@ -432,13 +441,15 @@ export async function getHostProductsOptimized(
  */
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371 // Earth's radius in kilometers
-  const dLat = (lat2 - lat1) * Math.PI / 180
-  const dLon = (lon2 - lon1) * Math.PI / 180
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2)
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLon = ((lon2 - lon1) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
   return R * c
 }
 
@@ -455,11 +466,11 @@ async function checkSpecialPriceActive(productId: string): Promise<boolean> {
           { startDate: null, endDate: null },
           { startDate: { lte: new Date() }, endDate: { gte: new Date() } },
           { startDate: { lte: new Date() }, endDate: null },
-          { startDate: null, endDate: { gte: new Date() } }
-        ]
-      }
+          { startDate: null, endDate: { gte: new Date() } },
+        ],
+      },
     })
-    
+
     return !!specialPrice
   } catch (error) {
     console.error('Special price check error:', error)
@@ -475,7 +486,7 @@ export async function getSearchFilters(
 ): Promise<OptimizedProductResponse['filters']> {
   try {
     const whereClause = buildWhereClause(baseFilters)
-    
+
     const [priceAgg, locationAgg] = await Promise.all([
       // Price range
       prisma.product.aggregate({
@@ -483,7 +494,7 @@ export async function getSearchFilters(
         _min: { basePrice: true },
         _max: { basePrice: true },
       }),
-      
+
       // Popular locations
       prisma.$queryRaw`
         SELECT 
@@ -494,7 +505,7 @@ export async function getSearchFilters(
         GROUP BY city
         ORDER BY count DESC
         LIMIT 10
-      `
+      `,
     ])
 
     return {
@@ -503,22 +514,23 @@ export async function getSearchFilters(
         max: parseInt(priceAgg._max.basePrice || '1000'),
       },
       availableTypes: [], // TODO: Implement product types grouping
-      locationCounts: locationAgg as Array<{ city: string; count: number }>
+      locationCounts: locationAgg as Array<{ city: string; count: number }>,
     }
-    
   } catch (error) {
     console.error('Filter data error:', error)
     return {
       priceRange: { min: 0, max: 1000 },
       availableTypes: [],
-      locationCounts: []
+      locationCounts: [],
     }
   }
 }
 
-function buildWhereClause(filters: Omit<OptimizedProductFilters, 'page' | 'limit'>): Prisma.ProductWhereInput {
+function buildWhereClause(
+  filters: Omit<OptimizedProductFilters, 'page' | 'limit'>
+): Prisma.ProductWhereInput {
   // Implementation similar to searchProductsOptimized
   return {
-    validate: { in: filters.validate || [ProductValidation.Approve] }
+    validate: { in: filters.validate || [ProductValidation.Approve] },
   }
 }

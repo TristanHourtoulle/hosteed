@@ -23,7 +23,11 @@ export async function findAllTypeRent(): Promise<TypeRent[]> {
   }
 }
 
-export async function createTypeRent(name: string, description: string, isHotelType: boolean = false): Promise<TypeRent | null> {
+export async function createTypeRent(
+  name: string,
+  description: string,
+  isHotelType: boolean = false
+): Promise<TypeRent | null> {
   try {
     return await prisma.typeRent.create({
       data: {
@@ -53,11 +57,11 @@ export async function updateTypeRent(
       name,
       description,
     }
-    
+
     if (isHotelType !== undefined) {
       updateData.isHotelType = isHotelType
     }
-    
+
     return await prisma.typeRent.update({
       where: {
         id,
@@ -116,7 +120,7 @@ export async function deleteTypeRentWithProducts(id: string): Promise<boolean> {
         typeId: id,
       },
     })
-    
+
     // Puis supprimer le type de location
     await prisma.typeRent.delete({
       where: {
@@ -125,7 +129,7 @@ export async function deleteTypeRentWithProducts(id: string): Promise<boolean> {
     })
     return true
   } catch (error) {
-    console.error("Erreur lors de la suppression du type de location et ses produits:", error)
+    console.error('Erreur lors de la suppression du type de location et ses produits:', error)
     return false
   }
 }

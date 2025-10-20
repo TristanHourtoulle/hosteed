@@ -14,21 +14,13 @@ import path from 'path'
  * - Analytics sur les images servies
  * - Redimensionnement à la volée si nécessaire
  */
-export async function GET(
-  request: NextRequest,
-  context: { params: Promise<{ path: string[] }> }
-) {
+export async function GET(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   try {
     const params = await context.params
     const imagePath = params.path.join('/')
 
     // Construire le chemin complet
-    const fullPath = path.join(
-      process.cwd(),
-      'public',
-      'uploads',
-      imagePath
-    )
+    const fullPath = path.join(process.cwd(), 'public', 'uploads', imagePath)
 
     // Vérifier que le fichier existe
     try {

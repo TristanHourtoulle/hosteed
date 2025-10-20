@@ -21,17 +21,21 @@ interface FormData {
 
 interface AdminProductLocationFormProps {
   formData: FormData
-  onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void
+  onInputChange: (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => void
   newPlace: {
     name: string
     distance: string
     unit: 'mètres' | 'kilomètres'
   }
-  setNewPlace: React.Dispatch<React.SetStateAction<{
-    name: string
-    distance: string
-    unit: 'mètres' | 'kilomètres'
-  }>>
+  setNewPlace: React.Dispatch<
+    React.SetStateAction<{
+      name: string
+      distance: string
+      unit: 'mètres' | 'kilomètres'
+    }>
+  >
   addNearbyPlace: () => void
   removeNearbyPlace: (index: number) => void
   itemVariants: Variants
@@ -44,7 +48,7 @@ export default function AdminProductLocationForm({
   setNewPlace,
   addNearbyPlace,
   removeNearbyPlace,
-  itemVariants
+  itemVariants,
 }: AdminProductLocationFormProps) {
   return (
     <motion.div variants={itemVariants}>
@@ -70,12 +74,12 @@ export default function AdminProductLocationForm({
             <AddressAutocomplete
               placeholder='Commencez à taper votre adresse...'
               value={formData.address}
-              onChange={(value) => {
+              onChange={value => {
                 const event = {
                   target: {
                     name: 'address',
-                    value: value
-                  }
+                    value: value,
+                  },
                 } as React.ChangeEvent<HTMLInputElement>
                 onInputChange(event)
               }}
@@ -94,12 +98,12 @@ export default function AdminProductLocationForm({
             </label>
             <PhoneInput
               value={formData.phoneNumber}
-              onChange={(value) => {
+              onChange={value => {
                 const event = {
                   target: {
                     name: 'phoneNumber',
-                    value: value || ''
-                  }
+                    value: value || '',
+                  },
                 } as React.ChangeEvent<HTMLInputElement>
                 onInputChange(event)
               }}

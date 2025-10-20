@@ -3,6 +3,7 @@
 ## Problème Actuel
 
 **Base64 dans la base de données**:
+
 - ❌ JSON énorme (1 image = ~500KB en base64)
 - ❌ Ralentit les requêtes Prisma
 - ❌ Consomme énormément de RAM
@@ -65,6 +66,7 @@ img: {
 ```
 
 **Résultat**:
+
 - JSON de 3MB → 300KB (-90%)
 - Parsing 10x plus rapide
 - **Gain: -2 secondes sur le chargement**
@@ -79,11 +81,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import sharp from 'sharp' // Déjà installé
 
-export async function saveProductImage(
-  productId: string,
-  base64Image: string,
-  index: number
-) {
+export async function saveProductImage(productId: string, base64Image: string, index: number) {
   const uploadDir = path.join(process.cwd(), 'public/uploads/products', productId)
   await fs.mkdir(uploadDir, { recursive: true })
 
@@ -129,18 +127,15 @@ En attendant la migration complète vers le file system, on peut faire un **Quic
 
 ```typescript
 // app/api/products/[id]/thumbnail/route.ts
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request, { params }: { params: { id: string } }) {
   const product = await prisma.product.findUnique({
     where: { id: params.id },
     select: {
       img: {
         take: 1,
-        select: { img: true }
-      }
-    }
+        select: { img: true },
+      },
+    },
   })
 
   if (!product?.img?.[0]?.img) {
@@ -170,20 +165,18 @@ Utilisation dans le composant:
 
 ```tsx
 // components/ui/ProductCard.tsx
-<img
-  src={`/api/products/${product.id}/thumbnail`}
-  alt={product.name}
-  loading="lazy"
-/>
+<img src={`/api/products/${product.id}/thumbnail`} alt={product.name} loading='lazy' />
 ```
 
 **Avantages**:
+
 - ✅ Pas de base64 dans la recherche
 - ✅ Cache navigateur
 - ✅ Lazy loading natif
 - ✅ Images optimisées à la volée
 
 **Inconvénient**:
+
 - ⚠️ 1 requête par image (mais mise en cache)
 
 ### Option 2: Endpoint Batch pour Plusieurs Thumbnails
@@ -199,14 +192,14 @@ export async function POST(request: Request) {
       id: true,
       img: {
         take: 1,
-        select: { img: true }
-      }
-    }
+        select: { img: true },
+      },
+    },
   })
 
   // Retourner un mapping id → thumbnail optimisé
   const thumbnails = await Promise.all(
-    products.map(async (p) => {
+    products.map(async p => {
       if (!p.img[0]?.img) return { id: p.id, data: null }
 
       const buffer = Buffer.from(p.img[0].img.split(',')[1], 'base64')
@@ -217,7 +210,7 @@ export async function POST(request: Request) {
 
       return {
         id: p.id,
-        data: `data:image/webp;base64,${optimized.toString('base64')}`
+        data: `data:image/webp;base64,${optimized.toString('base64')}`,
       }
     })
   )
@@ -233,9 +226,11 @@ export async function POST(request: Request) {
 **Pour résoudre ton problème de performance MAINTENANT**:
 
 1. ✅ **Retirer les images de `/api/products/search`** (5 min)
+
    - Ne renvoyer que `{ id, name, basePrice, ... }` sans `img`
 
 2. ✅ **Créer la route `/api/products/[id]/thumbnail`** (15 min)
+
    - Optimisation avec sharp
    - Cache HTTP agressif
 
@@ -243,6 +238,7 @@ export async function POST(request: Request) {
    - `<img loading="lazy" />` natif
 
 **Résultat**:
+
 - **5s → 1s** de temps de chargement (-80%)
 - Scalable pour 1000 produits
 - Pas de coût supplémentaire
@@ -259,6 +255,7 @@ Quand le client sera prêt:
 4. Configurer Nginx pour servir `/uploads` directement (sans passer par Next.js)
 
 **Performance finale**:
+
 - **0.3s** de temps de chargement
 - CDN-ready si besoin futur
 - Images servies directement par Nginx (ultra rapide)

@@ -31,20 +31,20 @@ export async function GET() {
         OR: [
           {
             roles: {
-              in: ['HOST', 'HOST_VERIFIED', 'HOST_MANAGER']
-            }
+              in: ['HOST', 'HOST_VERIFIED', 'HOST_MANAGER'],
+            },
           },
           {
             // Inclure aussi les admins qui ont des produits
             roles: {
-              in: ['ADMIN']
-            }
-          }
+              in: ['ADMIN'],
+            },
+          },
         ],
         // S'assurer qu'ils ont au moins un produit (hébergement)
         Product: {
-          some: {}
-        }
+          some: {},
+        },
       },
       select: {
         id: true,
@@ -54,21 +54,18 @@ export async function GET() {
         createdAt: true,
         _count: {
           select: {
-            Product: true
-          }
-        }
+            Product: true,
+          },
+        },
       },
       orderBy: {
-        name: 'asc'
-      }
+        name: 'asc',
+      },
     })
 
     return NextResponse.json({ hosts })
   } catch (error) {
     console.error('Error getting hosts:', error)
-    return NextResponse.json(
-      { error: 'Erreur lors de la récupération des hôtes' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Erreur lors de la récupération des hôtes' }, { status: 500 })
   }
 }

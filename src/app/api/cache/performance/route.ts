@@ -4,11 +4,11 @@ import { cacheMonitorService } from '@/lib/cache/cache-monitor.service'
 export async function POST() {
   try {
     const startTime = Date.now()
-    
+
     const performanceResults = await cacheMonitorService.performanceTest()
-    
+
     const totalTestTime = Date.now() - startTime
-    
+
     // Performance evaluation
     const getPerformanceGrade = (latency: number): string => {
       if (latency < 1) return 'Excellent'
@@ -26,46 +26,52 @@ export async function POST() {
       return 'Critical'
     }
 
-    return NextResponse.json({
-      testResults: {
-        setLatencyMs: performanceResults.setLatency.toFixed(2),
-        getLatencyMs: performanceResults.getLatency.toFixed(2),
-        delLatencyMs: performanceResults.delLatency.toFixed(2),
-        throughputOpsPerSec: Math.round(performanceResults.throughputOpsPerSec),
-        totalTestTimeMs: totalTestTime
+    return NextResponse.json(
+      {
+        testResults: {
+          setLatencyMs: performanceResults.setLatency.toFixed(2),
+          getLatencyMs: performanceResults.getLatency.toFixed(2),
+          delLatencyMs: performanceResults.delLatency.toFixed(2),
+          throughputOpsPerSec: Math.round(performanceResults.throughputOpsPerSec),
+          totalTestTimeMs: totalTestTime,
+        },
+        performance: {
+          setPerformance: getPerformanceGrade(performanceResults.setLatency),
+          getPerformance: getPerformanceGrade(performanceResults.getLatency),
+          delPerformance: getPerformanceGrade(performanceResults.delLatency),
+          throughputGrade: getThroughputGrade(performanceResults.throughputOpsPerSec),
+        },
+        benchmarks: {
+          excellent: { latency: '< 1ms', throughput: '> 10k ops/sec' },
+          good: { latency: '< 5ms', throughput: '> 5k ops/sec' },
+          fair: { latency: '< 10ms', throughput: '> 1k ops/sec' },
+          poor: { latency: '< 50ms', throughput: '> 100 ops/sec' },
+        },
+        recommendations: getPerformanceRecommendations(performanceResults),
+        timestamp: Date.now(),
+        testConfig: {
+          iterations: 100,
+          testPattern: 'SET -> GET -> DEL',
+          dataSize: 'Small JSON object',
+        },
       },
-      performance: {
-        setPerformance: getPerformanceGrade(performanceResults.setLatency),
-        getPerformance: getPerformanceGrade(performanceResults.getLatency),
-        delPerformance: getPerformanceGrade(performanceResults.delLatency),
-        throughputGrade: getThroughputGrade(performanceResults.throughputOpsPerSec)
-      },
-      benchmarks: {
-        excellent: { latency: '< 1ms', throughput: '> 10k ops/sec' },
-        good: { latency: '< 5ms', throughput: '> 5k ops/sec' },
-        fair: { latency: '< 10ms', throughput: '> 1k ops/sec' },
-        poor: { latency: '< 50ms', throughput: '> 100 ops/sec' }
-      },
-      recommendations: getPerformanceRecommendations(performanceResults),
-      timestamp: Date.now(),
-      testConfig: {
-        iterations: 100,
-        testPattern: 'SET -> GET -> DEL',
-        dataSize: 'Small JSON object'
+      {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'X-Test-Duration': totalTestTime.toString(),
+          'X-Throughput': Math.round(performanceResults.throughputOpsPerSec).toString(),
+        },
       }
-    }, {
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'X-Test-Duration': totalTestTime.toString(),
-        'X-Throughput': Math.round(performanceResults.throughputOpsPerSec).toString()
-      }
-    })
+    )
   } catch (error) {
     console.error('Performance test error:', error)
-    return NextResponse.json({
-      error: 'Performance test failed',
-      message: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: 'Performance test failed',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    )
   }
 }
 

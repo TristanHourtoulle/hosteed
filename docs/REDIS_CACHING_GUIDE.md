@@ -6,12 +6,12 @@ Hosteed implements a comprehensive Redis caching system that delivers **60-95% p
 
 ## 📊 Performance Impact
 
-| Operation | Before Redis | After Redis | Improvement |
-|-----------|--------------|-------------|-------------|
-| Product Search | 800-2000ms | 50-200ms | **80-90%** |
-| Availability Check | 200-500ms | 10-50ms | **90%** |
-| Static Data Loading | 100-300ms | 5-15ms | **95%** |
-| User Sessions | 50-150ms | 5-25ms | **85%** |
+| Operation           | Before Redis | After Redis | Improvement |
+| ------------------- | ------------ | ----------- | ----------- |
+| Product Search      | 800-2000ms   | 50-200ms    | **80-90%**  |
+| Availability Check  | 200-500ms    | 10-50ms     | **90%**     |
+| Static Data Loading | 100-300ms    | 5-15ms      | **95%**     |
+| User Sessions       | 50-150ms     | 5-25ms      | **85%**     |
 
 ## 🏗️ Architecture
 
@@ -113,24 +113,24 @@ curl http://localhost:3000/api/cache/health
 
 ### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `ENABLE_REDIS_CACHE` | `false` | Master switch for Redis caching |
-| `REDIS_URL` | - | Complete Redis connection URL |
-| `REDIS_HOST` | `localhost` | Redis server host |
-| `REDIS_PORT` | `6379` | Redis server port |
-| `REDIS_PASSWORD` | - | Redis authentication password |
-| `REDIS_DB` | `0` | Redis database number |
-| `REDIS_TLS_ENABLED` | `false` | Enable TLS for production |
-| `REDIS_MAX_RETRIES` | `3` | Connection retry attempts |
-| `REDIS_CONNECTION_TIMEOUT` | `10000` | Connection timeout (ms) |
+| Variable                   | Default     | Description                     |
+| -------------------------- | ----------- | ------------------------------- |
+| `ENABLE_REDIS_CACHE`       | `false`     | Master switch for Redis caching |
+| `REDIS_URL`                | -           | Complete Redis connection URL   |
+| `REDIS_HOST`               | `localhost` | Redis server host               |
+| `REDIS_PORT`               | `6379`      | Redis server port               |
+| `REDIS_PASSWORD`           | -           | Redis authentication password   |
+| `REDIS_DB`                 | `0`         | Redis database number           |
+| `REDIS_TLS_ENABLED`        | `false`     | Enable TLS for production       |
+| `REDIS_MAX_RETRIES`        | `3`         | Connection retry attempts       |
+| `REDIS_CONNECTION_TIMEOUT` | `10000`     | Connection timeout (ms)         |
 
 ### Cache TTL Configuration
 
 ```env
 # Product-related caching
 CACHE_TTL_PRODUCT_SEARCH=300      # Product search results
-CACHE_TTL_PRODUCT_DETAILS=1800    # Individual product data  
+CACHE_TTL_PRODUCT_DETAILS=1800    # Individual product data
 CACHE_TTL_PRODUCT_LIST=600        # Host product lists
 
 # Availability and booking
@@ -167,6 +167,7 @@ const cached = await productCacheService.getCachedProductSearch(filters)
 ```
 
 **Features:**
+
 - Intelligent cache key generation based on all search parameters
 - Automatic cache invalidation on product updates
 - 5-minute TTL for fresh results
@@ -179,22 +180,14 @@ const cached = await productCacheService.getCachedProductSearch(filters)
 import { availabilityCacheService } from '@/lib/cache/redis-cache.service'
 
 // Cache availability check
-await availabilityCacheService.cacheAvailability(
-  productId, 
-  startDate, 
-  endDate, 
-  isAvailable
-)
+await availabilityCacheService.cacheAvailability(productId, startDate, endDate, isAvailable)
 
 // Get cached availability
-const cached = await availabilityCacheService.getCachedAvailability(
-  productId, 
-  startDate, 
-  endDate
-)
+const cached = await availabilityCacheService.getCachedAvailability(productId, startDate, endDate)
 ```
 
 **Features:**
+
 - Separate caching for hotel rooms vs single units
 - Automatic invalidation on new bookings
 - 5-minute TTL for booking accuracy
@@ -207,13 +200,13 @@ const cached = await availabilityCacheService.getCachedAvailability(
 import { staticDataCacheService } from '@/lib/cache/redis-cache.service'
 
 // Cache with automatic fallback
-const equipment = await staticDataCacheService.getStaticDataWithCache(
-  'equipments',
-  () => findAllEquipments()
+const equipment = await staticDataCacheService.getStaticDataWithCache('equipments', () =>
+  findAllEquipments()
 )
 ```
 
 **Features:**
+
 - 24-hour TTL for static content
 - Preloading capabilities
 - Automatic database fallback
@@ -226,23 +219,18 @@ const equipment = await staticDataCacheService.getStaticDataWithCache(
 import { rateLimiterService, RATE_LIMITS } from '@/lib/cache/rate-limiter.service'
 
 // Check rate limit
-const result = await rateLimiterService.checkRateLimit(
-  userId,
-  RATE_LIMITS.SEARCH_API
-)
+const result = await rateLimiterService.checkRateLimit(userId, RATE_LIMITS.SEARCH_API)
 
 if (!result.allowed) {
   // Rate limit exceeded
-  return NextResponse.json(
-    { error: 'Rate limit exceeded' },
-    { status: 429 }
-  )
+  return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
 }
 ```
 
 **Built-in Limits:**
+
 - Search API: 30 requests/minute
-- Booking API: 10 requests/minute  
+- Booking API: 10 requests/minute
 - Login attempts: 5 attempts/15 minutes
 - Global API: 200 requests/minute per IP
 
@@ -255,6 +243,7 @@ GET /api/cache/health
 ```
 
 **Response:**
+
 ```json
 {
   "status": "healthy",
@@ -279,6 +268,7 @@ GET /api/cache/metrics
 ```
 
 **Detailed Performance Metrics:**
+
 - Hit/miss rates
 - Memory usage and fragmentation
 - Operations per second
@@ -292,6 +282,7 @@ GET /api/cache/alerts
 ```
 
 **Alert Management:**
+
 - Current alerts and warnings
 - Alert history (last 24 hours)
 - Configurable thresholds
@@ -304,6 +295,7 @@ POST /api/cache/performance
 ```
 
 **Benchmark Results:**
+
 - SET/GET/DEL operation latency
 - Throughput (operations per second)
 - Performance grades (Excellent/Good/Fair/Poor)
@@ -322,7 +314,7 @@ let product = await cache.get(productId)
 if (!product) {
   // 2. Cache miss - fetch from database
   product = await database.getProduct(productId)
-  
+
   // 3. Store in cache for next time
   await cache.set(productId, product, TTL)
 }
@@ -339,7 +331,7 @@ Used for: User sessions, frequently updated data
 async function updateUser(userId, data) {
   // 1. Update database first
   await database.updateUser(userId, data)
-  
+
   // 2. Update cache
   await cache.set(`user:${userId}`, data, TTL)
 }
@@ -354,7 +346,7 @@ Used for: Analytics, non-critical updates
 async function logUserActivity(userId, activity) {
   // 1. Update cache immediately
   await cache.lpush(`activity:${userId}`, activity)
-  
+
   // 2. Batch write to database (background job)
   scheduleBackgroundSync(userId, activity)
 }
@@ -370,7 +362,7 @@ export async function onProductUpdate(productId: string) {
   await Promise.all([
     cache.delete(`product:${productId}`),
     cache.invalidatePattern('search:*'),
-    cache.invalidatePattern(`host:*:products:*`)
+    cache.invalidatePattern(`host:*:products:*`),
   ])
 }
 
@@ -398,6 +390,7 @@ await cache.invalidatePattern('*')
 ### Redis Server Setup
 
 **Option 1: Managed Redis (Recommended)**
+
 - AWS ElastiCache
 - Google Cloud Memorystore
 - Azure Cache for Redis
@@ -480,6 +473,7 @@ watch -n 1 'curl -s http://localhost:3000/api/cache/metrics | jq .metrics.hitRat
 ### Common Issues
 
 **Redis Connection Failed**
+
 ```bash
 # Check Redis status
 redis-cli ping
@@ -492,6 +486,7 @@ redis-cli -u $REDIS_URL ping
 ```
 
 **Low Cache Hit Rate**
+
 ```bash
 # Check TTL values
 curl http://localhost:3000/api/cache/metrics
@@ -503,6 +498,7 @@ grep "invalidate" logs/*.log
 ```
 
 **High Memory Usage**
+
 ```bash
 # Check memory stats
 redis-cli info memory
@@ -513,6 +509,7 @@ redis-cli config set maxmemory-policy allkeys-lru
 ```
 
 **Performance Issues**
+
 ```bash
 # Run performance test
 curl -X POST http://localhost:3000/api/cache/performance
@@ -541,25 +538,19 @@ tail -f logs/redis-cache.log
 
 ```typescript
 // ✅ Good: Hierarchical, descriptive
-`product:${productId}:details`
-`search:${location}:${type}:page:${page}`
-`user:${userId}:session`
-
-// ❌ Bad: Flat, unclear
-`prod123`
-`search_result`
-`data`
+;`product:${productId}:details``search:${location}:${type}:page:${page}``user:${userId}:session` // ❌ Bad: Flat, unclear
+`prod123``search_result``data`
 ```
 
 ### TTL Selection
 
-| Data Type | TTL | Reason |
-|-----------|-----|--------|
-| Search Results | 5 minutes | Balance freshness vs performance |
-| Product Details | 30 minutes | Moderate update frequency |
-| Static Data | 24 hours | Rarely changes |
-| User Sessions | 1 hour | Security vs convenience |
-| Availability | 5 minutes | Critical for booking accuracy |
+| Data Type       | TTL        | Reason                           |
+| --------------- | ---------- | -------------------------------- |
+| Search Results  | 5 minutes  | Balance freshness vs performance |
+| Product Details | 30 minutes | Moderate update frequency        |
+| Static Data     | 24 hours   | Rarely changes                   |
+| User Sessions   | 1 hour     | Security vs convenience          |
+| Availability    | 5 minutes  | Critical for booking accuracy    |
 
 ### Error Handling
 
@@ -581,15 +572,15 @@ return await database.getData()
 
 ```typescript
 // Use appropriate data structures
-await cache.set(key, data, TTL)           // Simple key-value
-await cache.hset(key, field, value, TTL)  // Hash for objects
-await cache.lpush(key, item)              // List for sequences
+await cache.set(key, data, TTL) // Simple key-value
+await cache.hset(key, field, value, TTL) // Hash for objects
+await cache.lpush(key, item) // List for sequences
 
 // Implement cache warming
 await cache.preloadStaticData({
   equipments: () => findAllEquipments(),
   meals: () => findAllMeals(),
-  services: () => findAllServices()
+  services: () => findAllServices(),
 })
 ```
 
@@ -604,9 +595,9 @@ export async function warmCache() {
     equipments: () => findAllEquipments(),
     meals: () => findAllMeals(),
     services: () => findAllServices(),
-    typeRent: () => findAllTypeRent()
+    typeRent: () => findAllTypeRent(),
   }
-  
+
   await staticDataCacheService.preloadStaticData(staticData)
   console.log('✅ Cache warmed with static data')
 }
@@ -633,20 +624,20 @@ await pipeline.exec()
 export class SmartInvalidation {
   async onProductUpdate(productId: string, changes: string[]) {
     const promises = []
-    
+
     // Always invalidate product details
     promises.push(cache.delete(`product:${productId}`))
-    
+
     // Only invalidate search if searchable fields changed
     if (changes.some(field => ['name', 'description', 'price'].includes(field))) {
       promises.push(cache.invalidatePattern('search:*'))
     }
-    
+
     // Only invalidate availability if relevant fields changed
     if (changes.some(field => ['availableRooms', 'maxPeople'].includes(field))) {
       promises.push(cache.invalidatePattern(`availability:${productId}:*`))
     }
-    
+
     await Promise.all(promises)
   }
 }
@@ -671,7 +662,7 @@ watch -n 5 'curl -s http://localhost:3000/api/cache/health | jq ".summary"'
 # Performance tracking
 curl -s http://localhost:3000/api/cache/metrics | jq '.performance'
 
-# Alert monitoring  
+# Alert monitoring
 curl -s http://localhost:3000/api/cache/alerts | jq '.current'
 ```
 
@@ -691,7 +682,7 @@ curl -s http://localhost:3000/api/cache/alerts | jq '.current'
 export async function enableCacheForEndpoint(endpoint: string) {
   // 1. Enable with short TTL
   await cache.set(`config:${endpoint}:ttl`, 60)
-  
+
   // 2. Monitor hit rate for 24 hours
   // 3. Gradually increase TTL if stable
   // 4. Add to production configuration
@@ -705,7 +696,7 @@ export async function enableCacheForEndpoint(endpoint: string) {
 After implementing this Redis caching system:
 
 - **Product Search**: 80-90% faster response times
-- **Availability Checks**: 90% reduction in database queries  
+- **Availability Checks**: 90% reduction in database queries
 - **Static Data**: 95% performance improvement
 - **Overall API Performance**: 60-70% improvement
 - **Database Load**: 40-60% reduction

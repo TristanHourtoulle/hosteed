@@ -15,7 +15,9 @@ interface FormData {
 interface AdminProductBasicInfoFormProps {
   formData: FormData
   typeRent: TypeRentInterface[]
-  onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void
+  onInputChange: (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => void
   itemVariants: Variants
 }
 
@@ -23,7 +25,7 @@ export default function AdminProductBasicInfoForm({
   formData,
   typeRent,
   onInputChange,
-  itemVariants
+  itemVariants,
 }: AdminProductBasicInfoFormProps) {
   return (
     <motion.div variants={itemVariants}>
@@ -64,7 +66,7 @@ export default function AdminProductBasicInfoForm({
             <textarea
               id='description'
               name='description'
-              placeholder='Décrivez l&apos;hébergement, ses atouts, son environnement...'
+              placeholder="Décrivez l'hébergement, ses atouts, son environnement..."
               value={formData.description}
               onChange={onInputChange}
               required

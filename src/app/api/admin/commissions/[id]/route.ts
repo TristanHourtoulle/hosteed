@@ -4,17 +4,14 @@ import {
   getCommissionById,
   updateCommission,
   deleteCommission,
-  toggleCommissionStatus
+  toggleCommissionStatus,
 } from '@/lib/services/commission-management.service'
 
 /**
  * GET /api/admin/commissions/[id]
  * Get a specific commission by ID
  */
-export async function GET(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     // Check authentication and admin role
     const session = await auth()
@@ -59,10 +56,7 @@ export async function GET(
  *   isActive?: boolean
  * }
  */
-export async function PUT(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     // Check authentication and admin role
     const session = await auth()
@@ -78,19 +72,31 @@ export async function PUT(
     const body = await request.json()
 
     // Validate commission rates if provided
-    if (body.hostCommissionRate !== undefined && (typeof body.hostCommissionRate !== 'number' || body.hostCommissionRate < 0)) {
+    if (
+      body.hostCommissionRate !== undefined &&
+      (typeof body.hostCommissionRate !== 'number' || body.hostCommissionRate < 0)
+    ) {
       return NextResponse.json({ error: 'Invalid host commission rate' }, { status: 400 })
     }
 
-    if (body.hostCommissionFixed !== undefined && (typeof body.hostCommissionFixed !== 'number' || body.hostCommissionFixed < 0)) {
+    if (
+      body.hostCommissionFixed !== undefined &&
+      (typeof body.hostCommissionFixed !== 'number' || body.hostCommissionFixed < 0)
+    ) {
       return NextResponse.json({ error: 'Invalid host commission fixed' }, { status: 400 })
     }
 
-    if (body.clientCommissionRate !== undefined && (typeof body.clientCommissionRate !== 'number' || body.clientCommissionRate < 0)) {
+    if (
+      body.clientCommissionRate !== undefined &&
+      (typeof body.clientCommissionRate !== 'number' || body.clientCommissionRate < 0)
+    ) {
       return NextResponse.json({ error: 'Invalid client commission rate' }, { status: 400 })
     }
 
-    if (body.clientCommissionFixed !== undefined && (typeof body.clientCommissionFixed !== 'number' || body.clientCommissionFixed < 0)) {
+    if (
+      body.clientCommissionFixed !== undefined &&
+      (typeof body.clientCommissionFixed !== 'number' || body.clientCommissionFixed < 0)
+    ) {
       return NextResponse.json({ error: 'Invalid client commission fixed' }, { status: 400 })
     }
 
@@ -110,10 +116,7 @@ export async function PUT(
  * DELETE /api/admin/commissions/[id]
  * Delete a commission
  */
-export async function DELETE(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     // Check authentication and admin role
     const session = await auth()
@@ -142,10 +145,7 @@ export async function DELETE(
  * PATCH /api/admin/commissions/[id]
  * Toggle commission active status
  */
-export async function PATCH(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     // Check authentication and admin role
     const session = await auth()

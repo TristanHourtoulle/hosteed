@@ -22,7 +22,7 @@ export default function LocationContactSection({
   itemVariants,
 }: LocationContactSectionProps) {
   return (
-    <motion.div variants={itemVariants} className="relative z-50">
+    <motion.div variants={itemVariants} className='relative z-50'>
       <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm relative z-50'>
         <CardHeader className='space-y-2'>
           <div className='flex items-center gap-2'>
@@ -45,15 +45,15 @@ export default function LocationContactSection({
               </label>
               <AddressAutocomplete
                 value={formData.address}
-                onChange={(value) => setFormData((prev) => ({ ...prev, address: value }))}
+                onChange={value => setFormData(prev => ({ ...prev, address: value }))}
                 placeholder='Numéro, rue, code postal, ville'
                 className='border-slate-200 focus:border-green-300 focus:ring-green-200'
                 countryFilter='MG'
                 onAddressSelect={(address, placeId) => {
-                  setFormData((prev) => ({
+                  setFormData(prev => ({
                     ...prev,
                     address: address,
-                    placeId: placeId || ''
+                    placeId: placeId || '',
                   }))
                 }}
               />
@@ -67,15 +67,15 @@ export default function LocationContactSection({
                 value={formData.phone}
                 defaultCountry={formData.phoneCountry}
                 onChange={(phoneNumber, countryCode) => {
-                  setFormData((prev) => ({
+                  setFormData(prev => ({
                     ...prev,
                     phone: phoneNumber,
-                    phoneCountry: countryCode
+                    phoneCountry: countryCode,
                   }))
                 }}
-                placeholder="XX XX XX XX"
+                placeholder='XX XX XX XX'
                 required
-                className="border-slate-200 focus:border-green-300 focus:ring-green-200"
+                className='border-slate-200 focus:border-green-300 focus:ring-green-200'
               />
             </div>
           </div>

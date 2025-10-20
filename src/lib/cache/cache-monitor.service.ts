@@ -10,13 +10,13 @@ export interface CacheMetrics {
   // Connection health
   connected: boolean
   uptime: number
-  
+
   // Memory usage
   memoryUsed: number
   memoryUsedHuman: string
   memoryPeak: number
   memoryFragmentationRatio: number
-  
+
   // Performance metrics
   totalCommands: number
   instantaneousOpsPerSec: number
@@ -24,36 +24,36 @@ export interface CacheMetrics {
   missRate: number
   keyspaceHits: number
   keyspaceMisses: number
-  
+
   // Key statistics
   totalKeys: number
   expiredKeys: number
   evictedKeys: number
-  
+
   // Connection stats
   connectedClients: number
   blockedClients: number
   rejectedConnections: number
-  
+
   // Persistence info
   lastSaveTime: number
   changesSinceLastSave: number
-  
+
   // Error tracking
   totalErrors: number
   errorRate: number
-  
+
   // Timestamp
   timestamp: number
 }
 
 export interface AlertThresholds {
-  memoryUsagePercent: number      // Alert if memory usage > X%
-  hitRatePercent: number          // Alert if hit rate < X%
-  errorRatePercent: number        // Alert if error rate > X%
-  responseTimeMs: number          // Alert if response time > X ms
-  connectionCount: number         // Alert if connections > X
-  evictionRate: number           // Alert if eviction rate > X per minute
+  memoryUsagePercent: number // Alert if memory usage > X%
+  hitRatePercent: number // Alert if hit rate < X%
+  errorRatePercent: number // Alert if error rate > X%
+  responseTimeMs: number // Alert if response time > X ms
+  connectionCount: number // Alert if connections > X
+  evictionRate: number // Alert if eviction rate > X per minute
 }
 
 export interface HealthCheckResult {
@@ -73,9 +73,9 @@ export class CacheMonitorService {
     errorRatePercent: 5,
     responseTimeMs: 100,
     connectionCount: 100,
-    evictionRate: 10
+    evictionRate: 10,
   }
-  
+
   private lastMetrics: CacheMetrics | null = null
   private alertHistory: Array<{ type: string; message: string; timestamp: number }> = []
 
@@ -108,7 +108,7 @@ export class CacheMonitorService {
           changesSinceLastSave: 0,
           totalErrors: 0,
           errorRate: 0,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         }
       }
 
@@ -119,7 +119,7 @@ export class CacheMonitorService {
         client.info('memory'),
         client.info('stats'),
         client.info('clients'),
-        client.info('persistence')
+        client.info('persistence'),
       ])
 
       const dbSize = await client.dbsize()
@@ -128,25 +128,34 @@ export class CacheMonitorService {
       const memoryUsed = Number(this.parseInfoValue(infoMemory, 'used_memory', parseInt)) || 0
       const memoryUsedHuman = String(this.parseInfoValue(infoMemory, 'used_memory_human') || '0B')
       const memoryPeak = Number(this.parseInfoValue(infoMemory, 'used_memory_peak', parseInt)) || 0
-      const memoryFragmentationRatio = Number(this.parseInfoValue(infoMemory, 'mem_fragmentation_ratio', parseFloat)) || 0
+      const memoryFragmentationRatio =
+        Number(this.parseInfoValue(infoMemory, 'mem_fragmentation_ratio', parseFloat)) || 0
 
       // Parse stats info
-      const totalCommands = Number(this.parseInfoValue(infoStats, 'total_commands_processed', parseInt)) || 0
-      const instantaneousOpsPerSec = Number(this.parseInfoValue(infoStats, 'instantaneous_ops_per_sec', parseInt)) || 0
+      const totalCommands =
+        Number(this.parseInfoValue(infoStats, 'total_commands_processed', parseInt)) || 0
+      const instantaneousOpsPerSec =
+        Number(this.parseInfoValue(infoStats, 'instantaneous_ops_per_sec', parseInt)) || 0
       const keyspaceHits = Number(this.parseInfoValue(infoStats, 'keyspace_hits', parseInt)) || 0
-      const keyspaceMisses = Number(this.parseInfoValue(infoStats, 'keyspace_misses', parseInt)) || 0
+      const keyspaceMisses =
+        Number(this.parseInfoValue(infoStats, 'keyspace_misses', parseInt)) || 0
       const expiredKeys = Number(this.parseInfoValue(infoStats, 'expired_keys', parseInt)) || 0
       const evictedKeys = Number(this.parseInfoValue(infoStats, 'evicted_keys', parseInt)) || 0
       const uptime = Number(this.parseInfoValue(infoStats, 'uptime_in_seconds', parseInt)) || 0
-      const rejectedConnections = Number(this.parseInfoValue(infoStats, 'rejected_connections', parseInt)) || 0
+      const rejectedConnections =
+        Number(this.parseInfoValue(infoStats, 'rejected_connections', parseInt)) || 0
 
       // Parse client info
-      const connectedClients = Number(this.parseInfoValue(infoClients, 'connected_clients', parseInt)) || 0
-      const blockedClients = Number(this.parseInfoValue(infoClients, 'blocked_clients', parseInt)) || 0
+      const connectedClients =
+        Number(this.parseInfoValue(infoClients, 'connected_clients', parseInt)) || 0
+      const blockedClients =
+        Number(this.parseInfoValue(infoClients, 'blocked_clients', parseInt)) || 0
 
       // Parse persistence info
-      const lastSaveTime = Number(this.parseInfoValue(infoPersistence, 'last_save_time', parseInt)) || 0
-      const changesSinceLastSave = Number(this.parseInfoValue(infoPersistence, 'changes_since_last_save', parseInt)) || 0
+      const lastSaveTime =
+        Number(this.parseInfoValue(infoPersistence, 'last_save_time', parseInt)) || 0
+      const changesSinceLastSave =
+        Number(this.parseInfoValue(infoPersistence, 'changes_since_last_save', parseInt)) || 0
 
       // Calculate derived metrics
       const totalRequests = keyspaceHits + keyspaceMisses
@@ -180,12 +189,11 @@ export class CacheMonitorService {
         changesSinceLastSave,
         totalErrors,
         errorRate,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       }
 
       this.lastMetrics = metrics
       return metrics
-
     } catch (error) {
       console.error('Failed to get cache metrics:', error)
       return null
@@ -197,7 +205,7 @@ export class CacheMonitorService {
    */
   async healthCheck(): Promise<HealthCheckResult> {
     const metrics = await this.getMetrics()
-    
+
     if (!metrics || !metrics.connected) {
       return {
         healthy: false,
@@ -205,7 +213,7 @@ export class CacheMonitorService {
         issues: ['Redis connection failed'],
         warnings: [],
         recommendations: ['Check Redis server status', 'Verify connection configuration'],
-        metrics: metrics || {} as CacheMetrics
+        metrics: metrics || ({} as CacheMetrics),
       }
     }
 
@@ -219,7 +227,9 @@ export class CacheMonitorService {
     if (memoryUsagePercent > this.alertThresholds.memoryUsagePercent) {
       issues.push(`High memory usage: ${memoryUsagePercent.toFixed(1)}%`)
       score -= 20
-      recommendations.push('Consider increasing memory limit or implementing better eviction policies')
+      recommendations.push(
+        'Consider increasing memory limit or implementing better eviction policies'
+      )
     } else if (memoryUsagePercent > this.alertThresholds.memoryUsagePercent * 0.7) {
       warnings.push(`Memory usage approaching limit: ${memoryUsagePercent.toFixed(1)}%`)
       score -= 5
@@ -248,7 +258,7 @@ export class CacheMonitorService {
     if (this.lastMetrics) {
       const timeDiff = (metrics.timestamp - this.lastMetrics.timestamp) / 1000 / 60 // minutes
       const evictionRate = (metrics.evictedKeys - this.lastMetrics.evictedKeys) / timeDiff
-      
+
       if (evictionRate > this.alertThresholds.evictionRate) {
         issues.push(`High eviction rate: ${evictionRate.toFixed(1)} keys/min`)
         score -= 15
@@ -270,14 +280,14 @@ export class CacheMonitorService {
     }
 
     const healthy = issues.length === 0
-    
+
     return {
       healthy,
       score: Math.max(0, score),
       issues,
       warnings,
       recommendations,
-      metrics
+      metrics,
     }
   }
 
@@ -303,7 +313,7 @@ export class CacheMonitorService {
       this.alertHistory.push({
         type: alert.type,
         message: alert.message,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       })
     })
 
@@ -337,11 +347,15 @@ export class CacheMonitorService {
   /**
    * Parse Redis INFO response values
    */
-  private parseInfoValue(info: string, key: string, parser?: (value: string) => number): string | number | null {
+  private parseInfoValue(
+    info: string,
+    key: string,
+    parser?: (value: string) => number
+  ): string | number | null {
     const regex = new RegExp(`${key}:(.+)`)
     const match = info.match(regex)
     if (!match) return null
-    
+
     const value = match[1].trim()
     return parser ? parser(value) : value
   }
@@ -360,7 +374,7 @@ export class CacheMonitorService {
         setLatency: -1,
         getLatency: -1,
         delLatency: -1,
-        throughputOpsPerSec: 0
+        throughputOpsPerSec: 0,
       }
     }
 
@@ -398,16 +412,15 @@ export class CacheMonitorService {
         setLatency,
         getLatency,
         delLatency,
-        throughputOpsPerSec
+        throughputOpsPerSec,
       }
-
     } catch (error) {
       console.error('Performance test failed:', error)
       return {
         setLatency: -1,
         getLatency: -1,
         delLatency: -1,
-        throughputOpsPerSec: 0
+        throughputOpsPerSec: 0,
       }
     }
   }
@@ -427,28 +440,28 @@ export const MONITORING_ENDPOINTS: MonitoringEndpoint[] = [
   {
     path: '/api/cache/health',
     method: 'GET',
-    description: 'Get cache health status and metrics'
+    description: 'Get cache health status and metrics',
   },
   {
     path: '/api/cache/metrics',
-    method: 'GET', 
-    description: 'Get detailed cache performance metrics'
+    method: 'GET',
+    description: 'Get detailed cache performance metrics',
   },
   {
     path: '/api/cache/alerts',
     method: 'GET',
-    description: 'Get current alerts and warnings'
+    description: 'Get current alerts and warnings',
   },
   {
     path: '/api/cache/performance',
     method: 'POST',
-    description: 'Run performance test on cache'
+    description: 'Run performance test on cache',
   },
   {
     path: '/api/cache/stats',
     method: 'GET',
-    description: 'Get cache statistics and usage info'
-  }
+    description: 'Get cache statistics and usage info',
+  },
 ]
 
 // ================================

@@ -16,11 +16,7 @@ interface UseAuthOptions {
  * @returns { session, status, isLoading, isAuthenticated }
  */
 export function useAuth(options: UseAuthOptions = {}) {
-  const {
-    required = true,
-    redirectTo = '/auth',
-    onUnauthenticated,
-  } = options
+  const { required = true, redirectTo = '/auth', onUnauthenticated } = options
 
   const { data: session, status } = useSession()
   const router = useRouter()

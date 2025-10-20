@@ -117,9 +117,7 @@ export default function AdminPromotionsPage() {
         const data = await productsRes.json()
 
         // Filter only validated products (validate = 'Approve' in DB)
-        const validatedProducts = data.products.filter(
-          (p: Product) => p.validate === 'Approve'
-        )
+        const validatedProducts = data.products.filter((p: Product) => p.validate === 'Approve')
         setProducts(validatedProducts)
       }
     } catch (error) {
@@ -231,7 +229,7 @@ export default function AdminPromotionsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           promotionData: pendingPromotion,
-          overlappingIds: overlappingPromotions.map((p) => p.id),
+          overlappingIds: overlappingPromotions.map(p => p.id),
         }),
       })
 
@@ -309,9 +307,7 @@ export default function AdminPromotionsPage() {
       <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8'>
         <div>
           <h1 className='text-2xl sm:text-3xl font-bold'>Gestion des Promotions</h1>
-          <p className='text-gray-600 mt-2'>
-            Gérez les réductions appliquées aux hébergements
-          </p>
+          <p className='text-gray-600 mt-2'>Gérez les réductions appliquées aux hébergements</p>
         </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -339,12 +335,8 @@ export default function AdminPromotionsPage() {
                     <SelectValue placeholder='Sélectionner un hébergement' />
                   </SelectTrigger>
                   <SelectContent className='max-w-[calc(100vw-2rem)] sm:max-w-lg'>
-                    {products.map((product) => (
-                      <SelectItem
-                        key={product.id}
-                        value={product.id}
-                        className='max-w-full'
-                      >
+                    {products.map(product => (
+                      <SelectItem key={product.id} value={product.id} className='max-w-full'>
                         <div className='flex flex-col truncate'>
                           <span className='font-medium truncate'>{product.name}</span>
                           <span className='text-xs text-gray-500 truncate'>{product.address}</span>
@@ -364,7 +356,7 @@ export default function AdminPromotionsPage() {
                   max='99'
                   step='1'
                   value={discountPercentage}
-                  onChange={(e) => setDiscountPercentage(e.target.value)}
+                  onChange={e => setDiscountPercentage(e.target.value)}
                   placeholder='Ex: 20'
                   required
                 />
@@ -376,7 +368,7 @@ export default function AdminPromotionsPage() {
                   id='start'
                   type='datetime-local'
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={e => setStartDate(e.target.value)}
                   required
                 />
               </div>
@@ -387,7 +379,7 @@ export default function AdminPromotionsPage() {
                   id='end'
                   type='datetime-local'
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                  onChange={e => setEndDate(e.target.value)}
                   required
                 />
               </div>
@@ -419,7 +411,7 @@ export default function AdminPromotionsPage() {
               <div className='ml-3 sm:ml-4'>
                 <p className='text-xs sm:text-sm font-medium text-gray-600'>Promotions actives</p>
                 <p className='text-xl sm:text-2xl font-bold'>
-                  {promotions.filter((p) => isCurrentlyActive(p)).length}
+                  {promotions.filter(p => isCurrentlyActive(p)).length}
                 </p>
               </div>
             </div>
@@ -461,7 +453,7 @@ export default function AdminPromotionsPage() {
 
       {/* Liste des promotions */}
       <div className='grid gap-4 sm:gap-6'>
-        {promotions.map((promotion) => (
+        {promotions.map(promotion => (
           <Card key={promotion.id} className='overflow-hidden'>
             <CardContent className='p-0'>
               <div className='flex flex-col md:flex-row'>
@@ -612,7 +604,9 @@ export default function AdminPromotionsPage() {
             setOverlappingPromotions([])
           }}
           onConfirm={handleConfirmOverlap}
-          overlappingPromotions={overlappingPromotions as (ProductPromotion & { product?: { name: string } })[]}
+          overlappingPromotions={
+            overlappingPromotions as (ProductPromotion & { product?: { name: string } })[]
+          }
           newPromotion={pendingPromotion}
           loading={false}
         />

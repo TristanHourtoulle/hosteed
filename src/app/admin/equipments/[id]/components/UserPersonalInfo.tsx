@@ -1,7 +1,7 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
-import { EquipmentInterface } from "@/lib/interface/equipmentInterface"
+import { EquipmentInterface } from '@/lib/interface/equipmentInterface'
 import { DynamicIcon } from '@/lib/utils/iconMapping'
 
 export function UserPersonalInfo({ id, name, icon }: EquipmentInterface) {

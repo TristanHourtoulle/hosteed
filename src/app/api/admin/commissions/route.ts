@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth'
 import {
   getAllCommissions,
   createCommission,
-  getPropertyTypesWithoutCommissions
+  getPropertyTypesWithoutCommissions,
 } from '@/lib/services/commission-management.service'
 
 /**
@@ -30,8 +30,11 @@ export async function GET(request: NextRequest) {
 
     const commissions = await getAllCommissions()
 
-    const response: { commissions: typeof commissions; unassignedTypes?: Awaited<ReturnType<typeof getPropertyTypesWithoutCommissions>> } = {
-      commissions
+    const response: {
+      commissions: typeof commissions
+      unassignedTypes?: Awaited<ReturnType<typeof getPropertyTypesWithoutCommissions>>
+    } = {
+      commissions,
     }
 
     if (includeUnassigned) {
@@ -113,7 +116,7 @@ export async function POST(request: NextRequest) {
       clientCommissionFixed: body.clientCommissionFixed,
       typeRentId: body.typeRentId,
       isActive: body.isActive ?? true,
-      createdBy: session.user.id
+      createdBy: session.user.id,
     })
 
     return NextResponse.json(commission, { status: 201 })

@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth'
 import {
   createPromotion,
   getPromotionsByHost,
-  CreatePromotionInput
+  CreatePromotionInput,
 } from '@/lib/services/promotion.service'
 
 /**
@@ -15,10 +15,7 @@ export async function POST(request: NextRequest) {
     const session = await auth()
 
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Non authentifié' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
     // Vérifier les rôles (ADMIN, HOST_MANAGER, HOST)
@@ -34,10 +31,7 @@ export async function POST(request: NextRequest) {
     const { productId, discountPercentage, startDate, endDate } = body
 
     if (!productId || !discountPercentage || !startDate || !endDate) {
-      return NextResponse.json(
-        { error: 'Données manquantes' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Données manquantes' }, { status: 400 })
     }
 
     // Vérifier que l'utilisateur est le propriétaire du produit (sauf si ADMIN)
@@ -45,14 +39,11 @@ export async function POST(request: NextRequest) {
       const prisma = (await import('@/lib/prisma')).default
       const product = await prisma.product.findUnique({
         where: { id: productId },
-        select: { userManager: true }
+        select: { userManager: true },
       })
 
       if (!product) {
-        return NextResponse.json(
-          { error: 'Produit non trouvé' },
-          { status: 404 }
-        )
+        return NextResponse.json({ error: 'Produit non trouvé' }, { status: 404 })
       }
 
       if (product.userManager.toString() !== session.user.id) {
@@ -68,7 +59,7 @@ export async function POST(request: NextRequest) {
       discountPercentage: parseFloat(discountPercentage),
       startDate: new Date(startDate),
       endDate: new Date(endDate),
-      createdById: session.user.id
+      createdById: session.user.id,
     }
 
     const result = await createPromotion(data)
@@ -79,7 +70,7 @@ export async function POST(request: NextRequest) {
         {
           requiresConfirmation: true,
           overlappingPromotions: result.overlappingPromotions,
-          message: 'Une ou plusieurs promotions actives seront désactivées'
+          message: 'Une ou plusieurs promotions actives seront désactivées',
         },
         { status: 409 } // Conflict
       )
@@ -105,10 +96,7 @@ export async function GET(request: NextRequest) {
     const session = await auth()
 
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Non authentifié' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
     // Si ADMIN ou HOST_MANAGER, récupérer toutes les promotions
@@ -125,18 +113,18 @@ export async function GET(request: NextRequest) {
               basePrice: true,
               img: {
                 select: { img: true },
-                take: 1
+                take: 1,
               },
               user: {
                 select: {
                   id: true,
                   name: true,
-                  email: true
-                }
-              }
-            }
-          }
-        }
+                  email: true,
+                },
+              },
+            },
+          },
+        },
       })
       return NextResponse.json(allPromotions)
     }
@@ -147,9 +135,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(promotions)
   } catch (error) {
     console.error('Erreur lors de la récupération des promotions:', error)
-    return NextResponse.json(
-      { error: 'Erreur interne du serveur' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Erreur interne du serveur' }, { status: 500 })
   }
 }

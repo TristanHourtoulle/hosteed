@@ -51,7 +51,10 @@ interface DiffFieldProps {
 }
 
 export function ComparisonView({ draft, original }: ComparisonViewProps) {
-  const getFieldDiff = (draftValue: string | number | boolean | null | undefined, originalValue: string | number | boolean | null | undefined) => {
+  const getFieldDiff = (
+    draftValue: string | number | boolean | null | undefined,
+    originalValue: string | number | boolean | null | undefined
+  ) => {
     const isDifferent = JSON.stringify(draftValue) !== JSON.stringify(originalValue)
     return {
       isDifferent,
@@ -66,16 +69,18 @@ export function ComparisonView({ draft, original }: ComparisonViewProps) {
     originalValue,
     isDifferent = false,
     formatter = (v: string | number | boolean | null | undefined) => String(v || 'Non défini'),
-    isMarkdown = false
+    isMarkdown = false,
   }: DiffFieldProps) => (
-    <div className={`p-4 rounded-lg border-l-4 ${isDifferent ? 'border-orange-400 bg-orange-50' : 'border-gray-200 bg-gray-50'}`}>
-      <div className="font-medium text-sm text-gray-700 mb-2">{label}</div>
-      <div className="grid grid-cols-2 gap-4">
+    <div
+      className={`p-4 rounded-lg border-l-4 ${isDifferent ? 'border-orange-400 bg-orange-50' : 'border-gray-200 bg-gray-50'}`}
+    >
+      <div className='font-medium text-sm text-gray-700 mb-2'>{label}</div>
+      <div className='grid grid-cols-2 gap-4'>
         <div>
-          <div className="text-xs text-gray-500 mb-1">Original</div>
+          <div className='text-xs text-gray-500 mb-1'>Original</div>
           <div className={`text-sm ${isDifferent ? 'text-gray-600' : 'text-gray-800'}`}>
             {isMarkdown && typeof originalValue === 'string' ? (
-              <div className="prose prose-sm max-w-none">
+              <div className='prose prose-sm max-w-none'>
                 <MarkdownRenderer content={originalValue} />
               </div>
             ) : (
@@ -84,10 +89,12 @@ export function ComparisonView({ draft, original }: ComparisonViewProps) {
           </div>
         </div>
         <div>
-          <div className="text-xs text-green-600 mb-1">Modifié</div>
-          <div className={`text-sm font-medium ${isDifferent ? 'text-green-700' : 'text-gray-800'}`}>
+          <div className='text-xs text-green-600 mb-1'>Modifié</div>
+          <div
+            className={`text-sm font-medium ${isDifferent ? 'text-green-700' : 'text-gray-800'}`}
+          >
             {isMarkdown && typeof draftValue === 'string' ? (
-              <div className="prose prose-sm max-w-none">
+              <div className='prose prose-sm max-w-none'>
                 <MarkdownRenderer content={draftValue} />
               </div>
             ) : (
@@ -99,11 +106,23 @@ export function ComparisonView({ draft, original }: ComparisonViewProps) {
     </div>
   )
 
-  const priceFormatter = (value: string | number | boolean | null | undefined) => value ? `${value}€` : 'Non défini'
-  const booleanFormatter = (value: string | number | boolean | null | undefined) => value === true ? 'Oui' : value === false ? 'Non' : 'Non défini'
-  const numberFormatter = (value: string | number | boolean | null | undefined) => String(value || 0)
+  const priceFormatter = (value: string | number | boolean | null | undefined) =>
+    value ? `${value}€` : 'Non défini'
+  const booleanFormatter = (value: string | number | boolean | null | undefined) =>
+    value === true ? 'Oui' : value === false ? 'Non' : 'Non défini'
+  const numberFormatter = (value: string | number | boolean | null | undefined) =>
+    String(value || 0)
 
-  const differences: { label: string; diff: { isDifferent: boolean; draftValue: string | number | boolean | null | undefined; originalValue: string | number | boolean | null | undefined }; formatter?: (v: string | number | boolean | null | undefined) => string; isMarkdown?: boolean }[] = []
+  const differences: {
+    label: string
+    diff: {
+      isDifferent: boolean
+      draftValue: string | number | boolean | null | undefined
+      originalValue: string | number | boolean | null | undefined
+    }
+    formatter?: (v: string | number | boolean | null | undefined) => string
+    isMarkdown?: boolean
+  }[] = []
 
   // Check simple field differences
   if (draft.name !== original.name) {
@@ -128,21 +147,26 @@ export function ComparisonView({ draft, original }: ComparisonViewProps) {
 
   if (draft.priceMGA !== original.priceMGA) {
     const diff = getFieldDiff(draft.priceMGA, original.priceMGA)
-    differences.push({ 
-      label: 'Prix par nuit (MGA)', 
-      diff, 
-      formatter: (v: string | number | boolean | null | undefined) => v ? `${v} Ariary` : 'Non défini' 
+    differences.push({
+      label: 'Prix par nuit (MGA)',
+      diff,
+      formatter: (v: string | number | boolean | null | undefined) =>
+        v ? `${v} Ariary` : 'Non défini',
     })
   }
 
   if (draft.availableRooms !== original.availableRooms) {
     const diff = getFieldDiff(draft.availableRooms, original.availableRooms)
-    differences.push({ label: 'Nombre de chambres disponibles (Hôtel)', diff, formatter: numberFormatter })
+    differences.push({
+      label: 'Nombre de chambres disponibles (Hôtel)',
+      diff,
+      formatter: numberFormatter,
+    })
   }
 
   if (draft.guest !== original.guest) {
     const diff = getFieldDiff(draft.guest, original.guest)
-    differences.push({ label: 'Nombre d\'invités', diff, formatter: numberFormatter })
+    differences.push({ label: "Nombre d'invités", diff, formatter: numberFormatter })
   }
 
   if (draft.bedroom !== original.bedroom) {
@@ -162,19 +186,19 @@ export function ComparisonView({ draft, original }: ComparisonViewProps) {
 
   if (draft.arriving !== original.arriving) {
     const diff = getFieldDiff(draft.arriving, original.arriving)
-    differences.push({ 
-      label: 'Heure d\'arrivée', 
-      diff, 
-      formatter: (v: string | number | boolean | null | undefined) => v ? `${v}h` : 'Non défini' 
+    differences.push({
+      label: "Heure d'arrivée",
+      diff,
+      formatter: (v: string | number | boolean | null | undefined) => (v ? `${v}h` : 'Non défini'),
     })
   }
 
   if (draft.leaving !== original.leaving) {
     const diff = getFieldDiff(draft.leaving, original.leaving)
-    differences.push({ 
-      label: 'Heure de départ', 
-      diff, 
-      formatter: (v: string | number | boolean | null | undefined) => v ? `${v}h` : 'Non défini' 
+    differences.push({
+      label: 'Heure de départ',
+      diff,
+      formatter: (v: string | number | boolean | null | undefined) => (v ? `${v}h` : 'Non défini'),
     })
   }
 
@@ -182,8 +206,8 @@ export function ComparisonView({ draft, original }: ComparisonViewProps) {
   if (draft.type?.name !== original.type?.name) {
     const diff = getFieldDiff(draft.type?.name, original.type?.name)
     differences.push({
-      label: 'Type d\'hébergement',
-      diff
+      label: "Type d'hébergement",
+      diff,
     })
   }
 
@@ -191,7 +215,7 @@ export function ComparisonView({ draft, original }: ComparisonViewProps) {
     const diff = getFieldDiff(draft.typeRoom?.name, original.typeRoom?.name)
     differences.push({
       label: 'Type de chambre',
-      diff
+      diff,
     })
   }
 
@@ -202,21 +226,21 @@ export function ComparisonView({ draft, original }: ComparisonViewProps) {
       { key: 'petsAllowed', label: 'Animaux autorisés', formatter: booleanFormatter },
       { key: 'eventsAllowed', label: 'Événements autorisés', formatter: booleanFormatter },
       { key: 'selfCheckIn', label: 'Arrivée autonome', formatter: booleanFormatter },
-      { key: 'checkInTime', label: 'Heure d\'arrivée' },
+      { key: 'checkInTime', label: "Heure d'arrivée" },
       { key: 'checkOutTime', label: 'Heure de départ' },
-      { key: 'selfCheckInType', label: 'Type d\'arrivée autonome' },
+      { key: 'selfCheckInType', label: "Type d'arrivée autonome" },
     ]
 
     ruleFields.forEach(ruleField => {
       const draftValue = draft.rules?.[ruleField.key as keyof typeof draft.rules]
       const originalValue = original.rules?.[ruleField.key as keyof typeof original.rules]
       const diff = getFieldDiff(draftValue, originalValue)
-      
+
       if (diff.isDifferent) {
         differences.push({
           label: ruleField.label,
           diff,
-          formatter: ruleField.formatter
+          formatter: ruleField.formatter,
         })
       }
     })
@@ -234,14 +258,15 @@ export function ComparisonView({ draft, original }: ComparisonViewProps) {
 
     propertyFields.forEach(propertyField => {
       const draftValue = draft.propertyInfo?.[propertyField.key as keyof typeof draft.propertyInfo]
-      const originalValue = original.propertyInfo?.[propertyField.key as keyof typeof original.propertyInfo]
+      const originalValue =
+        original.propertyInfo?.[propertyField.key as keyof typeof original.propertyInfo]
       const diff = getFieldDiff(draftValue, originalValue)
-      
+
       if (diff.isDifferent) {
         differences.push({
           label: propertyField.label,
           diff,
-          formatter: propertyField.formatter
+          formatter: propertyField.formatter,
         })
       }
     })
@@ -249,11 +274,12 @@ export function ComparisonView({ draft, original }: ComparisonViewProps) {
 
   if (differences.length === 0) {
     return (
-      <div className="p-8 text-center">
-        <div className="bg-blue-50 p-4 rounded-lg">
-          <h3 className="text-lg font-semibold text-blue-800 mb-2">Aucune modification détectée</h3>
-          <p className="text-sm text-blue-700">
-            Aucune différence n&apos;a été trouvée entre l&apos;annonce originale et la version modifiée.
+      <div className='p-8 text-center'>
+        <div className='bg-blue-50 p-4 rounded-lg'>
+          <h3 className='text-lg font-semibold text-blue-800 mb-2'>Aucune modification détectée</h3>
+          <p className='text-sm text-blue-700'>
+            Aucune différence n&apos;a été trouvée entre l&apos;annonce originale et la version
+            modifiée.
           </p>
         </div>
       </div>
@@ -261,17 +287,18 @@ export function ComparisonView({ draft, original }: ComparisonViewProps) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="bg-blue-50 p-4 rounded-lg">
-        <h3 className="text-lg font-semibold text-blue-800 mb-2">Comparaison des modifications</h3>
-        <p className="text-sm text-blue-700">
-          Voici les {differences.length} différence(s) détectée(s) entre l&apos;annonce originale et les modifications proposées.
+    <div className='space-y-6'>
+      <div className='bg-blue-50 p-4 rounded-lg'>
+        <h3 className='text-lg font-semibold text-blue-800 mb-2'>Comparaison des modifications</h3>
+        <p className='text-sm text-blue-700'>
+          Voici les {differences.length} différence(s) détectée(s) entre l&apos;annonce originale et
+          les modifications proposées.
         </p>
       </div>
 
-      <div className="space-y-4">
-        <h4 className="text-lg font-semibold">Modifications détectées ({differences.length})</h4>
-        
+      <div className='space-y-4'>
+        <h4 className='text-lg font-semibold'>Modifications détectées ({differences.length})</h4>
+
         {differences.map((item, index) => (
           <DiffField
             key={index}

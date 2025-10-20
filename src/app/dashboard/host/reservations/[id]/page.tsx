@@ -21,7 +21,11 @@ import PaymentRequestModal from './PaymentRequestModal'
 import { PayablePrices } from './types'
 
 export default function RentDetailsPage({ params }: { params: Promise<{ id: string }> }) {
-  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const [rent, setRent] = useState<RentWithDates | null>(null)
   const [prices, setPrices] = useState<PayablePrices | null>(null)
   const [loading, setLoading] = useState(true)

@@ -1,12 +1,16 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Home,
+  MapPin,
   Users,
   Euro,
   Wifi,
@@ -22,31 +26,26 @@ import {
   Star,
   Package,
   Highlighter,
-  Save,
-  Edit3,
 } from 'lucide-react'
-import { resubmitProductWithChange } from '@/lib/services/product.service'
+
 import { findAllTypeRent } from '@/lib/services/typeRent.service'
 import { findAllEquipments } from '@/lib/services/equipments.service'
 import { findAllMeals } from '@/lib/services/meals.service'
 import { findAllServices } from '@/lib/services/services.service'
 import { findAllSecurity } from '@/lib/services/security.services'
-import { ExtraPriceType, ProductValidation } from '@prisma/client'
-import { TypeRentInterface } from '@/lib/interface/typeRentInterface'
-import CreateServiceModal from '@/components/ui/CreateServiceModal'
-import CreateExtraModal from '@/components/ui/CreateExtraModal'
-import CreateHighlightModal from '@/components/ui/CreateHighlightModal'
-import BookingCostSummary from '@/components/ui/BookingCostSummary'
-import SortableImageGrid from '@/components/ui/SortableImageGrid'
-import ImageGalleryPreview from '@/components/ui/ImageGalleryPreview'
-import CommissionDisplay from '@/components/ui/CommissionDisplay'
-import ErrorAlert, { ErrorDetails } from '@/components/ui/ErrorAlert'
+import { createProduct } from '@/lib/services/product.service'
+import { findAllUser } from '@/lib/services/user.service'
 import { compressImages, formatFileSize } from '@/lib/utils/imageCompression'
+
+interface TypeRent {
+  id: string
+  name: string
+  description?: string
+}
 
 interface Equipment {
   id: string
   name: string
-  icon: string
 }
 
 interface Meal {
@@ -67,45 +66,25 @@ interface Service {
 interface IncludedService {
   id: string
   name: string
-  description: string | null
-  icon: string | null
-  userId: string | null
+  description?: string
+  icon?: string
 }
 
 interface ProductExtra {
   id: string
   name: string
-  description: string | null
+  description?: string
   priceEUR: number
   priceMGA: number
-  type: ExtraPriceType
-  userId: string | null
-  createdAt?: Date
-  updatedAt?: Date
+  type: string
 }
 
 interface PropertyHighlight {
   id: string
   name: string
-  description: string | null
-  icon: string | null
-  userId: string | null
+  description?: string
+  icon?: string
 }
-
-interface NearbyPlace {
-  name: string
-  distance: string
-  unit: 'mètres' | 'kilomètres'
-}
-
-interface ImageFile {
-  file: File | null
-  preview: string
-  id: string
-  isExisting?: boolean
-  url?: string
-}
-
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -127,58 +106,17 @@ const itemVariants = {
   },
 }
 
-interface Product {
-  id: string
+interface NearbyPlace {
   name: string
-  description: string
-  address: string
-  basePrice: string
-  priceMGA?: string
-  availableRooms?: number
-  guest: number
-  bedroom: number
-  bed: number
-  bathroom: number
-  arriving: number
-  leaving: number
-  validate: ProductValidation
-  img?: { img: string }[]
-  user: {
-    id: string
-    name?: string | null
-    lastname?: string | null
-    email: string
-  }[]
-  type?: { id: string; name: string; description: string }
-  equipments?: { id: string; name: string; icon: string }[]
-  mealsList?: { id: string; name: string }[]
-  servicesList?: { id: string; name: string }[]
-  securities?: { id: string; name: string }[]
-  includedServices?: { id: string; name: string; description: string | null; icon: string | null }[]
-  extras?: {
-    id: string
-    name: string
-    description: string | null
-    priceEUR: number
-    priceMGA: number
-    type: ExtraPriceType
-  }[]
-  highlights?: { id: string; name: string; description: string | null; icon: string | null }[]
-}
-
-interface ProductEditFormProps {
-  product: Product
-  onSave: (updatedProduct: Product) => void
-  onCancel: () => void
+  distance: string
+  unit: 'mètres' | 'kilomètres'
 }
 
 interface FormData {
   name: string
   description: string
   address: string
-  placeId?: string
   phone: string
-  phoneCountry: string
   room: string
   bathroom: string
   arriving: string
@@ -200,72 +138,56 @@ interface FormData {
   petFriendly: boolean
   nearbyPlaces: NearbyPlace[]
   transportation: string
-  isHotel: boolean
-  hotelName: string
-  availableRooms: string
 }
 
-export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormProps) {
+export default function CreateProductPage() {
+  const router = useRouter()
+  const { data: session } = useSession()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isUploadingImages, setIsUploadingImages] = useState(false)
-  const [error, setError] = useState<ErrorDetails | null>(null)
+  const [error, setError] = useState('')
   const [dragActive, setDragActive] = useState(false)
-  const [selectedFiles, setSelectedFiles] = useState<ImageFile[]>([])
-  const [showGalleryPreview, setShowGalleryPreview] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [newPlace, setNewPlace] = useState({
     name: '',
     distance: '',
     unit: 'mètres' as 'mètres' | 'kilomètres',
   })
+  const [userSelected, setUserSelected] = useState('')
+  const [assignToOtherUser, setAssignToOtherUser] = useState(false)
 
-  // États pour les modaux de création personnalisée
-  const [serviceModalOpen, setServiceModalOpen] = useState(false)
-  const [extraModalOpen, setExtraModalOpen] = useState(false)
-  const [highlightModalOpen, setHighlightModalOpen] = useState(false)
-
-  // État pour simuler une réservation de test pour l'aperçu des coûts
-  const [testBooking] = useState({
-    startDate: new Date(),
-    endDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 jours plus tard
-    guestCount: 2,
-  })
-
+  // Form data
   const [formData, setFormData] = useState<FormData>({
-    name: product.name,
-    description: product.description,
-    address: product.address,
-    placeId: '',
+    name: '',
+    description: '',
+    address: '',
     phone: '',
-    phoneCountry: 'MG',
-    room: product.bedroom?.toString() || '',
-    bathroom: product.bathroom?.toString() || '',
-    arriving: product.arriving?.toString() || '',
-    leaving: product.leaving?.toString() || '',
-    basePrice: product.basePrice,
-    priceMGA: product.priceMGA || '',
+    room: '',
+    bathroom: '',
+    arriving: '',
+    leaving: '',
+    basePrice: '',
+    priceMGA: '',
     autoAccept: false,
-    typeId: product.type?.id || '',
-    equipmentIds: product.equipments?.map(e => e.id) || [],
-    mealIds: product.mealsList?.map(m => m.id) || [],
-    securityIds: product.securities?.map(s => s.id) || [],
-    serviceIds: product.servicesList?.map(s => s.id) || [],
-    includedServiceIds: product.includedServices?.map(s => s.id) || [],
-    extraIds: product.extras?.map(e => e.id) || [],
-    highlightIds: product.highlights?.map(h => h.id) || [],
+    typeId: '',
+    equipmentIds: [],
+    mealIds: [],
+    securityIds: [],
+    serviceIds: [],
+    includedServiceIds: [],
+    extraIds: [],
+    highlightIds: [],
     surface: '',
     maxPeople: '',
     accessibility: false,
     petFriendly: false,
     nearbyPlaces: [],
     transportation: '',
-    isHotel: false,
-    hotelName: '',
-    availableRooms: '',
   })
 
   // Data from services
-  const [types, setTypes] = useState<TypeRentInterface[]>([])
+  const [types, setTypes] = useState<TypeRent[]>([])
   const [equipments, setEquipments] = useState<Equipment[]>([])
   const [meals, setMeals] = useState<Meal[]>([])
   const [securities, setSecurities] = useState<Security[]>([])
@@ -273,22 +195,23 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
   const [includedServices, setIncludedServices] = useState<IncludedService[]>([])
   const [extras, setExtras] = useState<ProductExtra[]>([])
   const [highlights, setHighlights] = useState<PropertyHighlight[]>([])
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [users, setUsers] = useState<any[]>([])
 
-  // Calcul mémorisé pour les extras sélectionnés avec leurs données complètes
-  const selectedExtras = useMemo(() => {
-    return extras.filter(extra => formData.extraIds.includes(extra.id))
-  }, [extras, formData.extraIds])
-
-  // Calcul mémorisé pour le nombre de jours de la réservation de test
-  const numberOfDays = useMemo(() => {
-    return Math.ceil(
-      (testBooking.endDate.getTime() - testBooking.startDate.getTime()) / (1000 * 60 * 60 * 24)
-    )
-  }, [testBooking.startDate, testBooking.endDate])
+  // Handle input changes
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value, type } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
+    }))
+  }
 
   // Functions to load new data
   const loadIncludedServices = async (): Promise<IncludedService[]> => {
-    const response = await fetch('/api/user/included-services')
+    const response = await fetch('/api/admin/included-services')
     if (response.ok) {
       return await response.json()
     }
@@ -296,7 +219,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
   }
 
   const loadExtras = async (): Promise<ProductExtra[]> => {
-    const response = await fetch('/api/user/extras')
+    const response = await fetch('/api/admin/extras')
     if (response.ok) {
       return await response.json()
     }
@@ -304,13 +227,14 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
   }
 
   const loadHighlights = async (): Promise<PropertyHighlight[]> => {
-    const response = await fetch('/api/user/highlights')
+    const response = await fetch('/api/admin/highlights')
     if (response.ok) {
       return await response.json()
     }
     return []
   }
 
+  // Load data on component mount
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -323,6 +247,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
           includedServicesData,
           extrasData,
           highlightsData,
+          usersData,
         ] = await Promise.all([
           findAllTypeRent(),
           findAllEquipments(),
@@ -332,6 +257,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
           loadIncludedServices(),
           loadExtras(),
           loadHighlights(),
+          findAllUser(),
         ])
 
         setTypes(typesData || [])
@@ -342,55 +268,37 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
         setIncludedServices(includedServicesData || [])
         setExtras(extrasData || [])
         setHighlights(highlightsData || [])
+        setUsers(usersData || [])
       } catch (error) {
         console.error('Error loading data:', error)
-        setError({
-          type: 'network',
-          title: 'Erreur de chargement',
-          message: "Impossible de charger les données nécessaires à l'édition.",
-          details: [
-            "Échec du chargement des types d'hébergement, équipements ou services",
-            'Vérifiez votre connexion internet',
-          ],
-          suggestions: [
-            'Actualisez la page pour réessayer',
-            'Vérifiez votre connexion internet',
-            'Si le problème persiste, contactez le support',
-          ],
-          retryable: true,
-        })
+        setError('Erreur lors du chargement des données')
       }
     }
 
     loadData()
   }, [])
 
-  // Fonctions pour gérer les nouveaux services/extras/highlights créés
-  const handleServiceCreated = (newService: IncludedService) => {
-    setIncludedServices(prev => [...prev, newService])
-  }
-
-  const handleExtraCreated = (newExtra: ProductExtra) => {
-    setExtras(prev => [...prev, newExtra])
-  }
-
-  const handleHighlightCreated = (newHighlight: PropertyHighlight) => {
-    setHighlights(prev => [...prev, newHighlight])
-  }
-
-  // Initialize existing images
+  // Redirection si non connecté
   useEffect(() => {
-    if (product.img && product.img.length > 0) {
-      const existingImages: ImageFile[] = product.img.map((img, index) => ({
-        file: new File([], `existing-${index}.jpg`), // Placeholder file
-        preview: img.img,
-        id: `existing-${index}-${Date.now()}`,
-      }))
-      setSelectedFiles(existingImages)
+    if (!session) {
+      router.push('/auth')
     }
-  }, [product.img])
+  }, [session, router])
 
-  // File handling functions
+  // Handle checkbox changes for arrays
+  const handleCheckboxChange = (field: keyof FormData, id: string) => {
+    setFormData(prev => {
+      const currentArray = prev[field] as string[]
+      const isChecked = currentArray.includes(id)
+
+      return {
+        ...prev,
+        [field]: isChecked ? currentArray.filter(item => item !== id) : [...currentArray, id],
+      }
+    })
+  }
+
+  // File handling
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -420,62 +328,24 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
       // Validation des fichiers
       for (const file of filesArray) {
         if (!file.type.startsWith('image/')) {
-          setError({
-            type: 'file',
-            title: 'Format de fichier non supporté',
-            message: 'Seules les images sont acceptées.',
-            details: [`Fichier rejeté: ${file.name}`, `Type détecté: ${file.type || 'inconnu'}`],
-            suggestions: [
-              'Utilisez uniquement des fichiers image (JPEG, PNG, WebP, GIF)',
-              "Vérifiez l'extension de vos fichiers",
-              'Évitez les documents ou vidéos',
-            ],
-          })
+          setError('Veuillez sélectionner uniquement des images')
           return
         }
         if (file.size > 50 * 1024 * 1024) {
-          setError({
-            type: 'file',
-            title: 'Image trop volumineuse',
-            message: 'La taille de chaque image ne doit pas dépasser 50MB.',
-            details: [
-              `Fichier: ${file.name}`,
-              `Taille: ${(file.size / (1024 * 1024)).toFixed(1)}MB`,
-              'Limite: 50MB par image',
-            ],
-            suggestions: [
-              'Réduisez la résolution de votre image',
-              "Utilisez un outil de compression d'image en ligne",
-              'Choisissez le format JPEG pour des images de plus petite taille',
-            ],
-          })
+          // 50MB max before compression
+          setError('La taille de chaque image ne doit pas dépasser 50MB')
           return
         }
       }
 
       if (selectedFiles.length + filesArray.length > 35) {
-        setError({
-          type: 'file',
-          title: "Trop d'images sélectionnées",
-          message: 'Vous pouvez ajouter maximum 35 photos par annonce.',
-          details: [
-            `Images actuelles: ${selectedFiles.length}`,
-            `Images à ajouter: ${filesArray.length}`,
-            `Total: ${selectedFiles.length + filesArray.length}`,
-            'Limite: 35 photos maximum',
-          ],
-          suggestions: [
-            "Supprimez quelques images existantes avant d'en ajouter de nouvelles",
-            'Sélectionnez vos meilleures photos pour mettre en valeur votre hébergement',
-            "Vous pourrez ajouter d'autres photos après la création de l'annonce",
-          ],
-        })
+        setError('Maximum 35 photos autorisées')
         return
       }
 
       try {
         setIsUploadingImages(true)
-        setError(null) // Clear any previous errors
+        setError('Compression des images en cours...')
 
         // Compress images before adding them
         const compressedFiles = await compressImages(filesArray, {
@@ -485,15 +355,8 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
           quality: 0.8,
         })
 
-        // Create ImageFile objects with previews and unique IDs
-        const imageFiles: ImageFile[] = compressedFiles.map((file, index) => ({
-          file,
-          preview: URL.createObjectURL(file),
-          id: `img-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 11)}`,
-        }))
-
-        setSelectedFiles(prev => [...prev, ...imageFiles])
-        setError(null) // Clear any previous errors
+        setSelectedFiles(prev => [...prev, ...compressedFiles])
+        setError('') // Clear any previous errors
 
         // Log compression results
         compressedFiles.forEach((file, index) => {
@@ -504,39 +367,23 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
         })
       } catch (error) {
         console.error('Image compression failed:', error)
-        setError({
-          type: 'file',
-          title: 'Erreur de compression',
-          message: 'La compression automatique des images a échoué.',
-          details: [
-            'Certaines images peuvent être corrompues ou dans un format non supporté',
-            `Erreur technique: ${error instanceof Error ? error.message : 'inconnue'}`,
-          ],
-          suggestions: [
-            'Vérifiez que vos images ne sont pas corrompues',
-            'Essayez de compresser vos images manuellement avant de les télécharger',
-            "Utilisez des formats d'image standards (JPEG, PNG)",
-            'Réduisez la résolution de vos images si elles sont très grandes',
-          ],
-          retryable: true,
-        })
+        setError('Erreur lors de la compression des images')
       } finally {
         setIsUploadingImages(false)
       }
     }
   }
 
-  const removeFileById = (id: string) => {
-    const imageFile = selectedFiles.find(img => img.id === id)
-    if (imageFile?.preview && !imageFile.preview.startsWith('data:')) {
-      URL.revokeObjectURL(imageFile.preview)
+  const removeFile = (index: number) => {
+    // Libérer la mémoire de l'URL d'objet correspondante
+    if (imageUrls[index]) {
+      URL.revokeObjectURL(imageUrls[index])
     }
-    setSelectedFiles(prev => prev.filter(img => img.id !== id))
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index))
   }
 
   // Convert files to base64 with compression
-  const convertFilesToBase64 = async (imageFiles: ImageFile[]): Promise<string[]> => {
-    const files = imageFiles.filter(img => img.file !== null).map(img => img.file!)
+  const convertFilesToBase64 = async (files: File[]): Promise<string[]> => {
     setIsUploadingImages(true)
     try {
       // First compress the images
@@ -569,44 +416,27 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
     }
   }
 
-  // Handle input changes
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
-    const { name, value, type } = e.target
+  // Mémoriser les URLs des images pour éviter les re-créations
+  const imageUrls = useMemo(() => {
+    return selectedFiles.map(file => URL.createObjectURL(file))
+  }, [selectedFiles])
 
-    // Si on change le type d'hébergement, vérifier si c'est un hôtel
-    if (name === 'typeId') {
-      const selectedType = types.find(t => t.id === value)
-      const isHotelType = Boolean(selectedType?.isHotelType)
-      setFormData(prev => ({
-        ...prev,
-        [name]: value,
-        isHotel: isHotelType,
-        // Réinitialiser les champs hôtel si ce n'est pas un hôtel
-        hotelName: isHotelType ? prev.hotelName : '',
-        availableRooms: isHotelType ? prev.availableRooms : '',
-      }))
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
-      }))
+  // Nettoyer les URLs quand les fichiers changent
+  useEffect(() => {
+    return () => {
+      imageUrls.forEach(url => URL.revokeObjectURL(url))
     }
-  }
+  }, [imageUrls])
 
-  // Handle checkbox changes for arrays
-  const handleCheckboxChange = (field: keyof FormData, id: string) => {
-    setFormData(prev => {
-      const currentArray = prev[field] as string[]
-      const isChecked = currentArray.includes(id)
-
-      return {
-        ...prev,
-        [field]: isChecked ? currentArray.filter(item => item !== id) : [...currentArray, id],
-      }
-    })
-  }
+  // Cleanup object URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      selectedFiles.forEach(file => {
+        const url = URL.createObjectURL(file)
+        URL.revokeObjectURL(url)
+      })
+    }
+  }, [selectedFiles])
 
   // Nearby places management
   const addNearbyPlace = () => {
@@ -626,114 +456,113 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
     }))
   }
 
+  // Form submission avec validation basique
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    setError(null)
+    setError('')
+
+    if (!session?.user?.id) {
+      setError('Vous devez être connecté pour créer une annonce')
+      setIsLoading(false)
+      return
+    }
 
     // Validation basique
     if (!formData.name.trim()) {
-      setError({
-        type: 'validation',
-        title: 'Nom requis',
-        message: "Le nom de l'hébergement est requis",
-        details: ['Veuillez saisir un nom pour votre hébergement'],
-        suggestions: ['Entrez un nom descriptif pour votre hébergement'],
-        retryable: false,
-      })
+      setError("Le nom de l'hébergement est requis")
       setIsLoading(false)
       return
     }
 
     if (!formData.description.trim()) {
-      setError({
-        type: 'validation',
-        title: 'Description requise',
-        message: 'La description est requise',
-        details: ['Veuillez saisir une description pour votre hébergement'],
-        suggestions: ['Décrivez votre hébergement en détail'],
-        retryable: false,
-      })
+      setError('La description est requise')
       setIsLoading(false)
       return
     }
 
     if (!formData.typeId) {
-      setError({
-        type: 'validation',
-        title: 'Type requis',
-        message: "Veuillez sélectionner un type d'hébergement",
-        details: ["Le type d'hébergement est obligatoire"],
-        suggestions: ['Sélectionnez le type qui correspond le mieux à votre hébergement'],
-        retryable: false,
-      })
+      setError("Veuillez sélectionner un type d'hébergement")
+      setIsLoading(false)
+      return
+    }
+
+    if (selectedFiles.length === 0) {
+      setError('Veuillez ajouter au moins une photo de votre hébergement')
       setIsLoading(false)
       return
     }
 
     try {
-      // Convertir les nouvelles images en base64
-      let finalImages: string[] = []
+      // Convert images to base64
+      setIsUploadingImages(true)
+      const base64Images = await convertFilesToBase64(selectedFiles)
+      setIsUploadingImages(false)
 
-      if (selectedFiles.length > 0) {
-        // Séparer les images existantes des nouvelles
-        const existingImages = selectedFiles.filter(img => img.id.startsWith('existing-'))
-        const newImages = selectedFiles.filter(img => !img.id.startsWith('existing-'))
+      // Déterminer l'utilisateur final (admin peut assigner à un autre utilisateur)
+      const finalUserId = assignToOtherUser && userSelected ? userSelected : session.user.id
 
-        // Garder les images existantes (déjà en base64)
-        const existingImageUrls = existingImages.map(img => img.preview)
-
-        // Convertir les nouvelles images en base64
-        let newImageBase64: string[] = []
-        if (newImages.length > 0) {
-          setIsUploadingImages(true)
-          newImageBase64 = await convertFilesToBase64(newImages)
-          setIsUploadingImages(false)
-        }
-
-        // Combiner toutes les images
-        finalImages = [...existingImageUrls, ...newImageBase64]
+      // Préparer les données pour le service
+      const productData = {
+        name: formData.name,
+        description: formData.description,
+        address: formData.address,
+        longitude: 0, // Valeur par défaut puisqu'on supprime les champs
+        latitude: 0, // Valeur par défaut puisqu'on supprime les champs
+        basePrice: formData.basePrice,
+        priceMGA: formData.priceMGA,
+        room: formData.room ? Number(formData.room) : null,
+        bathroom: formData.bathroom ? Number(formData.bathroom) : null,
+        arriving: Number(formData.arriving),
+        leaving: Number(formData.leaving),
+        phone: formData.phone,
+        typeId: formData.typeId,
+        userId: [finalUserId],
+        equipments: formData.equipmentIds,
+        services: formData.serviceIds,
+        meals: formData.mealIds,
+        securities: formData.securityIds,
+        includedServices: formData.includedServiceIds,
+        extras: formData.extraIds,
+        highlights: formData.highlightIds,
+        images: base64Images, // Utiliser les images converties en base64
+        nearbyPlaces: formData.nearbyPlaces.map(place => ({
+          name: place.name,
+          distance: place.distance ? Number(place.distance) : 0,
+          duration: 0, // TODO: Calculer la durée si nécessaire
+          transport: place.unit === 'kilomètres' ? 'voiture' : 'à pied',
+        })),
       }
 
-      const updatedProduct = await resubmitProductWithChange(
-        product.id,
-        {
-          name: formData.name,
-          description: formData.description,
-          address: formData.address,
-          longitude: 0, // TODO: Récupérer les coordonnées réelles
-          latitude: 0, // TODO: Récupérer les coordonnées réelles
-          basePrice: formData.basePrice,
-          room: formData.room ? parseInt(formData.room) : null,
-          bathroom: formData.bathroom ? parseInt(formData.bathroom) : null,
-          arriving: parseInt(formData.arriving),
-          leaving: parseInt(formData.leaving),
-          typeId: formData.typeId,
-          securities: formData.securityIds,
-          equipments: formData.equipmentIds,
-          services: formData.serviceIds,
-          meals: formData.mealIds,
-          images: finalImages,
-        },
-        product.user[0]?.id // Utiliser l'ID du premier utilisateur comme hostId
-      )
+      const result = await createProduct(productData)
 
-      if (updatedProduct) {
-        onSave(updatedProduct as unknown as Product)
+      if (result) {
+        router.push('/dashboard')
+      } else {
+        throw new Error("Erreur lors de la création de l'annonce")
       }
     } catch (error) {
-      console.error('Erreur lors de la mise à jour du produit:', error)
-      setError({
-        type: 'general',
-        title: 'Erreur de sauvegarde',
-        message: 'Une erreur est survenue lors de la sauvegarde',
-        details: ['Impossible de sauvegarder les modifications'],
-        suggestions: ['Vérifiez votre connexion internet', 'Réessayez dans quelques instants'],
-        retryable: true,
-      })
+      console.error('Error creating product:', error)
+      setError("Erreur lors de la création de l'annonce")
     } finally {
       setIsLoading(false)
+      setIsUploadingImages(false)
     }
+  }
+
+  // Ne pas afficher le formulaire si l'utilisateur n'est pas connecté
+  if (!session) {
+    return (
+      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center'>
+        <div className='text-center'>
+          <h2 className='text-2xl font-bold text-slate-800 mb-4'>Connexion requise</h2>
+          <p className='text-slate-600 mb-6'>Vous devez être connecté pour créer une annonce.</p>
+          <Button onClick={() => router.push('/auth')} className='bg-blue-600 hover:bg-blue-700'>
+            Se connecter
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -746,12 +575,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
       >
         {/* Header with breadcrumb */}
         <motion.div className='flex items-center gap-4' variants={itemVariants}>
-          <Button
-            variant='ghost'
-            size='sm'
-            className='text-slate-600 hover:text-slate-800'
-            onClick={onCancel}
-          >
+          <Button variant='ghost' size='sm' className='text-slate-600 hover:text-slate-800'>
             <ArrowLeft className='h-4 w-4 mr-2' />
             Retour
           </Button>
@@ -760,31 +584,22 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
         {/* Page Header */}
         <motion.div className='text-center space-y-4' variants={itemVariants}>
           <div className='inline-flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-medium'>
-            <Edit3 className='h-4 w-4' />
-            Modifier l&apos;annonce
+            <Home className='h-4 w-4' />
+            Créer une annonce
           </div>
           <h1 className='text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 via-blue-700 to-indigo-700'>
-            Modifier l&apos;annonce
+            Créer une nouvelle annonce
           </h1>
           <p className='text-slate-600 max-w-2xl mx-auto text-lg'>
-            Modifiez les informations de votre hébergement
+            Remplissez les informations ci-dessous pour créer votre annonce
           </p>
         </motion.div>
 
         {error && (
           <motion.div variants={itemVariants}>
-            <ErrorAlert
-              error={error}
-              onClose={() => setError(null)}
-              onRetry={
-                error.retryable
-                  ? () => {
-                      setError(null)
-                      // Optionally trigger the last failed action again
-                    }
-                  : undefined
-              }
-            />
+            <div className='max-w-2xl mx-auto p-4 bg-red-50 border border-red-200 rounded-lg'>
+              <p className='text-red-700'>{error}</p>
+            </div>
           </motion.div>
         )}
 
@@ -861,6 +676,60 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
                         required
                         className='w-full px-3 py-2 border border-slate-200 rounded-md focus:border-blue-300 focus:ring-blue-200 focus:ring-2 focus:ring-opacity-50'
                       />
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Localisation et Contact */}
+              <motion.div variants={itemVariants}>
+                <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm'>
+                  <CardHeader className='space-y-2'>
+                    <div className='flex items-center gap-2'>
+                      <div className='p-2 bg-green-50 rounded-lg'>
+                        <MapPin className='h-5 w-5 text-green-600' />
+                      </div>
+                      <div>
+                        <CardTitle className='text-xl'>Localisation et Contact</CardTitle>
+                        <p className='text-slate-600 text-sm mt-1'>
+                          Où se trouve votre hébergement et comment vous joindre
+                        </p>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className='space-y-6'>
+                    <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+                      <div className='space-y-2'>
+                        <label htmlFor='address' className='text-sm font-medium text-slate-700'>
+                          Adresse complète
+                        </label>
+                        <Input
+                          id='address'
+                          name='address'
+                          type='text'
+                          placeholder='Numéro, rue, code postal, ville'
+                          value={formData.address}
+                          onChange={handleInputChange}
+                          required
+                          className='border-slate-200 focus:border-green-300 focus:ring-green-200'
+                        />
+                      </div>
+
+                      <div className='space-y-2'>
+                        <label htmlFor='phone' className='text-sm font-medium text-slate-700'>
+                          Téléphone de contact
+                        </label>
+                        <Input
+                          id='phone'
+                          name='phone'
+                          type='tel'
+                          placeholder='+33 6 XX XX XX XX'
+                          value={formData.phone}
+                          onChange={handleInputChange}
+                          required
+                          className='border-slate-200 focus:border-green-300 focus:ring-green-200'
+                        />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -1026,14 +895,6 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
                         Acceptation automatique des réservations
                       </label>
                     </div>
-
-                    {/* Calcul des commissions */}
-                    {formData.basePrice && (
-                      <CommissionDisplay
-                        basePrice={parseFloat(formData.basePrice) || 0}
-                        className='border-orange-200 bg-orange-50/30'
-                      />
-                    )}
                   </CardContent>
                 </Card>
               </motion.div>
@@ -1297,22 +1158,10 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
                 <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
                   {/* Services inclus */}
                   <div className='border-2 border-slate-200 rounded-xl p-4 bg-white/50 backdrop-blur-sm flex flex-col h-full'>
-                    <div className='flex items-center justify-between mb-4'>
-                      <h4 className='font-medium text-slate-700 flex items-center gap-2'>
-                        <Package className='h-4 w-4' />
-                        Services inclus
-                      </h4>
-                      <Button
-                        type='button'
-                        size='sm'
-                        variant='outline'
-                        onClick={() => setServiceModalOpen(true)}
-                        className='text-xs'
-                      >
-                        <Plus className='h-3 w-3 mr-1' />
-                        Ajouter
-                      </Button>
-                    </div>
+                    <h4 className='font-medium text-slate-700 flex items-center gap-2 mb-4'>
+                      <Package className='h-4 w-4' />
+                      Services inclus
+                    </h4>
                     <div className='flex-1 space-y-2 content-start'>
                       {includedServices.map(service => (
                         <label
@@ -1352,16 +1201,9 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
                               )}
                             </div>
                             <div className='flex-1 min-w-0'>
-                              <div className='flex items-center gap-1 mb-1'>
-                                <span className='text-xs font-medium text-slate-700 block truncate'>
-                                  {service.name}
-                                </span>
-                                {service.userId && (
-                                  <span className='text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium'>
-                                    Personnel
-                                  </span>
-                                )}
-                              </div>
+                              <span className='text-xs font-medium text-slate-700 block truncate'>
+                                {service.name}
+                              </span>
                               {service.description && (
                                 <span className='text-xs text-slate-500 block truncate'>
                                   {service.description}
@@ -1376,22 +1218,10 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
 
                   {/* Extras payants */}
                   <div className='border-2 border-slate-200 rounded-xl p-4 bg-white/50 backdrop-blur-sm flex flex-col h-full'>
-                    <div className='flex items-center justify-between mb-4'>
-                      <h4 className='font-medium text-slate-700 flex items-center gap-2'>
-                        <Plus className='h-4 w-4' />
-                        Options payantes
-                      </h4>
-                      <Button
-                        type='button'
-                        size='sm'
-                        variant='outline'
-                        onClick={() => setExtraModalOpen(true)}
-                        className='text-xs'
-                      >
-                        <Plus className='h-3 w-3 mr-1' />
-                        Ajouter
-                      </Button>
-                    </div>
+                    <h4 className='font-medium text-slate-700 flex items-center gap-2 mb-4'>
+                      <Plus className='h-4 w-4' />
+                      Options payantes
+                    </h4>
                     <div className='flex-1 space-y-2 content-start'>
                       {extras.map(extra => (
                         <label
@@ -1431,16 +1261,9 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
                               )}
                             </div>
                             <div className='flex-1 min-w-0'>
-                              <div className='flex items-center gap-1 mb-1'>
-                                <span className='text-xs font-medium text-slate-700 block truncate'>
-                                  {extra.name}
-                                </span>
-                                {extra.userId && (
-                                  <span className='text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium'>
-                                    Personnel
-                                  </span>
-                                )}
-                              </div>
+                              <span className='text-xs font-medium text-slate-700 block truncate'>
+                                {extra.name}
+                              </span>
                               <span className='text-xs text-green-600 block'>
                                 {extra.priceEUR}€ / {extra.priceMGA.toLocaleString()}Ar
                               </span>
@@ -1458,22 +1281,10 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
 
                   {/* Points forts */}
                   <div className='border-2 border-slate-200 rounded-xl p-4 bg-white/50 backdrop-blur-sm flex flex-col h-full'>
-                    <div className='flex items-center justify-between mb-4'>
-                      <h4 className='font-medium text-slate-700 flex items-center gap-2'>
-                        <Highlighter className='h-4 w-4' />
-                        Points forts
-                      </h4>
-                      <Button
-                        type='button'
-                        size='sm'
-                        variant='outline'
-                        onClick={() => setHighlightModalOpen(true)}
-                        className='text-xs'
-                      >
-                        <Plus className='h-3 w-3 mr-1' />
-                        Ajouter
-                      </Button>
-                    </div>
+                    <h4 className='font-medium text-slate-700 flex items-center gap-2 mb-4'>
+                      <Highlighter className='h-4 w-4' />
+                      Points forts
+                    </h4>
                     <div className='flex-1 space-y-2 content-start'>
                       {highlights.map(highlight => (
                         <label
@@ -1513,16 +1324,9 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
                               )}
                             </div>
                             <div className='flex-1 min-w-0'>
-                              <div className='flex items-center gap-1 mb-1'>
-                                <span className='text-xs font-medium text-slate-700 block truncate'>
-                                  {highlight.name}
-                                </span>
-                                {highlight.userId && (
-                                  <span className='text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full font-medium'>
-                                    Personnel
-                                  </span>
-                                )}
-                              </div>
+                              <span className='text-xs font-medium text-slate-700 block truncate'>
+                                {highlight.name}
+                              </span>
                               {highlight.description && (
                                 <span className='text-xs text-slate-500 block truncate'>
                                   {highlight.description}
@@ -1535,28 +1339,6 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
                     </div>
                   </div>
                 </div>
-
-                {/* Aperçu des coûts */}
-                {selectedExtras.length > 0 && formData.basePrice && (
-                  <div className='mt-6'>
-                    <h3 className='text-lg font-semibold mb-4 text-slate-700'>Aperçu des coûts</h3>
-                    <BookingCostSummary
-                      basePrice={parseFloat(formData.basePrice) || 0}
-                      numberOfDays={numberOfDays}
-                      guestCount={testBooking.guestCount}
-                      selectedExtras={selectedExtras}
-                      currency='EUR'
-                      startDate={testBooking.startDate}
-                      endDate={testBooking.endDate}
-                      className='max-w-md'
-                      showCommissions={true}
-                    />
-                    <p className='text-xs text-slate-500 mt-2'>
-                      * Exemple calculé sur {numberOfDays} jour{numberOfDays > 1 ? 's' : ''} pour{' '}
-                      {testBooking.guestCount} personne{testBooking.guestCount > 1 ? 's' : ''}
-                    </p>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </motion.div>
@@ -1572,7 +1354,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
                   <div>
                     <CardTitle className='text-xl'>Photos de l&apos;hébergement</CardTitle>
                     <p className='text-slate-600 text-sm mt-1'>
-                      Modifiez les photos de votre hébergement (maximum 35)
+                      Ajoutez des photos attrayantes de votre hébergement (maximum 10)
                       {selectedFiles.length > 0 && (
                         <span className='ml-2 font-medium text-blue-600'>
                           {selectedFiles.length} photo{selectedFiles.length > 1 ? 's' : ''}{' '}
@@ -1622,7 +1404,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
                         PNG, JPG, JPEG, WEBP jusqu&apos;à 50MB chacune (compressées automatiquement)
                         {selectedFiles.length > 0 && (
                           <span className='block mt-1 text-green-600 font-medium'>
-                            ✓ {selectedFiles.length}/35 photos sélectionnées
+                            ✓ {selectedFiles.length}/10 photos sélectionnées
                           </span>
                         )}
                         {isUploadingImages && (
@@ -1635,18 +1417,28 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
                   </div>
                 </div>
 
-                <SortableImageGrid
-                  images={selectedFiles}
-                  onReorder={setSelectedFiles}
-                  onRemove={removeFileById}
-                  onPreview={() => setShowGalleryPreview(true)}
-                />
-
-                <ImageGalleryPreview
-                  images={selectedFiles}
-                  isOpen={showGalleryPreview}
-                  onClose={() => setShowGalleryPreview(false)}
-                />
+                {selectedFiles.length > 0 && (
+                  <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
+                    {selectedFiles.map((file, index) => (
+                      <div key={index} className='relative group'>
+                        <Image
+                          src={imageUrls[index]}
+                          alt={`Aperçu ${index + 1}`}
+                          width={200}
+                          height={96}
+                          className='w-full h-24 object-cover rounded-lg border border-slate-200'
+                        />
+                        <button
+                          type='button'
+                          onClick={() => removeFile(index)}
+                          className='absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 transition-colors'
+                        >
+                          <X className='h-3 w-3' />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
@@ -1824,22 +1616,69 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
             </Card>
           </motion.div>
 
+          {/* Section Admin - Assigner à un autre utilisateur */}
+          {session?.user?.roles === 'ADMIN' && (
+            <motion.div variants={itemVariants}>
+              <Card className='border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50'>
+                <CardHeader>
+                  <CardTitle className='flex items-center gap-3 text-orange-800'>
+                    <Users className='h-5 w-5 text-orange-600' />
+                    Administration - Assigner l&apos;annonce
+                  </CardTitle>
+                  <p className='text-sm text-orange-600'>
+                    En tant qu&apos;administrateur, vous pouvez créer cette annonce pour un autre
+                    utilisateur
+                  </p>
+                </CardHeader>
+                <CardContent className='space-y-4'>
+                  <div className='flex items-center space-x-2'>
+                    <input
+                      type='checkbox'
+                      id='assignToOtherUser'
+                      checked={assignToOtherUser}
+                      onChange={e => setAssignToOtherUser(e.target.checked)}
+                      className='rounded border-orange-300 focus:ring-orange-200'
+                    />
+                    <label
+                      htmlFor='assignToOtherUser'
+                      className='text-sm font-medium text-orange-700'
+                    >
+                      Assigner cette annonce à un autre utilisateur
+                    </label>
+                  </div>
+
+                  {assignToOtherUser && (
+                    <div className='space-y-2'>
+                      <label htmlFor='userSelect' className='text-sm font-medium text-orange-700'>
+                        Sélectionner l&apos;utilisateur
+                      </label>
+                      <select
+                        id='userSelect'
+                        value={userSelected}
+                        onChange={e => setUserSelected(e.target.value)}
+                        className='w-full p-2 border border-orange-200 rounded-md focus:ring-orange-200 focus:border-orange-300'
+                        required={assignToOtherUser}
+                      >
+                        <option value=''>Choisir un utilisateur...</option>
+                        {users.map(user => (
+                          <option key={user.id} value={user.id}>
+                            {user.firstname} {user.lastname} ({user.email})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
           {/* Bouton de soumission */}
-          <motion.div className='flex justify-center gap-4 pt-8' variants={itemVariants}>
-            <Button
-              type='button'
-              variant='outline'
-              onClick={onCancel}
-              disabled={isLoading}
-              className='px-8 py-3'
-            >
-              <X className='h-4 w-4 mr-2' />
-              Annuler
-            </Button>
+          <motion.div className='flex justify-center pt-8' variants={itemVariants}>
             <Button
               type='submit'
               disabled={isLoading || isUploadingImages}
-              className='px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200'
+              className='w-full max-w-md h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium text-lg shadow-lg hover:shadow-xl transition-all duration-200'
             >
               {isUploadingImages ? (
                 <div className='flex items-center gap-2'>
@@ -1849,38 +1688,17 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
               ) : isLoading ? (
                 <div className='flex items-center gap-2'>
                   <div className='w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin' />
-                  Sauvegarde en cours...
+                  Création en cours...
                 </div>
               ) : (
                 <div className='flex items-center gap-2'>
-                  <Save className='h-5 w-5' />
-                  Sauvegarder les modifications
+                  <Plus className='h-5 w-5' />
+                  Créer l&apos;annonce
                 </div>
               )}
             </Button>
           </motion.div>
         </form>
-
-        {/* Modaux pour créer des services personnalisés */}
-        <CreateServiceModal
-          isOpen={serviceModalOpen}
-          onClose={() => setServiceModalOpen(false)}
-          onServiceCreated={handleServiceCreated}
-          title='Ajouter un service inclus personnalisé'
-          description='Créez un service inclus spécifique à votre hébergement'
-        />
-
-        <CreateExtraModal
-          isOpen={extraModalOpen}
-          onClose={() => setExtraModalOpen(false)}
-          onExtraCreated={handleExtraCreated}
-        />
-
-        <CreateHighlightModal
-          isOpen={highlightModalOpen}
-          onClose={() => setHighlightModalOpen(false)}
-          onHighlightCreated={handleHighlightCreated}
-        />
       </motion.div>
     </div>
   )

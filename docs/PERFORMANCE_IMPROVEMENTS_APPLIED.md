@@ -15,16 +15,19 @@
 **Fichier**: `src/hooks/useProductSearchPaginated.ts`
 
 **Avant**:
+
 ```typescript
 enabled: !staticQueries.some(q => q.isLoading) // ❌ Bloquait la recherche
 ```
 
 **Après**:
+
 ```typescript
 // ✅ Pas de enabled - toutes les requêtes en parallèle!
 ```
 
 **Impact**:
+
 - Les 6 requêtes (types, security, meals, equipments, services, products) se lancent **en même temps**
 - **Gain: -2.5 secondes** (plus d'attente waterfall)
 
@@ -35,6 +38,7 @@ enabled: !staticQueries.some(q => q.isLoading) // ❌ Bloquait la recherche
 **Fichier**: `src/app/api/products/search/route.ts`
 
 **Avant**:
+
 ```typescript
 img: {
   take: 1,
@@ -43,6 +47,7 @@ img: {
 ```
 
 **Après**:
+
 ```typescript
 img: {
   take: 1,
@@ -51,6 +56,7 @@ img: {
 ```
 
 **Impact**:
+
 - JSON de **3MB → 300KB** (-90%)
 - Parsing JSON **10x plus rapide**
 - **Gain: -2 secondes**
@@ -62,6 +68,7 @@ img: {
 **Nouveau fichier**: `src/app/api/products/[id]/thumbnail/route.ts`
 
 **Fonctionnalités**:
+
 - Récupère l'image base64 depuis la DB
 - Optimise avec sharp (resize 300x200, WebP, qualité 80)
 - Cache HTTP agressif (1 an)
@@ -79,18 +86,21 @@ img: {
 **Fichier**: `src/hooks/useProductSearchPaginated.ts`
 
 **Avant**:
+
 ```typescript
 staleTime: 1000 * 60 * 2,  // 2 minutes
 gcTime: 1000 * 60 * 5,     // 5 minutes
 ```
 
 **Après**:
+
 ```typescript
 staleTime: 1000 * 60 * 30,     // 30 minutes
 gcTime: 1000 * 60 * 60 * 2,    // 2 heures
 ```
 
 **Impact**:
+
 - Moins de re-fetch inutiles
 - Navigation instantanée après le premier chargement
 - **Gain: -3 secondes par navigation retour**
@@ -102,6 +112,7 @@ gcTime: 1000 * 60 * 60 * 2,    // 2 heures
 **Fichier**: `src/components/ui/ProductCard.tsx`
 
 **Modifications**:
+
 - Utilise `/api/products/${id}/thumbnail` au lieu du base64
 - Lazy loading natif (`loading="lazy"`)
 - Placeholder blur SVG pendant le chargement
@@ -114,13 +125,13 @@ gcTime: 1000 * 60 * 60 * 2,    // 2 heures
 
 ## 📊 Impact Attendu
 
-| Métrique | Avant | Après | Gain |
-|----------|-------|-------|------|
-| **Temps de chargement initial** | 5s | 0.5-1s | **-80 à -90%** |
-| **Taille du JSON** | 3MB | 300KB | **-90%** |
-| **Taille par image** | 500KB | 10-20KB | **-95%** |
-| **Cache React Query** | 2min | 30min | **+1400%** |
-| **Requêtes parallèles** | Non | Oui | **-50%** |
+| Métrique                        | Avant | Après   | Gain           |
+| ------------------------------- | ----- | ------- | -------------- |
+| **Temps de chargement initial** | 5s    | 0.5-1s  | **-80 à -90%** |
+| **Taille du JSON**              | 3MB   | 300KB   | **-90%**       |
+| **Taille par image**            | 500KB | 10-20KB | **-95%**       |
+| **Cache React Query**           | 2min  | 30min   | **+1400%**     |
+| **Requêtes parallèles**         | Non   | Oui     | **-50%**       |
 
 ---
 
@@ -151,6 +162,7 @@ console.timeEnd('Page Load')
 **DevTools → Network → Filter: Fetch/XHR**
 
 Vous devriez voir:
+
 ```
 ✅ GET /api/types          → ~100ms (en parallèle)
 ✅ GET /api/security       → ~100ms (en parallèle)
@@ -161,6 +173,7 @@ Vous devriez voir:
 ```
 
 **Puis, pour chaque image visible**:
+
 ```
 ✅ GET /api/products/xxx/thumbnail → ~50ms (lazy, avec cache)
 ```
@@ -168,6 +181,7 @@ Vous devriez voir:
 ### 4. Vérifier le cache
 
 **Second chargement** (rafraîchir F5):
+
 ```
 ✅ Les données statiques viennent du cache React Query
 ✅ Les images viennent du cache HTTP navigateur
@@ -193,15 +207,18 @@ Vous devriez voir:
 ### Phase 2: Amélioration Continue
 
 1. **Données statiques en SSR** (Next.js Server Components)
+
    - Pré-charger types/equipments au build time
    - Éliminer complètement ces 5 requêtes
    - Gain supplémentaire: -500ms
 
 2. **Index Base de Données**
+
    ```prisma
    @@index([validate, isDraft])
    @@index([typeId, validate])
    ```
+
    - Accélère les requêtes Prisma
    - Gain: -200ms
 
@@ -212,6 +229,7 @@ Vous devriez voir:
 ### Phase 3: Migration Images File System
 
 Quand le client est prêt, migrer vers:
+
 ```
 /public/uploads/products/{id}/
 ├── thumb.webp    (10KB)
@@ -220,6 +238,7 @@ Quand le client est prêt, migrer vers:
 ```
 
 **Avantages**:
+
 - Encore plus rapide (Nginx direct)
 - CDN-ready si besoin futur
 - Pas de sharp à la volée
@@ -229,6 +248,7 @@ Quand le client est prêt, migrer vers:
 ## ✅ Build Status
 
 Le build passe avec succès:
+
 ```bash
 pnpm build
 # ✓ Compiled successfully

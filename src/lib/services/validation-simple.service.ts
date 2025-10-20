@@ -23,9 +23,9 @@ export enum ValidationCommentStatus {
 export const validationService = {
   // Legacy function - use getProductsForValidationPaginated instead
   async getProductsForValidation() {
-    const result = await validationService.getProductsForValidationPaginated({ 
-      page: 1, 
-      limit: 100 
+    const result = await validationService.getProductsForValidationPaginated({
+      page: 1,
+      limit: 100,
     })
     return result?.products || []
   },
@@ -35,7 +35,7 @@ export const validationService = {
     page = 1,
     limit = 20,
     status,
-    includeLightweight = false
+    includeLightweight = false,
   }: {
     page?: number
     limit?: number
@@ -108,38 +108,40 @@ export const validationService = {
         take: limit,
         orderBy: [
           { validate: 'asc' }, // Pending validation first
-          { id: 'desc' }
-        ]
+          { id: 'desc' },
+        ],
       }),
       prisma.product.count({
-        where: whereClause
-      })
+        where: whereClause,
+      }),
     ])
 
     // Only process metadata for non-lightweight requests
-    const processedProducts = includeLightweight ? products : products.map(product => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const lastTwoEntries = (product as any).validationHistory || []
-      let isRecentlyModified = false
-      let wasRecheckRequested = false
+    const processedProducts = includeLightweight
+      ? products
+      : products.map(product => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const lastTwoEntries = (product as any).validationHistory || []
+          let isRecentlyModified = false
+          let wasRecheckRequested = false
 
-      if (lastTwoEntries.length >= 2) {
-        const [latest, previous] = lastTwoEntries
-        wasRecheckRequested =
-          previous.newStatus === ProductValidation.RecheckRequest &&
-          latest.newStatus === ProductValidation.NotVerified &&
-          latest.hostId !== null
+          if (lastTwoEntries.length >= 2) {
+            const [latest, previous] = lastTwoEntries
+            wasRecheckRequested =
+              previous.newStatus === ProductValidation.RecheckRequest &&
+              latest.newStatus === ProductValidation.NotVerified &&
+              latest.hostId !== null
 
-        isRecentlyModified = wasRecheckRequested
-      }
+            isRecentlyModified = wasRecheckRequested
+          }
 
-      return {
-        ...product,
-        validationHistory: undefined, // Remove from response
-        isRecentlyModified,
-        wasRecheckRequested,
-      }
-    })
+          return {
+            ...product,
+            validationHistory: undefined, // Remove from response
+            isRecentlyModified,
+            wasRecheckRequested,
+          }
+        })
 
     return {
       products: processedProducts,
@@ -149,8 +151,8 @@ export const validationService = {
         total: totalCount,
         totalPages: Math.ceil(totalCount / limit),
         hasNext: page < Math.ceil(totalCount / limit),
-        hasPrev: page > 1
-      }
+        hasPrev: page > 1,
+      },
     }
   },
 
@@ -168,7 +170,7 @@ export const validationService = {
       // Récupérer le produit avec ses informations de draft
       const currentProduct = await tx.product.findUnique({
         where: { id: productId },
-        select: { 
+        select: {
           validate: true,
           isDraft: true,
           originalProductId: true,
@@ -178,14 +180,14 @@ export const validationService = {
       if (!currentProduct) {
         throw new Error('Produit non trouvé')
       }
-      
+
       let product
-      
+
       // Si c'est un draft, appliquer les changements au produit original
       if (currentProduct.isDraft && currentProduct.originalProductId) {
         // Apply draft changes will handle the merge and deletion
         product = await applyDraftChanges(productId)
-        
+
         // Get the updated product with user info for email
         product = await tx.product.findUnique({
           where: { id: currentProduct.originalProductId },
@@ -217,17 +219,22 @@ export const validationService = {
       }
 
       // Créer l'entrée dans l'historique
-      const finalProductId = currentProduct.isDraft && currentProduct.originalProductId 
-        ? currentProduct.originalProductId 
-        : productId
-        
+      const finalProductId =
+        currentProduct.isDraft && currentProduct.originalProductId
+          ? currentProduct.originalProductId
+          : productId
+
       await tx.validationHistory.create({
         data: {
           productId: finalProductId,
           previousStatus: currentProduct.validate,
           newStatus: ProductValidation.Approve,
           adminId,
-          reason: reason || (currentProduct.isDraft ? 'Modifications approuvées par admin' : 'Produit approuvé par admin'),
+          reason:
+            reason ||
+            (currentProduct.isDraft
+              ? 'Modifications approuvées par admin'
+              : 'Produit approuvé par admin'),
         },
       })
 
@@ -260,7 +267,7 @@ export const validationService = {
       // Récupérer le produit avec ses informations de draft
       const currentProduct = await tx.product.findUnique({
         where: { id: productId },
-        select: { 
+        select: {
           validate: true,
           isDraft: true,
           originalProductId: true,
@@ -271,10 +278,10 @@ export const validationService = {
       if (!currentProduct) {
         throw new Error('Produit non trouvé')
       }
-      
+
       let product
       let finalProductId
-      
+
       // Si c'est un draft, rejeter et supprimer le draft
       if (currentProduct.isDraft && currentProduct.originalProductId) {
         // Get user info before deletion
@@ -290,12 +297,12 @@ export const validationService = {
             },
           },
         })
-        
+
         finalProductId = currentProduct.originalProductId
-        
+
         // Reject draft will handle email and deletion
         await rejectDraftChanges(productId, reason)
-        
+
         // The rejectDraftChanges function already sends the email, so we return early
         return product
       } else {
@@ -457,8 +464,9 @@ export const validationService = {
     const draftsCount = await prisma.product.count({
       where: { isDraft: true },
     })
-    
-    const modificationPendingCount = stats.find(s => s.validate === ProductValidation.ModificationPending)?._count.id || 0
+
+    const modificationPendingCount =
+      stats.find(s => s.validate === ProductValidation.ModificationPending)?._count.id || 0
 
     return {
       pending: newSubmissions, // Vraiment nouvelles soumissions

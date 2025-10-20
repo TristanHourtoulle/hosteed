@@ -43,8 +43,8 @@ export async function checkHotelRoomAvailability(
         hotel: {
           select: {
             name: true,
-          }
-        }
+          },
+        },
       },
     })
 
@@ -123,16 +123,17 @@ export async function checkHotelRoomAvailability(
     if (existingUnavailable.length > 0) {
       return {
         available: false,
-        message: 'Cette période est marquée comme indisponible par l\'hébergeur',
+        message: "Cette période est marquée comme indisponible par l'hébergeur",
         availableRooms: 0,
       }
     }
 
     return {
       available: availableRooms > 0,
-      message: availableRooms > 0 
-        ? `${availableRooms} chambre(s) disponible(s) sur ${product.availableRooms}`
-        : 'Aucune chambre disponible pour cette période',
+      message:
+        availableRooms > 0
+          ? `${availableRooms} chambre(s) disponible(s) sur ${product.availableRooms}`
+          : 'Aucune chambre disponible pour cette période',
       availableRooms: availableRooms,
     }
   } catch (error) {
@@ -156,8 +157,8 @@ export async function checkRentIsAvailable(
       select: {
         availableRooms: true,
         hotel: {
-          select: { id: true }
-        }
+          select: { id: true },
+        },
       },
     })
 

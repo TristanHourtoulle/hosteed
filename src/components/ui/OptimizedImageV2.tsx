@@ -18,43 +18,43 @@ interface OptimizedImageV2Props {
   src?: string
   optimizedData?: OptimizedImageData
   alt: string
-  
+
   // Display options
   width?: number
   height?: number
   fill?: boolean
   priority?: boolean
-  
-  // Responsive behavior  
+
+  // Responsive behavior
   sizes?: string
   quality?: number
-  
+
   // Performance options - Phase 5 enhancements
   lazy?: boolean
   placeholder?: 'blur' | 'empty' | 'shimmer' | 'dominant-color'
   blurDataURL?: string
   preloadMargin?: string // Distance avant d'être visible pour commencer le chargement
-  
+
   // Visual options
   objectFit?: 'contain' | 'cover' | 'fill' | 'none' | 'scale-down'
   objectPosition?: string
   className?: string
-  
+
   // Accessibility
   loading?: 'lazy' | 'eager'
   fetchPriority?: 'high' | 'low' | 'auto'
-  
+
   // Event handlers
   onLoad?: () => void
   onError?: () => void
   onVisible?: () => void // Nouveau: quand l'image devient visible
-  
+
   // Progressive enhancement - Phase 5
   showDominantColor?: boolean
   enableModernFormats?: boolean
   enableProgressiveLoading?: boolean // Charge l'image en plusieurs étapes
   trackPerformance?: boolean // Active le tracking de performance
-  
+
   // Animation options
   fadeInDuration?: number
   animateOnLoad?: boolean
@@ -93,11 +93,11 @@ const OptimizedImageV2: React.FC<OptimizedImageV2Props> = ({
   const [lowQualityLoaded, setLowQualityLoaded] = useState(false)
 
   // Performance tracking - Phase 5
-  const { 
+  const {
     // markInteraction, // Currently not used in this implementation
-    measureOperation, 
+    measureOperation,
     sendMetric,
-    isEnabled: performanceEnabled 
+    isEnabled: performanceEnabled,
   } = usePerformanceTracking({
     componentName: 'OptimizedImageV2',
     trackInteractions: false,
@@ -153,7 +153,8 @@ const OptimizedImageV2: React.FC<OptimizedImageV2Props> = ({
     if (blurDataURL) return blurDataURL
 
     if (optimizedData?.dominantColor) {
-      return `data:image/svg+xml;base64,${Buffer.from(`
+      return `data:image/svg+xml;base64,${Buffer.from(
+        `
         <svg width="${width || 400}" height="${height || 300}" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -163,14 +164,17 @@ const OptimizedImageV2: React.FC<OptimizedImageV2Props> = ({
           </defs>
           <rect width="100%" height="100%" fill="url(#grad)"/>
         </svg>
-      `).toString('base64')}`
+      `
+      ).toString('base64')}`
     }
 
-    return `data:image/svg+xml;base64,${Buffer.from(`
+    return `data:image/svg+xml;base64,${Buffer.from(
+      `
       <svg width="${width || 400}" height="${height || 300}" xmlns="http://www.w3.org/2000/svg">
         <rect width="100%" height="100%" fill="#f3f4f6"/>
       </svg>
-    `).toString('base64')}`
+    `
+    ).toString('base64')}`
   }, [blurDataURL, optimizedData, width, height])
 
   // Generate enhanced placeholders
@@ -225,20 +229,10 @@ const OptimizedImageV2: React.FC<OptimizedImageV2Props> = ({
         break
 
       default:
-        return (
-          <div
-            className={cn('bg-gray-200', className)}
-            style={baseStyle}
-          />
-        )
+        return <div className={cn('bg-gray-200', className)} style={baseStyle} />
     }
 
-    return (
-      <div
-        className={cn('bg-gray-200 animate-pulse', className)}
-        style={baseStyle}
-      />
-    )
+    return <div className={cn('bg-gray-200 animate-pulse', className)} style={baseStyle} />
   }, [placeholder, optimizedData, blurDataURL, className, fill, width, height, getBlurDataURL])
 
   // Handle image loading with performance tracking
@@ -247,22 +241,32 @@ const OptimizedImageV2: React.FC<OptimizedImageV2Props> = ({
       setImageState('loaded')
       handleIntersectionLoad()
       onLoad?.()
-      
+
       if (performanceEnabled) {
-        sendMetric('imageLoaded', 1, { 
-          alt, 
+        sendMetric('imageLoaded', 1, {
+          alt,
           src: getImageSource() || 'unknown',
-          progressive: enableProgressiveLoading && lowQualityLoaded 
+          progressive: enableProgressiveLoading && lowQualityLoaded,
         })
       }
     })
-  }, [measureOperation, handleIntersectionLoad, onLoad, performanceEnabled, sendMetric, alt, getImageSource, enableProgressiveLoading, lowQualityLoaded])
+  }, [
+    measureOperation,
+    handleIntersectionLoad,
+    onLoad,
+    performanceEnabled,
+    sendMetric,
+    alt,
+    getImageSource,
+    enableProgressiveLoading,
+    lowQualityLoaded,
+  ])
 
   const handleImageError = useCallback(() => {
     setImageState('error')
     handleIntersectionError()
     onError?.()
-    
+
     if (performanceEnabled) {
       sendMetric('imageError', 1, { alt, src: getImageSource() || 'unknown' })
     }
@@ -290,12 +294,12 @@ const OptimizedImageV2: React.FC<OptimizedImageV2Props> = ({
           className
         )}
         style={{ width: fill ? '100%' : width, height: fill ? '100%' : height }}
-        role="img"
+        role='img'
         aria-label={`Image failed to load: ${alt}`}
       >
-        <div className="text-center p-4">
-          <div className="w-8 h-8 mx-auto mb-2 bg-gray-300 rounded opacity-50" />
-          <p className="text-xs text-gray-500">Image indisponible</p>
+        <div className='text-center p-4'>
+          <div className='w-8 h-8 mx-auto mb-2 bg-gray-300 rounded opacity-50' />
+          <p className='text-xs text-gray-500'>Image indisponible</p>
         </div>
       </div>
     )
@@ -311,7 +315,12 @@ const OptimizedImageV2: React.FC<OptimizedImageV2Props> = ({
   }
 
   // Progressive loading with low quality first
-  if (enableProgressiveLoading && lowQualitySource && !lowQualityLoaded && imageState === 'loading') {
+  if (
+    enableProgressiveLoading &&
+    lowQualitySource &&
+    !lowQualityLoaded &&
+    imageState === 'loading'
+  ) {
     return (
       <div ref={imageRef} className={cn('relative overflow-hidden', className)}>
         {/* Low quality image */}
@@ -321,14 +330,14 @@ const OptimizedImageV2: React.FC<OptimizedImageV2Props> = ({
           width={width}
           height={height}
           fill={fill}
-          className="object-cover filter blur-sm transition-opacity duration-200 opacity-80"
+          className='object-cover filter blur-sm transition-opacity duration-200 opacity-80'
           onLoad={handleLowQualityLoad}
           onError={handleLowQualityLoad}
           priority={priority}
           sizes={sizes}
           quality={10}
         />
-        
+
         {/* High quality image overlay */}
         {lowQualityLoaded && (
           <Image
@@ -358,7 +367,7 @@ const OptimizedImageV2: React.FC<OptimizedImageV2Props> = ({
   return (
     <div ref={imageRef} className={cn('relative overflow-hidden', className)}>
       {imageState === 'loading' && getPlaceholderContent}
-      
+
       <Image
         src={imageSource}
         alt={alt}
@@ -374,7 +383,7 @@ const OptimizedImageV2: React.FC<OptimizedImageV2Props> = ({
             'opacity-100': imageState === 'loaded',
           }
         )}
-        style={{ 
+        style={{
           objectPosition,
           transitionDuration: animateOnLoad ? `${fadeInDuration}ms` : undefined,
         }}
@@ -397,35 +406,39 @@ const OptimizedImageV2: React.FC<OptimizedImageV2Props> = ({
  */
 
 // Pour ProductCard - optimisé pour les listes
-export const ProductCardImage: React.FC<Omit<OptimizedImageV2Props, 'placeholder' | 'enableProgressiveLoading'>> = (props) => (
+export const ProductCardImage: React.FC<
+  Omit<OptimizedImageV2Props, 'placeholder' | 'enableProgressiveLoading'>
+> = props => (
   <OptimizedImageV2
     {...props}
-    placeholder="shimmer"
+    placeholder='shimmer'
     enableProgressiveLoading={true}
-    preloadMargin="200px"
+    preloadMargin='200px'
     trackPerformance={true}
   />
 )
 
 // Pour Hero sections - qualité maximale
-export const HeroImage: React.FC<Omit<OptimizedImageV2Props, 'priority' | 'lazy'>> = (props) => (
+export const HeroImage: React.FC<Omit<OptimizedImageV2Props, 'priority' | 'lazy'>> = props => (
   <OptimizedImageV2
     {...props}
     priority={true}
     lazy={false}
-    placeholder="dominant-color"
+    placeholder='dominant-color'
     quality={95}
     trackPerformance={true}
   />
 )
 
 // Pour thumbnails - chargement rapide
-export const ThumbnailImage: React.FC<Omit<OptimizedImageV2Props, 'quality' | 'enableProgressiveLoading'>> = (props) => (
+export const ThumbnailImage: React.FC<
+  Omit<OptimizedImageV2Props, 'quality' | 'enableProgressiveLoading'>
+> = props => (
   <OptimizedImageV2
     {...props}
     quality={70}
     enableProgressiveLoading={false}
-    placeholder="shimmer"
+    placeholder='shimmer'
     fadeInDuration={200}
   />
 )

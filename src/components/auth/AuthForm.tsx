@@ -53,27 +53,29 @@ export const AuthForm = ({ mode = 'login' }: AuthFormProps) => {
   }
 
   return (
-    <NoSSR fallback={
-      <div className='flex' style={{ height: 'calc(100vh - 64px)' }}>
-        <div className='hidden lg:flex lg:w-1/2 bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600'>
-          <div className='w-full flex flex-col items-center justify-center text-white'>
-            <div className='text-center'>
-              <div className='text-6xl mb-4'>☀️</div>
-              <h1 className='text-4xl font-bold mb-2'>Bienvenue sur Hosteed</h1>
-              <p className='text-xl'>Chargement...</p>
+    <NoSSR
+      fallback={
+        <div className='flex' style={{ height: 'calc(100vh - 64px)' }}>
+          <div className='hidden lg:flex lg:w-1/2 bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600'>
+            <div className='w-full flex flex-col items-center justify-center text-white'>
+              <div className='text-center'>
+                <div className='text-6xl mb-4'>☀️</div>
+                <h1 className='text-4xl font-bold mb-2'>Bienvenue sur Hosteed</h1>
+                <p className='text-xl'>Chargement...</p>
+              </div>
+            </div>
+          </div>
+          <div className='w-full lg:w-1/2 flex items-center justify-center p-8 bg-gray-50'>
+            <div className='w-full max-w-md space-y-8'>
+              <div className='text-center'>
+                <div className='h-8 bg-gray-200 rounded animate-pulse mb-2'></div>
+                <div className='h-4 bg-gray-200 rounded animate-pulse w-3/4 mx-auto'></div>
+              </div>
             </div>
           </div>
         </div>
-        <div className='w-full lg:w-1/2 flex items-center justify-center p-8 bg-gray-50'>
-          <div className='w-full max-w-md space-y-8'>
-            <div className='text-center'>
-              <div className='h-8 bg-gray-200 rounded animate-pulse mb-2'></div>
-              <div className='h-4 bg-gray-200 rounded animate-pulse w-3/4 mx-auto'></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    }>
+      }
+    >
       <div className='flex' style={{ height: 'calc(100vh - 64px)' }}>
         {/* Left side - Image */}
         <div className='hidden lg:flex lg:w-1/2 bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600'>

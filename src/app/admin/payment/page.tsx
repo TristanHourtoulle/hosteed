@@ -27,7 +27,11 @@ interface PayRequest {
 }
 
 export default function PaymentAdminPage() {
-  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
   const [payRequests, setPayRequests] = useState<PayRequest[]>([])
   const [filteredRequests, setFilteredRequests] = useState<PayRequest[]>([])

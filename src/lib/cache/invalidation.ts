@@ -11,7 +11,7 @@ export async function invalidateProductCache(productId?: string) {
   if (productId) {
     revalidateTag(`product-${productId}`)
   }
-  
+
   // Invalider les pages concernées
   revalidatePath('/search')
   revalidatePath('/search-optimized')
@@ -21,11 +21,13 @@ export async function invalidateProductCache(productId?: string) {
   }
 }
 
-export async function invalidateStaticDataCache(type: 'equipments' | 'meals' | 'services' | 'security' | 'typeRent') {
+export async function invalidateStaticDataCache(
+  type: 'equipments' | 'meals' | 'services' | 'security' | 'typeRent'
+) {
   // Invalider le cache serveur pour les données statiques
   revalidateTag('static-data')
   revalidateTag(type)
-  
+
   // Invalider les pages qui utilisent ces données
   revalidatePath('/search')
   revalidatePath('/search-optimized')

@@ -29,25 +29,35 @@ export function useMutationWithCache<TData, TError, TVariables, TContext>(
     onSuccess: async (data, variables, context) => {
       // Invalidation automatique du cache
       if (config.invalidate) {
-        await Promise.all([
-          config.invalidate.products && invalidateClientCache.products(
-            typeof config.invalidate.products === 'string' ? config.invalidate.products : undefined
-          ),
-          config.invalidate.staticData && invalidateClientCache.staticData(
-            typeof config.invalidate.staticData === 'string' ? config.invalidate.staticData : undefined
-          ),
-          config.invalidate.user && invalidateClientCache.user(config.invalidate.user),
-          config.invalidate.favorites && invalidateClientCache.favorites(
-            config.invalidate.favorites.userId,
-            config.invalidate.favorites.productId
-          ),
-          config.invalidate.reservations && invalidateClientCache.reservations(
-            config.invalidate.reservations.userId,
-            config.invalidate.reservations.rentId
-          ),
-          config.invalidate.reviews && invalidateClientCache.reviews(config.invalidate.reviews),
-          config.invalidate.validation && invalidateClientCache.validation(),
-        ].filter(Boolean))
+        await Promise.all(
+          [
+            config.invalidate.products &&
+              invalidateClientCache.products(
+                typeof config.invalidate.products === 'string'
+                  ? config.invalidate.products
+                  : undefined
+              ),
+            config.invalidate.staticData &&
+              invalidateClientCache.staticData(
+                typeof config.invalidate.staticData === 'string'
+                  ? config.invalidate.staticData
+                  : undefined
+              ),
+            config.invalidate.user && invalidateClientCache.user(config.invalidate.user),
+            config.invalidate.favorites &&
+              invalidateClientCache.favorites(
+                config.invalidate.favorites.userId,
+                config.invalidate.favorites.productId
+              ),
+            config.invalidate.reservations &&
+              invalidateClientCache.reservations(
+                config.invalidate.reservations.userId,
+                config.invalidate.reservations.rentId
+              ),
+            config.invalidate.reviews && invalidateClientCache.reviews(config.invalidate.reviews),
+            config.invalidate.validation && invalidateClientCache.validation(),
+          ].filter(Boolean)
+        )
       }
 
       // Message de succès
@@ -80,9 +90,9 @@ export const useProductMutation = <TData, TError, TVariables, TContext>(
   return useMutationWithCache(
     mutationFn,
     {
-      invalidate: { 
-        products: productId || true 
-      }
+      invalidate: {
+        products: productId || true,
+      },
     },
     options
   )
@@ -96,9 +106,9 @@ export const useStaticDataMutation = <TData, TError, TVariables, TContext>(
   return useMutationWithCache(
     mutationFn,
     {
-      invalidate: { 
-        staticData: dataType 
-      }
+      invalidate: {
+        staticData: dataType,
+      },
     },
     options
   )
@@ -112,9 +122,9 @@ export const useUserMutation = <TData, TError, TVariables, TContext>(
   return useMutationWithCache(
     mutationFn,
     {
-      invalidate: { 
-        user: userId 
-      }
+      invalidate: {
+        user: userId,
+      },
     },
     options
   )

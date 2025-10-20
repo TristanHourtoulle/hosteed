@@ -19,8 +19,8 @@ export async function SendMailWithBrevo(
       pass: process.env.BREVO_API_KEY,
     },
     tls: {
-      ciphers: 'SSLv3'
-    }
+      ciphers: 'SSLv3',
+    },
   })
 
   const mailOptions: Mail.Options = {

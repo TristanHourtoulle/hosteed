@@ -37,7 +37,9 @@ export async function compressImage(
       lastModified: Date.now(),
     })
 
-    console.log(`Compressed ${file.name}: ${(file.size / 1024).toFixed(2)}KB → ${(newFile.size / 1024).toFixed(2)}KB`)
+    console.log(
+      `Compressed ${file.name}: ${(file.size / 1024).toFixed(2)}KB → ${(newFile.size / 1024).toFixed(2)}KB`
+    )
 
     return newFile
   } catch (error) {
@@ -53,16 +55,16 @@ export async function compressImages(
   onProgress?: (progress: number, currentFile: string) => void
 ): Promise<File[]> {
   const compressedFiles: File[] = []
-  
+
   for (let i = 0; i < files.length; i++) {
     try {
       if (onProgress) {
-        onProgress(((i) / files.length) * 100, files[i].name)
+        onProgress((i / files.length) * 100, files[i].name)
       }
 
       const compressed = await compressImage(files[i], options)
       compressedFiles.push(compressed)
-      
+
       if (onProgress) {
         onProgress(((i + 1) / files.length) * 100, files[i].name)
       }
@@ -72,16 +74,16 @@ export async function compressImages(
       compressedFiles.push(files[i])
     }
   }
-  
+
   return compressedFiles
 }
 
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 B'
-  
+
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  
+
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }

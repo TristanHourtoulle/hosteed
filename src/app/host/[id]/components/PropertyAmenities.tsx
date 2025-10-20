@@ -14,10 +14,7 @@ export default function PropertyAmenities({ equipments }: PropertyAmenitiesProps
       <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
         {equipments?.map((equipment: Equipment) => (
           <div key={equipment.id} className='flex items-center gap-3'>
-            <DynamicIcon 
-              name={equipment.icon} 
-              className='h-5 w-5 text-gray-600' 
-            />
+            <DynamicIcon name={equipment.icon} className='h-5 w-5 text-gray-600' />
             <span className='text-gray-700'>{equipment.name}</span>
           </div>
         ))}

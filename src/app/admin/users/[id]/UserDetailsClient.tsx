@@ -17,7 +17,11 @@ interface UserDetailsClientProps {
 }
 
 export function UserDetailsClient({ initialData }: UserDetailsClientProps) {
-  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
   const [user] = useState<ExtendedUser>(initialData)
   const [loading] = useState(false)

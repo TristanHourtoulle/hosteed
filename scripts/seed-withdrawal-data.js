@@ -11,7 +11,13 @@
  * Usage: node scripts/seed-withdrawal-data.js
  */
 
-const { PrismaClient, PaymentStatus, PaymentMethod, WithdrawalType, WithdrawalStatus } = require('@prisma/client')
+const {
+  PrismaClient,
+  PaymentStatus,
+  PaymentMethod,
+  WithdrawalType,
+  WithdrawalStatus,
+} = require('@prisma/client')
 
 const prisma = new PrismaClient()
 
@@ -22,13 +28,13 @@ async function main() {
   let host = await prisma.user.findFirst({
     where: {
       roles: {
-        in: ['HOST', 'HOST_VERIFIED', 'HOST_MANAGER']
-      }
-    }
+        in: ['HOST', 'HOST_VERIFIED', 'HOST_MANAGER'],
+      },
+    },
   })
 
   if (!host) {
-    console.log('❌ Aucun hôte trouvé. Créez d\'abord un utilisateur avec le rôle HOST.')
+    console.log("❌ Aucun hôte trouvé. Créez d'abord un utilisateur avec le rôle HOST.")
     return
   }
 
@@ -40,7 +46,7 @@ async function main() {
 
   if (!product) {
     console.log('❌ Aucun produit validé trouvé.')
-    console.log('💡 Créez d\'abord un produit validé dans l\'application.')
+    console.log("💡 Créez d'abord un produit validé dans l'application.")
     return
   }
 
@@ -56,12 +62,12 @@ async function main() {
 
   for (let i = 0; i < 5; i++) {
     const arrivingDate = new Date(baseDate)
-    arrivingDate.setDate(baseDate.getDate() + (i * 10))
+    arrivingDate.setDate(baseDate.getDate() + i * 10)
 
     const leavingDate = new Date(arrivingDate)
     leavingDate.setDate(arrivingDate.getDate() + 3)
 
-    const price = 150 + (i * 50) // 150€, 200€, 250€, etc.
+    const price = 150 + i * 50 // 150€, 200€, 250€, etc.
 
     try {
       const rent = await prisma.rent.create({
@@ -77,7 +83,7 @@ async function main() {
           confirmed: true,
           arriving: 14,
           leaving: 11,
-        }
+        },
       })
 
       reservations.push(rent)
@@ -106,7 +112,7 @@ async function main() {
         isDefault: true,
         isValidated: true, // Pré-validé pour les tests
         validatedAt: new Date(),
-      }
+      },
     })
     paymentAccounts.push(sepaAccount)
     console.log(`   ✅ Compte SEPA créé (validé)`)
@@ -124,7 +130,7 @@ async function main() {
         mobileNumber: '+261 32 12 345 67',
         isDefault: false,
         isValidated: false, // Non validé pour tester le workflow
-      }
+      },
     })
     paymentAccounts.push(mobileAccount)
     console.log(`   ✅ Compte Mobile Money créé (non validé)`)
@@ -145,7 +151,7 @@ async function main() {
         isDefault: false,
         isValidated: true, // Pré-validé
         validatedAt: new Date(),
-      }
+      },
     })
     paymentAccounts.push(paypalAccount)
     console.log(`   ✅ Compte PayPal créé (validé)`)
@@ -178,7 +184,7 @@ async function main() {
           },
           status: WithdrawalStatus.PENDING,
           notes: 'Demande de test - En attente',
-        }
+        },
       })
       console.log(`   ✅ Demande PENDING créée (100€)`)
     } catch (error) {
@@ -204,7 +210,7 @@ async function main() {
           notes: 'Demande de test - Approuvée',
           adminNotes: 'Approuvé pour test',
           processedAt: new Date(),
-        }
+        },
       })
       console.log(`   ✅ Demande APPROVED créée (200€)`)
     } catch (error) {
@@ -230,7 +236,7 @@ async function main() {
           notes: 'Demande de test - Payée',
           processedAt: new Date(Date.now() - 86400000), // Il y a 1 jour
           paidAt: new Date(),
-        }
+        },
       })
       console.log(`   ✅ Demande PAID créée (150€)`)
     } catch (error) {
@@ -258,7 +264,7 @@ async function main() {
           },
           status: WithdrawalStatus.ACCOUNT_VALIDATION,
           notes: 'Demande de test - En attente de validation du compte',
-        }
+        },
       })
       console.log(`   ✅ Demande ACCOUNT_VALIDATION créée (75€)`)
     } catch (error) {
@@ -280,7 +286,7 @@ async function main() {
 }
 
 main()
-  .catch((e) => {
+  .catch(e => {
     console.error('❌ Erreur:', e)
     process.exit(1)
   })

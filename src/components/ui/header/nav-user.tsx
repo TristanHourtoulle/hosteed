@@ -12,7 +12,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shadcnui'
-import { ChevronsUpDown, LogOut, Heart, Plus, User as UserIcon, MessageSquare, AlertCircle, RotateCcw, Loader2, Wifi } from 'lucide-react'
+import {
+  ChevronsUpDown,
+  LogOut,
+  Heart,
+  Plus,
+  User as UserIcon,
+  MessageSquare,
+  AlertCircle,
+  RotateCcw,
+  Loader2,
+  Wifi,
+} from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { findUserById } from '@/lib/services/user.service'
@@ -21,7 +32,10 @@ import { useUserProfile } from '@/contexts/UserProfileContext'
 import { useLoadingWithTimeout } from '@/hooks/useLoadingWithTimeout'
 
 export function NavUser({ session }: { session: Session | null }) {
-  const [user, setUser] = useState<Pick<User, 'id' | 'name' | 'email' | 'image' | 'profilePicture'> | null>(null)
+  const [user, setUser] = useState<Pick<
+    User,
+    'id' | 'name' | 'email' | 'image' | 'profilePicture'
+  > | null>(null)
   const [imageError, setImageError] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -37,40 +51,43 @@ export function NavUser({ session }: { session: Session | null }) {
     signOut()
   }
 
-  const fetchUser = useCallback(async (isRetry = false) => {
-    if (!session?.user?.id) {
-      return
-    }
+  const fetchUser = useCallback(
+    async (isRetry = false) => {
+      if (!session?.user?.id) {
+        return
+      }
 
-    try {
-      if (!isRetry) {
-        setIsLoading(true)
-        setError(null)
+      try {
+        if (!isRetry) {
+          setIsLoading(true)
+          setError(null)
+        }
+
+        const userData = await findUserById(session.user.id)
+
+        if (userData) {
+          setUser({
+            id: userData.id,
+            name: userData.name,
+            email: userData.email,
+            image: userData.image,
+            profilePicture: userData.profilePicture,
+          })
+          setError(null)
+          setRetryCount(0)
+        } else {
+          throw new Error('Impossible de récupérer les données utilisateur')
+        }
+      } catch (err) {
+        console.error('Error fetching user data:', err)
+        setError(err instanceof Error ? err.message : 'Erreur de connexion')
+        setUser(null)
+      } finally {
+        setIsLoading(false)
       }
-      
-      const userData = await findUserById(session.user.id)
-      
-      if (userData) {
-        setUser({
-          id: userData.id,
-          name: userData.name,
-          email: userData.email,
-          image: userData.image,
-          profilePicture: userData.profilePicture,
-        })
-        setError(null)
-        setRetryCount(0)
-      } else {
-        throw new Error('Impossible de récupérer les données utilisateur')
-      }
-    } catch (err) {
-      console.error('Error fetching user data:', err)
-      setError(err instanceof Error ? err.message : 'Erreur de connexion')
-      setUser(null)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [session?.user?.id])
+    },
+    [session?.user?.id]
+  )
 
   const handleRetry = () => {
     if (retryCount < 3) {
@@ -90,12 +107,12 @@ export function NavUser({ session }: { session: Session | null }) {
   // Loading state with enhanced feedback
   if (isLoadingWithTimeout && !user) {
     return (
-      <div className="flex items-center gap-2 px-2 py-1">
-        <Loader2 className="w-4 h-4 animate-spin text-gray-600" />
-        <span className="text-sm text-gray-600">
+      <div className='flex items-center gap-2 px-2 py-1'>
+        <Loader2 className='w-4 h-4 animate-spin text-gray-600' />
+        <span className='text-sm text-gray-600'>
           {showSlowWarning ? 'Connexion lente...' : 'Chargement...'}
         </span>
-        {showSlowWarning && <Wifi className="w-3 h-3 text-orange-500" />}
+        {showSlowWarning && <Wifi className='w-3 h-3 text-orange-500' />}
       </div>
     )
   }
@@ -103,15 +120,15 @@ export function NavUser({ session }: { session: Session | null }) {
   // Timeout state
   if (hasTimedOut && !user) {
     return (
-      <div className="flex items-center gap-2 px-2 py-1">
-        <AlertCircle className="w-4 h-4 text-red-500" />
-        <span className="text-sm text-red-600">Timeout</span>
+      <div className='flex items-center gap-2 px-2 py-1'>
+        <AlertCircle className='w-4 h-4 text-red-500' />
+        <span className='text-sm text-red-600'>Timeout</span>
         <button
           onClick={handleRetry}
-          className="ml-1 p-1 hover:bg-gray-100 rounded transition-colors"
-          title="Réessayer"
+          className='ml-1 p-1 hover:bg-gray-100 rounded transition-colors'
+          title='Réessayer'
         >
-          <RotateCcw className="w-3 h-3 text-gray-600" />
+          <RotateCcw className='w-3 h-3 text-gray-600' />
         </button>
       </div>
     )
@@ -120,18 +137,18 @@ export function NavUser({ session }: { session: Session | null }) {
   // Error state with retry option
   if (error && !user && !isLoading) {
     return (
-      <div className="flex items-center gap-2 px-2 py-1 max-w-48">
-        <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
-        <span className="text-xs text-red-600 truncate" title={error}>
+      <div className='flex items-center gap-2 px-2 py-1 max-w-48'>
+        <AlertCircle className='w-4 h-4 text-red-500 flex-shrink-0' />
+        <span className='text-xs text-red-600 truncate' title={error}>
           Erreur de connexion
         </span>
         {retryCount < 3 && (
           <button
             onClick={handleRetry}
-            className="ml-1 p-1 hover:bg-gray-100 rounded transition-colors"
-            title="Réessayer"
+            className='ml-1 p-1 hover:bg-gray-100 rounded transition-colors'
+            title='Réessayer'
           >
-            <RotateCcw className="w-3 h-3 text-gray-600" />
+            <RotateCcw className='w-3 h-3 text-gray-600' />
           </button>
         )}
       </div>
@@ -141,13 +158,13 @@ export function NavUser({ session }: { session: Session | null }) {
   // If still no user after all attempts, show fallback with session data
   if (!user) {
     return (
-      <div className="flex items-center gap-2">
-        <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-          <UserIcon className="w-4 h-4 text-gray-600" />
+      <div className='flex items-center gap-2'>
+        <div className='w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center'>
+          <UserIcon className='w-4 h-4 text-gray-600' />
         </div>
-        <div className="hidden lg:grid flex-1 text-left text-sm leading-tight">
-          <span className="truncate font-medium">{session.user?.name || 'Utilisateur'}</span>
-          <span className="truncate text-xs">{session.user?.email}</span>
+        <div className='hidden lg:grid flex-1 text-left text-sm leading-tight'>
+          <span className='truncate font-medium'>{session.user?.name || 'Utilisateur'}</span>
+          <span className='truncate text-xs'>{session.user?.email}</span>
         </div>
       </div>
     )

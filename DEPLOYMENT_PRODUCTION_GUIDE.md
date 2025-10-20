@@ -7,6 +7,7 @@
 ## 1. 📊 Base de Données - Index et Optimisations
 
 ### Application des Index
+
 ```bash
 # 1. Connectez-vous à votre base de données de production
 psql $DATABASE_URL
@@ -21,69 +22,72 @@ psql $DATABASE_URL
 ```
 
 ### Monitoring des performances
+
 ```sql
 -- Vérifier l'utilisation des index
-SELECT schemaname, tablename, indexname, idx_scan, idx_tup_read 
-FROM pg_stat_user_indexes 
+SELECT schemaname, tablename, indexname, idx_scan, idx_tup_read
+FROM pg_stat_user_indexes
 WHERE schemaname = 'public'
 ORDER BY idx_scan DESC;
 
 -- Vérifier les requêtes lentes
-SELECT query, mean_exec_time, calls 
-FROM pg_stat_statements 
-ORDER BY mean_exec_time DESC 
+SELECT query, mean_exec_time, calls
+FROM pg_stat_statements
+ORDER BY mean_exec_time DESC
 LIMIT 10;
 ```
 
 ## 2. 🖼️ Optimisation des Images
 
 ### Migration des Images Existantes
+
 Les images actuelles en base64 doivent être converties en WebP :
 
 ```typescript
 // Script de migration à exécuter UNE SEULE FOIS
 // Créer : scripts/migrate-images.ts
 
-import { PrismaClient } from '@prisma/client';
-import { optimizeImageForDatabase } from '../src/lib/services/image-optimization.service';
+import { PrismaClient } from '@prisma/client'
+import { optimizeImageForDatabase } from '../src/lib/services/image-optimization.service'
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient()
 
 async function migrateImages() {
-  console.log('🚀 Début de la migration des images...');
-  
+  console.log('🚀 Début de la migration des images...')
+
   const images = await prisma.images.findMany({
     where: {
-      img: { contains: 'data:image/' } // Images base64 non optimisées
-    }
-  });
+      img: { contains: 'data:image/' }, // Images base64 non optimisées
+    },
+  })
 
-  console.log(`📸 ${images.length} images à optimiser`);
+  console.log(`📸 ${images.length} images à optimiser`)
 
   for (const image of images) {
     try {
       if (image.img && image.img.startsWith('data:image/')) {
-        const optimizedImage = await optimizeImageForDatabase(image.img);
-        
+        const optimizedImage = await optimizeImageForDatabase(image.img)
+
         await prisma.images.update({
           where: { id: image.id },
-          data: { img: optimizedImage }
-        });
-        
-        console.log(`✅ Image ${image.id} optimisée`);
+          data: { img: optimizedImage },
+        })
+
+        console.log(`✅ Image ${image.id} optimisée`)
       }
     } catch (error) {
-      console.error(`❌ Erreur image ${image.id}:`, error);
+      console.error(`❌ Erreur image ${image.id}:`, error)
     }
   }
-  
-  console.log('✨ Migration terminée');
+
+  console.log('✨ Migration terminée')
 }
 
-migrateImages().catch(console.error);
+migrateImages().catch(console.error)
 ```
 
 ### Exécution de la Migration
+
 ```bash
 # 1. Créer le script de migration
 npx tsx scripts/migrate-images.ts
@@ -98,6 +102,7 @@ SELECT COUNT(*) FROM "Images" WHERE img LIKE 'data:image/webp%';
 ## 3. ⚡ Cache Redis (Optionnel mais Recommandé)
 
 ### Installation Redis
+
 ```bash
 # Sur le serveur de production
 sudo apt update
@@ -113,6 +118,7 @@ sudo systemctl enable redis
 ```
 
 ### Variables d'Environnement pour Redis
+
 ```env
 # Ajouter à votre .env de production
 REDIS_URL=redis://localhost:6379
@@ -123,6 +129,7 @@ ENABLE_REDIS_CACHE=true
 ## 4. 🔧 Variables d'Environnement Requises
 
 ### Nouvelles Variables à Ajouter
+
 ```env
 # === OPTIMISATIONS PERFORMANCE ===
 
@@ -154,6 +161,7 @@ CACHE_TTL_USER_DATA=1800     # 30 minutes
 ## 5. 📦 Déploiement par Étapes
 
 ### Étape 1: Préparation (SANS IMPACT)
+
 ```bash
 # 1. Déployer le code avec les optimisations DÉSACTIVÉES
 ENABLE_REDIS_CACHE=false
@@ -164,6 +172,7 @@ ENABLE_PERFORMANCE_MONITORING=false
 ```
 
 ### Étape 2: Base de Données (SANS DOWNTIME)
+
 ```bash
 # 1. Appliquer les index en production
 psql $DATABASE_URL -f database-optimizations.sql
@@ -173,6 +182,7 @@ psql $DATABASE_URL -f database-optimizations.sql
 ```
 
 ### Étape 3: Activation Progressive
+
 ```bash
 # 1. Activer le monitoring SEULEMENT
 ENABLE_PERFORMANCE_MONITORING=true
@@ -188,6 +198,7 @@ ENABLE_REDIS_CACHE=true
 ```
 
 ### Étape 4: Migration des Images
+
 ```bash
 # 1. Exécuter la migration des images (peut prendre du temps)
 npx tsx scripts/migrate-images.ts
@@ -198,6 +209,7 @@ npx tsx scripts/migrate-images.ts
 ## 6. 📈 Monitoring Post-Déploiement
 
 ### Métriques à Surveiller
+
 ```bash
 # 1. Performances des requêtes
 curl https://your-domain.com/api/analytics/performance
@@ -214,6 +226,7 @@ SELECT * FROM pg_stat_user_indexes WHERE idx_scan > 0;
 ```
 
 ### Alertes Recommandées
+
 - Temps de réponse > 5 secondes
 - Utilisation mémoire Redis > 80%
 - Requêtes lentes > 50 par minute
@@ -222,6 +235,7 @@ SELECT * FROM pg_stat_user_indexes WHERE idx_scan > 0;
 ## 7. 🔄 Rollback en Cas de Problème
 
 ### Désactivation Rapide
+
 ```env
 # En cas de problème, désactiver immédiatement :
 ENABLE_REDIS_CACHE=false
@@ -230,6 +244,7 @@ ENABLE_PERFORMANCE_MONITORING=false
 ```
 
 ### Suppression des Index (en dernier recours)
+
 ```sql
 -- SEULEMENT si les index causent des problèmes
 DROP INDEX IF EXISTS idx_images_product_lookup;
@@ -240,12 +255,14 @@ DROP INDEX IF EXISTS idx_product_complex_search;
 ## 8. 📊 Gains Attendus
 
 ### Performances
+
 - **Requêtes produits** : 200ms → 50ms (-75%)
 - **Chargement images** : 500ms → 150ms (-70%)
 - **Recherche** : 1200ms → 300ms (-75%)
 - **Dashboard admin** : 800ms → 200ms (-75%)
 
 ### Ressources
+
 - **Taille images** : -70% d'espace disque
 - **Bande passante** : -60% de transfert
 - **CPU base de données** : -40% d'utilisation

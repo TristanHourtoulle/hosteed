@@ -1,4 +1,9 @@
-import { FormSectionSkeleton, ImageUploaderSkeleton, ServicesSkeleton, PricingSkeleton } from '@/components/dynamic/LazyComponents'
+import {
+  FormSectionSkeleton,
+  ImageUploaderSkeleton,
+  ServicesSkeleton,
+  PricingSkeleton,
+} from '@/components/dynamic/LazyComponents'
 
 export default function CreateProductLoading() {
   return (
@@ -14,22 +19,22 @@ export default function CreateProductLoading() {
         <div className='max-w-4xl mx-auto space-y-8'>
           {/* Basic Info */}
           <FormSectionSkeleton />
-          
+
           {/* Location */}
           <FormSectionSkeleton />
-          
+
           {/* Characteristics */}
           <FormSectionSkeleton />
-          
+
           {/* Services */}
           <ServicesSkeleton />
-          
+
           {/* Images */}
           <ImageUploaderSkeleton />
-          
+
           {/* Pricing */}
           <PricingSkeleton />
-          
+
           {/* Submit Button */}
           <div className='animate-pulse'>
             <div className='h-12 bg-orange-200 rounded-lg w-full' />

@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     // Validation
     if (!hostId) {
-      return NextResponse.json({ error: 'ID de l\'hôte requis' }, { status: 400 })
+      return NextResponse.json({ error: "ID de l'hôte requis" }, { status: 400 })
     }
 
     if (!amount || amount <= 0) {
@@ -70,7 +70,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error creating withdrawal request for host:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Erreur lors de la création de la demande' },
+      {
+        error: error instanceof Error ? error.message : 'Erreur lors de la création de la demande',
+      },
       { status: 400 }
     )
   }

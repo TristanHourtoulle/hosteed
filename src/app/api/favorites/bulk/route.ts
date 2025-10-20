@@ -5,21 +5,15 @@ import prisma from '@/lib/prisma'
 export async function POST(request: Request) {
   try {
     const session = await auth()
-    
+
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Non authentifié' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
     const { productIds } = await request.json()
 
     if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
-      return NextResponse.json(
-        { error: 'Product IDs requis' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Product IDs requis' }, { status: 400 })
     }
 
     // Get all favorites for this user that match the product IDs
@@ -27,26 +21,26 @@ export async function POST(request: Request) {
       where: {
         userId: session.user.id,
         productId: {
-          in: productIds
-        }
+          in: productIds,
+        },
       },
       select: {
-        productId: true
-      }
+        productId: true,
+      },
     })
 
     // Create a map of productId -> isFavorite
-    const favoriteMap = productIds.reduce((acc, productId) => {
-      acc[productId] = favorites.some(fav => fav.productId === productId)
-      return acc
-    }, {} as Record<string, boolean>)
+    const favoriteMap = productIds.reduce(
+      (acc, productId) => {
+        acc[productId] = favorites.some(fav => fav.productId === productId)
+        return acc
+      },
+      {} as Record<string, boolean>
+    )
 
     return NextResponse.json(favoriteMap)
   } catch (error) {
     console.error('Erreur lors de la vérification bulk des favoris:', error)
-    return NextResponse.json(
-      { error: 'Erreur serveur' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }

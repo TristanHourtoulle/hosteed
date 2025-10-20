@@ -6,12 +6,12 @@ import { useAuth } from '@/hooks/useAuth'
 import { isFullAdmin } from '@/hooks/useAdminAuth'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Input } from '@/components/ui/input'
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from '@/components/ui/shadcnui/card'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/shadcnui/badge'
@@ -30,7 +30,11 @@ interface CommissionSettings {
 }
 
 export default function CommissionSettingsPage() {
-  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
   const [settings, setSettings] = useState<CommissionSettings | null>(null)
   const [loading, setLoading] = useState(true)
@@ -77,10 +81,12 @@ export default function CommissionSettingsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (
-      formData.hostCommissionRate < 0 || formData.hostCommissionRate > 1 ||
-      formData.clientCommissionRate < 0 || formData.clientCommissionRate > 1 ||
+      formData.hostCommissionRate < 0 ||
+      formData.hostCommissionRate > 1 ||
+      formData.clientCommissionRate < 0 ||
+      formData.clientCommissionRate > 1 ||
       formData.hostCommissionFixed < 0 ||
       formData.clientCommissionFixed < 0
     ) {
@@ -136,51 +142,55 @@ export default function CommissionSettingsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className='container mx-auto px-4 py-8'>
+      <div className='flex items-center justify-between mb-8'>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Paramètres de Commission</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className='text-3xl font-bold text-gray-900'>Paramètres de Commission</h1>
+          <p className='text-gray-600 mt-2'>
             Configurez les taux de commission pour les hébergeurs et les clients
           </p>
         </div>
       </div>
 
       {settings && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-8'>
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-lg">Commission Hébergeur</CardTitle>
-              <Settings className="w-5 h-5 text-blue-600" />
+            <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+              <CardTitle className='text-lg'>Commission Hébergeur</CardTitle>
+              <Settings className='w-5 h-5 text-blue-600' />
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Taux (%)</span>
-                  <Badge variant="secondary">{formatPercentage(settings.hostCommissionRate)}</Badge>
+              <div className='space-y-2'>
+                <div className='flex items-center justify-between'>
+                  <span className='text-sm text-gray-600'>Taux (%)</span>
+                  <Badge variant='secondary'>{formatPercentage(settings.hostCommissionRate)}</Badge>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Frais fixe</span>
-                  <Badge variant="secondary">{formatCurrency(settings.hostCommissionFixed)}</Badge>
+                <div className='flex items-center justify-between'>
+                  <span className='text-sm text-gray-600'>Frais fixe</span>
+                  <Badge variant='secondary'>{formatCurrency(settings.hostCommissionFixed)}</Badge>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-lg">Commission Client</CardTitle>
-              <Settings className="w-5 h-5 text-green-600" />
+            <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+              <CardTitle className='text-lg'>Commission Client</CardTitle>
+              <Settings className='w-5 h-5 text-green-600' />
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Taux (%)</span>
-                  <Badge variant="secondary">{formatPercentage(settings.clientCommissionRate)}</Badge>
+              <div className='space-y-2'>
+                <div className='flex items-center justify-between'>
+                  <span className='text-sm text-gray-600'>Taux (%)</span>
+                  <Badge variant='secondary'>
+                    {formatPercentage(settings.clientCommissionRate)}
+                  </Badge>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Frais fixe</span>
-                  <Badge variant="secondary">{formatCurrency(settings.clientCommissionFixed)}</Badge>
+                <div className='flex items-center justify-between'>
+                  <span className='text-sm text-gray-600'>Frais fixe</span>
+                  <Badge variant='secondary'>
+                    {formatCurrency(settings.clientCommissionFixed)}
+                  </Badge>
                 </div>
               </div>
             </CardContent>
@@ -197,118 +207,126 @@ export default function CommissionSettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <form onSubmit={handleSubmit} className='space-y-6'>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
               {/* Commission Hébergeur */}
-              <div className="space-y-4">
-                <div className="flex items-center space-x-2 mb-3">
-                  <Settings className="w-5 h-5 text-blue-600" />
-                  <h3 className="text-lg font-semibold">Commission Hébergeur</h3>
+              <div className='space-y-4'>
+                <div className='flex items-center space-x-2 mb-3'>
+                  <Settings className='w-5 h-5 text-blue-600' />
+                  <h3 className='text-lg font-semibold'>Commission Hébergeur</h3>
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="hostCommissionRate" className="flex items-center space-x-2">
-                    <Percent className="w-4 h-4" />
+
+                <div className='space-y-2'>
+                  <Label htmlFor='hostCommissionRate' className='flex items-center space-x-2'>
+                    <Percent className='w-4 h-4' />
                     <span>Taux de commission (%)</span>
                   </Label>
                   <Input
-                    id="hostCommissionRate"
-                    type="number"
-                    min="0"
-                    max="1"
-                    step="0.001"
+                    id='hostCommissionRate'
+                    type='number'
+                    min='0'
+                    max='1'
+                    step='0.001'
                     value={formData.hostCommissionRate}
-                    onChange={(e) => setFormData({ 
-                      ...formData, 
-                      hostCommissionRate: parseFloat(e.target.value) || 0 
-                    })}
-                    placeholder="Ex: 0.05 pour 5%"
+                    onChange={e =>
+                      setFormData({
+                        ...formData,
+                        hostCommissionRate: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    placeholder='Ex: 0.05 pour 5%'
                   />
-                  <p className="text-xs text-gray-500">
+                  <p className='text-xs text-gray-500'>
                     Actuel: {formatPercentage(formData.hostCommissionRate)}
                   </p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="hostCommissionFixed" className="flex items-center space-x-2">
-                    <DollarSign className="w-4 h-4" />
+                <div className='space-y-2'>
+                  <Label htmlFor='hostCommissionFixed' className='flex items-center space-x-2'>
+                    <DollarSign className='w-4 h-4' />
                     <span>Frais fixe (€)</span>
                   </Label>
                   <Input
-                    id="hostCommissionFixed"
-                    type="number"
-                    min="0"
-                    step="0.01"
+                    id='hostCommissionFixed'
+                    type='number'
+                    min='0'
+                    step='0.01'
                     value={formData.hostCommissionFixed}
-                    onChange={(e) => setFormData({ 
-                      ...formData, 
-                      hostCommissionFixed: parseFloat(e.target.value) || 0 
-                    })}
-                    placeholder="Ex: 2.50"
+                    onChange={e =>
+                      setFormData({
+                        ...formData,
+                        hostCommissionFixed: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    placeholder='Ex: 2.50'
                   />
-                  <p className="text-xs text-gray-500">
+                  <p className='text-xs text-gray-500'>
                     Actuel: {formatCurrency(formData.hostCommissionFixed)}
                   </p>
                 </div>
               </div>
 
               {/* Commission Client */}
-              <div className="space-y-4">
-                <div className="flex items-center space-x-2 mb-3">
-                  <Settings className="w-5 h-5 text-green-600" />
-                  <h3 className="text-lg font-semibold">Commission Client</h3>
+              <div className='space-y-4'>
+                <div className='flex items-center space-x-2 mb-3'>
+                  <Settings className='w-5 h-5 text-green-600' />
+                  <h3 className='text-lg font-semibold'>Commission Client</h3>
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="clientCommissionRate" className="flex items-center space-x-2">
-                    <Percent className="w-4 h-4" />
+
+                <div className='space-y-2'>
+                  <Label htmlFor='clientCommissionRate' className='flex items-center space-x-2'>
+                    <Percent className='w-4 h-4' />
                     <span>Taux de commission (%)</span>
                   </Label>
                   <Input
-                    id="clientCommissionRate"
-                    type="number"
-                    min="0"
-                    max="1"
-                    step="0.001"
+                    id='clientCommissionRate'
+                    type='number'
+                    min='0'
+                    max='1'
+                    step='0.001'
                     value={formData.clientCommissionRate}
-                    onChange={(e) => setFormData({ 
-                      ...formData, 
-                      clientCommissionRate: parseFloat(e.target.value) || 0 
-                    })}
-                    placeholder="Ex: 0.03 pour 3%"
+                    onChange={e =>
+                      setFormData({
+                        ...formData,
+                        clientCommissionRate: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    placeholder='Ex: 0.03 pour 3%'
                   />
-                  <p className="text-xs text-gray-500">
+                  <p className='text-xs text-gray-500'>
                     Actuel: {formatPercentage(formData.clientCommissionRate)}
                   </p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="clientCommissionFixed" className="flex items-center space-x-2">
-                    <DollarSign className="w-4 h-4" />
+                <div className='space-y-2'>
+                  <Label htmlFor='clientCommissionFixed' className='flex items-center space-x-2'>
+                    <DollarSign className='w-4 h-4' />
                     <span>Frais fixe (€)</span>
                   </Label>
                   <Input
-                    id="clientCommissionFixed"
-                    type="number"
-                    min="0"
-                    step="0.01"
+                    id='clientCommissionFixed'
+                    type='number'
+                    min='0'
+                    step='0.01'
                     value={formData.clientCommissionFixed}
-                    onChange={(e) => setFormData({ 
-                      ...formData, 
-                      clientCommissionFixed: parseFloat(e.target.value) || 0 
-                    })}
-                    placeholder="Ex: 1.50"
+                    onChange={e =>
+                      setFormData({
+                        ...formData,
+                        clientCommissionFixed: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    placeholder='Ex: 1.50'
                   />
-                  <p className="text-xs text-gray-500">
+                  <p className='text-xs text-gray-500'>
                     Actuel: {formatCurrency(formData.clientCommissionFixed)}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-end">
-              <Button type="submit" disabled={saving}>
-                <Save className="w-4 h-4 mr-2" />
+            <div className='flex justify-end'>
+              <Button type='submit' disabled={saving}>
+                <Save className='w-4 h-4 mr-2' />
                 {saving ? 'Sauvegarde...' : 'Sauvegarder les paramètres'}
               </Button>
             </div>

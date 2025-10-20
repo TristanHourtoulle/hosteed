@@ -95,7 +95,10 @@ export async function POST(req: Request) {
             await prisma.rent.update({
               where: { id: newRent.id },
               data: {
-                status: paymentIntentObj.status === 'succeeded' ? 'RESERVED' as RentStatus : 'WAITING' as RentStatus,
+                status:
+                  paymentIntentObj.status === 'succeeded'
+                    ? ('RESERVED' as RentStatus)
+                    : ('WAITING' as RentStatus),
                 payment: paymentIntentObj.status === 'succeeded' ? 'CLIENT_PAID' : 'NOT_PAID',
               },
             })

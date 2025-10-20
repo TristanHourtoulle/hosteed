@@ -31,13 +31,16 @@ interface HostProductsResponse {
   hasPreviousPage: boolean
 }
 
-async function fetchHostProducts(page: number = 1, limit: number = 20): Promise<HostProductsResponse> {
+async function fetchHostProducts(
+  page: number = 1,
+  limit: number = 20
+): Promise<HostProductsResponse> {
   const response = await fetch(`/api/host/products?page=${page}&limit=${limit}`)
-  
+
   if (!response.ok) {
     throw new Error('Erreur lors du chargement des produits')
   }
-  
+
   return response.json()
 }
 
@@ -49,6 +52,6 @@ export function useHostProducts(page: number = 1, limit: number = 20) {
     gcTime: 10 * 60 * 1000, // 10 minutes
     retry: 2,
     refetchOnWindowFocus: false,
-    placeholderData: (previousData) => previousData // Garde les données précédentes pendant le chargement
+    placeholderData: previousData => previousData, // Garde les données précédentes pendant le chargement
   })
 }

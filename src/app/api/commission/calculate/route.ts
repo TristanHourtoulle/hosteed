@@ -16,13 +16,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: calculation
+      data: calculation,
     })
   } catch (error) {
     console.error('Erreur lors du calcul des commissions:', error)
-    return NextResponse.json(
-      { error: 'Erreur lors du calcul des commissions' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Erreur lors du calcul des commissions' }, { status: 500 })
   }
 }

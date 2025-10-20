@@ -11,10 +11,7 @@ export async function GET(request: NextRequest) {
     const session = await auth()
 
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Non authentifié' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
     const searchParams = request.nextUrl.searchParams
@@ -37,13 +34,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       hasOverlap: overlapping.length > 0,
-      overlappingPromotions: overlapping
+      overlappingPromotions: overlapping,
     })
   } catch (error) {
     console.error('Erreur lors de la vérification des chevauchements:', error)
-    return NextResponse.json(
-      { error: 'Erreur interne du serveur' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Erreur interne du serveur' }, { status: 500 })
   }
 }

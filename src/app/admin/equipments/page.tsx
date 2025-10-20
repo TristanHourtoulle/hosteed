@@ -65,7 +65,11 @@ const itemVariants: Variants = {
 }
 
 export default function EquipmentsPage() {
-  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
   const [equipments, setEquipments] = useState<EquipmentInterface[]>([])
   const [loading, setLoading] = useState(true)

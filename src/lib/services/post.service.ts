@@ -12,9 +12,9 @@ interface SEOData {
 }
 
 export async function createPost(
-  title: string, 
-  content: string, 
-  image: string, 
+  title: string,
+  content: string,
+  image: string,
   authorId: string,
   seoData?: SEOData
 ) {
@@ -151,7 +151,7 @@ export async function getPostBySlugOrId(slugOrId: string) {
       },
       include: includeAuthor,
     })
-    
+
     // If not found by slug, try to find by ID
     if (!post) {
       post = await prisma.post.findUnique({
@@ -161,7 +161,7 @@ export async function getPostBySlugOrId(slugOrId: string) {
         include: includeAuthor,
       })
     }
-    
+
     return post
   } catch (error) {
     console.error('Error getting post by slug or ID:', error)
@@ -267,12 +267,14 @@ export async function updatePost(
     // Check if slug already exists (excluding current post)
     let uniqueSlug = slug
     let counter = 1
-    while (await prisma.post.findFirst({ 
-      where: { 
-        slug: uniqueSlug,
-        id: { not: id }
-      } 
-    })) {
+    while (
+      await prisma.post.findFirst({
+        where: {
+          slug: uniqueSlug,
+          id: { not: id },
+        },
+      })
+    ) {
       uniqueSlug = `${slug}-${counter}`
       counter++
     }
@@ -325,7 +327,7 @@ export async function deletePost(id: string, authorId: string) {
     await prisma.post.delete({
       where: { id },
     })
-    
+
     return { success: true, message: `Post "${existingPost.title}" deleted successfully` }
   } catch (error) {
     console.error('Error deleting post:', error)
@@ -333,7 +335,11 @@ export async function deletePost(id: string, authorId: string) {
   }
 }
 
-export async function canUserEditPost(postId: string, userId: string, userRole: string): Promise<boolean> {
+export async function canUserEditPost(
+  postId: string,
+  userId: string,
+  userRole: string
+): Promise<boolean> {
   try {
     // Admin can edit any post
     if (userRole === 'ADMIN') {

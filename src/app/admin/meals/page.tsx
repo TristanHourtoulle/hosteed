@@ -60,7 +60,11 @@ const itemVariants: Variants = {
 }
 
 export default function MealsPage() {
-  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
   const [meals, setMeals] = useState<MealsInterface[]>([])
   const [loading, setLoading] = useState(true)

@@ -29,10 +29,7 @@ export async function GET(request: NextRequest) {
     })
 
     if (!result) {
-      return NextResponse.json(
-        { error: 'Failed to fetch products' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 })
     }
 
     // Apply additional filters that aren't in the basic service
@@ -41,76 +38,67 @@ export async function GET(request: NextRequest) {
     // Apply search filter
     if (search.trim()) {
       const searchTerm = search.toLowerCase()
-      filteredProducts = filteredProducts.filter(product => 
-        product.name.toLowerCase().includes(searchTerm) ||
-        product.address.toLowerCase().includes(searchTerm) ||
-        (product.description && product.description.toLowerCase().includes(searchTerm))
+      filteredProducts = filteredProducts.filter(
+        product =>
+          product.name.toLowerCase().includes(searchTerm) ||
+          product.address.toLowerCase().includes(searchTerm) ||
+          (product.description && product.description.toLowerCase().includes(searchTerm))
       )
     }
 
     // Apply location filter
     if (location.trim()) {
       const locationTerm = location.toLowerCase()
-      filteredProducts = filteredProducts.filter(product => 
+      filteredProducts = filteredProducts.filter(product =>
         product.address.toLowerCase().includes(locationTerm)
       )
     }
 
     // Apply type filter
     if (typeRentId) {
-      filteredProducts = filteredProducts.filter(product => 
-        product.typeId === typeRentId
-      )
+      filteredProducts = filteredProducts.filter(product => product.typeId === typeRentId)
     }
 
     // Apply certification filter
     if (certifiedOnly) {
-      filteredProducts = filteredProducts.filter(product => 
-        product.certified === true
-      )
+      filteredProducts = filteredProducts.filter(product => product.certified === true)
     }
 
     // Apply auto-accept filter
     if (autoAcceptOnly) {
-      filteredProducts = filteredProducts.filter(product => 
-        product.autoAccept === true
-      )
+      filteredProducts = filteredProducts.filter(product => product.autoAccept === true)
     }
 
     // Apply price filters
     if (minPrice) {
       const min = parseFloat(minPrice)
-      filteredProducts = filteredProducts.filter(product => 
-        parseFloat(product.basePrice) >= min
-      )
+      filteredProducts = filteredProducts.filter(product => parseFloat(product.basePrice) >= min)
     }
 
     if (maxPrice) {
       const max = parseFloat(maxPrice)
-      filteredProducts = filteredProducts.filter(product => 
-        parseFloat(product.basePrice) <= max
-      )
+      filteredProducts = filteredProducts.filter(product => parseFloat(product.basePrice) <= max)
     }
 
     // Apply people filters
     if (minPeople) {
       const min = parseInt(minPeople)
-      filteredProducts = filteredProducts.filter(product => 
-        product.maxPeople && Number(product.maxPeople) >= min
+      filteredProducts = filteredProducts.filter(
+        product => product.maxPeople && Number(product.maxPeople) >= min
       )
     }
 
     if (maxPeople) {
       const max = parseInt(maxPeople)
-      filteredProducts = filteredProducts.filter(product => 
-        product.maxPeople && Number(product.maxPeople) <= max
+      filteredProducts = filteredProducts.filter(
+        product => product.maxPeople && Number(product.maxPeople) <= max
       )
     }
 
     // Apply special filters
     if (featured) {
-      filteredProducts = filteredProducts.filter(product => 
-        product.certified || product.validate === 'Approve'
+      filteredProducts = filteredProducts.filter(
+        product => product.certified || product.validate === 'Approve'
       )
     }
 
@@ -147,15 +135,30 @@ export async function GET(request: NextRequest) {
     }))
 
     // Update pagination to reflect filtered results
-    const totalFilteredItems = search.trim() || location.trim() || typeRentId || certifiedOnly || autoAcceptOnly || minPrice || maxPrice || minPeople || maxPeople || featured || popular || recent || promo
-      ? filteredProducts.length
-      : result.pagination.total
+    const totalFilteredItems =
+      search.trim() ||
+      location.trim() ||
+      typeRentId ||
+      certifiedOnly ||
+      autoAcceptOnly ||
+      minPrice ||
+      maxPrice ||
+      minPeople ||
+      maxPeople ||
+      featured ||
+      popular ||
+      recent ||
+      promo
+        ? filteredProducts.length
+        : result.pagination.total
 
     const response = {
       products,
       pagination: {
         currentPage: result.pagination.page,
-        totalPages: totalFilteredItems ? Math.ceil(totalFilteredItems / limit) : result.pagination.totalPages,
+        totalPages: totalFilteredItems
+          ? Math.ceil(totalFilteredItems / limit)
+          : result.pagination.totalPages,
         itemsPerPage: result.pagination.limit,
         totalItems: totalFilteredItems,
         hasNext: result.pagination.hasNext,
@@ -170,9 +173,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(response, { headers })
   } catch (error) {
     console.error('Error in optimized products API:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

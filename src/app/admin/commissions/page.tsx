@@ -11,7 +11,7 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
+  CardTitle,
 } from '@/components/ui/shadcnui/card'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/shadcnui/badge'
@@ -74,7 +74,11 @@ interface FormData {
 }
 
 export default function CommissionsPage() {
-  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
   const [commissions, setCommissions] = useState<Commission[]>([])
   const [unassignedTypes, setUnassignedTypes] = useState<PropertyType[]>([])
@@ -167,10 +171,16 @@ export default function CommissionsPage() {
     const clientFixed = parseFloat(formData.clientCommissionFixed)
 
     if (
-      isNaN(hostRate) || hostRate < 0 || hostRate > 1 ||
-      isNaN(clientRate) || clientRate < 0 || clientRate > 1 ||
-      isNaN(hostFixed) || hostFixed < 0 ||
-      isNaN(clientFixed) || clientFixed < 0
+      isNaN(hostRate) ||
+      hostRate < 0 ||
+      hostRate > 1 ||
+      isNaN(clientRate) ||
+      clientRate < 0 ||
+      clientRate > 1 ||
+      isNaN(hostFixed) ||
+      hostFixed < 0 ||
+      isNaN(clientFixed) ||
+      clientFixed < 0
     ) {
       toast.error('Les taux doivent être entre 0 et 100% et les frais fixes positifs')
       return
@@ -213,9 +223,7 @@ export default function CommissionsPage() {
 
       if (response.ok) {
         toast.success(
-          editingCommission
-            ? 'Commission mise à jour avec succès'
-            : 'Commission créée avec succès'
+          editingCommission ? 'Commission mise à jour avec succès' : 'Commission créée avec succès'
         )
         setIsDialogOpen(false)
         fetchCommissions()
@@ -294,32 +302,30 @@ export default function CommissionsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className='container mx-auto px-4 py-8'>
+      <div className='flex items-center justify-between mb-8'>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gestion des Commissions</h1>
-          <p className="text-gray-600 mt-2">
-            Configurez les commissions par type de logement
-          </p>
+          <h1 className='text-3xl font-bold text-gray-900'>Gestion des Commissions</h1>
+          <p className='text-gray-600 mt-2'>Configurez les commissions par type de logement</p>
         </div>
         <Button onClick={openCreateDialog} disabled={unassignedTypes.length === 0}>
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className='w-4 h-4 mr-2' />
           Nouvelle Commission
         </Button>
       </div>
 
       {unassignedTypes.length > 0 && (
-        <Card className="mb-6 border-yellow-200 bg-yellow-50">
+        <Card className='mb-6 border-yellow-200 bg-yellow-50'>
           <CardHeader>
-            <CardTitle className="text-yellow-800">Types sans commission</CardTitle>
+            <CardTitle className='text-yellow-800'>Types sans commission</CardTitle>
             <CardDescription>
               Les types de logement suivants n'ont pas encore de commission configurée
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-2">
+            <div className='flex flex-wrap gap-2'>
               {unassignedTypes.map(type => (
-                <Badge key={type.id} variant="secondary">
+                <Badge key={type.id} variant='secondary'>
                   {type.name}
                 </Badge>
               ))}
@@ -337,55 +343,55 @@ export default function CommissionsPage() {
               <TableHead>Commission Hôte</TableHead>
               <TableHead>Commission Client</TableHead>
               <TableHead>Statut</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className='text-right'>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {commissions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+                <TableCell colSpan={6} className='text-center text-gray-500 py-8'>
                   Aucune commission configurée
                 </TableCell>
               </TableRow>
             ) : (
-              commissions.map((commission) => (
+              commissions.map(commission => (
                 <TableRow key={`${commission.id}-${commission.updatedAt}`}>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-gray-500" />
-                      <span className="font-medium">{commission.typeRent.name}</span>
+                    <div className='flex items-center gap-2'>
+                      <Building2 className='w-4 h-4 text-gray-500' />
+                      <span className='font-medium'>{commission.typeRent.name}</span>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div>
-                      <div className="font-medium">{commission.title}</div>
+                      <div className='font-medium'>{commission.title}</div>
                       {commission.description && (
-                        <div className="text-sm text-gray-500 truncate max-w-xs">
+                        <div className='text-sm text-gray-500 truncate max-w-xs'>
                           {commission.description}
                         </div>
                       )}
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1">
-                        <Percent className="w-3 h-3 text-gray-400" />
+                    <div className='space-y-1'>
+                      <div className='flex items-center gap-1'>
+                        <Percent className='w-3 h-3 text-gray-400' />
                         <span>{formatPercentage(commission.hostCommissionRate)}</span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <DollarSign className="w-3 h-3 text-gray-400" />
+                      <div className='flex items-center gap-1'>
+                        <DollarSign className='w-3 h-3 text-gray-400' />
                         <span>{formatCurrency(commission.hostCommissionFixed)}</span>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1">
-                        <Percent className="w-3 h-3 text-gray-400" />
+                    <div className='space-y-1'>
+                      <div className='flex items-center gap-1'>
+                        <Percent className='w-3 h-3 text-gray-400' />
                         <span>{formatPercentage(commission.clientCommissionRate)}</span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <DollarSign className="w-3 h-3 text-gray-400" />
+                      <div className='flex items-center gap-1'>
+                        <DollarSign className='w-3 h-3 text-gray-400' />
                         <span>{formatCurrency(commission.clientCommissionFixed)}</span>
                       </div>
                     </div>
@@ -395,30 +401,26 @@ export default function CommissionsPage() {
                       {commission.isActive ? 'Actif' : 'Inactif'}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
+                  <TableCell className='text-right'>
+                    <div className='flex items-center justify-end gap-2'>
                       <Button
-                        variant="ghost"
-                        size="sm"
+                        variant='ghost'
+                        size='sm'
                         onClick={() => handleToggleStatus(commission.id)}
                         title={commission.isActive ? 'Désactiver' : 'Activer'}
                       >
-                        <Power className="w-4 h-4" />
+                        <Power className='w-4 h-4' />
+                      </Button>
+                      <Button variant='ghost' size='sm' onClick={() => openEditDialog(commission)}>
+                        <Edit2 className='w-4 h-4' />
                       </Button>
                       <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEditDialog(commission)}
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                        variant='ghost'
+                        size='sm'
                         onClick={() => handleDelete(commission.id)}
-                        className="text-red-600 hover:text-red-700"
+                        className='text-red-600 hover:text-red-700'
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className='w-4 h-4' />
                       </Button>
                     </div>
                   </TableCell>
@@ -430,7 +432,7 @@ export default function CommissionsPage() {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className='max-w-2xl max-h-[90vh] overflow-y-auto'>
           <DialogHeader>
             <DialogTitle>
               {editingCommission ? 'Modifier la Commission' : 'Nouvelle Commission'}
@@ -441,16 +443,16 @@ export default function CommissionsPage() {
           </DialogHeader>
 
           <form onSubmit={handleSubmit}>
-            <div className="space-y-4">
+            <div className='space-y-4'>
               <div>
-                <Label htmlFor="typeRentId">Type de logement *</Label>
+                <Label htmlFor='typeRentId'>Type de logement *</Label>
                 <Select
                   value={formData.typeRentId}
-                  onValueChange={(value) => setFormData({ ...formData, typeRentId: value })}
+                  onValueChange={value => setFormData({ ...formData, typeRentId: value })}
                   disabled={!!editingCommission}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Sélectionnez un type" />
+                    <SelectValue placeholder='Sélectionnez un type' />
                   </SelectTrigger>
                   <SelectContent>
                     {editingCommission ? (
@@ -469,56 +471,60 @@ export default function CommissionsPage() {
               </div>
 
               <div>
-                <Label htmlFor="title">Titre *</Label>
+                <Label htmlFor='title'>Titre *</Label>
                 <Input
-                  id="title"
+                  id='title'
                   value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Ex: Commission Appartement Standard"
+                  onChange={e => setFormData({ ...formData, title: e.target.value })}
+                  placeholder='Ex: Commission Appartement Standard'
                   required
                 />
               </div>
 
               <div>
-                <Label htmlFor="description">Description</Label>
+                <Label htmlFor='description'>Description</Label>
                 <Textarea
-                  id="description"
+                  id='description'
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Description optionnelle..."
+                  onChange={e => setFormData({ ...formData, description: e.target.value })}
+                  placeholder='Description optionnelle...'
                   rows={3}
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">Commission Hôte</CardTitle>
+                    <CardTitle className='text-lg'>Commission Hôte</CardTitle>
                     <CardDescription>Déduite du prix de base</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className='space-y-4'>
                     <div>
-                      <Label htmlFor="hostCommissionRate">Taux (%)</Label>
+                      <Label htmlFor='hostCommissionRate'>Taux (%)</Label>
                       <Input
-                        id="hostCommissionRate"
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        max="100"
+                        id='hostCommissionRate'
+                        type='number'
+                        step='0.1'
+                        min='0'
+                        max='100'
                         value={formData.hostCommissionRate}
-                        onChange={(e) => setFormData({ ...formData, hostCommissionRate: e.target.value })}
+                        onChange={e =>
+                          setFormData({ ...formData, hostCommissionRate: e.target.value })
+                        }
                         required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="hostCommissionFixed">Frais fixes (€)</Label>
+                      <Label htmlFor='hostCommissionFixed'>Frais fixes (€)</Label>
                       <Input
-                        id="hostCommissionFixed"
-                        type="number"
-                        step="0.01"
-                        min="0"
+                        id='hostCommissionFixed'
+                        type='number'
+                        step='0.01'
+                        min='0'
                         value={formData.hostCommissionFixed}
-                        onChange={(e) => setFormData({ ...formData, hostCommissionFixed: e.target.value })}
+                        onChange={e =>
+                          setFormData({ ...formData, hostCommissionFixed: e.target.value })
+                        }
                         required
                       />
                     </div>
@@ -527,32 +533,36 @@ export default function CommissionsPage() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">Commission Client</CardTitle>
+                    <CardTitle className='text-lg'>Commission Client</CardTitle>
                     <CardDescription>Ajoutée au prix de base</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className='space-y-4'>
                     <div>
-                      <Label htmlFor="clientCommissionRate">Taux (%)</Label>
+                      <Label htmlFor='clientCommissionRate'>Taux (%)</Label>
                       <Input
-                        id="clientCommissionRate"
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        max="100"
+                        id='clientCommissionRate'
+                        type='number'
+                        step='0.1'
+                        min='0'
+                        max='100'
                         value={formData.clientCommissionRate}
-                        onChange={(e) => setFormData({ ...formData, clientCommissionRate: e.target.value })}
+                        onChange={e =>
+                          setFormData({ ...formData, clientCommissionRate: e.target.value })
+                        }
                         required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="clientCommissionFixed">Frais fixes (€)</Label>
+                      <Label htmlFor='clientCommissionFixed'>Frais fixes (€)</Label>
                       <Input
-                        id="clientCommissionFixed"
-                        type="number"
-                        step="0.01"
-                        min="0"
+                        id='clientCommissionFixed'
+                        type='number'
+                        step='0.01'
+                        min='0'
                         value={formData.clientCommissionFixed}
-                        onChange={(e) => setFormData({ ...formData, clientCommissionFixed: e.target.value })}
+                        onChange={e =>
+                          setFormData({ ...formData, clientCommissionFixed: e.target.value })
+                        }
                         required
                       />
                     </div>
@@ -561,12 +571,12 @@ export default function CommissionsPage() {
               </div>
             </div>
 
-            <DialogFooter className="mt-6">
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+            <DialogFooter className='mt-6'>
+              <Button type='button' variant='outline' onClick={() => setIsDialogOpen(false)}>
                 Annuler
               </Button>
-              <Button type="submit" disabled={saving}>
-                <Save className="w-4 h-4 mr-2" />
+              <Button type='submit' disabled={saving}>
+                <Save className='w-4 h-4 mr-2' />
                 {saving ? 'Enregistrement...' : 'Enregistrer'}
               </Button>
             </DialogFooter>

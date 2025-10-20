@@ -21,7 +21,7 @@ async function migrateCommissionData() {
     // 1. Get the current global commission settings
     const globalSettings = await prisma.commissionSettings.findFirst({
       where: { isActive: true },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     })
 
     if (!globalSettings) {
@@ -34,7 +34,7 @@ async function migrateCommissionData() {
       hostCommissionFixed = 0.0,
       clientCommissionRate = 0.0,
       clientCommissionFixed = 0.0,
-      createdBy = null
+      createdBy = null,
     } = globalSettings || {}
 
     console.log('📊 Global Commission Settings:')
@@ -45,8 +45,8 @@ async function migrateCommissionData() {
     // 2. Get all property types
     const propertyTypes = await prisma.typeRent.findMany({
       include: {
-        commission: true // Check if commission already exists
-      }
+        commission: true, // Check if commission already exists
+      },
     })
 
     console.log(`📁 Found ${propertyTypes.length} property types\n`)
@@ -74,14 +74,16 @@ async function migrateCommissionData() {
           clientCommissionFixed,
           typeRentId: propertyType.id,
           isActive: true,
-          createdBy
-        }
+          createdBy,
+        },
       })
 
       console.log(`✅ Created commission for "${propertyType.name}"`)
       console.log(`   ID: ${commission.id}`)
       console.log(`   Host: ${commission.hostCommissionRate}% + ${commission.hostCommissionFixed}€`)
-      console.log(`   Client: ${commission.clientCommissionRate}% + ${commission.clientCommissionFixed}€`)
+      console.log(
+        `   Client: ${commission.clientCommissionRate}% + ${commission.clientCommissionFixed}€`
+      )
       console.log('')
 
       createdCount++
@@ -102,7 +104,6 @@ async function migrateCommissionData() {
     } else {
       console.log('✨ No new commissions created (all types already have commissions)')
     }
-
   } catch (error) {
     console.error('\n❌ Migration failed:', error)
     throw error
@@ -117,7 +118,7 @@ migrateCommissionData()
     console.log('\n✅ Migration script completed successfully!')
     process.exit(0)
   })
-  .catch((error) => {
+  .catch(error => {
     console.error('\n❌ Migration script failed:', error)
     process.exit(1)
   })

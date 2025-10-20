@@ -50,13 +50,13 @@ export async function getAllCommissions(): Promise<CommissionWithType[]> {
           select: {
             id: true,
             name: true,
-            description: true
-          }
-        }
+            description: true,
+          },
+        },
       },
       orderBy: {
-        createdAt: 'desc'
-      }
+        createdAt: 'desc',
+      },
     })
 
     return commissions
@@ -78,10 +78,10 @@ export async function getCommissionById(id: string): Promise<CommissionWithType 
           select: {
             id: true,
             name: true,
-            description: true
-          }
-        }
-      }
+            description: true,
+          },
+        },
+      },
     })
 
     return commission
@@ -103,10 +103,10 @@ export async function getCommissionByTypeId(typeId: string): Promise<CommissionW
           select: {
             id: true,
             name: true,
-            description: true
-          }
-        }
-      }
+            description: true,
+          },
+        },
+      },
     })
 
     return commission
@@ -123,7 +123,7 @@ export async function createCommission(data: CommissionData): Promise<Commission
   try {
     // Check if commission already exists for this property type
     const existing = await prisma.commission.findUnique({
-      where: { typeRentId: data.typeRentId }
+      where: { typeRentId: data.typeRentId },
     })
 
     if (existing) {
@@ -132,7 +132,7 @@ export async function createCommission(data: CommissionData): Promise<Commission
 
     // Validate property type exists
     const typeRent = await prisma.typeRent.findUnique({
-      where: { id: data.typeRentId }
+      where: { id: data.typeRentId },
     })
 
     if (!typeRent) {
@@ -149,17 +149,17 @@ export async function createCommission(data: CommissionData): Promise<Commission
         clientCommissionFixed: data.clientCommissionFixed,
         typeRentId: data.typeRentId,
         isActive: data.isActive ?? true,
-        createdBy: data.createdBy
+        createdBy: data.createdBy,
       },
       include: {
         typeRent: {
           select: {
             id: true,
             name: true,
-            description: true
-          }
-        }
-      }
+            description: true,
+          },
+        },
+      },
     })
 
     // Invalidate cache for this type
@@ -185,7 +185,7 @@ export async function updateCommission(
   try {
     // Check if commission exists
     const existing = await prisma.commission.findUnique({
-      where: { id }
+      where: { id },
     })
 
     if (!existing) {
@@ -195,7 +195,7 @@ export async function updateCommission(
     // If changing typeRentId, check for conflicts
     if (data.typeRentId && data.typeRentId !== existing.typeRentId) {
       const conflict = await prisma.commission.findUnique({
-        where: { typeRentId: data.typeRentId }
+        where: { typeRentId: data.typeRentId },
       })
 
       if (conflict) {
@@ -220,10 +220,10 @@ export async function updateCommission(
           select: {
             id: true,
             name: true,
-            description: true
-          }
-        }
-      }
+            description: true,
+          },
+        },
+      },
     })
 
     // Invalidate cache for both old and new types
@@ -248,7 +248,7 @@ export async function updateCommission(
 export async function deleteCommission(id: string): Promise<void> {
   try {
     const commission = await prisma.commission.findUnique({
-      where: { id }
+      where: { id },
     })
 
     if (!commission) {
@@ -256,7 +256,7 @@ export async function deleteCommission(id: string): Promise<void> {
     }
 
     await prisma.commission.delete({
-      where: { id }
+      where: { id },
     })
 
     // Invalidate cache for this type
@@ -278,8 +278,8 @@ export async function getPropertyTypesWithoutCommissions() {
   try {
     const allTypes = await prisma.typeRent.findMany({
       include: {
-        commission: true
-      }
+        commission: true,
+      },
     })
 
     return allTypes
@@ -287,7 +287,7 @@ export async function getPropertyTypesWithoutCommissions() {
       .map(type => ({
         id: type.id,
         name: type.name,
-        description: type.description
+        description: type.description,
       }))
   } catch (error) {
     console.error('Error fetching property types without commissions:', error)
@@ -301,7 +301,7 @@ export async function getPropertyTypesWithoutCommissions() {
 export async function toggleCommissionStatus(id: string): Promise<CommissionWithType> {
   try {
     const commission = await prisma.commission.findUnique({
-      where: { id }
+      where: { id },
     })
 
     if (!commission) {
@@ -311,17 +311,17 @@ export async function toggleCommissionStatus(id: string): Promise<CommissionWith
     const updated = await prisma.commission.update({
       where: { id },
       data: {
-        isActive: !commission.isActive
+        isActive: !commission.isActive,
       },
       include: {
         typeRent: {
           select: {
             id: true,
             name: true,
-            description: true
-          }
-        }
-      }
+            description: true,
+          },
+        },
+      },
     })
 
     // Invalidate cache for this type

@@ -19,8 +19,11 @@ export default function PropertyExtras({ extras }: PropertyExtrasProps) {
     <div className='border-b border-gray-200 pb-8'>
       <h3 className='text-lg font-semibold text-gray-900 mb-6'>Services supplémentaires</h3>
       <div className='space-y-4'>
-        {extras.map((extra) => (
-          <div key={extra.id} className='flex items-start justify-between p-4 bg-gray-50 rounded-lg'>
+        {extras.map(extra => (
+          <div
+            key={extra.id}
+            className='flex items-start justify-between p-4 bg-gray-50 rounded-lg'
+          >
             <div className='flex-1'>
               <h4 className='text-gray-900 font-medium'>{extra.name}</h4>
               {extra.description && (

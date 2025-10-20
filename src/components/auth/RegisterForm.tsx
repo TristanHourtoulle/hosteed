@@ -69,7 +69,7 @@ export const RegisterForm = () => {
       setSuccess(
         'Compte créé avec succès ! Avant de vous connecter, veuillez vérifier votre compte en cliquant sur le lien de vérification reçu dans votre boite mail.'
       )
-        /*
+      /*
       setTimeout(() => {
         router.push('/auth?mode=login')
       }, 2000)

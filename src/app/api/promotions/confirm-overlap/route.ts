@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import {
-  confirmPromotionWithOverlap,
-  CreatePromotionInput
-} from '@/lib/services/promotion.service'
+import { confirmPromotionWithOverlap, CreatePromotionInput } from '@/lib/services/promotion.service'
 
 /**
  * POST /api/promotions/confirm-overlap
@@ -14,29 +11,20 @@ export async function POST(request: NextRequest) {
     const session = await auth()
 
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Non authentifié' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
     // Vérifier les rôles
     const allowedRoles = ['ADMIN', 'HOST_MANAGER', 'HOST', 'HOST_VERIFIED']
     if (!allowedRoles.includes(session.user.roles)) {
-      return NextResponse.json(
-        { error: 'Non autorisé' },
-        { status: 403 }
-      )
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 403 })
     }
 
     const body = await request.json()
     const { promotionData, overlappingIds } = body
 
     if (!promotionData || !overlappingIds || !Array.isArray(overlappingIds)) {
-      return NextResponse.json(
-        { error: 'Données manquantes ou invalides' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Données manquantes ou invalides' }, { status: 400 })
     }
 
     // Vérifier la propriété du produit
@@ -44,21 +32,15 @@ export async function POST(request: NextRequest) {
       const prisma = (await import('@/lib/prisma')).default
       const product = await prisma.product.findUnique({
         where: { id: promotionData.productId },
-        select: { userManager: true }
+        select: { userManager: true },
       })
 
       if (!product) {
-        return NextResponse.json(
-          { error: 'Produit non trouvé' },
-          { status: 404 }
-        )
+        return NextResponse.json({ error: 'Produit non trouvé' }, { status: 404 })
       }
 
       if (product.userManager.toString() !== session.user.id) {
-        return NextResponse.json(
-          { error: 'Non autorisé' },
-          { status: 403 }
-        )
+        return NextResponse.json({ error: 'Non autorisé' }, { status: 403 })
       }
     }
 
@@ -67,7 +49,7 @@ export async function POST(request: NextRequest) {
       discountPercentage: parseFloat(promotionData.discountPercentage),
       startDate: new Date(promotionData.startDate),
       endDate: new Date(promotionData.endDate),
-      createdById: session.user.id
+      createdById: session.user.id,
     }
 
     const promotion = await confirmPromotionWithOverlap(data, overlappingIds)
@@ -75,7 +57,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         promotion,
-        message: 'Promotion créée avec succès. Les promotions précédentes ont été désactivées.'
+        message: 'Promotion créée avec succès. Les promotions précédentes ont été désactivées.',
       },
       { status: 201 }
     )

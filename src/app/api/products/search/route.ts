@@ -8,20 +8,20 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url)
-    
+
     // Parse query parameters
     const page = parseInt(searchParams.get('page') || '1', 10)
     const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 50)
     const search = searchParams.get('search') || searchParams.get('q') || ''
     const typeRentId = searchParams.get('typeRentId') || searchParams.get('type') || ''
     const location = searchParams.get('location') || ''
-    
+
     // Filtering options
     const featured = searchParams.get('featured') === 'true'
     const popular = searchParams.get('popular') === 'true'
     const recent = searchParams.get('recent') === 'true'
     const promo = searchParams.get('promo') === 'true'
-    
+
     // Advanced filters
     const minPrice = searchParams.get('minPrice')
     const maxPrice = searchParams.get('maxPrice')
@@ -64,7 +64,15 @@ export async function GET(request: NextRequest) {
       sizeMax: sizeMax ? parseInt(sizeMax) : undefined,
       page,
       limit,
-      sortBy: (featured ? 'featured' : popular ? 'popular' : recent ? 'recent' : promo ? 'promo' : 'created') as 'featured' | 'popular' | 'recent' | 'promo' | 'created',
+      sortBy: (featured
+        ? 'featured'
+        : popular
+          ? 'popular'
+          : recent
+            ? 'recent'
+            : promo
+              ? 'promo'
+              : 'created') as 'featured' | 'popular' | 'recent' | 'promo' | 'created',
       // Include boolean filters in cache key
       featured: featured || undefined,
       certifiedOnly: certifiedOnly || undefined,
@@ -83,7 +91,9 @@ export async function GET(request: NextRequest) {
     const cachedResult = await productCacheService.getCachedProductSearch(cacheFilters)
 
     if (cachedResult) {
-      console.log(`[SEARCH API] Cache HIT - Returning ${cachedResult.products?.length || 0} products`)
+      console.log(
+        `[SEARCH API] Cache HIT - Returning ${cachedResult.products?.length || 0} products`
+      )
 
       // ✅ FIXED: Ensure we always use "products" key
       const response = NextResponse.json({
@@ -103,14 +113,14 @@ export async function GET(request: NextRequest) {
             minPeople,
             maxPeople,
             certifiedOnly,
-            autoAcceptOnly
-          }
+            autoAcceptOnly,
+          },
         },
         meta: {
           cached: true,
           responseTime: Date.now() - startTime,
-          cacheHit: true
-        }
+          cacheHit: true,
+        },
       })
 
       // Add cache headers for cached responses
@@ -126,7 +136,7 @@ export async function GET(request: NextRequest) {
     // Build database where clause for server-side filtering
     const whereClause: Record<string, unknown> = {
       validate: {
-        in: [ProductValidation.Approve, ProductValidation.ModificationPending]
+        in: [ProductValidation.Approve, ProductValidation.ModificationPending],
       },
       isDraft: false,
     }
@@ -137,7 +147,7 @@ export async function GET(request: NextRequest) {
       whereClause.OR = [
         { name: { contains: searchTerm, mode: 'insensitive' } },
         { description: { contains: searchTerm, mode: 'insensitive' } },
-        { address: { contains: searchTerm, mode: 'insensitive' } }
+        { address: { contains: searchTerm, mode: 'insensitive' } },
       ]
     }
 
@@ -153,12 +163,12 @@ export async function GET(request: NextRequest) {
     // Add people filters (BigInt fields in DB, but Prisma accepts Number for comparison)
     if (minPeople) {
       whereClause.maxPeople = {
-        gte: BigInt(minPeople)
+        gte: BigInt(minPeople),
       }
     }
     if (maxPeople) {
       whereClause.minPeople = {
-        lte: BigInt(maxPeople)
+        lte: BigInt(maxPeople),
       }
     }
 
@@ -225,9 +235,9 @@ export async function GET(request: NextRequest) {
         ...(Array.isArray(whereClause.AND) ? whereClause.AND : []),
         ...equipments.map(equipmentId => ({
           equipments: {
-            some: { id: equipmentId }
-          }
-        }))
+            some: { id: equipmentId },
+          },
+        })),
       ]
     }
 
@@ -237,9 +247,9 @@ export async function GET(request: NextRequest) {
         ...(Array.isArray(whereClause.AND) ? whereClause.AND : []),
         ...services.map(serviceId => ({
           servicesList: {
-            some: { id: serviceId }
-          }
-        }))
+            some: { id: serviceId },
+          },
+        })),
       ]
     }
 
@@ -249,9 +259,9 @@ export async function GET(request: NextRequest) {
         ...(Array.isArray(whereClause.AND) ? whereClause.AND : []),
         ...meals.map(mealId => ({
           mealsList: {
-            some: { id: mealId }
-          }
-        }))
+            some: { id: mealId },
+          },
+        })),
       ]
     }
 
@@ -261,9 +271,9 @@ export async function GET(request: NextRequest) {
         ...(Array.isArray(whereClause.AND) ? whereClause.AND : []),
         ...securities.map(securityId => ({
           securities: {
-            some: { id: securityId }
-          }
-        }))
+            some: { id: securityId },
+          },
+        })),
       ]
     }
 
@@ -281,18 +291,18 @@ export async function GET(request: NextRequest) {
         ...(Array.isArray(whereClause.AND) ? whereClause.AND : []),
         {
           OR: [
-            { basePrice: { startsWith: '0' } },  // 0-9
-            { basePrice: { startsWith: '1' } },  // 10-19
-            { basePrice: { startsWith: '2' } },  // 20-29
-            { basePrice: { startsWith: '3' } },  // 30-39
-            { basePrice: { startsWith: '4' } },  // 40-49
-            { basePrice: { startsWith: '5' } },  // 50-59
-            { basePrice: { startsWith: '6' } },  // 60-69
-            { basePrice: { startsWith: '7' } },  // 70-79
-            { basePrice: { startsWith: '8' } },  // 80-89
-            { basePrice: { startsWith: '9' } },  // 90-99
-          ]
-        }
+            { basePrice: { startsWith: '0' } }, // 0-9
+            { basePrice: { startsWith: '1' } }, // 10-19
+            { basePrice: { startsWith: '2' } }, // 20-29
+            { basePrice: { startsWith: '3' } }, // 30-39
+            { basePrice: { startsWith: '4' } }, // 40-49
+            { basePrice: { startsWith: '5' } }, // 50-59
+            { basePrice: { startsWith: '6' } }, // 60-69
+            { basePrice: { startsWith: '7' } }, // 70-79
+            { basePrice: { startsWith: '8' } }, // 80-89
+            { basePrice: { startsWith: '9' } }, // 90-99
+          ],
+        },
       ]
     }
 
@@ -308,11 +318,11 @@ export async function GET(request: NextRequest) {
         take: 1,
         select: {
           id: true,
-          img: true  // ✅ URL needed for migrated images (/uploads/...)
-        }
+          img: true, // ✅ URL needed for migrated images (/uploads/...)
+        },
       },
       type: {
-        select: { name: true, id: true }
+        select: { name: true, id: true },
       },
       // Include active promotions
       promotions: {
@@ -327,28 +337,32 @@ export async function GET(request: NextRequest) {
           startDate: true,
           endDate: true,
           isActive: true,
-        }
+        },
       },
       // Only include these for popular sorting
-      ...(popular ? {
-        equipments: {
-          select: { id: true }
-        },
-        servicesList: {
-          select: { id: true }
-        }
-      } : {}),
+      ...(popular
+        ? {
+            equipments: {
+              select: { id: true },
+            },
+            servicesList: {
+              select: { id: true },
+            },
+          }
+        : {}),
       // Only include promoted info if featured
-      ...(featured ? {
-        PromotedProduct: {
-          where: {
-            active: true,
-            start: { lte: new Date() },
-            end: { gte: new Date() },
-          },
-          select: { id: true, active: true }
-        }
-      } : {}),
+      ...(featured
+        ? {
+            PromotedProduct: {
+              where: {
+                active: true,
+                start: { lte: new Date() },
+                end: { gte: new Date() },
+              },
+              select: { id: true, active: true },
+            },
+          }
+        : {}),
     }
 
     // Build optimized order by clause
@@ -366,9 +380,11 @@ export async function GET(request: NextRequest) {
     // Execute optimized query
     // Custom JSON serializer for BigInt values
     const serializeForLog = (obj: unknown): string => {
-      return JSON.stringify(obj, (key, value) =>
-        typeof value === 'bigint' ? value.toString() + 'n' : value
-      , 2)
+      return JSON.stringify(
+        obj,
+        (key, value) => (typeof value === 'bigint' ? value.toString() + 'n' : value),
+        2
+      )
     }
     console.log('[SEARCH API] Executing DB query with whereClause:', serializeForLog(whereClause))
     const [rawProducts, totalCount] = await Promise.all([
@@ -377,14 +393,16 @@ export async function GET(request: NextRequest) {
         include: ultraLightIncludes,
         skip,
         take: limit,
-        orderBy
+        orderBy,
       }),
       prisma.product.count({
-        where: whereClause
-      })
+        where: whereClause,
+      }),
     ])
 
-    console.log(`[SEARCH API] DB query returned ${rawProducts.length} products (total: ${totalCount})`)
+    console.log(
+      `[SEARCH API] DB query returned ${rawProducts.length} products (total: ${totalCount})`
+    )
 
     // Convert BigInt fields to strings for JSON serialization
     const products = rawProducts.map(product => ({
@@ -428,14 +446,14 @@ export async function GET(request: NextRequest) {
 
     // Build response with pagination metadata
     // Note: We use filteredProducts.length for accurate count after client-side price filtering
-    const finalTotal = (minPrice || maxPrice) ? filteredProducts.length : totalCount
+    const finalTotal = minPrice || maxPrice ? filteredProducts.length : totalCount
     const pagination = {
       page,
       limit,
       total: finalTotal,
       totalPages: Math.ceil(finalTotal / limit),
       hasNext: page < Math.ceil(finalTotal / limit),
-      hasPrev: page > 1
+      hasPrev: page > 1,
     }
 
     const result = {
@@ -455,25 +473,24 @@ export async function GET(request: NextRequest) {
           minPeople,
           maxPeople,
           certifiedOnly,
-          autoAcceptOnly
-        }
+          autoAcceptOnly,
+        },
       },
       meta: {
         cached: false,
         responseTime: Date.now() - startTime,
         cacheHit: false,
-        dbQueryTime: Date.now() - startTime
-      }
+        dbQueryTime: Date.now() - startTime,
+      },
     }
 
     // Cache the search results for future requests (massive performance boost)
-    console.log(`[SEARCH API] Caching ${filteredProducts.length} products with pagination:`, pagination)
+    console.log(
+      `[SEARCH API] Caching ${filteredProducts.length} products with pagination:`,
+      pagination
+    )
     try {
-      await productCacheService.cacheProductSearch(
-        cacheFilters,
-        filteredProducts,
-        pagination
-      )
+      await productCacheService.cacheProductSearch(cacheFilters, filteredProducts, pagination)
       console.log('[SEARCH API] Successfully cached search results')
     } catch (cacheError) {
       console.error('[SEARCH API] Failed to cache search results:', cacheError)
@@ -482,10 +499,7 @@ export async function GET(request: NextRequest) {
 
     // Add optimized cache headers for faster subsequent requests
     const response = NextResponse.json(result)
-    response.headers.set(
-      'Cache-Control',
-      'public, s-maxage=300, stale-while-revalidate=600'
-    )
+    response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
     response.headers.set('X-Cache', 'MISS')
     response.headers.set('X-Response-Time', (Date.now() - startTime).toString())
     response.headers.set('X-DB-Query', 'true')
@@ -493,9 +507,6 @@ export async function GET(request: NextRequest) {
     return response
   } catch (error) {
     console.error('Error in /api/products/search:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

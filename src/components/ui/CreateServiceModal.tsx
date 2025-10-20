@@ -46,7 +46,7 @@ export default function CreateServiceModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!formData.name.trim()) {
       toast.error('Le nom du service est requis')
       return
@@ -87,47 +87,47 @@ export default function CreateServiceModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className='max-w-md'>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nom du service *</Label>
+          <div className='grid gap-4 py-4'>
+            <div className='space-y-2'>
+              <Label htmlFor='name'>Nom du service *</Label>
               <Input
-                id="name"
+                id='name'
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Ex: Nettoyage de ma piscine privée"
+                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                placeholder='Ex: Nettoyage de ma piscine privée'
                 required
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+            <div className='space-y-2'>
+              <Label htmlFor='description'>Description</Label>
               <Input
-                id="description"
+                id='description'
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Description détaillée (optionnel)"
+                onChange={e => setFormData({ ...formData, description: e.target.value })}
+                placeholder='Description détaillée (optionnel)'
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="icon">Icône</Label>
+            <div className='space-y-2'>
+              <Label htmlFor='icon'>Icône</Label>
               <Input
-                id="icon"
+                id='icon'
                 value={formData.icon}
-                onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+                onChange={e => setFormData({ ...formData, icon: e.target.value })}
                 placeholder="Nom de l'icône Lucide (optionnel)"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose}>
+            <Button type='button' variant='outline' onClick={handleClose}>
               Annuler
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type='submit' disabled={loading}>
               {loading ? 'Création...' : 'Créer le service'}
             </Button>
           </DialogFooter>

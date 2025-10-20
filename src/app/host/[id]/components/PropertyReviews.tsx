@@ -50,7 +50,6 @@ function StarRating({ rating, size = 'sm' }: { rating: number; size?: 'sm' | 'md
   )
 }
 
-
 // Composant pour un avis individuel
 function ReviewCard({ review, index }: { review: Reviews; index: number }) {
   const [isExpanded, setIsExpanded] = useState(false)
@@ -139,7 +138,6 @@ function ReviewCard({ review, index }: { review: Reviews; index: number }) {
               </button>
             )}
           </div>
-
         </div>
       </div>
     </motion.div>
@@ -172,7 +170,6 @@ export default function PropertyReviews({ reviews, globalGrade }: PropertyReview
     )
   }
 
-
   const displayedReviews = showAllReviews ? reviews : reviews.slice(0, 3)
 
   return (
@@ -181,7 +178,6 @@ export default function PropertyReviews({ reviews, globalGrade }: PropertyReview
       animate={{ opacity: 1, y: 0 }}
       className='border-b border-gray-200 pb-12'
     >
-
       {/* En-tête avec note globale */}
       <div className='mb-8'>
         <div className='flex items-center gap-4 mb-6'>
@@ -200,7 +196,6 @@ export default function PropertyReviews({ reviews, globalGrade }: PropertyReview
 
         {/* Statistiques avancées */}
         <ReviewStatistics reviews={reviews} globalGrade={globalGrade} />
-
       </div>
 
       {/* Filtres des avis */}

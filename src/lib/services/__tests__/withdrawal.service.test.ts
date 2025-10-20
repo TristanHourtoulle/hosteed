@@ -6,10 +6,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { prisma } from '@/lib/prisma'
-import {
-  PaymentMethod,
-  WithdrawalType,
-} from '@prisma/client'
+import { PaymentMethod, WithdrawalType } from '@prisma/client'
 import {
   calculateHostBalance,
   createPaymentAccount,

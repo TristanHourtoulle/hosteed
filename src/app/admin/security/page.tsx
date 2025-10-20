@@ -64,7 +64,11 @@ const itemVariants: Variants = {
 }
 
 export default function SecurityPage() {
-  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
   const [security, setSecurity] = useState<SecurityInterface[]>([])
   const [loading, setLoading] = useState(true)

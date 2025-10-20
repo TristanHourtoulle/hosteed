@@ -97,11 +97,12 @@ export const useProductLoader = (productId?: string) => {
           includedServiceIds: product.includedServices?.map((s: { id: string }) => s.id) || [],
           extraIds: product.extras?.map((e: { id: string }) => e.id) || [],
           highlightIds: product.highlights?.map((h: { id: string }) => h.id) || [],
-          nearbyPlaces: product.nearbyPlaces?.map((p: { name: string; distance: number }) => ({
-            name: p.name,
-            distance: p.distance?.toString() || '',
-            unit: p.distance && p.distance < 1000 ? 'mètres' : 'kilomètres',
-          })) || [],
+          nearbyPlaces:
+            product.nearbyPlaces?.map((p: { name: string; distance: number }) => ({
+              name: p.name,
+              distance: p.distance?.toString() || '',
+              unit: p.distance && p.distance < 1000 ? 'mètres' : 'kilomètres',
+            })) || [],
           transportation: product.transportOptions?.[0]?.name || '',
           room: product.room?.toString() || '',
           bathroom: product.bathroom?.toString() || '',
@@ -116,14 +117,15 @@ export const useProductLoader = (productId?: string) => {
 
         // Transform images to ImageFile format
         // Mark existing images with isExisting flag to prevent re-upload
-        const images: ImageFile[] = product.img?.map((img: ProductImage, index: number) => ({
-          id: img.id,
-          file: null, // No file object for existing images
-          preview: img.img, // URL of the existing image
-          url: img.img, // Keep original URL
-          isExisting: true, // Flag to prevent re-upload
-          order: index,
-        })) || []
+        const images: ImageFile[] =
+          product.img?.map((img: ProductImage, index: number) => ({
+            id: img.id,
+            file: null, // No file object for existing images
+            preview: img.img, // URL of the existing image
+            url: img.img, // Keep original URL
+            isExisting: true, // Flag to prevent re-upload
+            order: index,
+          })) || []
 
         setLoadedProduct({
           formData,

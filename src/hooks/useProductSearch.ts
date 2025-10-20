@@ -82,14 +82,17 @@ export function useProductSearch() {
   const [error, setError] = useState<string | null>(null)
 
   // Memoize URL parameters to prevent unnecessary recalculations
-  const urlParams = useMemo(() => ({
-    typeRentId: searchParams.get('type') || searchParams.get('typeRent') || '',
-    searchQuery: searchParams.get('q') || searchParams.get('location') || '',
-    featured: searchParams.get('featured') === 'true',
-    popular: searchParams.get('popular') === 'true',
-    recent: searchParams.get('recent') === 'true',
-    promo: searchParams.get('promo') === 'true',
-  }), [searchParams])
+  const urlParams = useMemo(
+    () => ({
+      typeRentId: searchParams.get('type') || searchParams.get('typeRent') || '',
+      searchQuery: searchParams.get('q') || searchParams.get('location') || '',
+      featured: searchParams.get('featured') === 'true',
+      popular: searchParams.get('popular') === 'true',
+      recent: searchParams.get('recent') === 'true',
+      promo: searchParams.get('promo') === 'true',
+    }),
+    [searchParams]
+  )
 
   // Search state
   const [location, setLocation] = useState(urlParams.searchQuery)
@@ -158,142 +161,150 @@ export function useProductSearch() {
   }, [])
 
   // Memoized filter function to prevent recreation on every render
-  const filterProducts = useCallback((allProducts: Product[]) => {
-    return allProducts.filter((product: Product) => {
-      const matchesTypeRent = !selectedType || product.typeRentId === selectedType
-      const matchesSearch =
-        !location ||
-        product.name.toLowerCase().includes(location.toLowerCase()) ||
-        product.description.toLowerCase().includes(location.toLowerCase()) ||
-        product.address.toLowerCase().includes(location.toLowerCase())
+  const filterProducts = useCallback(
+    (allProducts: Product[]) => {
+      return allProducts.filter((product: Product) => {
+        const matchesTypeRent = !selectedType || product.typeRentId === selectedType
+        const matchesSearch =
+          !location ||
+          product.name.toLowerCase().includes(location.toLowerCase()) ||
+          product.description.toLowerCase().includes(location.toLowerCase()) ||
+          product.address.toLowerCase().includes(location.toLowerCase())
 
-      const matchesEquipments =
-        filters.selectedEquipments.length === 0 ||
-        filters.selectedEquipments.every(equipmentId =>
-          product.equipments?.some(equipment => equipment.id === equipmentId)
-        )
-
-      const matchesServices =
-        filters.selectedServices.length === 0 ||
-        filters.selectedServices.every(serviceId =>
-          product.servicesList?.some(service => service.id === serviceId)
-        )
-
-      const matchesMeals =
-        filters.selectedMeals.length === 0 ||
-        filters.selectedMeals.every(mealId => product.mealsList?.some(meal => meal.id === mealId))
-
-      let matchesSecurities = true
-      if (filters.selectedSecurities.length > 0) {
-        if (!product.securities || product.securities.length === 0) {
-          matchesSecurities = false
-        } else {
-          matchesSecurities = filters.selectedSecurities.every(securityId =>
-            product.securities?.some(security => security.id === securityId)
+        const matchesEquipments =
+          filters.selectedEquipments.length === 0 ||
+          filters.selectedEquipments.every(equipmentId =>
+            product.equipments?.some(equipment => equipment.id === equipmentId)
           )
+
+        const matchesServices =
+          filters.selectedServices.length === 0 ||
+          filters.selectedServices.every(serviceId =>
+            product.servicesList?.some(service => service.id === serviceId)
+          )
+
+        const matchesMeals =
+          filters.selectedMeals.length === 0 ||
+          filters.selectedMeals.every(mealId => product.mealsList?.some(meal => meal.id === mealId))
+
+        let matchesSecurities = true
+        if (filters.selectedSecurities.length > 0) {
+          if (!product.securities || product.securities.length === 0) {
+            matchesSecurities = false
+          } else {
+            matchesSecurities = filters.selectedSecurities.every(securityId =>
+              product.securities?.some(security => security.id === securityId)
+            )
+          }
         }
-      }
 
-      // Skip date filtering if product dates are just numbers (not proper dates)
-      const matchesDates =
-        !filters.arrivingDate ||
-        !filters.leavingDate ||
-        typeof product.arriving === 'number' ||
-        typeof product.leaving === 'number' ||
-        (new Date(product.arriving) <= new Date(filters.arrivingDate) &&
-          new Date(product.leaving) >= new Date(filters.leavingDate))
+        // Skip date filtering if product dates are just numbers (not proper dates)
+        const matchesDates =
+          !filters.arrivingDate ||
+          !filters.leavingDate ||
+          typeof product.arriving === 'number' ||
+          typeof product.leaving === 'number' ||
+          (new Date(product.arriving) <= new Date(filters.arrivingDate) &&
+            new Date(product.leaving) >= new Date(filters.leavingDate))
 
-      // New filters based on Prisma schema
-      const price = parseFloat(product.basePrice)
-      const matchesPrice =
-        (!filters.minPrice || price >= parseFloat(filters.minPrice)) &&
-        (!filters.maxPrice || price <= parseFloat(filters.maxPrice))
+        // New filters based on Prisma schema
+        const price = parseFloat(product.basePrice)
+        const matchesPrice =
+          (!filters.minPrice || price >= parseFloat(filters.minPrice)) &&
+          (!filters.maxPrice || price <= parseFloat(filters.maxPrice))
 
-      // Vérification du nombre de personnes : le logement doit pouvoir accueillir au moins le nombre d'invités demandé
-      const matchesPeople =
-        // Si des invités sont spécifiés dans la recherche (barre de recherche moderne)
-        (guests <= 1 || (product.maxPeople && Number(product.maxPeople) >= guests)) &&
-        // Filtres avancés pour min/max people
-        (!filters.minPeople ||
-          !product.minPeople ||
-          Number(product.minPeople) >= parseInt(filters.minPeople)) &&
-        (!filters.maxPeople ||
-          !product.maxPeople ||
-          Number(product.maxPeople) >= parseInt(filters.maxPeople))
+        // Vérification du nombre de personnes : le logement doit pouvoir accueillir au moins le nombre d'invités demandé
+        const matchesPeople =
+          // Si des invités sont spécifiés dans la recherche (barre de recherche moderne)
+          (guests <= 1 || (product.maxPeople && Number(product.maxPeople) >= guests)) &&
+          // Filtres avancés pour min/max people
+          (!filters.minPeople ||
+            !product.minPeople ||
+            Number(product.minPeople) >= parseInt(filters.minPeople)) &&
+          (!filters.maxPeople ||
+            !product.maxPeople ||
+            Number(product.maxPeople) >= parseInt(filters.maxPeople))
 
-      const matchesRooms =
-        (!filters.minRooms ||
-          !product.room ||
-          Number(product.room) >= parseInt(filters.minRooms)) &&
-        (!filters.maxRooms || !product.room || Number(product.room) <= parseInt(filters.maxRooms))
+        const matchesRooms =
+          (!filters.minRooms ||
+            !product.room ||
+            Number(product.room) >= parseInt(filters.minRooms)) &&
+          (!filters.maxRooms || !product.room || Number(product.room) <= parseInt(filters.maxRooms))
 
-      const matchesBathrooms =
-        (!filters.minBathrooms ||
-          !product.bathroom ||
-          Number(product.bathroom) >= parseInt(filters.minBathrooms)) &&
-        (!filters.maxBathrooms ||
-          !product.bathroom ||
-          Number(product.bathroom) <= parseInt(filters.maxBathrooms))
+        const matchesBathrooms =
+          (!filters.minBathrooms ||
+            !product.bathroom ||
+            Number(product.bathroom) >= parseInt(filters.minBathrooms)) &&
+          (!filters.maxBathrooms ||
+            !product.bathroom ||
+            Number(product.bathroom) <= parseInt(filters.maxBathrooms))
 
-      const matchesSize =
-        (!filters.sizeMin || !product.sizeRoom || product.sizeRoom >= parseInt(filters.sizeMin)) &&
-        (!filters.sizeMax || !product.sizeRoom || product.sizeRoom <= parseInt(filters.sizeMax))
+        const matchesSize =
+          (!filters.sizeMin ||
+            !product.sizeRoom ||
+            product.sizeRoom >= parseInt(filters.sizeMin)) &&
+          (!filters.sizeMax || !product.sizeRoom || product.sizeRoom <= parseInt(filters.sizeMax))
 
-      const matchesSpecialOptions =
-        (!filters.autoAcceptOnly || product.autoAccept) &&
-        (!filters.certifiedOnly || product.certified) &&
-        (!filters.contractRequired || product.contract)
+        const matchesSpecialOptions =
+          (!filters.autoAcceptOnly || product.autoAccept) &&
+          (!filters.certifiedOnly || product.certified) &&
+          (!filters.contractRequired || product.contract)
 
-      return (
-        matchesTypeRent &&
-        matchesSearch &&
-        matchesEquipments &&
-        matchesServices &&
-        matchesMeals &&
-        matchesSecurities &&
-        matchesDates &&
-        matchesPrice &&
-        matchesPeople &&
-        matchesRooms &&
-        matchesBathrooms &&
-        matchesSize &&
-        matchesSpecialOptions
-      )
-    })
-  }, [selectedType, location, filters, guests])
+        return (
+          matchesTypeRent &&
+          matchesSearch &&
+          matchesEquipments &&
+          matchesServices &&
+          matchesMeals &&
+          matchesSecurities &&
+          matchesDates &&
+          matchesPrice &&
+          matchesPeople &&
+          matchesRooms &&
+          matchesBathrooms &&
+          matchesSize &&
+          matchesSpecialOptions
+        )
+      })
+    },
+    [selectedType, location, filters, guests]
+  )
 
   // Memoized special filters function to prevent recreation on every render
-  const applySpecialFilters = useCallback((filteredProducts: Product[]) => {
-    let result = [...filteredProducts]
+  const applySpecialFilters = useCallback(
+    (filteredProducts: Product[]) => {
+      let result = [...filteredProducts]
 
-    if (urlParams.featured) {
-      result = result.filter(product => product.certified || product.validate === 'Approve')
-    }
+      if (urlParams.featured) {
+        result = result.filter(product => product.certified || product.validate === 'Approve')
+      }
 
-    if (urlParams.popular) {
-      result = result.sort((a, b) => {
-        const aScore = (a.equipments?.length || 0) + (a.servicesList?.length || 0)
-        const bScore = (b.equipments?.length || 0) + (b.servicesList?.length || 0)
-        return bScore - aScore
-      })
-    }
+      if (urlParams.popular) {
+        result = result.sort((a, b) => {
+          const aScore = (a.equipments?.length || 0) + (a.servicesList?.length || 0)
+          const bScore = (b.equipments?.length || 0) + (b.servicesList?.length || 0)
+          return bScore - aScore
+        })
+      }
 
-    if (urlParams.recent) {
-      result = result.sort((a, b) => b.id.localeCompare(a.id))
-    }
+      if (urlParams.recent) {
+        result = result.sort((a, b) => b.id.localeCompare(a.id))
+      }
 
-    if (urlParams.promo) {
-      result = result.filter(product => {
-        const price = parseFloat(product.basePrice)
-        return price < 100
-      })
-    }
+      if (urlParams.promo) {
+        result = result.filter(product => {
+          const price = parseFloat(product.basePrice)
+          return price < 100
+        })
+      }
 
-    // Always sort with sponsored products first
-    result = sortProductsWithSponsoredFirst(result)
+      // Always sort with sponsored products first
+      result = sortProductsWithSponsoredFirst(result)
 
-    return result
-  }, [urlParams.featured, urlParams.popular, urlParams.recent, urlParams.promo])
+      return result
+    },
+    [urlParams.featured, urlParams.popular, urlParams.recent, urlParams.promo]
+  )
 
   // Load and filter products
   useEffect(() => {
@@ -315,7 +326,18 @@ export function useProductSearch() {
     }
 
     fetchProducts()
-  }, [selectedType, location, filters, urlParams.featured, urlParams.popular, urlParams.recent, urlParams.promo, guests, filterProducts, applySpecialFilters])
+  }, [
+    selectedType,
+    location,
+    filters,
+    urlParams.featured,
+    urlParams.popular,
+    urlParams.recent,
+    urlParams.promo,
+    guests,
+    filterProducts,
+    applySpecialFilters,
+  ])
 
   // Location suggestions with memoized fetch function
   const fetchLocationSuggestions = useCallback(async (searchLocation: string) => {
@@ -347,25 +369,23 @@ export function useProductSearch() {
   }, [location, fetchLocationSuggestions])
 
   // Memoized event handlers to prevent recreation on every render
-  const handleModernSearch = useCallback((data: {
-    location: string
-    checkIn: string
-    checkOut: string
-    guests: number
-  }) => {
-    // Always set location, even if it's empty (to allow searching all locations)
-    setLocation(data.location)
-    if (data.checkIn) {
-      setFilters(prev => ({ ...prev, arrivingDate: data.checkIn }))
-    }
-    if (data.checkOut) {
-      setFilters(prev => ({ ...prev, leavingDate: data.checkOut }))
-    }
-    if (data.guests !== undefined && data.guests >= 0) {
-      setGuests(data.guests)
-    }
-    setShowSuggestions(false)
-  }, [])
+  const handleModernSearch = useCallback(
+    (data: { location: string; checkIn: string; checkOut: string; guests: number }) => {
+      // Always set location, even if it's empty (to allow searching all locations)
+      setLocation(data.location)
+      if (data.checkIn) {
+        setFilters(prev => ({ ...prev, arrivingDate: data.checkIn }))
+      }
+      if (data.checkOut) {
+        setFilters(prev => ({ ...prev, leavingDate: data.checkOut }))
+      }
+      if (data.guests !== undefined && data.guests >= 0) {
+        setGuests(data.guests)
+      }
+      setShowSuggestions(false)
+    },
+    []
+  )
 
   const handleFilterChange = useCallback((filterType: string, value: string, checked: boolean) => {
     setFilters(prev => ({

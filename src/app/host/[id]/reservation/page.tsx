@@ -5,7 +5,10 @@ import { useAuth } from '@/hooks/useAuth'
 import { CheckRentIsAvailable } from '@/lib/services/rents.service'
 import { findProductById } from '@/lib/services/product.service'
 import { findUserById } from '@/lib/services/user.service'
-import { calculateTotalRentPrice, type CommissionCalculation } from '@/lib/services/commission.service'
+import {
+  calculateTotalRentPrice,
+  type CommissionCalculation,
+} from '@/lib/services/commission.service'
 import { MapPin, Star, CreditCard, Shield, ArrowLeft, Check } from 'lucide-react'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
@@ -62,7 +65,11 @@ export default function ReservationPage() {
   const { id } = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -489,12 +496,12 @@ export default function ReservationPage() {
                           setFormData(prev => ({
                             ...prev,
                             phone: phoneNumber,
-                            phoneCountry: countryCode
+                            phoneCountry: countryCode,
                           }))
                         }}
-                        placeholder="XX XX XX XX"
+                        placeholder='XX XX XX XX'
                         required
-                        className="w-full"
+                        className='w-full'
                       />
                     </div>
                   </div>

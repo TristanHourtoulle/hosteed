@@ -19,6 +19,7 @@ Les images ne s'affichaient pas sur la page `/host` (affichait "Image non dispon
 ### Changements
 
 1. **API Search** (`src/app/api/products/search/route.ts`)
+
    - Ajout du champ `img: true` dans le select
    - Les URLs `/uploads/` sont légères (83 bytes vs 500KB base64)
 

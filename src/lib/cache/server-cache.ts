@@ -51,7 +51,7 @@ export const cachedStaticData = {
       tags: ['static-data', 'equipments'],
     }
   ),
-  
+
   meals: unstable_cache(
     async () => {
       const { findAllMeals } = await import('@/lib/services/meals.service')
@@ -63,7 +63,7 @@ export const cachedStaticData = {
       tags: ['static-data', 'meals'],
     }
   ),
-  
+
   services: unstable_cache(
     async () => {
       const { findAllServices } = await import('@/lib/services/services.service')
@@ -75,7 +75,7 @@ export const cachedStaticData = {
       tags: ['static-data', 'services'],
     }
   ),
-  
+
   security: unstable_cache(
     async () => {
       const { findAllSecurity } = await import('@/lib/services/security.services')
@@ -87,7 +87,7 @@ export const cachedStaticData = {
       tags: ['static-data', 'security'],
     }
   ),
-  
+
   typeRent: unstable_cache(
     async () => {
       const { findAllTypeRent } = await import('@/lib/services/typeRent.service')

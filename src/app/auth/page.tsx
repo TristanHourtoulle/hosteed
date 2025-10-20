@@ -10,7 +10,7 @@ interface AuthPageProps {
 async function AuthPage({ searchParams }: AuthPageProps) {
   const params = await searchParams
   const mode = params.mode || 'login'
-  
+
   return <AuthForm mode={mode} />
 }
 

@@ -32,7 +32,7 @@ interface NotificationDetails {
 export async function POST(request: NextRequest) {
   try {
     const alert: PerformanceAlert = await request.json()
-    
+
     // Validate required fields
     if (!alert.type || !alert.metric || !alert.value || !alert.url) {
       return NextResponse.json(
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     const headersList = await headers()
     const ip = headersList.get('x-forwarded-for') || 'unknown'
     const referer = headersList.get('referer') || ''
-    
+
     // Enrich alert data
     const enrichedAlert = {
       ...alert,
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     // Store alert in database
     await storePerformanceAlert(enrichedAlert)
-    
+
     // Send notifications based on alert type
     if (alert.type === 'critical') {
       await sendImmediateNotification(enrichedAlert)
@@ -73,22 +73,18 @@ export async function POST(request: NextRequest) {
         value: alert.value,
         threshold: alert.threshold,
         url: alert.url,
-        message: alert.message
+        message: alert.message,
       })
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       alertId: enrichedAlert.id,
-      received: enrichedAlert.receivedAt 
+      received: enrichedAlert.receivedAt,
     })
-    
   } catch (error) {
     console.error('Performance alert error:', error)
-    return NextResponse.json(
-      { error: 'Failed to process performance alert' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to process performance alert' }, { status: 500 })
   }
 }
 
@@ -103,15 +99,11 @@ export async function GET() {
     return NextResponse.json({
       alerts,
       summary,
-      total: alerts.length
+      total: alerts.length,
     })
-    
   } catch (error) {
     console.error('Performance alerts query error:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch performance alerts' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to fetch performance alerts' }, { status: 500 })
   }
 }
 
@@ -143,10 +135,9 @@ async function storePerformanceAlert(alert: Record<string, unknown>) {
       }
     })
     */
-    
+
     // Temporary: log to console (replace with actual database storage)
     console.log('💾 Storing alert:', alert.type, alert.metric, alert.message)
-    
   } catch (error) {
     console.error('Failed to store performance alert:', error)
   }
@@ -165,11 +156,13 @@ async function sendImmediateNotification(alert: Record<string, unknown>) {
         value: alert.value,
         threshold: alert.threshold,
         url: alert.url,
-        timestamp: new Date(typeof alert.timestamp === 'number' ? alert.timestamp : Date.now()).toISOString(),
+        timestamp: new Date(
+          typeof alert.timestamp === 'number' ? alert.timestamp : Date.now()
+        ).toISOString(),
         suggestions: alert.suggestions,
       },
       priority: 'critical',
-      channels: ['slack', 'email', 'sms'] // Multiple notification channels
+      channels: ['slack', 'email', 'sms'], // Multiple notification channels
     }
 
     // Integrate with notification services
@@ -178,7 +171,6 @@ async function sendImmediateNotification(alert: Record<string, unknown>) {
       sendEmailNotification(notification),
       // Add other notification channels as needed
     ])
-    
   } catch (error) {
     console.error('Failed to send immediate notification:', error)
   }
@@ -200,7 +192,7 @@ async function sendHighPriorityNotification(alert: Record<string, unknown>) {
         suggestions: alert.suggestions,
       },
       priority: 'high',
-      channels: ['slack', 'email']
+      channels: ['slack', 'email'],
     }
 
     // Send to fewer channels for non-critical alerts
@@ -208,7 +200,6 @@ async function sendHighPriorityNotification(alert: Record<string, unknown>) {
       sendSlackNotification(notification),
       sendEmailNotification(notification),
     ])
-    
   } catch (error) {
     console.error('Failed to send high priority notification:', error)
   }
@@ -232,38 +223,38 @@ async function sendSlackNotification(notification: Record<string, unknown>) {
           type: 'header',
           text: {
             type: 'plain_text',
-            text: notification.title
-          }
+            text: notification.title,
+          },
         },
         {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: notification.message
-          }
+            text: notification.message,
+          },
         },
         {
           type: 'section',
           fields: [
             {
               type: 'mrkdwn',
-              text: `*Metric:* ${(notification.details as NotificationDetails)?.metric || 'N/A'}`
+              text: `*Metric:* ${(notification.details as NotificationDetails)?.metric || 'N/A'}`,
             },
             {
               type: 'mrkdwn',
-              text: `*Value:* ${(notification.details as NotificationDetails)?.value || 'N/A'}`
+              text: `*Value:* ${(notification.details as NotificationDetails)?.value || 'N/A'}`,
             },
             {
               type: 'mrkdwn',
-              text: `*Threshold:* ${(notification.details as NotificationDetails)?.threshold || 'N/A'}`
+              text: `*Threshold:* ${(notification.details as NotificationDetails)?.threshold || 'N/A'}`,
             },
             {
               type: 'mrkdwn',
-              text: `*URL:* ${(notification.details as NotificationDetails)?.url || 'N/A'}`
-            }
-          ]
-        }
-      ]
+              text: `*URL:* ${(notification.details as NotificationDetails)?.url || 'N/A'}`,
+            },
+          ],
+        },
+      ],
     }
 
     // Add suggestions if available
@@ -273,19 +264,18 @@ async function sendSlackNotification(notification: Record<string, unknown>) {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `*Suggestions:*\n${suggestions.map((s: string) => `• ${s}`).join('\n')}`
-        }
+          text: `*Suggestions:*\n${suggestions.map((s: string) => `• ${s}`).join('\n')}`,
+        },
       })
     }
 
     await fetch(slackWebhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(slackMessage)
+      body: JSON.stringify(slackMessage),
     })
-    
+
     console.log('📤 Slack notification sent')
-    
   } catch (error) {
     console.error('Failed to send Slack notification:', error)
   }
@@ -298,7 +288,7 @@ async function sendEmailNotification(notification: Record<string, unknown>) {
   try {
     // This would integrate with your email service (SendGrid, SES, etc.)
     console.log('📧 Email notification:', notification.title)
-    
+
     // Example implementation:
     /*
     await sendEmail({
@@ -308,7 +298,6 @@ async function sendEmailNotification(notification: Record<string, unknown>) {
       priority: notification.priority
     })
     */
-    
   } catch (error) {
     console.error('Failed to send email notification:', error)
   }
@@ -327,10 +316,9 @@ async function getPerformanceAlerts(): Promise<unknown[]> {
       take: limit,
     })
     */
-    
+
     // Temporary mock data
     return []
-    
   } catch (error) {
     console.error('Failed to fetch performance alerts:', error)
     return []
@@ -354,16 +342,15 @@ async function getAlertsSummary() {
     
     return { total, critical, error, warning, resolved }
     */
-    
+
     // Temporary mock data
     return {
       total: 0,
       critical: 0,
       error: 0,
       warning: 0,
-      resolved: 0
+      resolved: 0,
     }
-    
   } catch (error) {
     console.error('Failed to fetch alerts summary:', error)
     return { total: 0, critical: 0, error: 0, warning: 0, resolved: 0 }
@@ -417,14 +404,19 @@ function generateAlertEmailHtml(notification: Record<string, unknown>): string {
             </ul>
         </div>
         
-        ${Array.isArray((notification.details as NotificationDetails)?.suggestions) && ((notification.details as NotificationDetails).suggestions?.length ?? 0) > 0 ? `
+        ${
+          Array.isArray((notification.details as NotificationDetails)?.suggestions) &&
+          ((notification.details as NotificationDetails).suggestions?.length ?? 0) > 0
+            ? `
         <div class="suggestions">
             <h3>Suggestions</h3>
             <ul>
                 ${(notification.details as NotificationDetails).suggestions?.map((s: string) => `<li>${s}</li>`).join('')}
             </ul>
         </div>
-        ` : ''}
+        `
+            : ''
+        }
         
         <p><small>This alert was generated automatically by Hosteed Performance Monitor.</small></p>
     </body>

@@ -36,7 +36,10 @@ export const validateProductForm = (formData: FormData): ValidationError[] => {
   // Price validation
   const basePrice = parseFloat(formData.basePrice)
   if (isNaN(basePrice) || basePrice < MIN_PRICE || basePrice > MAX_PRICE) {
-    errors.push({ field: 'basePrice', message: `Le prix doit être entre ${MIN_PRICE}€ et ${MAX_PRICE}€` })
+    errors.push({
+      field: 'basePrice',
+      message: `Le prix doit être entre ${MIN_PRICE}€ et ${MAX_PRICE}€`,
+    })
   }
 
   const priceMGA = parseFloat(formData.priceMGA)
@@ -64,7 +67,10 @@ export const validateProductForm = (formData: FormData): ValidationError[] => {
 
     const availableRooms = parseInt(formData.availableRooms)
     if (!formData.availableRooms || isNaN(availableRooms) || availableRooms < 1) {
-      errors.push({ field: 'availableRooms', message: 'Le nombre de chambres disponibles est requis' })
+      errors.push({
+        field: 'availableRooms',
+        message: 'Le nombre de chambres disponibles est requis',
+      })
     }
   }
 

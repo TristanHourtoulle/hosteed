@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { CACHE_TAGS } from '@/lib/cache/query-client'
-import { 
-  findAllRentsByUserIdWithProducts, 
+import {
+  findAllRentsByUserIdWithProducts,
   findRentByIdWithFullDetails,
-  getUserRentStatistics 
+  getUserRentStatistics,
 } from '@/lib/services/rents-optimized.service'
 import { cancelRent } from '@/lib/services/rents.service'
 import { toast } from 'sonner'
@@ -37,7 +37,7 @@ export function useReservationDetails(rentId: string) {
     queryFn: async () => {
       const rent = await findRentByIdWithFullDetails(rentId)
       if (!rent) return null
-      
+
       // Transform dates from BigInt to Date
       return {
         ...rent,
@@ -78,21 +78,21 @@ export function useCancelReservation() {
     },
     onSuccess: (_, rentId) => {
       toast.success('Réservation annulée avec succès')
-      
+
       // Invalidate related queries
       queryClient.invalidateQueries({
-        queryKey: CACHE_TAGS.reservations(userId || '')
+        queryKey: CACHE_TAGS.reservations(userId || ''),
       })
       queryClient.invalidateQueries({
-        queryKey: CACHE_TAGS.reservation(rentId)
+        queryKey: CACHE_TAGS.reservation(rentId),
       })
       queryClient.invalidateQueries({
-        queryKey: ['rent-statistics', userId]
+        queryKey: ['rent-statistics', userId],
       })
     },
-    onError: (error) => {
+    onError: error => {
       console.error('Error cancelling reservation:', error)
-      toast.error('Erreur lors de l\'annulation de la réservation')
-    }
+      toast.error("Erreur lors de l'annulation de la réservation")
+    },
   })
 }

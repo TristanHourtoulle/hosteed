@@ -55,11 +55,13 @@ export default function HostPromotionsPage() {
       const productsRes = await fetch('/api/host/products')
       if (productsRes.ok) {
         const data = await productsRes.json()
-        setProducts(data.map((p: Product) => ({
-          id: p.id,
-          name: p.name,
-          basePrice: p.basePrice
-        })))
+        setProducts(
+          data.map((p: Product) => ({
+            id: p.id,
+            name: p.name,
+            basePrice: p.basePrice,
+          }))
+        )
       }
     } catch (error) {
       console.error('Erreur lors du chargement:', error)
@@ -81,7 +83,7 @@ export default function HostPromotionsPage() {
       const res = await fetch('/api/promotions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
       })
 
       const responseData = await res.json()
@@ -115,8 +117,8 @@ export default function HostPromotionsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           promotionData: pendingPromotion,
-          overlappingIds: overlappingPromotions.map((p) => p.id)
-        })
+          overlappingIds: overlappingPromotions.map(p => p.id),
+        }),
       })
 
       if (res.ok) {
@@ -145,7 +147,7 @@ export default function HostPromotionsPage() {
 
     try {
       const res = await fetch(`/api/promotions/${promotionId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
       })
 
       if (res.ok) {
@@ -153,72 +155,61 @@ export default function HostPromotionsPage() {
         fetchData()
       } else {
         const data = await res.json()
-        toast.error(data.error || 'Erreur lors de l\'annulation')
+        toast.error(data.error || "Erreur lors de l'annulation")
       }
     } catch (error) {
       console.error('Erreur:', error)
-      toast.error('Erreur lors de l\'annulation')
+      toast.error("Erreur lors de l'annulation")
     }
   }
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="h-32 bg-gray-200 rounded"></div>
-          <div className="h-32 bg-gray-200 rounded"></div>
+      <div className='container mx-auto px-4 py-8'>
+        <div className='animate-pulse space-y-4'>
+          <div className='h-8 bg-gray-200 rounded w-1/4'></div>
+          <div className='h-32 bg-gray-200 rounded'></div>
+          <div className='h-32 bg-gray-200 rounded'></div>
         </div>
       </div>
     )
   }
 
-  const activePromotions = promotions.filter((p) => p.isActive)
-  const inactivePromotions = promotions.filter((p) => !p.isActive)
+  const activePromotions = promotions.filter(p => p.isActive)
+  const inactivePromotions = promotions.filter(p => !p.isActive)
 
   return (
-    <div className="container mx-auto px-4 py-6 sm:py-8">
+    <div className='container mx-auto px-4 py-6 sm:py-8'>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-8">
+      <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-8'>
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-            Mes Promotions
-          </h1>
-          <p className="text-sm sm:text-base text-gray-600 mt-1">
+          <h1 className='text-2xl sm:text-3xl font-bold text-gray-900'>Mes Promotions</h1>
+          <p className='text-sm sm:text-base text-gray-600 mt-1'>
             Gérez les promotions de vos logements
           </p>
         </div>
-        <Button
-          onClick={() => setShowForm(!showForm)}
-          className="w-full sm:w-auto"
-        >
-          <Plus className="w-4 h-4 mr-2" />
+        <Button onClick={() => setShowForm(!showForm)} className='w-full sm:w-auto'>
+          <Plus className='w-4 h-4 mr-2' />
           {showForm ? 'Annuler' : 'Nouvelle promotion'}
         </Button>
       </div>
 
       {/* Form */}
       {showForm && (
-        <div className="mb-6 sm:mb-8 p-4 sm:p-6 bg-white rounded-lg border-2 border-blue-200 shadow-sm">
-          <h2 className="text-lg sm:text-xl font-semibold mb-4">
-            Créer une nouvelle promotion
-          </h2>
-          <PromotionForm
-            products={products}
-            onSubmit={handleSubmit}
-            loading={submitting}
-          />
+        <div className='mb-6 sm:mb-8 p-4 sm:p-6 bg-white rounded-lg border-2 border-blue-200 shadow-sm'>
+          <h2 className='text-lg sm:text-xl font-semibold mb-4'>Créer une nouvelle promotion</h2>
+          <PromotionForm products={products} onSubmit={handleSubmit} loading={submitting} />
         </div>
       )}
 
       {/* Active Promotions */}
       {activePromotions.length > 0 && (
-        <div className="mb-6 sm:mb-8">
-          <h2 className="text-lg sm:text-xl font-semibold mb-4 text-gray-900">
+        <div className='mb-6 sm:mb-8'>
+          <h2 className='text-lg sm:text-xl font-semibold mb-4 text-gray-900'>
             Promotions actives ({activePromotions.length})
           </h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {activePromotions.map((promo) => (
+          <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
+            {activePromotions.map(promo => (
               <PromotionCard
                 key={promo.id}
                 promotion={promo}
@@ -233,16 +224,12 @@ export default function HostPromotionsPage() {
       {/* Inactive Promotions */}
       {inactivePromotions.length > 0 && (
         <div>
-          <h2 className="text-lg sm:text-xl font-semibold mb-4 text-gray-600">
+          <h2 className='text-lg sm:text-xl font-semibold mb-4 text-gray-600'>
             Promotions désactivées ou expirées ({inactivePromotions.length})
           </h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {inactivePromotions.map((promo) => (
-              <PromotionCard
-                key={promo.id}
-                promotion={promo}
-                showActions={false}
-              />
+          <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
+            {inactivePromotions.map(promo => (
+              <PromotionCard key={promo.id} promotion={promo} showActions={false} />
             ))}
           </div>
         </div>
@@ -250,15 +237,10 @@ export default function HostPromotionsPage() {
 
       {/* Empty state */}
       {promotions.length === 0 && (
-        <div className="text-center py-12 bg-gray-50 rounded-lg">
-          <p className="text-gray-600 text-base sm:text-lg">
-            Aucune promotion pour le moment
-          </p>
-          <Button
-            onClick={() => setShowForm(true)}
-            className="mt-4"
-          >
-            <Plus className="w-4 h-4 mr-2" />
+        <div className='text-center py-12 bg-gray-50 rounded-lg'>
+          <p className='text-gray-600 text-base sm:text-lg'>Aucune promotion pour le moment</p>
+          <Button onClick={() => setShowForm(true)} className='mt-4'>
+            <Plus className='w-4 h-4 mr-2' />
             Créer ma première promotion
           </Button>
         </div>

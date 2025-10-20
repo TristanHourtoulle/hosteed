@@ -81,7 +81,11 @@ const itemVariants: Variants = {
 }
 
 export default function UsersPage() {
-  const { session, isLoading: isAuthLoading, isAuthenticated } = useAuth({ required: true, redirectTo: '/auth' })
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
 
   // Use optimized pagination hook
@@ -241,7 +245,9 @@ export default function UsersPage() {
       <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-8'>
         <div className='max-w-7xl mx-auto'>
           <Alert variant='destructive' className='rounded-2xl'>
-            <AlertDescription>{error || hookError?.message || 'Erreur lors du chargement'}</AlertDescription>
+            <AlertDescription>
+              {error || hookError?.message || 'Erreur lors du chargement'}
+            </AlertDescription>
           </Alert>
         </div>
       </div>
@@ -301,7 +307,7 @@ export default function UsersPage() {
             const count = users.filter(user => user.roles === role).length
             return (
               <motion.div key={role} variants={itemVariants}>
-                <Card 
+                <Card
                   className='border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 backdrop-blur-sm cursor-pointer'
                   onClick={() => handleRoleFilter(roleFilter === role ? '' : role)}
                 >
@@ -318,7 +324,9 @@ export default function UsersPage() {
                                 : 'Utilisateurs'}
                           {roleFilter === role && ' (Filtré)'}
                         </p>
-                        <p className='text-2xl font-bold text-gray-900'>{roleFilter === role ? pagination.totalItems : count}</p>
+                        <p className='text-2xl font-bold text-gray-900'>
+                          {roleFilter === role ? pagination.totalItems : count}
+                        </p>
                       </div>
                       <RoleIcon role={role} size='md' />
                     </div>
@@ -572,7 +580,7 @@ export default function UsersPage() {
         {/* Results summary */}
         {users.length > 0 && (
           <div className='mt-4 text-center text-sm text-gray-500'>
-            Affichage de {((pagination.currentPage - 1) * pagination.itemsPerPage) + 1} à{' '}
+            Affichage de {(pagination.currentPage - 1) * pagination.itemsPerPage + 1} à{' '}
             {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} sur{' '}
             {pagination.totalItems} utilisateurs
           </div>

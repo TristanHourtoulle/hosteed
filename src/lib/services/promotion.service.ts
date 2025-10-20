@@ -59,34 +59,25 @@ export async function findOverlappingPromotions(
       OR: [
         // La nouvelle promotion commence pendant une promotion existante
         {
-          AND: [
-            { startDate: { lte: startDate } },
-            { endDate: { gte: startDate } }
-          ]
+          AND: [{ startDate: { lte: startDate } }, { endDate: { gte: startDate } }],
         },
         // La nouvelle promotion se termine pendant une promotion existante
         {
-          AND: [
-            { startDate: { lte: endDate } },
-            { endDate: { gte: endDate } }
-          ]
+          AND: [{ startDate: { lte: endDate } }, { endDate: { gte: endDate } }],
         },
         // La nouvelle promotion englobe une promotion existante
         {
-          AND: [
-            { startDate: { gte: startDate } },
-            { endDate: { lte: endDate } }
-          ]
-        }
-      ]
+          AND: [{ startDate: { gte: startDate } }, { endDate: { lte: endDate } }],
+        },
+      ],
     },
     include: {
       product: {
         select: {
-          name: true
-        }
-      }
-    }
+          name: true,
+        },
+      },
+    },
   })
 
   return overlapping
@@ -95,28 +86,19 @@ export async function findOverlappingPromotions(
 /**
  * Crée une promotion (vérifie d'abord les chevauchements)
  */
-export async function createPromotion(
-  data: CreatePromotionInput
-): Promise<CreatePromotionResult> {
+export async function createPromotion(data: CreatePromotionInput): Promise<CreatePromotionResult> {
   // 1. Vérifier les promotions qui se chevauchent
-  const overlapping = await findOverlappingPromotions(
-    data.productId,
-    data.startDate,
-    data.endDate
-  )
+  const overlapping = await findOverlappingPromotions(data.productId, data.startDate, data.endDate)
 
   if (overlapping.length > 0) {
     return {
       hasOverlap: true,
-      overlappingPromotions: overlapping
+      overlappingPromotions: overlapping,
     }
   }
 
   // 2. Vérifier que la promotion ne fait pas perdre d'argent à la plateforme
-  const isValid = await validatePromotionCommission(
-    data.productId,
-    data.discountPercentage
-  )
+  const isValid = await validatePromotionCommission(data.productId, data.discountPercentage)
 
   if (!isValid) {
     throw new Error(
@@ -132,15 +114,15 @@ export async function createPromotion(
       startDate: data.startDate,
       endDate: data.endDate,
       createdById: data.createdById,
-      isActive: true
+      isActive: true,
     },
     include: {
       product: {
         select: {
-          name: true
-        }
-      }
-    }
+          name: true,
+        },
+      },
+    },
   })
 
   return { promotion }
@@ -153,7 +135,7 @@ export async function confirmPromotionWithOverlap(
   data: CreatePromotionInput,
   overlappingIds: string[]
 ): Promise<ProductPromotion> {
-  return await prisma.$transaction(async (tx) => {
+  return await prisma.$transaction(async tx => {
     // 1. Créer la nouvelle promotion
     const newPromotion = await tx.productPromotion.create({
       data: {
@@ -162,8 +144,8 @@ export async function confirmPromotionWithOverlap(
         startDate: data.startDate,
         endDate: data.endDate,
         createdById: data.createdById,
-        isActive: true
-      }
+        isActive: true,
+      },
     })
 
     // 2. Désactiver les anciennes promotions et lier la relation
@@ -171,8 +153,8 @@ export async function confirmPromotionWithOverlap(
       where: { id: { in: overlappingIds } },
       data: {
         isActive: false,
-        replacedById: newPromotion.id
-      }
+        replacedById: newPromotion.id,
+      },
     })
 
     return newPromotion
@@ -189,7 +171,7 @@ export async function updatePromotion(
   // Vérifier les chevauchements si les dates changent
   if (data.startDate || data.endDate) {
     const current = await prisma.productPromotion.findUnique({
-      where: { id }
+      where: { id },
     })
 
     if (!current) {
@@ -204,9 +186,7 @@ export async function updatePromotion(
     )
 
     if (overlapping.length > 0) {
-      throw new Error(
-        'Les nouvelles dates se chevauchent avec une autre promotion existante'
-      )
+      throw new Error('Les nouvelles dates se chevauchent avec une autre promotion existante')
     }
   }
 
@@ -215,8 +195,8 @@ export async function updatePromotion(
     data: {
       discountPercentage: data.discountPercentage,
       startDate: data.startDate,
-      endDate: data.endDate
-    }
+      endDate: data.endDate,
+    },
   })
 }
 
@@ -226,7 +206,7 @@ export async function updatePromotion(
 export async function cancelPromotion(id: string): Promise<ProductPromotion> {
   return await prisma.productPromotion.update({
     where: { id },
-    data: { isActive: false }
+    data: { isActive: false },
   })
 }
 
@@ -242,11 +222,11 @@ export async function getActivePromotionForProduct(
       productId,
       isActive: true,
       startDate: { lte: date },
-      endDate: { gte: date }
+      endDate: { gte: date },
     },
     orderBy: {
-      createdAt: 'desc'
-    }
+      createdAt: 'desc',
+    },
   })
 
   return promotion
@@ -264,12 +244,12 @@ export async function getPromotionsForProducts(
       productId: { in: productIds },
       isActive: true,
       startDate: { lte: date },
-      endDate: { gte: date }
-    }
+      endDate: { gte: date },
+    },
   })
 
   const promotionMap = new Map<string, ProductPromotion>()
-  promotions.forEach((promo) => {
+  promotions.forEach(promo => {
     // Prendre la première promotion pour chaque produit (ne devrait y en avoir qu'une normalement)
     if (!promotionMap.has(promo.productId)) {
       promotionMap.set(promo.productId, promo)
@@ -282,9 +262,7 @@ export async function getPromotionsForProducts(
 /**
  * Récupérer toutes les promotions d'un produit
  */
-export async function getPromotionsByProduct(
-  productId: string
-): Promise<ProductPromotion[]> {
+export async function getPromotionsByProduct(productId: string): Promise<ProductPromotion[]> {
   return await prisma.productPromotion.findMany({
     where: { productId },
     orderBy: { createdAt: 'desc' },
@@ -292,28 +270,26 @@ export async function getPromotionsByProduct(
       createdBy: {
         select: {
           name: true,
-          email: true
-        }
-      }
-    }
+          email: true,
+        },
+      },
+    },
   })
 }
 
 /**
  * Récupérer toutes les promotions d'un hôte
  */
-export async function getPromotionsByHost(
-  hostId: string
-): Promise<ProductPromotion[]> {
+export async function getPromotionsByHost(hostId: string): Promise<ProductPromotion[]> {
   return await prisma.productPromotion.findMany({
     where: {
       product: {
         user: {
           some: {
-            id: hostId
-          }
-        }
-      }
+            id: hostId,
+          },
+        },
+      },
     },
     orderBy: { createdAt: 'desc' },
     include: {
@@ -325,18 +301,18 @@ export async function getPromotionsByHost(
           address: true,
           img: {
             select: { img: true },
-            take: 1
+            take: 1,
           },
           user: {
             select: {
               id: true,
               name: true,
-              email: true
-            }
-          }
-        }
-      }
-    }
+              email: true,
+            },
+          },
+        },
+      },
+    },
   })
 }
 
@@ -352,10 +328,10 @@ export async function validatePromotionCommission(
     include: {
       type: {
         include: {
-          commission: true
-        }
-      }
-    }
+          commission: true,
+        },
+      },
+    },
   })
 
   if (!product) {
@@ -374,12 +350,10 @@ export async function validatePromotionCommission(
   }
 
   const hostCommission =
-    (discountedPrice * commission.hostCommissionRate) / 100 +
-    commission.hostCommissionFixed
+    (discountedPrice * commission.hostCommissionRate) / 100 + commission.hostCommissionFixed
 
   const clientCommission =
-    (discountedPrice * commission.clientCommissionRate) / 100 +
-    commission.clientCommissionFixed
+    (discountedPrice * commission.clientCommissionRate) / 100 + commission.clientCommissionFixed
 
   const platformRevenue = hostCommission + clientCommission
 
@@ -398,7 +372,7 @@ export async function getHostPricingSettings(
   userId: string
 ): Promise<{ promotionPriority: PricingPriority }> {
   let settings = await prisma.hostPricingSettings.findUnique({
-    where: { userId }
+    where: { userId },
   })
 
   // Créer les paramètres par défaut si ils n'existent pas
@@ -406,13 +380,13 @@ export async function getHostPricingSettings(
     settings = await prisma.hostPricingSettings.create({
       data: {
         userId,
-        promotionPriority: 'PROMOTION_FIRST'
-      }
+        promotionPriority: 'PROMOTION_FIRST',
+      },
     })
   }
 
   return {
-    promotionPriority: settings.promotionPriority
+    promotionPriority: settings.promotionPriority,
   }
 }
 
@@ -426,12 +400,12 @@ export async function updateHostPricingSettings(
   return await prisma.hostPricingSettings.upsert({
     where: { userId },
     update: {
-      promotionPriority: settings.promotionPriority
+      promotionPriority: settings.promotionPriority,
     },
     create: {
       userId,
-      promotionPriority: settings.promotionPriority
-    }
+      promotionPriority: settings.promotionPriority,
+    },
   })
 }
 
@@ -456,13 +430,13 @@ async function getActiveSpecialPrice(
       productId,
       activate: true,
       day: {
-        has: currentDay
-      }
-    }
+        has: currentDay,
+      },
+    },
   })
 
   // Filtrer par dates
-  const validSpecialPrices = specialPrices.filter((sp) => {
+  const validSpecialPrices = specialPrices.filter(sp => {
     if (!sp.startDate && !sp.endDate) return true
 
     if (sp.startDate && sp.endDate) {
@@ -492,14 +466,13 @@ function applyPricingLogic(
     basePrice,
     promotionApplied: false,
     specialPriceApplied: false,
-    finalPrice: basePrice
+    finalPrice: basePrice,
   }
 
   switch (priority) {
     case 'PROMOTION_FIRST':
       if (promotion) {
-        const discountedPrice =
-          basePrice * (1 - promotion.discountPercentage / 100)
+        const discountedPrice = basePrice * (1 - promotion.discountPercentage / 100)
         breakdown.promotionApplied = true
         breakdown.promotionDiscount = promotion.discountPercentage
         breakdown.finalPrice = discountedPrice
@@ -509,7 +482,7 @@ function applyPricingLogic(
           originalPrice: basePrice,
           appliedPromotion: promotion,
           appliedSpecialPrice: null,
-          breakdown
+          breakdown,
         }
       }
       if (specialPrice) {
@@ -523,7 +496,7 @@ function applyPricingLogic(
           originalPrice: basePrice,
           appliedPromotion: null,
           appliedSpecialPrice: specialPrice,
-          breakdown
+          breakdown,
         }
       }
       break
@@ -540,12 +513,11 @@ function applyPricingLogic(
           originalPrice: basePrice,
           appliedPromotion: null,
           appliedSpecialPrice: specialPrice,
-          breakdown
+          breakdown,
         }
       }
       if (promotion) {
-        const discountedPrice =
-          basePrice * (1 - promotion.discountPercentage / 100)
+        const discountedPrice = basePrice * (1 - promotion.discountPercentage / 100)
         breakdown.promotionApplied = true
         breakdown.promotionDiscount = promotion.discountPercentage
         breakdown.finalPrice = discountedPrice
@@ -555,7 +527,7 @@ function applyPricingLogic(
           originalPrice: basePrice,
           appliedPromotion: promotion,
           appliedSpecialPrice: null,
-          breakdown
+          breakdown,
         }
       }
       break
@@ -564,9 +536,7 @@ function applyPricingLogic(
       const priceWithPromo = promotion
         ? basePrice * (1 - promotion.discountPercentage / 100)
         : basePrice
-      const priceWithSpecial = specialPrice
-        ? parseFloat(specialPrice.pricesEuro)
-        : basePrice
+      const priceWithSpecial = specialPrice ? parseFloat(specialPrice.pricesEuro) : basePrice
 
       const lowestPrice = Math.min(priceWithPromo, priceWithSpecial, basePrice)
 
@@ -580,7 +550,7 @@ function applyPricingLogic(
           originalPrice: basePrice,
           appliedPromotion: promotion,
           appliedSpecialPrice: null,
-          breakdown
+          breakdown,
         }
       } else if (lowestPrice === priceWithSpecial && specialPrice) {
         breakdown.specialPriceApplied = true
@@ -592,7 +562,7 @@ function applyPricingLogic(
           originalPrice: basePrice,
           appliedPromotion: null,
           appliedSpecialPrice: specialPrice,
-          breakdown
+          breakdown,
         }
       }
       break
@@ -608,8 +578,7 @@ function applyPricingLogic(
 
       if (specialPrice) {
         const specialPriceValue = parseFloat(specialPrice.pricesEuro)
-        const specialDiscount =
-          (basePrice - specialPriceValue) / basePrice
+        const specialDiscount = (basePrice - specialPriceValue) / basePrice
         finalPrice = finalPrice * (1 - specialDiscount)
         breakdown.specialPriceApplied = true
         breakdown.specialPriceValue = specialPriceValue
@@ -623,7 +592,7 @@ function applyPricingLogic(
         originalPrice: basePrice,
         appliedPromotion: promotion,
         appliedSpecialPrice: specialPrice,
-        breakdown
+        breakdown,
       }
   }
 
@@ -633,7 +602,7 @@ function applyPricingLogic(
     originalPrice: basePrice,
     appliedPromotion: null,
     appliedSpecialPrice: null,
-    breakdown
+    breakdown,
   }
 }
 
@@ -649,8 +618,8 @@ export async function calculateFinalPrice(
   const product = await prisma.product.findUnique({
     where: { id: productId },
     select: {
-      basePrice: true
-    }
+      basePrice: true,
+    },
   })
 
   if (!product) {
@@ -669,12 +638,7 @@ export async function calculateFinalPrice(
   const settings = await getHostPricingSettings(userManagerId)
 
   // 5. Appliquer la logique de tarification
-  return applyPricingLogic(
-    basePrice,
-    promotion,
-    specialPrice,
-    settings.promotionPriority
-  )
+  return applyPricingLogic(basePrice, promotion, specialPrice, settings.promotionPriority)
 }
 
 /**
@@ -694,13 +658,13 @@ export async function getProductsWithActivePromotions(filters?: {
     startDate: { lte: now },
     endDate: { gte: now },
     ...(filters?.minDiscount && {
-      discountPercentage: { gte: filters.minDiscount }
+      discountPercentage: { gte: filters.minDiscount },
     }),
     ...(filters?.typeId && {
       product: {
-        typeId: filters.typeId
-      }
-    })
+        typeId: filters.typeId,
+      },
+    }),
   }
 
   const orderBy = (() => {
@@ -725,15 +689,15 @@ export async function getProductsWithActivePromotions(filters?: {
       product: {
         include: {
           img: {
-            take: 1
+            take: 1,
           },
           reviews: {
-            where: { approved: true }
+            where: { approved: true },
           },
-          type: true
-        }
-      }
-    }
+          type: true,
+        },
+      },
+    },
   })
 
   return promotions

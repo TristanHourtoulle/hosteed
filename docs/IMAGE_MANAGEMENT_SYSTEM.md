@@ -39,11 +39,11 @@ Système complet de gestion d'images pour remplacer le stockage base64 par un sy
 
 ### Tailles d'Images
 
-| Taille | Dimensions | Usage | Qualité | Poids |
-|--------|------------|-------|---------|-------|
-| **thumb** | 300x200 | Liste de produits | 80 | ~10KB |
-| **medium** | 800x600 | Modal/preview | 85 | ~50KB |
-| **full** | 1920x1440 | Page détail | 90 | ~200KB |
+| Taille     | Dimensions | Usage             | Qualité | Poids  |
+| ---------- | ---------- | ----------------- | ------- | ------ |
+| **thumb**  | 300x200    | Liste de produits | 80      | ~10KB  |
+| **medium** | 800x600    | Modal/preview     | 85      | ~50KB  |
+| **full**   | 1920x1440  | Page détail       | 90      | ~200KB |
 
 ---
 
@@ -155,6 +155,7 @@ pnpm images:migrate -- --limit 50
 ```
 
 Le script va:
+
 1. ✅ Trouver tous les produits avec images base64
 2. ✅ Convertir chaque image en WebP (3 tailles)
 3. ✅ Sauvegarder dans `/public/uploads/products/{id}/`
@@ -170,6 +171,7 @@ Le script va:
 Upload une ou plusieurs images.
 
 **Request:**
+
 ```json
 {
   "images": ["data:image/jpeg;base64,...", "..."],
@@ -179,6 +181,7 @@ Upload une ou plusieurs images.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -198,6 +201,7 @@ Upload une ou plusieurs images.
 Les images sont servies directement par Next.js depuis `/public`.
 
 Headers de cache automatiques:
+
 - `Cache-Control: public, max-age=31536000, immutable`
 - Cache navigateur: 1 an
 
@@ -246,11 +250,13 @@ const info = await getImageInfo('/uploads/products/abc123/img_0_thumb.webp')
 ### Stratégie Recommandée
 
 1. **Phase 1: Setup** (Maintenant)
+
    - ✅ Service d'images créé
    - ✅ APIs créées
    - ✅ Scripts de migration prêts
 
 2. **Phase 2: Test** (1-2 jours)
+
    ```bash
    # Tester avec 10 produits
    pnpm images:migrate:preview
@@ -260,6 +266,7 @@ const info = await getImageInfo('/uploads/products/abc123/img_0_thumb.webp')
    ```
 
 3. **Phase 3: Migration Partielle** (1 semaine)
+
    ```bash
    # Migrer 100 produits
    pnpm images:migrate -- --limit 100
@@ -269,6 +276,7 @@ const info = await getImageInfo('/uploads/products/abc123/img_0_thumb.webp')
    ```
 
 4. **Phase 4: Migration Complète** (Quand prêt)
+
    ```bash
    # Migrer TOUT
    pnpm images:migrate
@@ -283,8 +291,8 @@ Le système supporte les deux formats en même temps:
 ```typescript
 // ProductCard.tsx
 const imageSrc = product.img?.startsWith('/uploads/')
-  ? product.img  // Nouvelle URL
-  : `/api/products/${product.id}/thumbnail`  // Ancienne base64
+  ? product.img // Nouvelle URL
+  : `/api/products/${product.id}/thumbnail` // Ancienne base64
 ```
 
 ---
@@ -315,6 +323,7 @@ location /uploads/ {
 ```
 
 Redémarrer Nginx:
+
 ```bash
 sudo nginx -t
 sudo systemctl reload nginx

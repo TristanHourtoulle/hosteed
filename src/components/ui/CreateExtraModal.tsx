@@ -42,7 +42,7 @@ const PRICE_TYPE_LABELS: Record<ExtraPriceType, string> = {
   PER_DAY: 'Par jour',
   PER_PERSON: 'Par personne',
   PER_DAY_PERSON: 'Par jour et par personne',
-  PER_BOOKING: 'Par réservation'
+  PER_BOOKING: 'Par réservation',
 }
 
 export default function CreateExtraModal({
@@ -61,7 +61,7 @@ export default function CreateExtraModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!formData.name || !formData.priceEUR || !formData.priceMGA || !formData.type) {
       toast.error('Tous les champs obligatoires doivent être renseignés')
       return
@@ -70,12 +70,12 @@ export default function CreateExtraModal({
     // Validation des prix
     const priceEUR = parseFloat(formData.priceEUR)
     const priceMGA = parseFloat(formData.priceMGA)
-    
+
     if (isNaN(priceEUR) || priceEUR < 0) {
       toast.error('Le prix en EUR doit être un nombre positif')
       return
     }
-    
+
     if (isNaN(priceMGA) || priceMGA < 0) {
       toast.error('Le prix en MGA doit être un nombre positif')
       return
@@ -120,7 +120,7 @@ export default function CreateExtraModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className='max-w-md'>
         <DialogHeader>
           <DialogTitle>Ajouter un extra personnalisé</DialogTitle>
           <DialogDescription>
@@ -128,63 +128,63 @@ export default function CreateExtraModal({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nom de l&apos;extra *</Label>
+          <div className='grid gap-4 py-4'>
+            <div className='space-y-2'>
+              <Label htmlFor='name'>Nom de l&apos;extra *</Label>
               <Input
-                id="name"
+                id='name'
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Ex: Petit déjeuner maison"
+                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                placeholder='Ex: Petit déjeuner maison'
                 required
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+            <div className='space-y-2'>
+              <Label htmlFor='description'>Description</Label>
               <Input
-                id="description"
+                id='description'
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Description détaillée (optionnel)"
+                onChange={e => setFormData({ ...formData, description: e.target.value })}
+                placeholder='Description détaillée (optionnel)'
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="priceEUR">Prix EUR *</Label>
+            <div className='grid grid-cols-2 gap-4'>
+              <div className='space-y-2'>
+                <Label htmlFor='priceEUR'>Prix EUR *</Label>
                 <Input
-                  id="priceEUR"
-                  type="number"
-                  step="0.01"
-                  min="0"
+                  id='priceEUR'
+                  type='number'
+                  step='0.01'
+                  min='0'
                   value={formData.priceEUR}
-                  onChange={(e) => setFormData({ ...formData, priceEUR: e.target.value })}
-                  placeholder="0.00"
+                  onChange={e => setFormData({ ...formData, priceEUR: e.target.value })}
+                  placeholder='0.00'
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="priceMGA">Prix MGA *</Label>
+              <div className='space-y-2'>
+                <Label htmlFor='priceMGA'>Prix MGA *</Label>
                 <Input
-                  id="priceMGA"
-                  type="number"
-                  step="1"
-                  min="0"
+                  id='priceMGA'
+                  type='number'
+                  step='1'
+                  min='0'
                   value={formData.priceMGA}
-                  onChange={(e) => setFormData({ ...formData, priceMGA: e.target.value })}
-                  placeholder="0"
+                  onChange={e => setFormData({ ...formData, priceMGA: e.target.value })}
+                  placeholder='0'
                   required
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="type">Type de tarification *</Label>
+            <div className='space-y-2'>
+              <Label htmlFor='type'>Type de tarification *</Label>
               <Select
                 value={formData.type}
                 onValueChange={(value: ExtraPriceType) => setFormData({ ...formData, type: value })}
                 required
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner un type" />
+                  <SelectValue placeholder='Sélectionner un type' />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(PRICE_TYPE_LABELS).map(([value, label]) => (
@@ -197,10 +197,10 @@ export default function CreateExtraModal({
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose}>
+            <Button type='button' variant='outline' onClick={handleClose}>
               Annuler
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type='submit' disabled={loading}>
               {loading ? 'Création...' : 'Créer l&apos;extra'}
             </Button>
           </DialogFooter>

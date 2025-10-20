@@ -59,7 +59,9 @@ export function ValidationStatsCards({ stats }: ValidationStatsCardsProps) {
           <FileText className='h-4 w-4 text-purple-600' />
         </CardHeader>
         <CardContent>
-          <div className='text-2xl font-bold text-purple-600'>{stats.modificationPending + stats.drafts}</div>
+          <div className='text-2xl font-bold text-purple-600'>
+            {stats.modificationPending + stats.drafts}
+          </div>
           <p className='text-xs text-muted-foreground'>en attente</p>
         </CardContent>
       </Card>
