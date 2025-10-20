@@ -6,14 +6,13 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 
 const nextConfig: NextConfig = {
   output: 'standalone',
-  
+
   // Enable compression for better performance
   compress: true,
-  
-  
+
   // Performance optimizations
   poweredByHeader: false,
-  
+
   async redirects() {
     return [
       {
@@ -23,7 +22,16 @@ const nextConfig: NextConfig = {
       },
     ]
   },
-  
+
+  async rewrites() {
+    return [
+      {
+        source: '/uploads/:path*',
+        destination: '/api/images/:path*',
+      },
+    ]
+  },
+
   // Enhanced image optimization
   images: {
     remotePatterns: [
@@ -48,7 +56,7 @@ const nextConfig: NextConfig = {
     minimumCacheTTL: 86400,
     unoptimized: false,
   },
-  
+
   // Experimental features for performance
   experimental: {
     serverActions: {
@@ -56,10 +64,10 @@ const nextConfig: NextConfig = {
     },
     optimizePackageImports: ['lucide-react', 'date-fns', '@radix-ui/react-icons'],
   },
-  
+
   // External packages for server components
   serverExternalPackages: ['prisma'],
-  
+
   // Webpack optimization for production
   webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
     if (!dev && !isServer) {
@@ -94,7 +102,7 @@ const nextConfig: NextConfig = {
           },
         },
       }
-      
+
       // Add performance budgets
       config.performance = {
         maxAssetSize: 100000, // 100KB
@@ -102,10 +110,10 @@ const nextConfig: NextConfig = {
         hints: 'warning',
       }
     }
-    
+
     return config
   },
-  
+
   // Headers for performance
   async headers() {
     return [

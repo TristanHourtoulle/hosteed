@@ -14,21 +14,13 @@ import path from 'path'
  * - Analytics sur les images servies
  * - Redimensionnement à la volée si nécessaire
  */
-export async function GET(
-  request: NextRequest,
-  context: { params: Promise<{ path: string[] }> }
-) {
+export async function GET(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   try {
     const params = await context.params
     const imagePath = params.path.join('/')
 
     // Construire le chemin complet
-    const fullPath = path.join(
-      process.cwd(),
-      'public',
-      'uploads',
-      imagePath
-    )
+    const fullPath = path.join(process.cwd(), 'public', 'uploads', imagePath)
 
     // Vérifier que le fichier existe
     try {
@@ -52,7 +44,8 @@ export async function GET(
     const contentType = mimeTypes[extension] || 'application/octet-stream'
 
     // Retourner l'image avec cache optimal
-    return new NextResponse(imageBuffer, {
+    // Convert Buffer to Uint8Array for Next.js 15 compatibility
+    return new NextResponse(new Uint8Array(imageBuffer), {
       headers: {
         'Content-Type': contentType,
         'Cache-Control': 'public, max-age=31536000, immutable', // 1 an

@@ -19,35 +19,51 @@ type MutationConfig = {
 /**
  * Hook pour les mutations avec invalidation automatique du cache
  */
-export function useMutationWithCache<TData, TError, TVariables, TContext>(
+export function useMutationWithCache<TData, TError, TVariables, TContext = unknown>(
   mutationFn: (variables: TVariables) => Promise<TData>,
   config: MutationConfig,
-  options?: UseMutationOptions<TData, TError, TVariables, TContext>
+  options?: Omit<UseMutationOptions<TData, TError, TVariables, TContext>, 'mutationFn'>
 ) {
+  const originalOnSuccess = options?.onSuccess
+  const originalOnError = options?.onError
+
   return useMutation({
+    ...options,
     mutationFn,
-    onSuccess: async (data, variables, context) => {
+    onSuccess: async (...args) => {
+      const [data, variables] = args
+
       // Invalidation automatique du cache
       if (config.invalidate) {
-        await Promise.all([
-          config.invalidate.products && invalidateClientCache.products(
-            typeof config.invalidate.products === 'string' ? config.invalidate.products : undefined
-          ),
-          config.invalidate.staticData && invalidateClientCache.staticData(
-            typeof config.invalidate.staticData === 'string' ? config.invalidate.staticData : undefined
-          ),
-          config.invalidate.user && invalidateClientCache.user(config.invalidate.user),
-          config.invalidate.favorites && invalidateClientCache.favorites(
-            config.invalidate.favorites.userId,
-            config.invalidate.favorites.productId
-          ),
-          config.invalidate.reservations && invalidateClientCache.reservations(
-            config.invalidate.reservations.userId,
-            config.invalidate.reservations.rentId
-          ),
-          config.invalidate.reviews && invalidateClientCache.reviews(config.invalidate.reviews),
-          config.invalidate.validation && invalidateClientCache.validation(),
-        ].filter(Boolean))
+        await Promise.all(
+          [
+            config.invalidate.products &&
+              invalidateClientCache.products(
+                typeof config.invalidate.products === 'string'
+                  ? config.invalidate.products
+                  : undefined
+              ),
+            config.invalidate.staticData &&
+              invalidateClientCache.staticData(
+                typeof config.invalidate.staticData === 'string'
+                  ? config.invalidate.staticData
+                  : undefined
+              ),
+            config.invalidate.user && invalidateClientCache.user(config.invalidate.user),
+            config.invalidate.favorites &&
+              invalidateClientCache.favorites(
+                config.invalidate.favorites.userId,
+                config.invalidate.favorites.productId
+              ),
+            config.invalidate.reservations &&
+              invalidateClientCache.reservations(
+                config.invalidate.reservations.userId,
+                config.invalidate.reservations.rentId
+              ),
+            config.invalidate.reviews && invalidateClientCache.reviews(config.invalidate.reviews),
+            config.invalidate.validation && invalidateClientCache.validation(),
+          ].filter(Boolean)
+        )
       }
 
       // Message de succès
@@ -56,65 +72,68 @@ export function useMutationWithCache<TData, TError, TVariables, TContext>(
       }
 
       // Callback utilisateur
-      options?.onSuccess?.(data, variables, context)
+      if (originalOnSuccess) {
+        await originalOnSuccess(...args)
+      }
     },
-    onError: (error, variables, context) => {
+    onError: (...args) => {
       // Message d'erreur
       if (config.errorMessage) {
         toast.error(config.errorMessage)
       }
 
       // Callback utilisateur
-      options?.onError?.(error, variables, context)
+      if (originalOnError) {
+        originalOnError(...args)
+      }
     },
-    ...options,
   })
 }
 
 // Helpers pour des cas d'usage courants
-export const useProductMutation = <TData, TError, TVariables, TContext>(
+export const useProductMutation = <TData, TError, TVariables, TContext = unknown>(
   mutationFn: (variables: TVariables) => Promise<TData>,
   productId?: string,
-  options?: UseMutationOptions<TData, TError, TVariables, TContext>
+  options?: Omit<UseMutationOptions<TData, TError, TVariables, TContext>, 'mutationFn'>
 ) => {
   return useMutationWithCache(
     mutationFn,
     {
-      invalidate: { 
-        products: productId || true 
-      }
+      invalidate: {
+        products: productId || true,
+      },
     },
     options
   )
 }
 
-export const useStaticDataMutation = <TData, TError, TVariables, TContext>(
+export const useStaticDataMutation = <TData, TError, TVariables, TContext = unknown>(
   mutationFn: (variables: TVariables) => Promise<TData>,
   dataType: 'equipments' | 'meals' | 'services' | 'security' | 'typeRent',
-  options?: UseMutationOptions<TData, TError, TVariables, TContext>
+  options?: Omit<UseMutationOptions<TData, TError, TVariables, TContext>, 'mutationFn'>
 ) => {
   return useMutationWithCache(
     mutationFn,
     {
-      invalidate: { 
-        staticData: dataType 
-      }
+      invalidate: {
+        staticData: dataType,
+      },
     },
     options
   )
 }
 
-export const useUserMutation = <TData, TError, TVariables, TContext>(
+export const useUserMutation = <TData, TError, TVariables, TContext = unknown>(
   mutationFn: (variables: TVariables) => Promise<TData>,
   userId: string,
-  options?: UseMutationOptions<TData, TError, TVariables, TContext>
+  options?: Omit<UseMutationOptions<TData, TError, TVariables, TContext>, 'mutationFn'>
 ) => {
   return useMutationWithCache(
     mutationFn,
     {
-      invalidate: { 
-        user: userId 
-      }
+      invalidate: {
+        user: userId,
+      },
     },
     options
   )

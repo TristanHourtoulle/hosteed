@@ -1,15 +1,15 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { 
-  AlertCircle, 
-  XCircle, 
-  Wifi, 
-  Image as ImageIcon, 
-  Database, 
-  Shield, 
+import {
+  AlertCircle,
+  XCircle,
+  Wifi,
+  Image as ImageIcon,
+  Database,
+  Shield,
   FileText,
-  X 
+  X,
 } from 'lucide-react'
 
 export interface ErrorDetails {
@@ -52,7 +52,7 @@ const getErrorColors = (type: ErrorDetails['type']) => {
         border: 'border-yellow-200',
         icon: 'text-yellow-600',
         title: 'text-yellow-800',
-        text: 'text-yellow-700'
+        text: 'text-yellow-700',
       }
     case 'network':
       return {
@@ -60,7 +60,7 @@ const getErrorColors = (type: ErrorDetails['type']) => {
         border: 'border-blue-200',
         icon: 'text-blue-600',
         title: 'text-blue-800',
-        text: 'text-blue-700'
+        text: 'text-blue-700',
       }
     case 'file':
       return {
@@ -68,7 +68,7 @@ const getErrorColors = (type: ErrorDetails['type']) => {
         border: 'border-purple-200',
         icon: 'text-purple-600',
         title: 'text-purple-800',
-        text: 'text-purple-700'
+        text: 'text-purple-700',
       }
     case 'auth':
       return {
@@ -76,7 +76,7 @@ const getErrorColors = (type: ErrorDetails['type']) => {
         border: 'border-orange-200',
         icon: 'text-orange-600',
         title: 'text-orange-800',
-        text: 'text-orange-700'
+        text: 'text-orange-700',
       }
     default:
       return {
@@ -84,7 +84,7 @@ const getErrorColors = (type: ErrorDetails['type']) => {
         border: 'border-red-200',
         icon: 'text-red-600',
         title: 'text-red-800',
-        text: 'text-red-700'
+        text: 'text-red-700',
       }
   }
 }
@@ -93,13 +93,14 @@ export default function ErrorAlert({ error, onClose, onRetry }: ErrorAlertProps)
   if (!error) return null
 
   // Si c'est juste une string, la convertir en ErrorDetails
-  const errorDetails: ErrorDetails = typeof error === 'string' 
-    ? {
-        type: 'general',
-        title: 'Erreur',
-        message: error
-      }
-    : error
+  const errorDetails: ErrorDetails =
+    typeof error === 'string'
+      ? {
+          type: 'general',
+          title: 'Erreur',
+          message: error,
+        }
+      : error
 
   const colors = getErrorColors(errorDetails.type)
   const icon = getErrorIcon(errorDetails.type)
@@ -123,18 +124,12 @@ export default function ErrorAlert({ error, onClose, onRetry }: ErrorAlertProps)
         )}
 
         <div className='flex items-start gap-3'>
-          <div className={`flex-shrink-0 ${colors.icon}`}>
-            {icon}
-          </div>
-          
+          <div className={`flex-shrink-0 ${colors.icon}`}>{icon}</div>
+
           <div className='flex-1 space-y-3'>
             <div>
-              <h3 className={`font-medium ${colors.title}`}>
-                {errorDetails.title}
-              </h3>
-              <p className={`mt-1 ${colors.text}`}>
-                {errorDetails.message}
-              </p>
+              <h3 className={`font-medium ${colors.title}`}>{errorDetails.title}</h3>
+              <p className={`mt-1 ${colors.text}`}>{errorDetails.message}</p>
             </div>
 
             {errorDetails.details && errorDetails.details.length > 0 && (
@@ -164,7 +159,7 @@ export default function ErrorAlert({ error, onClose, onRetry }: ErrorAlertProps)
               </div>
             )}
 
-            {(errorDetails.retryable && onRetry) && (
+            {errorDetails.retryable && onRetry && (
               <div className='pt-2'>
                 <button
                   onClick={onRetry}

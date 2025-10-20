@@ -6,7 +6,7 @@ export enum EmailType {
   BOOKING = 'booking',
   HOST = 'host',
   ADMIN = 'admin',
-  NOREPLY = 'noreply'
+  NOREPLY = 'noreply',
 }
 
 const getEmailAddress = (type: EmailType): string => {
@@ -83,7 +83,7 @@ export async function sendHosteedEmail(
       'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
       'X-Mailer': 'Hosteed Platform',
       'X-Priority': '3',
-      'Importance': 'Normal',
+      Importance: 'Normal',
     },
   }
 
@@ -111,8 +111,12 @@ export const sendHostEmail = (to: string, subject: string, content: string, isHt
 export const sendAdminEmail = (to: string, subject: string, content: string, isHtml = false) =>
   sendHosteedEmail(to, subject, content, EmailType.ADMIN, isHtml)
 
-export const sendNotificationEmail = (to: string, subject: string, content: string, isHtml = false) =>
-  sendHosteedEmail(to, subject, content, EmailType.NOREPLY, isHtml)
+export const sendNotificationEmail = (
+  to: string,
+  subject: string,
+  content: string,
+  isHtml = false
+) => sendHosteedEmail(to, subject, content, EmailType.NOREPLY, isHtml)
 
 // Fonction pour les emails avec templates
 export async function sendTemplatedHosteedEmail(
@@ -124,17 +128,17 @@ export async function sendTemplatedHosteedEmail(
 ) {
   const fs = await import('fs/promises')
   const path = await import('path')
-  
+
   try {
     const fullPath = path.join(process.cwd(), 'public/templates/emails', templatePath)
     let html = await fs.readFile(fullPath, 'utf-8')
-    
+
     // Remplacer les variables {{variable}}
     for (const [key, value] of Object.entries(variables)) {
       const regex = new RegExp(`{{\s*${key}\s*}}`, 'g')
       html = html.replace(regex, String(value))
     }
-    
+
     return sendHosteedEmail(to, subject, html, type, true)
   } catch (error) {
     console.error(`❌ Erreur lecture template: ${templatePath}`, error)
@@ -154,10 +158,28 @@ export const EmailTemplates = {
 
 // Fonctions d'envoi spécialisées avec templates
 export const sendWelcomeEmail = (to: string, variables: Record<string, string | number>) =>
-  sendTemplatedHosteedEmail(to, 'Bienvenue chez Hosteed !', EmailTemplates.WELCOME, variables, EmailType.CONTACT)
+  sendTemplatedHosteedEmail(
+    to,
+    'Bienvenue chez Hosteed !',
+    EmailTemplates.WELCOME,
+    variables,
+    EmailType.CONTACT
+  )
 
 export const sendBookingConfirmation = (to: string, variables: Record<string, string | number>) =>
-  sendTemplatedHosteedEmail(to, 'Confirmation de votre réservation', EmailTemplates.BOOKING_CONFIRMATION, variables, EmailType.BOOKING)
+  sendTemplatedHosteedEmail(
+    to,
+    'Confirmation de votre réservation',
+    EmailTemplates.BOOKING_CONFIRMATION,
+    variables,
+    EmailType.BOOKING
+  )
 
 export const sendHostNotification = (to: string, variables: Record<string, string | number>) =>
-  sendTemplatedHosteedEmail(to, 'Nouvelle réservation reçue', EmailTemplates.HOST_NEW_BOOKING, variables, EmailType.HOST)
+  sendTemplatedHosteedEmail(
+    to,
+    'Nouvelle réservation reçue',
+    EmailTemplates.HOST_NEW_BOOKING,
+    variables,
+    EmailType.HOST
+  )

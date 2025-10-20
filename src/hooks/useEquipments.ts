@@ -1,6 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { CACHE_TAGS } from '@/lib/cache/query-client'
-import { findAllEquipments, createEquipment, updateEquipment, deleteEquipement } from '@/lib/services/equipments.service'
+import {
+  findAllEquipments,
+  createEquipment,
+  updateEquipment,
+  deleteEquipement,
+} from '@/lib/services/equipments.service'
 import { useStaticDataMutation } from './useMutationWithCache'
 
 // Hook pour récupérer tous les équipements
@@ -21,7 +26,7 @@ export function useCreateEquipment() {
     {
       onSuccess: () => {
         // Le cache est déjà invalidé automatiquement
-      }
+      },
     }
   )
 }
@@ -29,7 +34,7 @@ export function useCreateEquipment() {
 // Hook pour modifier un équipement
 export function useUpdateEquipment() {
   return useStaticDataMutation(
-    ({ id, name, icon }: { id: string; name: string; icon: string }) => 
+    ({ id, name, icon }: { id: string; name: string; icon: string }) =>
       updateEquipment(id, name, icon),
     'equipments'
   )
@@ -37,10 +42,7 @@ export function useUpdateEquipment() {
 
 // Hook pour supprimer un équipement
 export function useDeleteEquipment() {
-  return useStaticDataMutation(
-    ({ id }: { id: string }) => deleteEquipement(id),
-    'equipments'
-  )
+  return useStaticDataMutation(({ id }: { id: string }) => deleteEquipement(id), 'equipments')
 }
 
 // Exemple d'utilisation dans un composant :

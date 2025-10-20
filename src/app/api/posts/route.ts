@@ -29,7 +29,10 @@ export async function GET(request: NextRequest) {
     }
 
     if (!posts) {
-      return NextResponse.json({ error: 'Erreur lors de la récupération des articles' }, { status: 500 })
+      return NextResponse.json(
+        { error: 'Erreur lors de la récupération des articles' },
+        { status: 500 }
+      )
     }
 
     return NextResponse.json(posts)
@@ -63,7 +66,10 @@ export async function POST(request: NextRequest) {
     const post = await createPost(title, content, image, session.user.id, seoData)
 
     if (!post) {
-      return NextResponse.json({ error: 'Erreur lors de la création de l\'article' }, { status: 500 })
+      return NextResponse.json(
+        { error: "Erreur lors de la création de l'article" },
+        { status: 500 }
+      )
     }
 
     return NextResponse.json(post, { status: 201 })

@@ -164,20 +164,21 @@ const VirtualizedProductGrid: React.FC<VirtualizedProductListProps> = ({
   })
 
   // Calcul responsive des dimensions
-  const dimensions = useResponsiveDimensions(
-    typeof width === 'number' ? width : 1200
-  )
+  const dimensions = useResponsiveDimensions(typeof width === 'number' ? width : 1200)
 
   const columnCount = forcedColumnCount || dimensions.columnCount
   const _columnWidth = forcedColumnWidth || dimensions.columnWidth
   const rowCount = Math.ceil(products.length / columnCount)
 
   // Données pour les items de la grille (reserved for future virtualization)
-  const _itemData = useMemo(() => ({
-    products,
-    columnCount,
-    onItemVisible,
-  }), [products, columnCount, onItemVisible])
+  const _itemData = useMemo(
+    () => ({
+      products,
+      columnCount,
+      onItemVisible,
+    }),
+    [products, columnCount, onItemVisible]
+  )
 
   // Charge la page suivante quand on approche de la fin
   React.useEffect(() => {
@@ -197,31 +198,28 @@ const VirtualizedProductGrid: React.FC<VirtualizedProductListProps> = ({
   return (
     <div className='w-full'>
       {/* Grille virtualisée - Temporarily disabled for build compatibility */}
-      <div 
+      <div
         style={{ height, width }}
-        className="border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50"
+        className='border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50'
       >
-        <div className="text-center p-8">
-          <div className="text-lg font-semibold text-gray-600 mb-2">🚀 Virtual Grid</div>
-          <p className="text-gray-500">
+        <div className='text-center p-8'>
+          <div className='text-lg font-semibold text-gray-600 mb-2'>🚀 Virtual Grid</div>
+          <p className='text-gray-500'>
             Virtual scrolling will be fully implemented after package resolution
           </p>
-          <p className="text-sm text-gray-400 mt-2">
+          <p className='text-sm text-gray-400 mt-2'>
             Grid: {columnCount} columns × {rowCount} rows
           </p>
         </div>
       </div>
-      
+
       {/* Indicateur de fin proche pour le chargement */}
       <div ref={containerRef} className='h-4' />
-      
+
       {/* Skeleton pendant le chargement de nouvelles pages */}
       {isLoading && products.length > 0 && (
         <div className='mt-6'>
-          <ProductGridSkeleton 
-            count={columnCount * 2} 
-            disableAnimation={true}
-          />
+          <ProductGridSkeleton count={columnCount * 2} disableAnimation={true} />
         </div>
       )}
     </div>
@@ -285,10 +283,13 @@ const VirtualizedProductList: React.FC<VirtualizedProductListProps> = ({
     rootMargin: '200px',
   })
 
-  const _itemData2 = useMemo(() => ({
-    products,
-    onItemVisible,
-  }), [products, onItemVisible])
+  const _itemData2 = useMemo(
+    () => ({
+      products,
+      onItemVisible,
+    }),
+    [products, onItemVisible]
+  )
 
   React.useEffect(() => {
     if (isNearEnd && hasNextPage && loadNextPage && !isLoading) {
@@ -303,30 +304,24 @@ const VirtualizedProductList: React.FC<VirtualizedProductListProps> = ({
   return (
     <div className='w-full'>
       {/* Virtual List - Temporarily disabled for build compatibility */}
-      <div 
+      <div
         style={{ height, width }}
-        className="border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50"
+        className='border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50'
       >
-        <div className="text-center p-8">
-          <div className="text-lg font-semibold text-gray-600 mb-2">📋 Virtual List</div>
-          <p className="text-gray-500">
+        <div className='text-center p-8'>
+          <div className='text-lg font-semibold text-gray-600 mb-2'>📋 Virtual List</div>
+          <p className='text-gray-500'>
             Virtual scrolling list will be fully implemented after package resolution
           </p>
-          <p className="text-sm text-gray-400 mt-2">
-            Items: {products.length} products
-          </p>
+          <p className='text-sm text-gray-400 mt-2'>Items: {products.length} products</p>
         </div>
       </div>
-      
+
       <div ref={containerRef} className='h-4' />
-      
+
       {isLoading && products.length > 0 && (
         <div className='mt-6'>
-          <ProductGridSkeleton 
-            count={3} 
-            gridClassName='space-y-4'
-            disableAnimation={true}
-          />
+          <ProductGridSkeleton count={3} gridClassName='space-y-4' disableAnimation={true} />
         </div>
       )}
     </div>
@@ -350,9 +345,11 @@ const useAdaptiveVirtualization = (containerWidth: number) => {
 /**
  * Composant unifié qui choisit automatiquement entre Grid et List
  */
-const AdaptiveVirtualizedProductList: React.FC<VirtualizedProductListProps & {
-  forceMode?: 'grid' | 'list'
-}> = ({ forceMode, ...props }) => {
+const AdaptiveVirtualizedProductList: React.FC<
+  VirtualizedProductListProps & {
+    forceMode?: 'grid' | 'list'
+  }
+> = ({ forceMode, ...props }) => {
   const [containerRef, setContainerRef] = React.useState<HTMLDivElement | null>(null)
   const [containerWidth, setContainerWidth] = React.useState(1200)
 
@@ -362,7 +359,7 @@ const AdaptiveVirtualizedProductList: React.FC<VirtualizedProductListProps & {
   React.useEffect(() => {
     if (!containerRef) return
 
-    const resizeObserver = new ResizeObserver((entries) => {
+    const resizeObserver = new ResizeObserver(entries => {
       for (const entry of entries) {
         setContainerWidth(entry.contentRect.width)
       }

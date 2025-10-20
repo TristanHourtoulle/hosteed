@@ -34,15 +34,15 @@ interface ExtendedNavigator extends Navigator {
 
 export interface CoreWebVitalsData {
   // Core Web Vitals (Google ranking factors)
-  lcp?: number          // Largest Contentful Paint
-  fid?: number          // First Input Delay (being replaced by INP)
-  inp?: number          // Interaction to Next Paint (new 2024 metric)
-  cls?: number          // Cumulative Layout Shift
-  
+  lcp?: number // Largest Contentful Paint
+  fid?: number // First Input Delay (being replaced by INP)
+  inp?: number // Interaction to Next Paint (new 2024 metric)
+  cls?: number // Cumulative Layout Shift
+
   // Other important metrics
-  fcp?: number          // First Contentful Paint
-  ttfb?: number         // Time to First Byte
-  
+  fcp?: number // First Contentful Paint
+  ttfb?: number // Time to First Byte
+
   // Metadata
   url: string
   userAgent: string
@@ -59,23 +59,23 @@ export interface CustomPerformanceMetrics {
   domContentLoaded: number
   imagesLoaded: number
   scriptsLoaded: number
-  
+
   // User interaction metrics
   timeToInteractive: number
   firstInteraction: number
-  
+
   // Bundle performance
   bundleSize: number
   initialBundleSize: number
-  
+
   // Database/API metrics
   apiResponseTime: number
   databaseQueryTime: number
-  
+
   // Image optimization metrics
-  imageOptimizationRatio: number  // % of optimized vs base64 images
+  imageOptimizationRatio: number // % of optimized vs base64 images
   imageLoadTime: number
-  
+
   // Cache performance
   cacheHitRatio: number
   cacheResponseTime: number
@@ -107,7 +107,7 @@ export class PerformanceMonitor {
   constructor() {
     this.sessionId = this.generateSessionId()
     this.userId = this.getUserId()
-    
+
     if (typeof window !== 'undefined') {
       this.initialize()
     }
@@ -118,7 +118,7 @@ export class PerformanceMonitor {
    */
   private initialize() {
     if (this.isInitialized) return
-    
+
     try {
       this.setupCoreWebVitals()
       this.setupCustomMetrics()
@@ -126,7 +126,7 @@ export class PerformanceMonitor {
       this.setupNavigationTiming()
       this.setupResourceTiming()
       this.isInitialized = true
-      
+
       console.log('🚀 Performance monitoring initialized')
     } catch (error) {
       console.error('Failed to initialize performance monitoring:', error)
@@ -139,7 +139,7 @@ export class PerformanceMonitor {
   private setupCoreWebVitals() {
     // Core Web Vitals disabled due to missing web-vitals package
     console.log('Core Web Vitals tracking disabled - web-vitals package not available')
-    
+
     /* // Largest Contentful Paint
     getLCP((metric: Metric) => {
       this.metrics.lcp = metric.value
@@ -183,10 +183,13 @@ export class PerformanceMonitor {
   private setupCustomMetrics() {
     // Page load timing
     window.addEventListener('load', () => {
-      const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming
+      const navigation = performance.getEntriesByType(
+        'navigation'
+      )[0] as PerformanceNavigationTiming
       if (navigation) {
         this.customMetrics.pageLoadTime = navigation.loadEventEnd - navigation.fetchStart
-        this.customMetrics.domContentLoaded = navigation.domContentLoadedEventEnd - navigation.fetchStart
+        this.customMetrics.domContentLoaded =
+          navigation.domContentLoadedEventEnd - navigation.fetchStart
         this.customMetrics.timeToInteractive = this.calculateTimeToInteractive()
       }
     })
@@ -199,7 +202,7 @@ export class PerformanceMonitor {
         document.removeEventListener(event, trackFirstInteraction)
       })
     }
-    
+
     interactionEvents.forEach(event => {
       document.addEventListener(event, trackFirstInteraction)
     })
@@ -213,11 +216,15 @@ export class PerformanceMonitor {
    */
   private setupPerformanceObservers() {
     // Long Tasks API - detect blocking tasks
-    if ('PerformanceObserver' in window && PerformanceObserver.supportedEntryTypes?.includes('longtask')) {
-      const longTaskObserver = new PerformanceObserver((list) => {
+    if (
+      'PerformanceObserver' in window &&
+      PerformanceObserver.supportedEntryTypes?.includes('longtask')
+    ) {
+      const longTaskObserver = new PerformanceObserver(list => {
         const longTasks = list.getEntries()
         longTasks.forEach(task => {
-          if (task.duration > 50) { // > 50ms is considered blocking
+          if (task.duration > 50) {
+            // > 50ms is considered blocking
             this.reportAlert({
               type: 'warning',
               metric: 'Long Task',
@@ -229,20 +236,23 @@ export class PerformanceMonitor {
               suggestions: [
                 'Consider code splitting to reduce JavaScript bundle size',
                 'Use dynamic imports for non-critical code',
-                'Optimize heavy computations with Web Workers'
-              ]
+                'Optimize heavy computations with Web Workers',
+              ],
             })
           }
         })
       })
-      
+
       longTaskObserver.observe({ entryTypes: ['longtask'] })
       this.observers.push(longTaskObserver)
     }
 
     // Layout Shift monitoring
-    if ('PerformanceObserver' in window && PerformanceObserver.supportedEntryTypes?.includes('layout-shift')) {
-      const clsObserver = new PerformanceObserver((list) => {
+    if (
+      'PerformanceObserver' in window &&
+      PerformanceObserver.supportedEntryTypes?.includes('layout-shift')
+    ) {
+      const clsObserver = new PerformanceObserver(list => {
         const layoutShifts = list.getEntries() as LayoutShiftEntry[]
         layoutShifts.forEach((shift: LayoutShiftEntry) => {
           if (shift.value > 0.1) {
@@ -257,13 +267,13 @@ export class PerformanceMonitor {
               suggestions: [
                 'Add explicit width/height to images',
                 'Reserve space for dynamic content',
-                'Use CSS transforms instead of changing layout properties'
-              ]
+                'Use CSS transforms instead of changing layout properties',
+              ],
             })
           }
         })
       })
-      
+
       clsObserver.observe({ entryTypes: ['layout-shift'] })
       this.observers.push(clsObserver)
     }
@@ -274,7 +284,9 @@ export class PerformanceMonitor {
    */
   private setupNavigationTiming() {
     window.addEventListener('load', () => {
-      const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming
+      const navigation = performance.getEntriesByType(
+        'navigation'
+      )[0] as PerformanceNavigationTiming
       if (navigation) {
         // DNS lookup time
         const dnsTime = navigation.domainLookupEnd - navigation.domainLookupStart
@@ -287,7 +299,7 @@ export class PerformanceMonitor {
             message: `Slow DNS lookup: ${dnsTime.toFixed(2)}ms`,
             url: window.location.href,
             timestamp: Date.now(),
-            suggestions: ['Consider using DNS prefetch hints', 'Optimize DNS provider']
+            suggestions: ['Consider using DNS prefetch hints', 'Optimize DNS provider'],
           })
         }
 
@@ -302,7 +314,7 @@ export class PerformanceMonitor {
             message: `Slow SSL negotiation: ${sslTime.toFixed(2)}ms`,
             url: window.location.href,
             timestamp: Date.now(),
-            suggestions: ['Optimize SSL certificate chain', 'Enable HTTP/2 push']
+            suggestions: ['Optimize SSL certificate chain', 'Enable HTTP/2 push'],
           })
         }
       }
@@ -315,7 +327,7 @@ export class PerformanceMonitor {
   private setupResourceTiming() {
     window.addEventListener('load', () => {
       const resources = performance.getEntriesByType('resource') as ResourceTimingEntry[]
-      
+
       // Check for slow images
       resources.forEach((resource: ResourceTimingEntry) => {
         if (resource.initiatorType === 'img' && resource.duration > 1000) {
@@ -331,13 +343,14 @@ export class PerformanceMonitor {
               'Optimize image formats (WebP, AVIF)',
               'Implement responsive images',
               'Use CDN for image delivery',
-              'Add preload hints for critical images'
-            ]
+              'Add preload hints for critical images',
+            ],
           })
         }
-        
+
         // Check for large JavaScript bundles
-        if (resource.initiatorType === 'script' && (resource.transferSize ?? 0) > 250000) { // > 250KB
+        if (resource.initiatorType === 'script' && (resource.transferSize ?? 0) > 250000) {
+          // > 250KB
           this.reportAlert({
             type: 'error',
             metric: 'Large Bundle',
@@ -350,8 +363,8 @@ export class PerformanceMonitor {
               'Implement code splitting',
               'Use dynamic imports',
               'Remove unused dependencies',
-              'Enable tree shaking'
-            ]
+              'Enable tree shaking',
+            ],
           })
         }
       })
@@ -392,7 +405,8 @@ export class PerformanceMonitor {
       this.customMetrics.initialBundleSize = initialBundleSize
 
       // Alert for bundle size issues
-      if (initialBundleSize > 250000) { // > 250KB
+      if (initialBundleSize > 250000) {
+        // > 250KB
         this.reportAlert({
           type: 'critical',
           metric: 'Initial Bundle Size',
@@ -405,8 +419,8 @@ export class PerformanceMonitor {
             'Implement route-based code splitting',
             'Use dynamic imports for large libraries',
             'Remove unused dependencies',
-            'Optimize third-party scripts'
-          ]
+            'Optimize third-party scripts',
+          ],
         })
       }
     })
@@ -416,14 +430,15 @@ export class PerformanceMonitor {
    * Report metric with threshold checking
    */
   private reportMetric(
-    name: string, 
-    value: number, 
+    name: string,
+    value: number,
     thresholds: { threshold: number; good: number; poor: number }
   ) {
-    const rating = value <= thresholds.good ? 'good' : value <= thresholds.poor ? 'needs-improvement' : 'poor'
-    
+    const rating =
+      value <= thresholds.good ? 'good' : value <= thresholds.poor ? 'needs-improvement' : 'poor'
+
     console.log(`📊 ${name}: ${value.toFixed(2)}ms (${rating})`)
-    
+
     if (rating === 'poor') {
       this.reportAlert({
         type: rating === 'poor' ? 'critical' : 'warning',
@@ -433,7 +448,7 @@ export class PerformanceMonitor {
         message: `Poor ${name}: ${value.toFixed(2)}ms (threshold: ${thresholds.threshold}ms)`,
         url: window.location.href,
         timestamp: Date.now(),
-        suggestions: this.getSuggestions(name)
+        suggestions: this.getSuggestions(name),
       })
     }
 
@@ -446,10 +461,10 @@ export class PerformanceMonitor {
    */
   private reportAlert(alert: PerformanceAlert) {
     console.warn('🚨 Performance Alert:', alert)
-    
+
     // Send to monitoring service (Sentry, DataDog, etc.)
     this.sendAlertToMonitoring(alert)
-    
+
     // Store locally for debugging
     const alerts = this.getStoredAlerts()
     alerts.push(alert)
@@ -461,36 +476,36 @@ export class PerformanceMonitor {
    */
   private getSuggestions(metric: string): string[] {
     const suggestions: { [key: string]: string[] } = {
-      'LCP': [
+      LCP: [
         'Optimize server response time (TTFB)',
         'Remove render-blocking resources',
         'Optimize images with WebP/AVIF',
-        'Use preload for critical resources'
+        'Use preload for critical resources',
       ],
-      'FID': [
+      FID: [
         'Reduce JavaScript execution time',
         'Break up long tasks',
         'Use code splitting',
-        'Defer non-critical JavaScript'
+        'Defer non-critical JavaScript',
       ],
-      'INP': [
+      INP: [
         'Optimize event handlers',
         'Reduce main thread blocking',
         'Use Web Workers for heavy computations',
-        'Implement virtual scrolling for long lists'
+        'Implement virtual scrolling for long lists',
       ],
-      'CLS': [
+      CLS: [
         'Add size attributes to images',
         'Reserve space for dynamic content',
         'Use CSS transforms instead of layout changes',
-        'Avoid inserting content above existing content'
+        'Avoid inserting content above existing content',
       ],
-      'TTFB': [
+      TTFB: [
         'Optimize server performance',
         'Use CDN for static assets',
         'Implement server-side caching',
-        'Reduce database query time'
-      ]
+        'Reduce database query time',
+      ],
     }
 
     return suggestions[metric] || ['Review and optimize the affected component']
@@ -514,8 +529,8 @@ export class PerformanceMonitor {
           timestamp: Date.now(),
           sessionId: this.sessionId,
           userId: this.userId,
-          ...this.getDeviceInfo()
-        })
+          ...this.getDeviceInfo(),
+        }),
       })
     } catch (error) {
       console.error('Failed to send metric to analytics:', error)
@@ -530,7 +545,7 @@ export class PerformanceMonitor {
       await fetch('/api/monitoring/alert', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(alert)
+        body: JSON.stringify(alert),
       })
     } catch (error) {
       console.error('Failed to send alert to monitoring:', error)
@@ -544,7 +559,7 @@ export class PerformanceMonitor {
     return {
       connectionType: (navigator as ExtendedNavigator).connection?.effectiveType,
       deviceMemory: (navigator as ExtendedNavigator).deviceMemory,
-      userAgent: navigator.userAgent
+      userAgent: navigator.userAgent,
     }
   }
 
@@ -587,7 +602,7 @@ export class PerformanceMonitor {
       timestamp: Date.now(),
       sessionId: this.sessionId,
       userId: this.userId,
-      ...this.getDeviceInfo()
+      ...this.getDeviceInfo(),
     } as CoreWebVitalsData & CustomPerformanceMetrics
   }
 

@@ -36,11 +36,7 @@ interface ProductValidationCardProps {
   onUpdate: () => void
 }
 
-function ProductValidationCard({
-  product,
-  currentUserId,
-  onUpdate,
-}: ProductValidationCardProps) {
+function ProductValidationCard({ product, currentUserId, onUpdate }: ProductValidationCardProps) {
   const [loading, setLoading] = useState(false)
 
   // Memoize the validation badge to prevent recreation on every render
@@ -93,8 +89,10 @@ function ProductValidationCard({
 
   // Memoize whether validation actions should be shown
   const showValidationActions = useMemo(() => {
-    return product.validate === ProductValidation.NotVerified || 
-           product.validate === ProductValidation.RecheckRequest
+    return (
+      product.validate === ProductValidation.NotVerified ||
+      product.validate === ProductValidation.RecheckRequest
+    )
   }, [product.validate])
 
   // Memoize first image URL
@@ -103,39 +101,44 @@ function ProductValidationCard({
   }, [product.img])
 
   // Memoized validation action handler to prevent recreation
-  const handleValidationAction = useCallback(async (action: 'approve' | 'reject') => {
-    setLoading(true)
-    try {
-      let result
-      if (action === 'approve') {
-        result = await approveProduct(product.id, currentUserId, 'Approuvé par admin')
-      } else {
-        result = await rejectProduct(
-          product.id,
-          currentUserId,
-          "Produit rejeté par l'administrateur"
-        )
-      }
+  const handleValidationAction = useCallback(
+    async (action: 'approve' | 'reject') => {
+      setLoading(true)
+      try {
+        let result
+        if (action === 'approve') {
+          result = await approveProduct(product.id, currentUserId, 'Approuvé par admin')
+        } else {
+          result = await rejectProduct(
+            product.id,
+            currentUserId,
+            "Produit rejeté par l'administrateur"
+          )
+        }
 
-      if (result.success) {
-        onUpdate()
-      } else {
-        console.error(result.error)
+        if (result.success) {
+          onUpdate()
+        } else {
+          console.error(result.error)
+        }
+      } catch (error) {
+        console.error(
+          `Erreur lors de la ${action === 'approve' ? 'validation' : 'rejection'}:`,
+          error
+        )
+      } finally {
+        setLoading(false)
       }
-    } catch (error) {
-      console.error(
-        `Erreur lors de la ${action === 'approve' ? 'validation' : 'rejection'}:`,
-        error
-      )
-    } finally {
-      setLoading(false)
-    }
-  }, [product.id, currentUserId, onUpdate])
+    },
+    [product.id, currentUserId, onUpdate]
+  )
 
   // Memoized click handlers to prevent recreation
-  const handleApprove = useCallback(() => handleValidationAction('approve'), [handleValidationAction])
+  const handleApprove = useCallback(
+    () => handleValidationAction('approve'),
+    [handleValidationAction]
+  )
   const handleReject = useCallback(() => handleValidationAction('reject'), [handleValidationAction])
-
 
   return (
     <Card className='overflow-hidden hover:shadow-lg transition-all duration-300'>
@@ -148,9 +151,7 @@ function ProductValidationCard({
             <Home className='h-12 w-12 text-gray-400' />
           </div>
         )}
-        <div className='absolute top-4 right-4'>
-          {validationBadge}
-        </div>
+        <div className='absolute top-4 right-4'>{validationBadge}</div>
       </div>
 
       <CardContent className='p-4'>
@@ -199,12 +200,7 @@ function ProductValidationCard({
                     <CheckCircle className='h-4 w-4' />
                   )}
                 </Button>
-                <Button
-                  variant='destructive'
-                  size='sm'
-                  onClick={handleReject}
-                  disabled={loading}
-                >
+                <Button variant='destructive' size='sm' onClick={handleReject} disabled={loading}>
                   {loading ? (
                     <Loader2 className='h-4 w-4 animate-spin' />
                   ) : (
@@ -221,7 +217,10 @@ function ProductValidationCard({
 }
 
 // Custom comparison function for React.memo to prevent unnecessary re-renders
-const arePropsEqual = (prevProps: ProductValidationCardProps, nextProps: ProductValidationCardProps) => {
+const arePropsEqual = (
+  prevProps: ProductValidationCardProps,
+  nextProps: ProductValidationCardProps
+) => {
   // Check if currentUserId changed
   if (prevProps.currentUserId !== nextProps.currentUserId) {
     return false

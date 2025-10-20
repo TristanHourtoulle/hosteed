@@ -53,12 +53,13 @@ export default function FiltersPanel({ filters, setFilters }: FiltersPanelProps)
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [securityResponse, mealsResponse, equipmentsResponse, servicesResponse] = await Promise.all([
-          fetch('/api/securities'),
-          fetch('/api/meals'),
-          fetch('/api/equipments'),
-          fetch('/api/services'),
-        ])
+        const [securityResponse, mealsResponse, equipmentsResponse, servicesResponse] =
+          await Promise.all([
+            fetch('/api/securities'),
+            fetch('/api/meals'),
+            fetch('/api/equipments'),
+            fetch('/api/services'),
+          ])
 
         if (securityResponse.ok) {
           const securityList = await securityResponse.json()

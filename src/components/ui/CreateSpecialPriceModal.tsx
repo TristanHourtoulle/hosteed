@@ -58,10 +58,10 @@ export default function CreateSpecialPriceModal({
         pricesMga: editingSpecialPrice.pricesMga,
         pricesEuro: editingSpecialPrice.pricesEuro,
         day: editingSpecialPrice.day,
-        startDate: editingSpecialPrice.startDate 
+        startDate: editingSpecialPrice.startDate
           ? new Date(editingSpecialPrice.startDate).toISOString().split('T')[0]
           : '',
-        endDate: editingSpecialPrice.endDate 
+        endDate: editingSpecialPrice.endDate
           ? new Date(editingSpecialPrice.endDate).toISOString().split('T')[0]
           : '',
         activate: editingSpecialPrice.activate,
@@ -79,9 +79,7 @@ export default function CreateSpecialPriceModal({
     }
   }, [editingSpecialPrice])
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target
     setFormData(prev => ({
       ...prev,
@@ -92,9 +90,7 @@ export default function CreateSpecialPriceModal({
   const handleDayToggle = (day: DayEnum) => {
     setFormData(prev => ({
       ...prev,
-      day: prev.day.includes(day)
-        ? prev.day.filter(d => d !== day)
-        : [...prev.day, day],
+      day: prev.day.includes(day) ? prev.day.filter(d => d !== day) : [...prev.day, day],
     }))
   }
 
@@ -163,7 +159,9 @@ export default function CreateSpecialPriceModal({
                     </div>
                     <div>
                       <CardTitle className='text-xl text-slate-800'>
-                        {editingSpecialPrice ? 'Modifier le prix spécial' : 'Ajouter un prix spécial'}
+                        {editingSpecialPrice
+                          ? 'Modifier le prix spécial'
+                          : 'Ajouter un prix spécial'}
                       </CardTitle>
                       <p className='text-slate-600 text-sm mt-1'>
                         Définissez des tarifs spécifiques pour certaines périodes
@@ -260,9 +258,7 @@ export default function CreateSpecialPriceModal({
                                 <CheckCircle className='w-3 h-3 text-white' />
                               )}
                             </div>
-                            <span className='text-sm font-medium text-slate-700'>
-                              {day.label}
-                            </span>
+                            <span className='text-sm font-medium text-slate-700'>{day.label}</span>
                           </div>
                         </label>
                       ))}
@@ -344,7 +340,9 @@ export default function CreateSpecialPriceModal({
                       ) : (
                         <div className='flex items-center gap-2'>
                           <CheckCircle className='h-4 w-4' />
-                          {editingSpecialPrice ? 'Modifier le prix spécial' : 'Créer le prix spécial'}
+                          {editingSpecialPrice
+                            ? 'Modifier le prix spécial'
+                            : 'Créer le prix spécial'}
                         </div>
                       )}
                     </Button>

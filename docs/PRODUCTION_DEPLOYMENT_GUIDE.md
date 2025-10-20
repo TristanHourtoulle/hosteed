@@ -619,17 +619,20 @@ du -sh public/uploads/
 ### En Cas de Problème
 
 1. **Consulter les logs**:
+
    ```bash
    pm2 logs hosteed --lines 200
    ```
 
 2. **Vérifier les permissions**:
+
    ```bash
    ls -la public/uploads/
    chmod -R 755 public/uploads/
    ```
 
 3. **Redémarrer l'app**:
+
    ```bash
    pm2 restart hosteed
    ```

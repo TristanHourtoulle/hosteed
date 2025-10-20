@@ -9,15 +9,12 @@ interface LoadingTimeoutOptions {
   onSlowConnection?: (() => void) | undefined
 }
 
-export function useLoadingWithTimeout(
-  isLoading: boolean,
-  options: LoadingTimeoutOptions = {}
-) {
+export function useLoadingWithTimeout(isLoading: boolean, options: LoadingTimeoutOptions = {}) {
   const {
     timeout = 15000, // 15 seconds
     slowConnectionWarning = 5000, // 5 seconds
     onTimeout,
-    onSlowConnection
+    onSlowConnection,
   } = options
 
   const [showSlowWarning, setShowSlowWarning] = useState(false)
@@ -62,6 +59,6 @@ export function useLoadingWithTimeout(
   return {
     showSlowWarning,
     hasTimedOut,
-    isLoadingWithTimeout: isLoading && !hasTimedOut
+    isLoadingWithTimeout: isLoading && !hasTimedOut,
   }
 }

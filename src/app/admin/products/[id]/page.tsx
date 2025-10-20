@@ -4,13 +4,20 @@
 import { useEffect, useState, use } from 'react'
 import { findProductById, validateProduct, rejectProduct } from '@/lib/services/product.service'
 import { findAllRentByProductId } from '@/lib/services/rents.service'
-import { findSpecialsPricesByProduct, createSpecialPrices, updateSpecialPrices, toggleSpecialPriceStatus, deleteSpecialsPricesByProduct } from '@/lib/services/specialPrices.service'
+import {
+  findSpecialsPricesByProduct,
+  createSpecialPrices,
+  updateSpecialPrices,
+  toggleSpecialPriceStatus,
+  deleteSpecialsPricesByProduct,
+} from '@/lib/services/specialPrices.service'
 import { Product, RentStatus, PaymentStatus, ProductValidation, DayEnum } from '@prisma/client'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { getCityFromAddress } from '@/lib/utils'
 import { Tag, Power, PowerOff } from 'lucide-react'
 import CreateSpecialPriceModal from '@/components/ui/CreateSpecialPriceModal'
+import MarkdownRenderer from '@/components/ui/MarkdownRenderer'
 
 interface ProductWithRelations extends Product {
   type?: {
@@ -153,7 +160,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const handleSpecialPriceCreated = async (specialPriceData: SpecialPriceData) => {
     try {
       let result
-      
+
       if (editingSpecialPrice) {
         // Mode modification
         result = await updateSpecialPrices(
@@ -187,10 +194,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         setSpecialPriceModalOpen(false)
         setEditingSpecialPrice(null)
       } else {
-        console.error('Erreur lors de l\'opération sur le prix spécial')
+        console.error("Erreur lors de l'opération sur le prix spécial")
       }
     } catch (error) {
-      console.error('Erreur lors de l\'opération sur le prix spécial:', error)
+      console.error("Erreur lors de l'opération sur le prix spécial:", error)
     }
   }
 
@@ -323,7 +330,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             </div>
             <div>
               <h3 className='font-semibold text-gray-800'>Description</h3>
-              <p className='text-gray-700'>{product.description}</p>
+              <div className='text-gray-700 prose prose-slate max-w-none'>
+                <MarkdownRenderer content={product.description} />
+              </div>
             </div>
             <div>
               <h3 className='font-semibold text-gray-800'>Adresse</h3>
@@ -609,7 +618,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               <div>
                 <h2 className='text-xl font-bold text-gray-900'>Gestion des prix spéciaux</h2>
                 <p className='text-sm text-gray-500'>
-                  {specialPrices.length} prix spécial{specialPrices.length > 1 ? 'aux' : ''} configuré{specialPrices.length > 1 ? 's' : ''}
+                  {specialPrices.length} prix spécial{specialPrices.length > 1 ? 'aux' : ''}{' '}
+                  configuré{specialPrices.length > 1 ? 's' : ''}
                 </p>
               </div>
             </div>
@@ -644,39 +654,40 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                         <Tag className='h-5 w-5 text-orange-600' />
                       </div>
                       <div>
-                        <p className='font-medium text-gray-900'>
-                          {price.pricesEuro}€ / nuit
-                        </p>
-                        <p className='text-sm text-gray-500'>
-                          Prix MGA: {price.pricesMga}
-                        </p>
+                        <p className='font-medium text-gray-900'>{price.pricesEuro}€ / nuit</p>
+                        <p className='text-sm text-gray-500'>Prix MGA: {price.pricesMga}</p>
                       </div>
                     </div>
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      price.activate ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
+                    <span
+                      className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        price.activate ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
                       {price.activate ? 'Actif' : 'Inactif'}
                     </span>
                   </div>
-                  
+
                   <div className='grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-4'>
                     <div>
                       <p className='text-gray-600 mb-1'>Jours applicables</p>
                       <div className='flex flex-wrap gap-1'>
                         {price.day.map(day => (
-                          <span key={day} className='bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs border border-gray-200'>
+                          <span
+                            key={day}
+                            className='bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs border border-gray-200'
+                          >
                             {day}
                           </span>
                         ))}
                       </div>
                     </div>
-                    
+
                     <div>
                       <p className='text-gray-600 mb-1'>Période</p>
                       <p className='text-gray-900'>
                         {price.startDate && price.endDate ? (
                           <>
-                            {new Date(price.startDate).toLocaleDateString('fr-FR')} - {' '}
+                            {new Date(price.startDate).toLocaleDateString('fr-FR')} -{' '}
                             {new Date(price.endDate).toLocaleDateString('fr-FR')}
                           </>
                         ) : price.startDate ? (
@@ -684,11 +695,11 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                         ) : price.endDate ? (
                           `Jusqu'au ${new Date(price.endDate).toLocaleDateString('fr-FR')}`
                         ) : (
-                          'Toute l\'année'
+                          "Toute l'année"
                         )}
                       </p>
                     </div>
-                    
+
                     <div className='flex items-end justify-end gap-2'>
                       <button
                         onClick={() => handleEditSpecialPrice(price)}
@@ -699,8 +710,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                       <button
                         onClick={() => handleToggleSpecialPriceStatus(price.id, price.activate)}
                         className={`px-3 py-1 text-sm border rounded transition-colors flex items-center gap-1 ${
-                          price.activate 
-                            ? 'border-orange-300 text-orange-600 hover:bg-orange-50' 
+                          price.activate
+                            ? 'border-orange-300 text-orange-600 hover:bg-orange-50'
                             : 'border-green-300 text-green-600 hover:bg-green-50'
                         }`}
                       >

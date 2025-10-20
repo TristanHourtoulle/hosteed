@@ -3,13 +3,10 @@ import { auth } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { ExtraPriceType } from '@prisma/client'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await auth()
-    
+
     if (!session?.user?.roles || !['ADMIN', 'HOST_MANAGER'].includes(session.user.roles)) {
       return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })
     }
@@ -22,35 +19,26 @@ export async function GET(
           select: {
             id: true,
             name: true,
-          }
-        }
-      }
+          },
+        },
+      },
     })
 
     if (!extra) {
-      return NextResponse.json(
-        { error: 'Extra non trouvé' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Extra non trouvé' }, { status: 404 })
     }
 
     return NextResponse.json(extra)
   } catch (error) {
-    console.error('Erreur lors de la récupération de l\'extra:', error)
-    return NextResponse.json(
-      { error: 'Erreur interne du serveur' },
-      { status: 500 }
-    )
+    console.error("Erreur lors de la récupération de l'extra:", error)
+    return NextResponse.json({ error: 'Erreur interne du serveur' }, { status: 500 })
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await auth()
-    
+
     if (!session?.user?.roles || !['ADMIN', 'HOST_MANAGER'].includes(session.user.roles)) {
       return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })
     }
@@ -61,17 +49,17 @@ export async function PUT(
 
     if (!name || !priceEUR || !priceMGA || !type) {
       return NextResponse.json(
-        { error: 'Tous les champs obligatoires doivent être renseignés (name, priceEUR, priceMGA, type)' },
+        {
+          error:
+            'Tous les champs obligatoires doivent être renseignés (name, priceEUR, priceMGA, type)',
+        },
         { status: 400 }
       )
     }
 
     // Vérifier que le type est valide
     if (!Object.values(ExtraPriceType).includes(type)) {
-      return NextResponse.json(
-        { error: 'Type de tarification invalide' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Type de tarification invalide' }, { status: 400 })
     }
 
     const extra = await prisma.productExtra.update({
@@ -87,11 +75,8 @@ export async function PUT(
 
     return NextResponse.json(extra)
   } catch (error) {
-    console.error('Erreur lors de la mise à jour de l\'extra:', error)
-    return NextResponse.json(
-      { error: 'Erreur interne du serveur' },
-      { status: 500 }
-    )
+    console.error("Erreur lors de la mise à jour de l'extra:", error)
+    return NextResponse.json({ error: 'Erreur interne du serveur' }, { status: 500 })
   }
 }
 
@@ -101,13 +86,13 @@ export async function DELETE(
 ) {
   try {
     const session = await auth()
-    
+
     if (!session?.user?.roles || !['ADMIN', 'HOST_MANAGER'].includes(session.user.roles)) {
       return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })
     }
 
     const resolvedParams = await params
-    
+
     // Vérifier si l'extra est utilisé par des produits ou des réservations
     const extraWithUsage = await prisma.productExtra.findUnique({
       where: { id: resolvedParams.id },
@@ -115,17 +100,14 @@ export async function DELETE(
         _count: {
           select: {
             products: true,
-            rentExtras: true
-          }
-        }
-      }
+            rentExtras: true,
+          },
+        },
+      },
     })
 
     if (!extraWithUsage) {
-      return NextResponse.json(
-        { error: 'Extra non trouvé' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Extra non trouvé' }, { status: 404 })
     }
 
     if (extraWithUsage._count.products > 0 || extraWithUsage._count.rentExtras > 0) {
@@ -141,10 +123,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: 'Extra supprimé avec succès' })
   } catch (error) {
-    console.error('Erreur lors de la suppression de l\'extra:', error)
-    return NextResponse.json(
-      { error: 'Erreur interne du serveur' },
-      { status: 500 }
-    )
+    console.error("Erreur lors de la suppression de l'extra:", error)
+    return NextResponse.json({ error: 'Erreur interne du serveur' }, { status: 500 })
   }
 }

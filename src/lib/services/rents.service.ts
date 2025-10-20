@@ -143,11 +143,13 @@ export async function CheckRentIsAvailable(
       normalizedArrivalDate,
       normalizedLeavingDate
     )
-    
+
     if (cachedAvailability) {
       return {
         available: cachedAvailability.isAvailable,
-        message: cachedAvailability.isAvailable ? undefined : 'Property not available for selected dates'
+        message: cachedAvailability.isAvailable
+          ? undefined
+          : 'Property not available for selected dates',
       }
     }
 
@@ -157,8 +159,8 @@ export async function CheckRentIsAvailable(
       select: {
         availableRooms: true,
         hotel: {
-          select: { id: true }
-        }
+          select: { id: true },
+        },
       },
     })
 
@@ -212,7 +214,7 @@ export async function CheckRentIsAvailable(
             hotelRooms: true,
             totalRooms: productInfo.availableRooms,
             bookedRooms,
-            availableRooms
+            availableRooms,
           }
         )
       } catch (cacheError) {
@@ -270,7 +272,7 @@ export async function CheckRentIsAvailable(
           isSingleUnitAvailable,
           {
             singleUnit: true,
-            hasConflictingRent: !!existingRent
+            hasConflictingRent: !!existingRent,
           }
         )
       } catch (cacheError) {
@@ -329,7 +331,7 @@ export async function CheckRentIsAvailable(
         isAvailable,
         {
           checkedAt: Date.now(),
-          hasUnavailableBlock: !!existingUnavailable
+          hasUnavailableBlock: !!existingUnavailable,
         }
       )
     } catch (cacheError) {

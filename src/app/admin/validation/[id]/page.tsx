@@ -8,7 +8,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Loader2, XCircle, Tag, Power, PowerOff } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { findSpecialsPricesByProduct, createSpecialPrices, updateSpecialPrices, toggleSpecialPriceStatus, deleteSpecialsPricesByProduct } from '@/lib/services/specialPrices.service'
+import {
+  findSpecialsPricesByProduct,
+  createSpecialPrices,
+  updateSpecialPrices,
+  toggleSpecialPriceStatus,
+  deleteSpecialsPricesByProduct,
+} from '@/lib/services/specialPrices.service'
 import CreateSpecialPriceModal from '@/components/ui/CreateSpecialPriceModal'
 import {
   getProductForValidation,
@@ -116,7 +122,14 @@ interface Product {
   }
   hotel?: { id: string; userId: string }
   includedServices?: { id: string; name: string; description: string | null; icon: string | null }[]
-  extras?: { id: string; name: string; description: string | null; priceEUR: number; priceMGA: number; type: ExtraPriceType }[]
+  extras?: {
+    id: string
+    name: string
+    description: string | null
+    priceEUR: number
+    priceMGA: number
+    type: ExtraPriceType
+  }[]
   highlights?: { id: string; name: string; description: string | null; icon: string | null }[]
 }
 
@@ -171,7 +184,7 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
 
       const [result, specialPricesResult] = await Promise.all([
         getProductForValidation(productId),
-        findSpecialsPricesByProduct(productId)
+        findSpecialsPricesByProduct(productId),
       ])
 
       if (result.success && result.data) {
@@ -283,7 +296,7 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
   const handleSpecialPriceCreated = async (specialPriceData: SpecialPriceData) => {
     try {
       let result
-      
+
       if (editingSpecialPrice) {
         // Mode modification
         result = await updateSpecialPrices(
@@ -317,10 +330,10 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
         setSpecialPriceModalOpen(false)
         setEditingSpecialPrice(null)
       } else {
-        console.error('Erreur lors de l\'opération sur le prix spécial')
+        console.error("Erreur lors de l'opération sur le prix spécial")
       }
     } catch (error) {
-      console.error('Erreur lors de l\'opération sur le prix spécial:', error)
+      console.error("Erreur lors de l'opération sur le prix spécial:", error)
     }
   }
 
@@ -435,7 +448,9 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
                 }`}
               >
                 Comparaison
-                <Badge variant="secondary" className="ml-2">Modifications</Badge>
+                <Badge variant='secondary' className='ml-2'>
+                  Modifications
+                </Badge>
               </button>
             )}
             <button
@@ -482,7 +497,8 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
                     <div>
                       <h3 className='text-lg font-semibold text-gray-900'>Prix spéciaux</h3>
                       <p className='text-sm text-gray-500'>
-                        {specialPrices.length} prix spécial{specialPrices.length > 1 ? 'aux' : ''} configuré{specialPrices.length > 1 ? 's' : ''}
+                        {specialPrices.length} prix spécial{specialPrices.length > 1 ? 'aux' : ''}{' '}
+                        configuré{specialPrices.length > 1 ? 's' : ''}
                       </p>
                     </div>
                   </div>
@@ -506,16 +522,20 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
                               <p className='font-medium text-gray-900'>
                                 {price.pricesEuro}€ / nuit
                               </p>
-                              <p className='text-sm text-gray-500'>
-                                Prix MGA: {price.pricesMga}
-                              </p>
+                              <p className='text-sm text-gray-500'>Prix MGA: {price.pricesMga}</p>
                             </div>
                           </div>
-                          <Badge className={price.activate ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                          <Badge
+                            className={
+                              price.activate
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }
+                          >
                             {price.activate ? 'Actif' : 'Inactif'}
                           </Badge>
                         </div>
-                        
+
                         <div className='grid grid-cols-1 md:grid-cols-3 gap-4 text-sm'>
                           <div>
                             <p className='text-gray-600 mb-1'>Jours applicables</p>
@@ -527,13 +547,13 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
                               ))}
                             </div>
                           </div>
-                          
+
                           <div>
                             <p className='text-gray-600 mb-1'>Période</p>
                             <p className='text-gray-900'>
                               {price.startDate && price.endDate ? (
                                 <>
-                                  {new Date(price.startDate).toLocaleDateString('fr-FR')} - {' '}
+                                  {new Date(price.startDate).toLocaleDateString('fr-FR')} -{' '}
                                   {new Date(price.endDate).toLocaleDateString('fr-FR')}
                                 </>
                               ) : price.startDate ? (
@@ -541,7 +561,7 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
                               ) : price.endDate ? (
                                 `Jusqu'au ${new Date(price.endDate).toLocaleDateString('fr-FR')}`
                               ) : (
-                                'Toute l\'année'
+                                "Toute l'année"
                               )}
                             </p>
                           </div>
@@ -581,9 +601,12 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
                       <Tag className='h-5 w-5 text-orange-600' />
                     </div>
                     <div>
-                      <h3 className='text-lg font-semibold text-gray-900'>Gestion des prix spéciaux</h3>
+                      <h3 className='text-lg font-semibold text-gray-900'>
+                        Gestion des prix spéciaux
+                      </h3>
                       <p className='text-sm text-gray-500'>
-                        {specialPrices.length} prix spécial{specialPrices.length > 1 ? 'aux' : ''} configuré{specialPrices.length > 1 ? 's' : ''}
+                        {specialPrices.length} prix spécial{specialPrices.length > 1 ? 'aux' : ''}{' '}
+                        configuré{specialPrices.length > 1 ? 's' : ''}
                       </p>
                     </div>
                   </div>
@@ -621,16 +644,20 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
                               <p className='font-medium text-gray-900'>
                                 {price.pricesEuro}€ / nuit
                               </p>
-                              <p className='text-sm text-gray-500'>
-                                Prix MGA: {price.pricesMga}
-                              </p>
+                              <p className='text-sm text-gray-500'>Prix MGA: {price.pricesMga}</p>
                             </div>
                           </div>
-                          <Badge className={price.activate ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                          <Badge
+                            className={
+                              price.activate
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }
+                          >
                             {price.activate ? 'Actif' : 'Inactif'}
                           </Badge>
                         </div>
-                        
+
                         <div className='grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-4'>
                           <div>
                             <p className='text-gray-600 mb-1'>Jours applicables</p>
@@ -642,13 +669,13 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
                               ))}
                             </div>
                           </div>
-                          
+
                           <div>
                             <p className='text-gray-600 mb-1'>Période</p>
                             <p className='text-gray-900'>
                               {price.startDate && price.endDate ? (
                                 <>
-                                  {new Date(price.startDate).toLocaleDateString('fr-FR')} - {' '}
+                                  {new Date(price.startDate).toLocaleDateString('fr-FR')} -{' '}
                                   {new Date(price.endDate).toLocaleDateString('fr-FR')}
                                 </>
                               ) : price.startDate ? (
@@ -656,11 +683,11 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
                               ) : price.endDate ? (
                                 `Jusqu'au ${new Date(price.endDate).toLocaleDateString('fr-FR')}`
                               ) : (
-                                'Toute l\'année'
+                                "Toute l'année"
                               )}
                             </p>
                           </div>
-                          
+
                           <div className='flex items-end justify-end gap-2'>
                             <button
                               onClick={() => handleEditSpecialPrice(price)}
@@ -669,10 +696,12 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
                               Modifier
                             </button>
                             <button
-                              onClick={() => handleToggleSpecialPriceStatus(price.id, price.activate)}
+                              onClick={() =>
+                                handleToggleSpecialPriceStatus(price.id, price.activate)
+                              }
                               className={`px-3 py-1 text-sm border rounded transition-colors flex items-center gap-1 ${
-                                price.activate 
-                                  ? 'border-orange-300 text-orange-600 hover:bg-orange-50' 
+                                price.activate
+                                  ? 'border-orange-300 text-orange-600 hover:bg-orange-50'
                                   : 'border-green-300 text-green-600 hover:bg-green-50'
                               }`}
                             >
@@ -713,7 +742,13 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
           >
-            <ValidationHistoryCard history={validationHistory as unknown as Parameters<typeof ValidationHistoryCard>[0]['history']} />
+            <ValidationHistoryCard
+              history={
+                validationHistory as unknown as Parameters<
+                  typeof ValidationHistoryCard
+                >[0]['history']
+              }
+            />
           </motion.div>
         )}
       </motion.div>

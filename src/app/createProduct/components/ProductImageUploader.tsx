@@ -10,9 +10,11 @@ import ImageGalleryPreview from '@/components/ui/ImageGalleryPreview'
 import ErrorAlert, { ErrorDetails } from '@/components/ui/ErrorAlert'
 
 interface ImageFile {
-  file: File
+  file: File | null
   preview: string
   id: string
+  isExisting?: boolean
+  url?: string
 }
 
 interface ProductImageUploaderProps {
@@ -32,7 +34,7 @@ export default function ProductImageUploader({
   setIsUploadingImages,
   error,
   setError,
-  itemVariants
+  itemVariants,
 }: ProductImageUploaderProps) {
   const [dragActive, setDragActive] = useState(false)
   const [showGalleryPreview, setShowGalleryPreview] = useState(false)
@@ -53,7 +55,9 @@ export default function ProductImageUploader({
     e.stopPropagation()
     setDragActive(false)
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFiles({ target: { files: e.dataTransfer.files } } as React.ChangeEvent<HTMLInputElement>)
+      handleFiles({
+        target: { files: e.dataTransfer.files },
+      } as React.ChangeEvent<HTMLInputElement>)
     }
   }
 
@@ -63,18 +67,18 @@ export default function ProductImageUploader({
       if (selectedFiles.length + files.length > 35) {
         setError({
           type: 'file',
-          title: 'Limite d\'images dépassée',
+          title: "Limite d'images dépassée",
           message: 'Vous ne pouvez télécharger que 35 images maximum.',
           details: [
             `Images actuelles: ${selectedFiles.length}`,
             `Images à ajouter: ${files.length}`,
-            `Total: ${selectedFiles.length + files.length} (limite: 35)`
+            `Total: ${selectedFiles.length + files.length} (limite: 35)`,
           ],
           suggestions: [
-            'Supprimez quelques images existantes avant d\'en ajouter de nouvelles',
-            'Sélectionnez moins d\'images à la fois'
+            "Supprimez quelques images existantes avant d'en ajouter de nouvelles",
+            "Sélectionnez moins d'images à la fois",
           ],
-          retryable: false
+          retryable: false,
         })
         return
       }
@@ -94,7 +98,7 @@ export default function ProductImageUploader({
         const imageFiles: ImageFile[] = compressedFiles.map((file, index) => ({
           file,
           preview: URL.createObjectURL(file),
-          id: `img-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 11)}`
+          id: `img-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 11)}`,
         }))
 
         setSelectedFiles(prev => [...prev, ...imageFiles])
@@ -115,15 +119,15 @@ export default function ProductImageUploader({
           message: 'La compression automatique des images a échoué.',
           details: [
             'Certaines images peuvent être corrompues ou dans un format non supporté',
-            `Erreur technique: ${error instanceof Error ? error.message : 'inconnue'}`
+            `Erreur technique: ${error instanceof Error ? error.message : 'inconnue'}`,
           ],
           suggestions: [
             'Vérifiez que vos images ne sont pas corrompues',
             'Essayez de compresser vos images manuellement avant de les télécharger',
-            'Utilisez des formats d\'image standards (JPEG, PNG)',
-            'Réduisez la résolution de vos images si elles sont très grandes'
+            "Utilisez des formats d'image standards (JPEG, PNG)",
+            'Réduisez la résolution de vos images si elles sont très grandes',
           ],
-          retryable: true
+          retryable: true,
         })
       } finally {
         setIsUploadingImages(false)
@@ -153,8 +157,8 @@ export default function ProductImageUploader({
                 Ajoutez des photos attrayantes de votre hébergement (maximum 35)
                 {selectedFiles.length > 0 && (
                   <span className='ml-2 font-medium text-blue-600'>
-                    {selectedFiles.length} photo{selectedFiles.length > 1 ? 's' : ''}{' '}
-                    sélectionnée{selectedFiles.length > 1 ? 's' : ''}
+                    {selectedFiles.length} photo{selectedFiles.length > 1 ? 's' : ''} sélectionnée
+                    {selectedFiles.length > 1 ? 's' : ''}
                   </span>
                 )}
               </p>

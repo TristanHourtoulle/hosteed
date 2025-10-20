@@ -48,7 +48,7 @@ export async function getFullSizeImageUrlAsync(thumbUrl: string): Promise<string
       return data.fullUrl
     }
   } catch (error) {
-    console.error('Erreur lors de la résolution de l\'image full:', error)
+    console.error("Erreur lors de la résolution de l'image full:", error)
   }
 
   // Fallback

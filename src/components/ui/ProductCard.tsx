@@ -62,13 +62,13 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
   console.log(`ProductCard ${product.id} - img length:`, product.img?.length)
 
   // Memoize expensive calculations to prevent recalculation on every render
-  const isSponsored = useMemo(() =>
-    isProductSponsored(product.PromotedProduct),
+  const isSponsored = useMemo(
+    () => isProductSponsored(product.PromotedProduct),
     [product.PromotedProduct]
   )
 
-  const rating = useMemo(() =>
-    product.reviews ? calculateAverageRating(product.reviews) : null,
+  const rating = useMemo(
+    () => (product.reviews ? calculateAverageRating(product.reviews) : null),
     [product.reviews]
   )
 
@@ -76,11 +76,12 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
   const activePromotion = useMemo(() => {
     if (!product.promotions || product.promotions.length === 0) return null
     const now = new Date()
-    return product.promotions.find((promo) =>
-      promo.isActive &&
-      new Date(promo.startDate) <= now &&
-      new Date(promo.endDate) >= now
-    ) || null
+    return (
+      product.promotions.find(
+        promo =>
+          promo.isActive && new Date(promo.startDate) <= now && new Date(promo.endDate) >= now
+      ) || null
+    )
   }, [product.promotions])
 
   const hasActivePromotion = activePromotion !== null
@@ -93,7 +94,7 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
       return {
         displayPrice: discounted.toFixed(2),
         originalPrice: basePrice.toFixed(2),
-        savings: (basePrice - discounted).toFixed(2)
+        savings: (basePrice - discounted).toFixed(2),
       }
     }
 
@@ -102,16 +103,22 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
       return {
         displayPrice: product.basePrice,
         originalPrice: product.originalBasePrice,
-        savings: (parseFloat(product.originalBasePrice) - basePrice).toFixed(2)
+        savings: (parseFloat(product.originalBasePrice) - basePrice).toFixed(2),
       }
     }
 
     return {
       displayPrice: basePrice.toFixed(2),
       originalPrice: null,
-      savings: null
+      savings: null,
     }
-  }, [product.basePrice, product.originalBasePrice, product.specialPriceApplied, hasActivePromotion, activePromotion])
+  }, [
+    product.basePrice,
+    product.originalBasePrice,
+    product.specialPriceApplied,
+    hasActivePromotion,
+    activePromotion,
+  ])
 
   const urgencyInfo = useMemo(() => {
     if (!activePromotion) return null
@@ -121,47 +128,63 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
   }, [activePromotion])
 
   // ✅ PERFORMANCE FIX: Utiliser directement l'URL de l'image migrée ou l'API thumbnail
-  const hasImages = useMemo(() =>
-    product.img && product.img.length > 0,
-    [product.img]
-  )
+  const hasImages = useMemo(() => product.img && product.img.length > 0, [product.img])
 
   // Générer l'URL de l'image (DB contient déjà les URLs _full_ après migration)
   const thumbnailUrl = useMemo(() => {
     if (product.img && product.img.length > 0 && product.img[0].img) {
+      console.log(`[ProductCard ${product.id}] Image URL:`, product.img[0].img)
       return product.img[0].img
     }
+    console.log(
+      `[ProductCard ${product.id}] NO IMAGE - hasImg:`,
+      !!product.img,
+      'length:',
+      product.img?.length
+    )
     return ''
-  }, [product.img])
+  }, [product.img, product.id])
 
   const hasValidImages = hasImages
 
   // Memoize motion props to prevent recreation
-  const cardMotionProps = useMemo(() => ({
-    initial: { opacity: 0, y: 20 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.5, delay: index * 0.1 },
-    whileHover: { y: -5 }
-  }), [index])
+  const cardMotionProps = useMemo(
+    () => ({
+      initial: { opacity: 0, y: 20 },
+      animate: { opacity: 1, y: 0 },
+      transition: { duration: 0.5, delay: index * 0.1 },
+      whileHover: { y: -5 },
+    }),
+    [index]
+  )
 
-  const imageMotionProps = useMemo(() => ({
-    initial: { opacity: 0 },
-    animate: { opacity: 1 },
-    transition: { duration: 0.3 }
-  }), [])
+  const imageMotionProps = useMemo(
+    () => ({
+      initial: { opacity: 0 },
+      animate: { opacity: 1 },
+      transition: { duration: 0.3 },
+    }),
+    []
+  )
 
-  const contentMotionProps = useMemo(() => ({
-    initial: { opacity: 0, y: 10 },
-    animate: { opacity: 1, y: 0 },
-    transition: { delay: 0.3 }
-  }), [])
+  const contentMotionProps = useMemo(
+    () => ({
+      initial: { opacity: 0, y: 10 },
+      animate: { opacity: 1, y: 0 },
+      transition: { delay: 0.3 },
+    }),
+    []
+  )
 
   // Memoize event handlers to prevent recreation and unnecessary re-renders
-  const handleToggleFavorite = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    toggleFavorite()
-  }, [toggleFavorite])
+  const handleToggleFavorite = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      toggleFavorite()
+    },
+    [toggleFavorite]
+  )
 
   const handleImageError = useCallback(() => {
     setImageError(true)
@@ -186,10 +209,7 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
         >
           <div className='relative aspect-[4/3] w-full'>
             {hasValidImages && !imageError ? (
-              <motion.div
-                {...imageMotionProps}
-                className='w-full h-full'
-              >
+              <motion.div {...imageMotionProps} className='w-full h-full'>
                 {/* ✅ PERFORMANCE: Utiliser l'URL optimisée au lieu du base64 */}
                 <Image
                   src={thumbnailUrl}
@@ -219,10 +239,7 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
                 animate={{ opacity: 1, y: 0 }}
                 className='absolute top-3 left-3 z-10'
               >
-                <PromotionBadge
-                  discountPercentage={activePromotion.discountPercentage}
-                  size="md"
-                />
+                <PromotionBadge discountPercentage={activePromotion.discountPercentage} size='md' />
               </motion.div>
             )}
 
@@ -323,10 +340,7 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
             {/* Image Dots - Removed for performance (single thumbnail only) */}
           </div>
 
-          <motion.div
-            className='p-4 space-y-2'
-            {...contentMotionProps}
-          >
+          <motion.div className='p-4 space-y-2' {...contentMotionProps}>
             <div className='space-y-1'>
               <h3 className='font-semibold text-gray-900 text-base leading-tight line-clamp-1'>
                 {getCityFromAddress(product.address)}
@@ -339,12 +353,12 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
                 {/* Prix avec ou sans promotion */}
                 <div className='flex flex-col gap-1'>
                   {originalPrice && (
-                    <span className='text-sm text-gray-400 line-through'>
-                      {originalPrice}€
-                    </span>
+                    <span className='text-sm text-gray-400 line-through'>{originalPrice}€</span>
                   )}
                   <div className='flex items-baseline gap-1'>
-                    <span className={`font-bold text-lg ${hasActivePromotion ? 'text-green-600' : 'text-gray-900'}`}>
+                    <span
+                      className={`font-bold text-lg ${hasActivePromotion ? 'text-green-600' : 'text-gray-900'}`}
+                    >
                       {displayPrice}€
                     </span>
                     <span className='text-gray-400 text-sm font-light'>/ nuit</span>
@@ -380,7 +394,10 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
 }
 
 // Custom comparison function for React.memo to optimize re-renders
-const arePropsEqual = (prevProps: { product: Product; index?: number }, nextProps: { product: Product; index?: number }) => {
+const arePropsEqual = (
+  prevProps: { product: Product; index?: number },
+  nextProps: { product: Product; index?: number }
+) => {
   // Check if it's the same product by id
   if (prevProps.product.id !== nextProps.product.id) {
     return false

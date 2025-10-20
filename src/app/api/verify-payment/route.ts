@@ -5,7 +5,7 @@ import Stripe from 'stripe'
 import { RentStatus } from '@prisma/client'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-05-28.basil',
+  apiVersion: '2025-08-27.basil',
 })
 
 export async function POST(req: Request) {
@@ -95,7 +95,10 @@ export async function POST(req: Request) {
             await prisma.rent.update({
               where: { id: newRent.id },
               data: {
-                status: paymentIntentObj.status === 'succeeded' ? 'RESERVED' as RentStatus : 'WAITING' as RentStatus,
+                status:
+                  paymentIntentObj.status === 'succeeded'
+                    ? ('RESERVED' as RentStatus)
+                    : ('WAITING' as RentStatus),
                 payment: paymentIntentObj.status === 'succeeded' ? 'CLIENT_PAID' : 'NOT_PAID',
               },
             })

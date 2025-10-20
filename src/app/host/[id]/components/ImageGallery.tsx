@@ -25,10 +25,9 @@ export default function ImageGallery({
   setCurrentImageIndex,
 }: ImageGalleryProps) {
   const [showAllPhotosLocal, setShowAllPhotosLocal] = useState(false)
-  
+
   // Variable intentionally unused - kept for API compatibility
   void setShowAllPhotos
-
 
   if (!images || images.length === 0) {
     return (
@@ -77,8 +76,8 @@ export default function ImageGallery({
         {/* Side Images */}
         <div className='hidden md:grid grid-cols-1 gap-2'>
           {images.slice(1, 3).map((img, index) => (
-            <div 
-              key={index} 
+            <div
+              key={index}
               className='relative cursor-pointer group'
               onClick={() => {
                 if (setCurrentImageIndex) {
@@ -96,7 +95,7 @@ export default function ImageGallery({
                 fill
                 className='object-cover transition-transform group-hover:scale-105'
                 unoptimized
-                sizes="(max-width: 768px) 50vw, 25vw"
+                sizes='(max-width: 768px) 50vw, 25vw'
               />
               <div className='absolute inset-0 group-hover:bg-black/20 transition-all duration-200 flex items-center justify-center pointer-events-none'>
                 <Expand className='h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none' />
@@ -107,8 +106,8 @@ export default function ImageGallery({
 
         <div className='hidden md:grid grid-cols-1 gap-2'>
           {images.slice(3, 5).map((img, index) => (
-            <div 
-              key={index} 
+            <div
+              key={index}
               className='relative cursor-pointer group'
               onClick={() => {
                 if (setCurrentImageIndex) {
@@ -126,7 +125,7 @@ export default function ImageGallery({
                 fill
                 className='object-cover transition-transform group-hover:scale-105'
                 unoptimized
-                sizes="(max-width: 768px) 50vw, 25vw"
+                sizes='(max-width: 768px) 50vw, 25vw'
               />
               <div className='absolute inset-0 group-hover:bg-black/20 transition-all duration-200 flex items-center justify-center pointer-events-none'>
                 <Expand className='h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none' />
@@ -150,8 +149,8 @@ export default function ImageGallery({
         <div className='mt-4'>
           <div className='grid grid-cols-2 md:grid-cols-4 gap-2'>
             {images.slice(5).map((img, index) => (
-              <div 
-                key={index + 5} 
+              <div
+                key={index + 5}
                 className='relative h-32 md:h-40 rounded-lg overflow-hidden cursor-pointer group'
                 onClick={() => {
                   if (setCurrentImageIndex) {
@@ -169,7 +168,7 @@ export default function ImageGallery({
                   fill
                   className='object-cover transition-transform group-hover:scale-105'
                   unoptimized
-                  sizes="(max-width: 768px) 50vw, 25vw"
+                  sizes='(max-width: 768px) 50vw, 25vw'
                 />
                 <div className='absolute inset-0 group-hover:bg-black/20 transition-all duration-200 flex items-center justify-center pointer-events-none'>
                   <Expand className='h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none' />

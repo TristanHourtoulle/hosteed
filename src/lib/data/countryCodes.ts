@@ -9,27 +9,27 @@ export const COUNTRIES: Country[] = [
   // Pays principaux pour Madagascar et France
   { code: 'MG', name: 'Madagascar', dialCode: '+261', flag: '🇲🇬' },
   { code: 'FR', name: 'France', dialCode: '+33', flag: '🇫🇷' },
-  
+
   // Autres pays francophones
   { code: 'BE', name: 'Belgique', dialCode: '+32', flag: '🇧🇪' },
   { code: 'CH', name: 'Suisse', dialCode: '+41', flag: '🇨🇭' },
   { code: 'CA', name: 'Canada', dialCode: '+1', flag: '🇨🇦' },
   { code: 'LU', name: 'Luxembourg', dialCode: '+352', flag: '🇱🇺' },
   { code: 'MC', name: 'Monaco', dialCode: '+377', flag: '🇲🇨' },
-  
+
   // Pays de l'Océan Indien
   { code: 'MU', name: 'Maurice', dialCode: '+230', flag: '🇲🇺' },
   { code: 'SC', name: 'Seychelles', dialCode: '+248', flag: '🇸🇨' },
   { code: 'RE', name: 'Réunion', dialCode: '+262', flag: '🇷🇪' },
   { code: 'YT', name: 'Mayotte', dialCode: '+262', flag: '🇾🇹' },
   { code: 'KM', name: 'Comores', dialCode: '+269', flag: '🇰🇲' },
-  
+
   // Pays africains
   { code: 'DZ', name: 'Algérie', dialCode: '+213', flag: '🇩🇿' },
   { code: 'MA', name: 'Maroc', dialCode: '+212', flag: '🇲🇦' },
   { code: 'TN', name: 'Tunisie', dialCode: '+216', flag: '🇹🇳' },
   { code: 'SN', name: 'Sénégal', dialCode: '+221', flag: '🇸🇳' },
-  { code: 'CI', name: 'Côte d\'Ivoire', dialCode: '+225', flag: '🇨🇮' },
+  { code: 'CI', name: "Côte d'Ivoire", dialCode: '+225', flag: '🇨🇮' },
   { code: 'ML', name: 'Mali', dialCode: '+223', flag: '🇲🇱' },
   { code: 'BF', name: 'Burkina Faso', dialCode: '+226', flag: '🇧🇫' },
   { code: 'NE', name: 'Niger', dialCode: '+227', flag: '🇳🇪' },
@@ -40,7 +40,7 @@ export const COUNTRIES: Country[] = [
   { code: 'CG', name: 'République du Congo', dialCode: '+242', flag: '🇨🇬' },
   { code: 'CD', name: 'République Démocratique du Congo', dialCode: '+243', flag: '🇨🇩' },
   { code: 'DJ', name: 'Djibouti', dialCode: '+253', flag: '🇩🇯' },
-  
+
   // Autres pays importants
   { code: 'US', name: 'États-Unis', dialCode: '+1', flag: '🇺🇸' },
   { code: 'GB', name: 'Royaume-Uni', dialCode: '+44', flag: '🇬🇧' },

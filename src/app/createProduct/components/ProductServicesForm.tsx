@@ -93,7 +93,7 @@ export default function ProductServicesForm({
   onServiceCreated,
   onExtraCreated,
   onHighlightCreated,
-  itemVariants
+  itemVariants,
 }: ProductServicesFormProps) {
   const [serviceModalOpen, setServiceModalOpen] = useState(false)
   const [extraModalOpen, setExtraModalOpen] = useState(false)
@@ -247,7 +247,9 @@ export default function ProductServicesForm({
                     <input
                       type='checkbox'
                       checked={formData.includedServices.includes(service.id)}
-                      onChange={e => onCheckboxChange('includedServices', service.id, e.target.checked)}
+                      onChange={e =>
+                        onCheckboxChange('includedServices', service.id, e.target.checked)
+                      }
                       className='w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500'
                     />
                     <div className='flex-1'>
@@ -292,7 +294,9 @@ export default function ProductServicesForm({
                     <div className='flex-1'>
                       <div className='flex items-center justify-between'>
                         <span className='text-sm font-medium text-slate-700'>{extra.name}</span>
-                        <span className='text-sm font-semibold text-emerald-600'>{extra.priceEUR}€</span>
+                        <span className='text-sm font-semibold text-emerald-600'>
+                          {extra.priceEUR}€
+                        </span>
                       </div>
                       {extra.description && (
                         <p className='text-xs text-slate-500 mt-1'>{extra.description}</p>
@@ -350,8 +354,8 @@ export default function ProductServicesForm({
         isOpen={serviceModalOpen}
         onClose={() => setServiceModalOpen(false)}
         onServiceCreated={onServiceCreated}
-        title="Créer un nouveau service"
-        description="Ajoutez un nouveau service à votre hébergement"
+        title='Créer un nouveau service'
+        description='Ajoutez un nouveau service à votre hébergement'
       />
 
       <CreateExtraModal

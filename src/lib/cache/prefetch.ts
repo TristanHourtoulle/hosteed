@@ -10,7 +10,7 @@ export async function prefetchPageData(prefetchFns: Array<() => Promise<void>>) 
 // Helper for product pages
 export async function prefetchProductPage(productId: string) {
   const { findProductById } = await import('@/lib/services/product.service')
-  
+
   await Promise.all([
     queryClient.prefetchQuery({
       queryKey: ['product', productId],
@@ -18,7 +18,7 @@ export async function prefetchProductPage(productId: string) {
       staleTime: 1000 * 60 * 5,
     }),
   ])
-  
+
   return dehydrate(queryClient)
 }
 
@@ -30,7 +30,7 @@ export async function prefetchSearchPage() {
   const { findAllServicesForQuery } = await import('@/lib/services/services.service')
   const { findAllSecurity } = await import('@/lib/services/security.services')
   const { findAllTypeRent } = await import('@/lib/services/typeRent.service')
-  
+
   await Promise.all([
     queryClient.prefetchQuery({
       queryKey: ['products'],
@@ -63,6 +63,6 @@ export async function prefetchSearchPage() {
       staleTime: 1000 * 60 * 60 * 24,
     }),
   ])
-  
+
   return dehydrate(queryClient)
 }

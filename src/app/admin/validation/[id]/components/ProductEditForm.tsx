@@ -99,9 +99,11 @@ interface NearbyPlace {
 }
 
 interface ImageFile {
-  file: File
+  file: File | null
   preview: string
   id: string
+  isExisting?: boolean
+  url?: string
 }
 
 const containerVariants = {
@@ -153,7 +155,14 @@ interface Product {
   servicesList?: { id: string; name: string }[]
   securities?: { id: string; name: string }[]
   includedServices?: { id: string; name: string; description: string | null; icon: string | null }[]
-  extras?: { id: string; name: string; description: string | null; priceEUR: number; priceMGA: number; type: ExtraPriceType }[]
+  extras?: {
+    id: string
+    name: string
+    description: string | null
+    priceEUR: number
+    priceMGA: number
+    type: ExtraPriceType
+  }[]
   highlights?: { id: string; name: string; description: string | null; icon: string | null }[]
 }
 
@@ -219,7 +228,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
   const [testBooking] = useState({
     startDate: new Date(),
     endDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 jours plus tard
-    guestCount: 2
+    guestCount: 2,
   })
 
   const [formData, setFormData] = useState<FormData>({
@@ -272,7 +281,9 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
 
   // Calcul mémorisé pour le nombre de jours de la réservation de test
   const numberOfDays = useMemo(() => {
-    return Math.ceil((testBooking.endDate.getTime() - testBooking.startDate.getTime()) / (1000 * 60 * 60 * 24))
+    return Math.ceil(
+      (testBooking.endDate.getTime() - testBooking.startDate.getTime()) / (1000 * 60 * 60 * 24)
+    )
   }, [testBooking.startDate, testBooking.endDate])
 
   // Functions to load new data
@@ -303,17 +314,25 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [typesData, equipmentsData, mealsData, securitiesData, servicesData, includedServicesData, extrasData, highlightsData] =
-          await Promise.all([
-            findAllTypeRent(),
-            findAllEquipments(),
-            findAllMeals(),
-            findAllSecurity(),
-            findAllServices(),
-            loadIncludedServices(),
-            loadExtras(),
-            loadHighlights(),
-          ])
+        const [
+          typesData,
+          equipmentsData,
+          mealsData,
+          securitiesData,
+          servicesData,
+          includedServicesData,
+          extrasData,
+          highlightsData,
+        ] = await Promise.all([
+          findAllTypeRent(),
+          findAllEquipments(),
+          findAllMeals(),
+          findAllSecurity(),
+          findAllServices(),
+          loadIncludedServices(),
+          loadExtras(),
+          loadHighlights(),
+        ])
 
         setTypes(typesData || [])
         setEquipments(equipmentsData || [])
@@ -328,17 +347,17 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
         setError({
           type: 'network',
           title: 'Erreur de chargement',
-          message: 'Impossible de charger les données nécessaires à l\'édition.',
+          message: "Impossible de charger les données nécessaires à l'édition.",
           details: [
-            'Échec du chargement des types d\'hébergement, équipements ou services',
-            'Vérifiez votre connexion internet'
+            "Échec du chargement des types d'hébergement, équipements ou services",
+            'Vérifiez votre connexion internet',
           ],
           suggestions: [
             'Actualisez la page pour réessayer',
             'Vérifiez votre connexion internet',
-            'Si le problème persiste, contactez le support'
+            'Si le problème persiste, contactez le support',
           ],
-          retryable: true
+          retryable: true,
         })
       }
     }
@@ -365,7 +384,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
       const existingImages: ImageFile[] = product.img.map((img, index) => ({
         file: new File([], `existing-${index}.jpg`), // Placeholder file
         preview: img.img,
-        id: `existing-${index}-${Date.now()}`
+        id: `existing-${index}-${Date.now()}`,
       }))
       setSelectedFiles(existingImages)
     }
@@ -405,15 +424,12 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
             type: 'file',
             title: 'Format de fichier non supporté',
             message: 'Seules les images sont acceptées.',
-            details: [
-              `Fichier rejeté: ${file.name}`,
-              `Type détecté: ${file.type || 'inconnu'}`
-            ],
+            details: [`Fichier rejeté: ${file.name}`, `Type détecté: ${file.type || 'inconnu'}`],
             suggestions: [
               'Utilisez uniquement des fichiers image (JPEG, PNG, WebP, GIF)',
-              'Vérifiez l\'extension de vos fichiers',
-              'Évitez les documents ou vidéos'
-            ]
+              "Vérifiez l'extension de vos fichiers",
+              'Évitez les documents ou vidéos',
+            ],
           })
           return
         }
@@ -425,13 +441,13 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
             details: [
               `Fichier: ${file.name}`,
               `Taille: ${(file.size / (1024 * 1024)).toFixed(1)}MB`,
-              'Limite: 50MB par image'
+              'Limite: 50MB par image',
             ],
             suggestions: [
               'Réduisez la résolution de votre image',
-              'Utilisez un outil de compression d\'image en ligne',
-              'Choisissez le format JPEG pour des images de plus petite taille'
-            ]
+              "Utilisez un outil de compression d'image en ligne",
+              'Choisissez le format JPEG pour des images de plus petite taille',
+            ],
           })
           return
         }
@@ -440,19 +456,19 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
       if (selectedFiles.length + filesArray.length > 35) {
         setError({
           type: 'file',
-          title: 'Trop d\'images sélectionnées',
+          title: "Trop d'images sélectionnées",
           message: 'Vous pouvez ajouter maximum 35 photos par annonce.',
           details: [
             `Images actuelles: ${selectedFiles.length}`,
             `Images à ajouter: ${filesArray.length}`,
             `Total: ${selectedFiles.length + filesArray.length}`,
-            'Limite: 35 photos maximum'
+            'Limite: 35 photos maximum',
           ],
           suggestions: [
-            'Supprimez quelques images existantes avant d\'en ajouter de nouvelles',
+            "Supprimez quelques images existantes avant d'en ajouter de nouvelles",
             'Sélectionnez vos meilleures photos pour mettre en valeur votre hébergement',
-            'Vous pourrez ajouter d\'autres photos après la création de l\'annonce'
-          ]
+            "Vous pourrez ajouter d'autres photos après la création de l'annonce",
+          ],
         })
         return
       }
@@ -473,7 +489,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
         const imageFiles: ImageFile[] = compressedFiles.map((file, index) => ({
           file,
           preview: URL.createObjectURL(file),
-          id: `img-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 11)}`
+          id: `img-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 11)}`,
         }))
 
         setSelectedFiles(prev => [...prev, ...imageFiles])
@@ -494,15 +510,15 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
           message: 'La compression automatique des images a échoué.',
           details: [
             'Certaines images peuvent être corrompues ou dans un format non supporté',
-            `Erreur technique: ${error instanceof Error ? error.message : 'inconnue'}`
+            `Erreur technique: ${error instanceof Error ? error.message : 'inconnue'}`,
           ],
           suggestions: [
             'Vérifiez que vos images ne sont pas corrompues',
             'Essayez de compresser vos images manuellement avant de les télécharger',
-            'Utilisez des formats d\'image standards (JPEG, PNG)',
-            'Réduisez la résolution de vos images si elles sont très grandes'
+            "Utilisez des formats d'image standards (JPEG, PNG)",
+            'Réduisez la résolution de vos images si elles sont très grandes',
           ],
-          retryable: true
+          retryable: true,
         })
       } finally {
         setIsUploadingImages(false)
@@ -520,7 +536,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
 
   // Convert files to base64 with compression
   const convertFilesToBase64 = async (imageFiles: ImageFile[]): Promise<string[]> => {
-    const files = imageFiles.map(img => img.file)
+    const files = imageFiles.filter(img => img.file !== null).map(img => img.file!)
     setIsUploadingImages(true)
     try {
       // First compress the images
@@ -623,7 +639,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
         message: "Le nom de l'hébergement est requis",
         details: ['Veuillez saisir un nom pour votre hébergement'],
         suggestions: ['Entrez un nom descriptif pour votre hébergement'],
-        retryable: false
+        retryable: false,
       })
       setIsLoading(false)
       return
@@ -636,7 +652,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
         message: 'La description est requise',
         details: ['Veuillez saisir une description pour votre hébergement'],
         suggestions: ['Décrivez votre hébergement en détail'],
-        retryable: false
+        retryable: false,
       })
       setIsLoading(false)
       return
@@ -647,9 +663,9 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
         type: 'validation',
         title: 'Type requis',
         message: "Veuillez sélectionner un type d'hébergement",
-        details: ['Le type d\'hébergement est obligatoire'],
+        details: ["Le type d'hébergement est obligatoire"],
         suggestions: ['Sélectionnez le type qui correspond le mieux à votre hébergement'],
-        retryable: false
+        retryable: false,
       })
       setIsLoading(false)
       return
@@ -658,15 +674,15 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
     try {
       // Convertir les nouvelles images en base64
       let finalImages: string[] = []
-      
+
       if (selectedFiles.length > 0) {
         // Séparer les images existantes des nouvelles
         const existingImages = selectedFiles.filter(img => img.id.startsWith('existing-'))
         const newImages = selectedFiles.filter(img => !img.id.startsWith('existing-'))
-        
+
         // Garder les images existantes (déjà en base64)
         const existingImageUrls = existingImages.map(img => img.preview)
-        
+
         // Convertir les nouvelles images en base64
         let newImageBase64: string[] = []
         if (newImages.length > 0) {
@@ -674,7 +690,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
           newImageBase64 = await convertFilesToBase64(newImages)
           setIsUploadingImages(false)
         }
-        
+
         // Combiner toutes les images
         finalImages = [...existingImageUrls, ...newImageBase64]
       }
@@ -713,7 +729,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
         message: 'Une erreur est survenue lors de la sauvegarde',
         details: ['Impossible de sauvegarder les modifications'],
         suggestions: ['Vérifiez votre connexion internet', 'Réessayez dans quelques instants'],
-        retryable: true
+        retryable: true,
       })
     } finally {
       setIsLoading(false)
@@ -730,7 +746,12 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
       >
         {/* Header with breadcrumb */}
         <motion.div className='flex items-center gap-4' variants={itemVariants}>
-          <Button variant='ghost' size='sm' className='text-slate-600 hover:text-slate-800' onClick={onCancel}>
+          <Button
+            variant='ghost'
+            size='sm'
+            className='text-slate-600 hover:text-slate-800'
+            onClick={onCancel}
+          >
             <ArrowLeft className='h-4 w-4 mr-2' />
             Retour
           </Button>
@@ -752,13 +773,17 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
 
         {error && (
           <motion.div variants={itemVariants}>
-            <ErrorAlert 
+            <ErrorAlert
               error={error}
               onClose={() => setError(null)}
-              onRetry={error.retryable ? () => {
-                setError(null)
-                // Optionally trigger the last failed action again
-              } : undefined}
+              onRetry={
+                error.retryable
+                  ? () => {
+                      setError(null)
+                      // Optionally trigger the last failed action again
+                    }
+                  : undefined
+              }
             />
           </motion.div>
         )}
@@ -1004,9 +1029,9 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
 
                     {/* Calcul des commissions */}
                     {formData.basePrice && (
-                      <CommissionDisplay 
+                      <CommissionDisplay
                         basePrice={parseFloat(formData.basePrice) || 0}
-                        className="border-orange-200 bg-orange-50/30"
+                        className='border-orange-200 bg-orange-50/30'
                       />
                     )}
                   </CardContent>
@@ -1261,7 +1286,8 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
                   <div>
                     <CardTitle className='text-xl'>Services et Options</CardTitle>
                     <p className='text-slate-600 text-sm mt-1'>
-                      Sélectionnez les services inclus, extras payants et points forts de votre hébergement
+                      Sélectionnez les services inclus, extras payants et points forts de votre
+                      hébergement
                     </p>
                   </div>
                 </div>
@@ -1511,7 +1537,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
                 </div>
 
                 {/* Aperçu des coûts */}
-                {(selectedExtras.length > 0 && formData.basePrice) && (
+                {selectedExtras.length > 0 && formData.basePrice && (
                   <div className='mt-6'>
                     <h3 className='text-lg font-semibold mb-4 text-slate-700'>Aperçu des coûts</h3>
                     <BookingCostSummary
@@ -1526,7 +1552,8 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
                       showCommissions={true}
                     />
                     <p className='text-xs text-slate-500 mt-2'>
-                      * Exemple calculé sur {numberOfDays} jour{numberOfDays > 1 ? 's' : ''} pour {testBooking.guestCount} personne{testBooking.guestCount > 1 ? 's' : ''}
+                      * Exemple calculé sur {numberOfDays} jour{numberOfDays > 1 ? 's' : ''} pour{' '}
+                      {testBooking.guestCount} personne{testBooking.guestCount > 1 ? 's' : ''}
                     </p>
                   </div>
                 )}
@@ -1800,13 +1827,13 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
           {/* Bouton de soumission */}
           <motion.div className='flex justify-center gap-4 pt-8' variants={itemVariants}>
             <Button
-              type="button"
-              variant="outline"
+              type='button'
+              variant='outline'
               onClick={onCancel}
               disabled={isLoading}
               className='px-8 py-3'
             >
-              <X className="h-4 w-4 mr-2" />
+              <X className='h-4 w-4 mr-2' />
               Annuler
             </Button>
             <Button
@@ -1839,8 +1866,8 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
           isOpen={serviceModalOpen}
           onClose={() => setServiceModalOpen(false)}
           onServiceCreated={handleServiceCreated}
-          title="Ajouter un service inclus personnalisé"
-          description="Créez un service inclus spécifique à votre hébergement"
+          title='Ajouter un service inclus personnalisé'
+          description='Créez un service inclus spécifique à votre hébergement'
         />
 
         <CreateExtraModal

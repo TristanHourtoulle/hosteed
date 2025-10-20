@@ -17,13 +17,13 @@ export async function GET(request: NextRequest) {
 
     // Build optimized database query with server-side search
     const whereClause: Record<string, unknown> = {}
-    
+
     // Add search filter at database level for better performance
     if (search.trim()) {
       whereClause.OR = [
         { name: { contains: search.trim(), mode: 'insensitive' } },
         { description: { contains: search.trim(), mode: 'insensitive' } },
-        { address: { contains: search.trim(), mode: 'insensitive' } }
+        { address: { contains: search.trim(), mode: 'insensitive' } },
       ]
     }
 
@@ -47,20 +47,20 @@ export async function GET(request: NextRequest) {
           // Only essential relations for admin list
           img: {
             take: 1,
-            select: { id: true, img: true }
+            select: { id: true, img: true },
           },
           type: {
-            select: { id: true, name: true }
+            select: { id: true, name: true },
           },
           user: {
-            select: { id: true, name: true, email: true }
-          }
+            select: { id: true, name: true, email: true },
+          },
         },
         orderBy: [{ id: 'desc' }],
         skip,
         take: limit,
       }),
-      prisma.product.count({ where: whereClause })
+      prisma.product.count({ where: whereClause }),
     ])
 
     // Convert BigInt fields for JSON serialization
@@ -73,12 +73,8 @@ export async function GET(request: NextRequest) {
     }))
 
     if (!rawProducts) {
-      return NextResponse.json(
-        { error: 'Failed to fetch products' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 })
     }
-
 
     // Build optimized response with accurate pagination
     const response = {
@@ -101,9 +97,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(response, { headers })
   } catch (error) {
     console.error('Error in admin products API:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

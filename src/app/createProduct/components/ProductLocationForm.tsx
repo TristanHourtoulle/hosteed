@@ -6,12 +6,14 @@ import { Input } from '@/components/ui/input'
 import { MapPin, X } from 'lucide-react'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import PhoneInput from '@/components/ui/PhoneInput'
+import ProximityLandmarksField from '@/components/ui/ProximityLandmarksField'
 
 interface FormData {
   address: string
   latitude: number
   longitude: number
   phoneNumber: string
+  proximityLandmarks: string[]
   nearbyPlaces: Array<{
     name: string
     distance: string
@@ -21,17 +23,22 @@ interface FormData {
 
 interface ProductLocationFormProps {
   formData: FormData
-  onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void
+  onInputChange: (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => void
+  setFormData: React.Dispatch<React.SetStateAction<FormData>>
   newPlace: {
     name: string
     distance: string
     unit: 'mètres' | 'kilomètres'
   }
-  setNewPlace: React.Dispatch<React.SetStateAction<{
-    name: string
-    distance: string
-    unit: 'mètres' | 'kilomètres'
-  }>>
+  setNewPlace: React.Dispatch<
+    React.SetStateAction<{
+      name: string
+      distance: string
+      unit: 'mètres' | 'kilomètres'
+    }>
+  >
   addNearbyPlace: () => void
   removeNearbyPlace: (index: number) => void
   itemVariants: Variants
@@ -40,11 +47,12 @@ interface ProductLocationFormProps {
 export default function ProductLocationForm({
   formData,
   onInputChange,
+  setFormData,
   newPlace,
   setNewPlace,
   addNearbyPlace,
   removeNearbyPlace,
-  itemVariants
+  itemVariants,
 }: ProductLocationFormProps) {
   return (
     <motion.div variants={itemVariants}>
@@ -70,15 +78,16 @@ export default function ProductLocationForm({
             <AddressAutocomplete
               placeholder='Commencez à taper votre adresse...'
               value={formData.address}
-              onChange={(value) => {
+              onChange={value => {
                 const event = {
                   target: {
                     name: 'address',
-                    value: value
-                  }
+                    value: value,
+                  },
                 } as React.ChangeEvent<HTMLInputElement>
                 onInputChange(event)
               }}
+              allowFreeInput={true}
               className='border-slate-200 focus:border-green-300 focus:ring-green-200'
             />
             {formData.latitude && formData.longitude && (
@@ -88,18 +97,25 @@ export default function ProductLocationForm({
             )}
           </div>
 
+          <ProximityLandmarksField
+            landmarks={formData.proximityLandmarks}
+            onChange={landmarks =>
+              setFormData(prev => ({ ...prev, proximityLandmarks: landmarks }))
+            }
+          />
+
           <div className='space-y-2'>
             <label htmlFor='phoneNumber' className='text-sm font-medium text-slate-700'>
               Numéro de téléphone
             </label>
             <PhoneInput
               value={formData.phoneNumber}
-              onChange={(value) => {
+              onChange={value => {
                 const event = {
                   target: {
                     name: 'phoneNumber',
-                    value: value || ''
-                  }
+                    value: value || '',
+                  },
                 } as React.ChangeEvent<HTMLInputElement>
                 onInputChange(event)
               }}

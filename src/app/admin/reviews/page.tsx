@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/shadcnui/input'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Search, Plus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 import { ReviewCard } from './components/ReviewCard'
 import { findAllReviews, approveReview, deleteReview } from '@/lib/services/reviews.service'
 
@@ -37,7 +37,11 @@ interface Review {
 
 export default function ReviewsPage() {
   const router = useRouter()
-  const { data: session } = useSession()
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const [searchTerm, setSearchTerm] = useState('')
   const [reviews, setReviews] = useState<Review[]>([])
   const [adminReviews, setAdminReviews] = useState<Review[]>([])
@@ -52,7 +56,11 @@ export default function ReviewsPage() {
         }
 
         // Charger aussi les avis administratifs
-        if (session?.user?.roles && ['ADMIN', 'HOST_MANAGER'].includes(session.user.roles)) {
+        if (
+          isAuthenticated &&
+          session?.user?.roles &&
+          ['ADMIN', 'HOST_MANAGER'].includes(session.user.roles)
+        ) {
           const adminResponse = await fetch('/api/admin/reviews')
           if (adminResponse.ok) {
             const adminData = await adminResponse.json()
@@ -68,8 +76,10 @@ export default function ReviewsPage() {
       }
     }
 
-    fetchReviews()
-  }, [session])
+    if (isAuthenticated) {
+      fetchReviews()
+    }
+  }, [isAuthenticated, session])
 
   const handleApprove = async (id: string) => {
     try {
@@ -99,18 +109,19 @@ export default function ReviewsPage() {
   const pendingReviews = filteredReviews.filter(r => !r.approved)
   const approvedReviews = filteredReviews.filter(r => r.approved)
 
-  if (loading) {
+  if (isAuthLoading || loading) {
     return (
-      <div className='p-8 max-w-5xl mx-auto'>
-        <div className='space-y-8'>
-          {[1, 2, 3].map(i => (
-            <div key={i} className='animate-pulse'>
-              <div className='h-40 bg-gray-200 rounded-lg'></div>
-            </div>
-          ))}
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='flex flex-col items-center gap-4'>
+          <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin'></div>
+          <p className='text-slate-600 text-lg'>Chargement...</p>
         </div>
       </div>
     )
+  }
+
+  if (!session) {
+    return null
   }
 
   return (

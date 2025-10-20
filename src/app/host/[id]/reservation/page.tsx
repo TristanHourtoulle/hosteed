@@ -1,11 +1,14 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 import { CheckRentIsAvailable } from '@/lib/services/rents.service'
 import { findProductById } from '@/lib/services/product.service'
 import { findUserById } from '@/lib/services/user.service'
-import { calculateTotalRentPrice, type CommissionCalculation } from '@/lib/services/commission.service'
+import {
+  calculateTotalRentPrice,
+  type CommissionCalculation,
+} from '@/lib/services/commission.service'
 import { MapPin, Star, CreditCard, Shield, ArrowLeft, Check } from 'lucide-react'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
@@ -62,7 +65,11 @@ export default function ReservationPage() {
   const { id } = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { data: session } = useSession()
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -110,7 +117,7 @@ export default function ReservationPage() {
   }, [id])
 
   useEffect(() => {
-    if (session?.user?.id) {
+    if (isAuthenticated && session?.user?.id) {
       const fetchUserData = async () => {
         try {
           const userData = await findUserById(session.user.id)
@@ -140,7 +147,7 @@ export default function ReservationPage() {
 
       fetchUserData()
     }
-  }, [session])
+  }, [isAuthenticated, session])
 
   useEffect(() => {
     const checkAvailability = async () => {
@@ -294,15 +301,19 @@ export default function ReservationPage() {
     }
   }
 
-  if (loading) {
+  if (isAuthLoading || loading) {
     return (
-      <div className='min-h-screen bg-gray-50 flex items-center justify-center'>
-        <div className='text-center'>
-          <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto'></div>
-          <p className='text-gray-600 mt-4'>Chargement...</p>
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='flex flex-col items-center gap-4'>
+          <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin'></div>
+          <p className='text-slate-600 text-lg'>Chargement...</p>
         </div>
       </div>
     )
+  }
+
+  if (!session) {
+    return null
   }
 
   if (error || !product) {
@@ -485,12 +496,12 @@ export default function ReservationPage() {
                           setFormData(prev => ({
                             ...prev,
                             phone: phoneNumber,
-                            phoneCountry: countryCode
+                            phoneCountry: countryCode,
                           }))
                         }}
-                        placeholder="XX XX XX XX"
+                        placeholder='XX XX XX XX'
                         required
-                        className="w-full"
+                        className='w-full'
                       />
                     </div>
                   </div>

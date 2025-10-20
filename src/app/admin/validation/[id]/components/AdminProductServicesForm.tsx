@@ -87,7 +87,7 @@ export default function AdminProductServicesForm({
   onServiceCreated,
   onExtraCreated,
   onHighlightCreated,
-  itemVariants
+  itemVariants,
 }: AdminProductServicesFormProps) {
   const [serviceModalOpen, setServiceModalOpen] = useState(false)
   const [extraModalOpen, setExtraModalOpen] = useState(false)
@@ -309,8 +309,8 @@ export default function AdminProductServicesForm({
         isOpen={serviceModalOpen}
         onClose={() => setServiceModalOpen(false)}
         onServiceCreated={onServiceCreated}
-        title="Créer un nouveau service"
-        description="Ajoutez un nouveau service disponible"
+        title='Créer un nouveau service'
+        description='Ajoutez un nouveau service disponible'
       />
 
       <CreateExtraModal

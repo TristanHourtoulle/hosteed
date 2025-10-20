@@ -56,13 +56,13 @@ const container = {
 const noResultsMotion = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.5 }
+  transition: { duration: 0.5 },
 }
 
 const buttonMotion = {
   initial: { scale: 0 },
   animate: { scale: 1 },
-  transition: { delay: 0.2 }
+  transition: { delay: 0.2 },
 }
 
 function SearchResults({
@@ -75,12 +75,12 @@ function SearchResults({
   // Memoize motion props for empty state
   const noResultsProps = useMemo(() => noResultsMotion, [])
   const buttonProps = useMemo(() => buttonMotion, [])
-  
+
   // Debug logging
   console.log('SearchResults - products received:', products)
   console.log('SearchResults - products length:', products.length)
   console.log('SearchResults - first product img:', products[0]?.img)
-  
+
   if (products.length === 0) {
     return (
       <motion.div {...noResultsProps}>
@@ -101,16 +101,16 @@ function SearchResults({
   }
 
   return (
-    <div className="space-y-6">
+    <div className='space-y-6'>
       {/* Pagination Info */}
       {pagination && (
-        <div className="flex justify-between items-center">
+        <div className='flex justify-between items-center'>
           <PaginationInfo
             currentPage={pagination.page}
             itemsPerPage={pagination.limit}
             totalItems={pagination.total}
           />
-          <div className="text-sm text-gray-500">
+          <div className='text-sm text-gray-500'>
             {pagination.totalPages} page{pagination.totalPages > 1 ? 's' : ''}
           </div>
         </div>
@@ -130,12 +130,12 @@ function SearchResults({
 
       {/* Pagination Controls */}
       {pagination && pagination.totalPages > 1 && onPageChange && (
-        <div className="flex justify-center pt-6">
+        <div className='flex justify-center pt-6'>
           <Pagination
             currentPage={pagination.page}
             totalPages={pagination.totalPages}
             onPageChange={onPageChange}
-            className="bg-white p-4 rounded-lg shadow-sm border"
+            className='bg-white p-4 rounded-lg shadow-sm border'
           />
         </div>
       )}
@@ -170,10 +170,10 @@ const areEqual = (prevProps: SearchResultsProps, nextProps: SearchResultsProps) 
   // Check pagination object
   const prevPag = prevProps.pagination
   const nextPag = nextProps.pagination
-  
+
   if (prevPag !== nextPag) {
     if (!prevPag || !nextPag) return false
-    
+
     if (
       prevPag.page !== nextPag.page ||
       prevPag.limit !== nextPag.limit ||

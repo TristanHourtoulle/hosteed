@@ -38,9 +38,8 @@ export async function POST(request: NextRequest) {
     // Vérifier le solde disponible
     const balance = await calculateHostBalance(session.user.id)
 
-    const maxAmount = withdrawalType === 'PARTIAL_50'
-      ? balance.amount50Percent
-      : balance.amount100Percent
+    const maxAmount =
+      withdrawalType === 'PARTIAL_50' ? balance.amount50Percent : balance.amount100Percent
 
     if (amount > maxAmount) {
       return NextResponse.json(
@@ -140,9 +139,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       request: withdrawalRequest,
-      message: status === WithdrawalStatus.ACCOUNT_VALIDATION
-        ? 'Demande créée. Votre compte de paiement doit être validé par un administrateur.'
-        : 'Demande de retrait créée avec succès. Un administrateur va la traiter sous peu.',
+      message:
+        status === WithdrawalStatus.ACCOUNT_VALIDATION
+          ? 'Demande créée. Votre compte de paiement doit être validé par un administrateur.'
+          : 'Demande de retrait créée avec succès. Un administrateur va la traiter sous peu.',
     })
   } catch (error) {
     console.error('Error creating withdrawal request:', error)

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 import Link from 'next/link'
 import { Heart, Star, MapPin, Trash2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/shadcnui/card'
@@ -26,15 +26,19 @@ interface FavoriteProduct {
 }
 
 export default function FavoritesPage() {
-  const { data: session } = useSession()
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const [favorites, setFavorites] = useState<FavoriteProduct[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (session?.user?.id) {
+    if (isAuthenticated && session?.user?.id) {
       fetchFavorites()
     }
-  }, [session?.user?.id])
+  }, [isAuthenticated, session?.user?.id])
 
   const fetchFavorites = async () => {
     try {
@@ -81,32 +85,19 @@ export default function FavoritesPage() {
     return total / reviews.length
   }
 
-  if (!session) {
+  if (isAuthLoading || loading) {
     return (
-      <div className='min-h-screen bg-gray-50 flex items-center justify-center'>
-        <Card className='w-full max-w-md'>
-          <CardContent className='p-8 text-center'>
-            <Heart className='w-16 h-16 text-gray-300 mx-auto mb-4' />
-            <h2 className='text-2xl font-bold text-gray-900 mb-2'>Connectez-vous</h2>
-            <p className='text-gray-600 mb-6'>Vous devez être connecté pour voir vos favoris</p>
-            <Button asChild>
-              <Link href='/auth'>Se connecter</Link>
-            </Button>
-          </CardContent>
-        </Card>
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='flex flex-col items-center gap-4'>
+          <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin'></div>
+          <p className='text-slate-600 text-lg'>Chargement...</p>
+        </div>
       </div>
     )
   }
 
-  if (loading) {
-    return (
-      <div className='min-h-screen bg-gray-50 flex items-center justify-center'>
-        <div className='text-center'>
-          <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4'></div>
-          <p className='text-gray-600'>Chargement de vos favoris...</p>
-        </div>
-      </div>
-    )
+  if (!session) {
+    return null
   }
 
   return (

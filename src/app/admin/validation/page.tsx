@@ -1,8 +1,8 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useAuth } from '@/hooks/useAuth'
 import { ProductValidation } from '@prisma/client'
 import { isAdmin } from '@/hooks/useAdminAuth'
 import { motion, Variants } from 'framer-motion'
@@ -68,7 +68,11 @@ interface ValidationStats {
 }
 
 export default function ValidationPage() {
-  const { data: session, status } = useSession()
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
@@ -84,20 +88,20 @@ export default function ValidationPage() {
   })
 
   useEffect(() => {
-    if (status === 'loading') return
+    if (isAuthenticated) {
+      if (!session?.user) {
+        router.push('/auth')
+        return
+      }
 
-    if (!session?.user) {
-      router.push('/auth')
-      return
+      if (!isAdmin(session.user.roles)) {
+        router.push('/')
+        return
+      }
+
+      fetchData()
     }
-
-    if (!isAdmin(session.user.roles)) {
-      router.push('/')
-      return
-    }
-
-    fetchData()
-  }, [session, status, router])
+  }, [isAuthenticated, session, router])
 
   const fetchData = async () => {
     try {
@@ -125,12 +129,19 @@ export default function ValidationPage() {
     }
   }
 
-  if (status === 'loading' || loading) {
+  if (isAuthLoading || loading) {
     return (
-      <div className='flex justify-center items-center min-h-screen'>
-        <Loader2 className='h-8 w-8 animate-spin text-primary' />
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='flex flex-col items-center gap-4'>
+          <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin'></div>
+          <p className='text-slate-600 text-lg'>Chargement...</p>
+        </div>
       </div>
     )
+  }
+
+  if (!session) {
+    return null
   }
 
   if (error) {

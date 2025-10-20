@@ -22,9 +22,9 @@ async function syncDatabaseWithFilesystem() {
     const images = await prisma.images.findMany({
       where: {
         img: {
-          startsWith: '/uploads/products/'
-        }
-      }
+          startsWith: '/uploads/products/',
+        },
+      },
     })
 
     console.log(`📊 Found ${images.length} images in database\n`)
@@ -37,7 +37,9 @@ async function syncDatabaseWithFilesystem() {
       const dbUrl = image.img
 
       // Parse the URL to extract product ID and image details
-      const match = dbUrl.match(/\/uploads\/products\/([^/]+)\/img_(\d+)_(thumb|medium|full)_(\d+)_([a-f0-9]+)\.webp/)
+      const match = dbUrl.match(
+        /\/uploads\/products\/([^/]+)\/img_(\d+)_(thumb|medium|full)_(\d+)_([a-f0-9]+)\.webp/
+      )
 
       if (!match) {
         console.log(`⚠️  Skipping invalid URL format: ${dbUrl}`)
@@ -94,7 +96,7 @@ async function syncDatabaseWithFilesystem() {
       // Update the database to use _full_ size
       await prisma.images.update({
         where: { id: image.id },
-        data: { img: correctUrl }
+        data: { img: correctUrl },
       })
 
       console.log(`✅ Updated: ${path.basename(dbUrl)} → ${path.basename(correctUrl)}`)
@@ -106,7 +108,6 @@ async function syncDatabaseWithFilesystem() {
     console.log(`   ✔️  Already correct: ${alreadyCorrectCount}`)
     console.log(`   ❌ Not found: ${notFoundCount}`)
     console.log(`   📁 Total processed: ${images.length}`)
-
   } catch (error) {
     console.error('❌ Error during sync:', error)
     throw error
@@ -121,7 +122,7 @@ syncDatabaseWithFilesystem()
     console.log('\n✅ Database sync completed successfully!')
     process.exit(0)
   })
-  .catch((error) => {
+  .catch(error => {
     console.error('\n❌ Database sync failed:', error)
     process.exit(1)
   })

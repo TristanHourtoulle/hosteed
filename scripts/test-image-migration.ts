@@ -29,8 +29,8 @@ interface TestStats {
 
 async function testImageMigration() {
   const args = process.argv.slice(2)
-  const limitArg = args.find((arg) => arg.startsWith('--limit'))
-  const productIdArg = args.find((arg) => arg.startsWith('--product-id'))
+  const limitArg = args.find(arg => arg.startsWith('--limit'))
+  const productIdArg = args.find(arg => arg.startsWith('--product-id'))
 
   const limit = limitArg ? parseInt(limitArg.split('=')[1]) : 1
   const specificProductId = productIdArg ? productIdArg.split('=')[1] : null
@@ -129,19 +129,11 @@ async function testImageMigration() {
 
         try {
           // Extraire info sur l'image base64
-          const base64Size = Buffer.from(
-            image.img.split(',')[1] || '',
-            'base64'
-          ).length
+          const base64Size = Buffer.from(image.img.split(',')[1] || '', 'base64').length
           console.log(`      📊 Taille base64: ${(base64Size / 1024).toFixed(2)} KB`)
 
           // Tester la migration (dans le dossier test)
-          const imageUrls = await migrateBase64ToFileSystem(
-            image.img,
-            'products',
-            product.id,
-            i
-          )
+          const imageUrls = await migrateBase64ToFileSystem(image.img, 'products', product.id, i)
 
           stats.totalImagesProcessed++
 
@@ -161,9 +153,13 @@ async function testImageMigration() {
 
             console.log('      ✅ Migration réussie!')
             console.log(`      📁 Thumb:  ${imageUrls.thumb} (${(thumbSize / 1024).toFixed(2)} KB)`)
-            console.log(`      📁 Medium: ${imageUrls.medium} (${(mediumSize / 1024).toFixed(2)} KB)`)
+            console.log(
+              `      📁 Medium: ${imageUrls.medium} (${(mediumSize / 1024).toFixed(2)} KB)`
+            )
             console.log(`      📁 Full:   ${imageUrls.full} (${(fullSize / 1024).toFixed(2)} KB)`)
-            console.log(`      💾 Économie: ${((1 - (thumbSize + mediumSize + fullSize) / base64Size) * 100).toFixed(1)}%`)
+            console.log(
+              `      💾 Économie: ${((1 - (thumbSize + mediumSize + fullSize) / base64Size) * 100).toFixed(1)}%`
+            )
 
             stats.generatedFiles.push(thumbPath, mediumPath, fullPath)
           } else {
@@ -210,14 +206,13 @@ async function testImageMigration() {
     console.log('\nVous pouvez les vérifier visuellement avant de lancer la migration réelle.')
 
     console.log('\n⚠️  NOTE IMPORTANTE:')
-    console.log('   Ce test N\'A PAS modifié la base de données.')
+    console.log("   Ce test N'A PAS modifié la base de données.")
     console.log('   Les images base64 sont toujours présentes.')
     console.log('   Pour migrer réellement, utilisez: pnpm images:migrate')
 
     console.log('\n🧹 === NETTOYAGE ===\n')
     console.log('Pour supprimer les fichiers de test:')
     console.log(`   rm -rf ${testDir}`)
-
   } catch (error) {
     console.error('\n❌ Erreur fatale:', error)
     process.exit(1)
@@ -232,7 +227,7 @@ testImageMigration()
     console.log('\n✅ Test terminé avec succès\n')
     process.exit(0)
   })
-  .catch((error) => {
+  .catch(error => {
     console.error('\n❌ Erreur lors du test:', error)
     process.exit(1)
   })

@@ -179,7 +179,9 @@ const Navbar = () => {
               className='block py-2 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer'
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              {session.user.roles === 'HOST_MANAGER' ? 'Gestion Hébergements' : 'Gestion Administrateur'}
+              {session.user.roles === 'HOST_MANAGER'
+                ? 'Gestion Hébergements'
+                : 'Gestion Administrateur'}
             </Link>
           )}
         </div>
@@ -422,18 +424,21 @@ const Navbar = () => {
                     </NavigationMenuItem>
                   )} */}
 
-                {session && (session.user.roles === 'ADMIN' || session.user.roles === 'HOST_MANAGER') && (
-                  <NavigationMenuItem>
-                    <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-                      <Link
-                        href='/admin'
-                        className={isActive('/admin') ? 'text-indigo-600 font-medium' : ''}
-                      >
-                        {session.user.roles === 'HOST_MANAGER' ? 'Gestion Hébergements' : 'Gestion Administrateur'}
-                      </Link>
-                    </NavigationMenuLink>
-                  </NavigationMenuItem>
-                )}
+                {session &&
+                  (session.user.roles === 'ADMIN' || session.user.roles === 'HOST_MANAGER') && (
+                    <NavigationMenuItem>
+                      <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+                        <Link
+                          href='/admin'
+                          className={isActive('/admin') ? 'text-indigo-600 font-medium' : ''}
+                        >
+                          {session.user.roles === 'HOST_MANAGER'
+                            ? 'Gestion Hébergements'
+                            : 'Gestion Administrateur'}
+                        </Link>
+                      </NavigationMenuLink>
+                    </NavigationMenuItem>
+                  )}
               </NavigationMenuList>
             </NavigationMenu>
           </div>

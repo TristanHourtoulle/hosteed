@@ -54,7 +54,9 @@ async function inspectRedisCache(pattern: string = 'search:*') {
 
         // Get TTL
         const ttl = await client.ttl(key)
-        console.log(`⏰ TTL: ${ttl === -1 ? 'No expiration' : `${ttl} seconds (${Math.floor(ttl / 60)} minutes)`}`)
+        console.log(
+          `⏰ TTL: ${ttl === -1 ? 'No expiration' : `${ttl} seconds (${Math.floor(ttl / 60)} minutes)`}`
+        )
 
         // Get value
         const value = await client.get(key)
@@ -142,7 +144,7 @@ inspectRedisCache(pattern)
     console.log('\n✨ Done!')
     process.exit(0)
   })
-  .catch((error) => {
+  .catch(error => {
     console.error('\n❌ Fatal error:', error)
     process.exit(1)
   })

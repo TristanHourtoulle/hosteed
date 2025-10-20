@@ -89,7 +89,7 @@ clearRedisCache(pattern)
     console.log('\n✨ Done!')
     process.exit(0)
   })
-  .catch((error) => {
+  .catch(error => {
     console.error('\n❌ Fatal error:', error)
     process.exit(1)
   })

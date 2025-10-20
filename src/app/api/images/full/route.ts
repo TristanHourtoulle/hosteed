@@ -12,10 +12,7 @@ export async function GET(request: NextRequest) {
     const thumbUrl = searchParams.get('thumb')
 
     if (!thumbUrl || !thumbUrl.startsWith('/uploads/')) {
-      return NextResponse.json(
-        { error: 'URL thumbnail invalide' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'URL thumbnail invalide' }, { status: 400 })
     }
 
     // Extraire les infos de l'URL thumb
@@ -27,10 +24,7 @@ export async function GET(request: NextRequest) {
     // Extraire le numéro d'image et le timestamp
     const match = fileName.match(/img_(\d+)_thumb_(\d+)_/)
     if (!match) {
-      return NextResponse.json(
-        { error: 'Format de nom de fichier invalide' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Format de nom de fichier invalide' }, { status: 400 })
     }
 
     const imgNumber = match[1]
@@ -41,42 +35,36 @@ export async function GET(request: NextRequest) {
 
     // Vérifier que le dossier existe
     if (!fs.existsSync(uploadsDir)) {
-      return NextResponse.json(
-        { error: 'Dossier produit non trouvé' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Dossier produit non trouvé' }, { status: 404 })
     }
 
     // Lister les fichiers et trouver le full correspondant
     const files = fs.readdirSync(uploadsDir)
     const fullPattern = `img_${imgNumber}_full_${timestamp}_`
-    const fullFile = files.find((f) => f.startsWith(fullPattern))
+    const fullFile = files.find(f => f.startsWith(fullPattern))
 
     if (!fullFile) {
       // Si pas de full, essayer medium
       const mediumPattern = `img_${imgNumber}_medium_${timestamp}_`
-      const mediumFile = files.find((f) => f.startsWith(mediumPattern))
+      const mediumFile = files.find(f => f.startsWith(mediumPattern))
 
       if (mediumFile) {
         return NextResponse.json({
-          fullUrl: `/uploads/products/${productId}/${mediumFile}`
+          fullUrl: `/uploads/products/${productId}/${mediumFile}`,
         })
       }
 
       // Si rien, retourner le thumb
       return NextResponse.json({
-        fullUrl: thumbUrl
+        fullUrl: thumbUrl,
       })
     }
 
     return NextResponse.json({
-      fullUrl: `/uploads/products/${productId}/${fullFile}`
+      fullUrl: `/uploads/products/${productId}/${fullFile}`,
     })
   } catch (error) {
-    console.error('Erreur lors de la résolution de l\'image full:', error)
-    return NextResponse.json(
-      { error: 'Erreur interne du serveur' },
-      { status: 500 }
-    )
+    console.error("Erreur lors de la résolution de l'image full:", error)
+    return NextResponse.json({ error: 'Erreur interne du serveur' }, { status: 500 })
   }
 }

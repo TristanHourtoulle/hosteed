@@ -9,6 +9,7 @@ Système complet de gestion des retraits pour les hôtes, permettant aux admins 
 ### 1. Base de données (✅ Terminé)
 
 **Modèles Prisma créés:**
+
 - `PaymentAccount` - Comptes de paiement enregistrés
 - `WithdrawalRequest` - Demandes de retrait
 - `WithdrawalType` - Enum (PARTIAL_50, FULL_100)
@@ -16,6 +17,7 @@ Système complet de gestion des retraits pour les hôtes, permettant aux admins 
 - `PaymentMethod` - Étendu avec PRIPEO, MOBILE_MONEY, MONEYGRAM
 
 **Migrations:**
+
 ```bash
 ✅ pnpm prisma db push
 ✅ pnpm prisma generate
@@ -26,6 +28,7 @@ Système complet de gestion des retraits pour les hôtes, permettant aux admins 
 **Fichier:** `/src/lib/services/withdrawal.service.ts`
 
 **Fonctions implémentées:**
+
 - `calculateHostBalance()` - Calcul du solde disponible
 - `createPaymentAccount()` - Création compte de paiement
 - `getPaymentAccounts()` - Liste des comptes
@@ -46,6 +49,7 @@ Système complet de gestion des retraits pour les hôtes, permettant aux admins 
 **Fichier:** `/src/lib/services/__tests__/withdrawal.service.test.ts`
 
 **Tests couverts:**
+
 - Calcul de solde
 - CRUD comptes de paiement
 - Validation des données
@@ -55,16 +59,20 @@ Système complet de gestion des retraits pour les hôtes, permettant aux admins 
 ### 4. API Routes (🔄 Partiellement complété)
 
 **Complété:**
+
 - `GET /api/withdrawals/balance` - Récupérer le solde
 
 **À créer:**
+
 - `/api/withdrawals/payment-accounts`
+
   - GET - Liste des comptes
   - POST - Créer un compte
   - PUT /:id - Mettre à jour
   - DELETE /:id - Supprimer
 
 - `/api/withdrawals/requests`
+
   - GET - Liste des demandes
   - POST - Créer une demande
 
@@ -80,6 +88,7 @@ Système complet de gestion des retraits pour les hôtes, permettant aux admins 
 ### 1. API Routes (Routes manquantes)
 
 #### A. Routes Host - Payment Accounts
+
 ```typescript
 // /src/app/api/withdrawals/payment-accounts/route.ts
 GET    - Liste des comptes de paiement du host connecté
@@ -92,6 +101,7 @@ PUT /set-default - Définir comme compte par défaut
 ```
 
 #### B. Routes Host - Withdrawal Requests
+
 ```typescript
 // /src/app/api/withdrawals/requests/route.ts
 GET  - Liste des demandes du host
@@ -103,6 +113,7 @@ PUT    - Annuler une demande (CANCELLED)
 ```
 
 #### C. Routes Admin
+
 ```typescript
 // /src/app/api/admin/withdrawals/route.ts
 GET - Liste de toutes les demandes (filtres par statut)
@@ -123,21 +134,26 @@ PUT - Valider un compte de paiement
 ### 2. Interface Host Dashboard
 
 #### A. Page principale de retrait
+
 **Fichier:** `/src/app/dashboard/host/withdrawals/page.tsx`
 
 **Composants nécessaires:**
+
 1. `BalanceCard` - Affichage du solde
+
    - Montant total disponible
    - Montant disponible à 50%
    - Montant disponible à 100%
    - Montant en attente
 
 2. `PaymentAccountSelector` - Sélection/ajout compte
+
    - Liste déroulante des comptes
    - Bouton "Ajouter un nouveau compte"
    - Indicateur de validation
 
 3. `WithdrawalRequestForm` - Formulaire de demande
+
    - Choix 50% ou 100%
    - Montant à retirer
    - Sélection du moyen de paiement
@@ -150,15 +166,19 @@ PUT - Valider un compte de paiement
    - Actions (annuler si pending)
 
 #### B. Modale d'ajout de compte de paiement
+
 **Composant:** `AddPaymentAccountModal`
 
 **Formulaires par méthode:**
+
 1. **SEPA**
+
    - Nom du titulaire
    - IBAN
    - Checkbox "Enregistrer pour les prochaines fois"
 
 2. **Pripeo**
+
    - Nom du titulaire
    - Numéro de carte
    - Email
@@ -166,11 +186,13 @@ PUT - Valider un compte de paiement
    - Checkbox "Enregistrer"
 
 3. **Mobile Money**
+
    - Nom associé
    - Numéro (+261 XX XX XXX XX)
    - Checkbox "Enregistrer"
 
 4. **PayPal**
+
    - Nom d'utilisateur
    - Email
    - Téléphone (avec code pays)
@@ -186,10 +208,13 @@ PUT - Valider un compte de paiement
 ### 3. Interface Admin
 
 #### A. Page de gestion des retraits
+
 **Fichier:** `/src/app/admin/withdrawals/page.tsx`
 
 **Composants:**
+
 1. `WithdrawalRequestsTable` - Tableau des demandes
+
    - Colonnes:
      - Hôte (nom, email)
      - Montant
@@ -204,6 +229,7 @@ PUT - Valider un compte de paiement
      - Par hôte
 
 2. `WithdrawalDetailsModal` - Détails d'une demande
+
    - Informations hôte
    - Montant détaillé
    - Méthode de paiement choisie
@@ -227,25 +253,31 @@ PUT - Valider un compte de paiement
 **Fichier:** `/src/lib/services/withdrawal-email.service.ts`
 
 **Emails à implémenter:**
+
 1. **Demande créée** (vers hôte)
+
    - Confirmation de réception
    - Montant demandé
    - Méthode de paiement
    - Délai de traitement estimé
 
 2. **Compte à valider** (vers admin)
+
    - Nouvelle demande nécessitant validation
    - Lien direct vers l'admin
 
 3. **Compte validé** (vers hôte)
+
    - Compte approuvé
    - Prochaines étapes
 
 4. **Demande approuvée** (vers hôte)
+
    - Demande approuvée
    - Paiement effectif sous 1 jour ouvré
 
 5. **Paiement effectué** (vers hôte)
+
    - Confirmation de paiement
    - Nouveau solde
    - Détails de la transaction
@@ -257,18 +289,22 @@ PUT - Valider un compte de paiement
 ### 5. Fonctionnalités avancées
 
 #### A. Pour les admins/HOST_MANAGER
+
 Permettre de faire une demande de retrait pour un hôte:
+
 - Sélectionner l'hôte
 - Voir son solde
 - Créer la demande pour lui
 - Notification automatique à l'hôte
 
 #### B. Gestion des frais
+
 - Pripeo: +1,50€ automatique
 - PayPal: Note sur les frais possibles
 - Calcul automatique dans le formulaire
 
 #### C. Export et rapports
+
 - Export CSV des demandes
 - Rapport mensuel des retraits
 - Statistiques par méthode de paiement
@@ -409,6 +445,7 @@ pnpm test:watch
 ## 📚 Documentation des statuts
 
 ### Statuts de WithdrawalRequest
+
 - `PENDING` - En attente de traitement admin
 - `ACCOUNT_VALIDATION` - En attente de validation du compte de paiement
 - `APPROVED` - Approuvée, en attente de paiement
@@ -417,6 +454,7 @@ pnpm test:watch
 - `CANCELLED` - Annulée par l'hôte
 
 ### Workflow typique
+
 1. Hôte crée demande → `ACCOUNT_VALIDATION` ou `PENDING`
 2. Admin valide compte → `PENDING`
 3. Admin approuve → `APPROVED`
@@ -442,6 +480,7 @@ pnpm test:watch
 ## 📞 Support
 
 Pour toute question sur l'implémentation, référez-vous aux fichiers suivants:
+
 - Service: `/src/lib/services/withdrawal.service.ts`
 - Tests: `/src/lib/services/__tests__/withdrawal.service.test.ts`
 - Schema: `/prisma/schema.prisma`

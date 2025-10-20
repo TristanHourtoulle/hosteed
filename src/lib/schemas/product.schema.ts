@@ -24,7 +24,7 @@ export const createProductSchema = z.object({
   description: z
     .string()
     .min(10, 'La description doit contenir au moins 10 caractères')
-    .max(2000, 'La description ne peut pas dépasser 2000 caractères')
+    .max(10000, 'La description ne peut pas dépasser 10000 caractères')
     .trim(),
 
   address: z

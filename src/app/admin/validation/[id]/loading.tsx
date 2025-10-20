@@ -19,13 +19,13 @@ export default function AdminValidationDetailLoading() {
           <div className='lg:col-span-2 space-y-8'>
             {/* Basic Info */}
             <FormSectionSkeleton />
-            
+
             {/* Images */}
             <ImageUploaderSkeleton />
-            
+
             {/* Details */}
             <FormSectionSkeleton />
-            
+
             {/* Validation Form */}
             <div className='bg-white p-6 rounded-lg shadow animate-pulse'>
               <div className='h-6 bg-gray-200 rounded w-1/3 mb-4' />

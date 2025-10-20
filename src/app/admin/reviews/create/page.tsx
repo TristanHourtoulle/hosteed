@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
 import { Input } from '@/components/ui/shadcnui/input'
@@ -100,7 +100,11 @@ function RatingInput({
 
 export default function CreateAdminReviewPage() {
   const router = useRouter()
-  const { data: session } = useSession()
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const [products, setProducts] = useState<Array<{ id: string; name: string }>>([])
   const [loading, setLoading] = useState(true)
 
@@ -126,13 +130,18 @@ export default function CreateAdminReviewPage() {
 
   useEffect(() => {
     // Vérifier les permissions
-    if (!session?.user?.roles || !['ADMIN', 'HOST_MANAGER'].includes(session.user.roles)) {
+    if (
+      isAuthenticated &&
+      (!session?.user?.roles || !['ADMIN', 'HOST_MANAGER'].includes(session.user.roles))
+    ) {
       router.push('/admin')
       return
     }
 
     // Charger la liste des produits
     const fetchProducts = async () => {
+      if (!isAuthenticated) return
+
       try {
         const response = await fetch('/api/admin/products', {
           cache: 'no-store',
@@ -152,7 +161,7 @@ export default function CreateAdminReviewPage() {
     }
 
     fetchProducts()
-  }, [session, router])
+  }, [isAuthenticated, session, router])
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {}
@@ -219,12 +228,19 @@ export default function CreateAdminReviewPage() {
     }))
   }
 
-  if (loading) {
+  if (isAuthLoading || loading) {
     return (
-      <div className='min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center'>
-        <div className='animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent'></div>
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='flex flex-col items-center gap-4'>
+          <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin'></div>
+          <p className='text-slate-600 text-lg'>Chargement...</p>
+        </div>
       </div>
     )
+  }
+
+  if (!session) {
+    return null
   }
 
   return (

@@ -3,10 +3,7 @@ import { ProductPromotion } from '@prisma/client'
 /**
  * Appliquer une réduction en pourcentage sur un prix
  */
-export function applyPromotionToPrice(
-  price: number,
-  discountPercentage: number
-): number {
+export function applyPromotionToPrice(price: number, discountPercentage: number): number {
   return price * (1 - discountPercentage / 100)
 }
 
@@ -18,9 +15,7 @@ export function isPromotionActive(
   currentDate: Date = new Date()
 ): boolean {
   return (
-    promotion.isActive &&
-    currentDate >= promotion.startDate &&
-    currentDate <= promotion.endDate
+    promotion.isActive && currentDate >= promotion.startDate && currentDate <= promotion.endDate
   )
 }
 
@@ -34,10 +29,7 @@ export function formatPromotionLabel(discountPercentage: number): string {
 /**
  * Calculer les économies réalisées avec une promotion
  */
-export function calculateSavings(
-  originalPrice: number,
-  discountPercentage: number
-): number {
+export function calculateSavings(originalPrice: number, discountPercentage: number): number {
   return originalPrice * (discountPercentage / 100)
 }
 
@@ -53,10 +45,7 @@ export function getDaysUntilEnd(endDate: Date): number {
 /**
  * Vérifier si une promotion expire bientôt (moins de 7 jours)
  */
-export function isPromotionExpiringSoon(
-  endDate: Date,
-  threshold: number = 7
-): boolean {
+export function isPromotionExpiringSoon(endDate: Date, threshold: number = 7): boolean {
   const daysUntilEnd = getDaysUntilEnd(endDate)
   return daysUntilEnd > 0 && daysUntilEnd <= threshold
 }
@@ -91,15 +80,12 @@ export function mergeProductWithPromotion<T extends { basePrice: string }>(
   if (!promotion) {
     return {
       ...product,
-      hasActivePromotion: false
+      hasActivePromotion: false,
     }
   }
 
   const basePrice = parseFloat(product.basePrice)
-  const discountedPrice = applyPromotionToPrice(
-    basePrice,
-    promotion.discountPercentage
-  )
+  const discountedPrice = applyPromotionToPrice(basePrice, promotion.discountPercentage)
   const savings = calculateSavings(basePrice, promotion.discountPercentage)
 
   return {
@@ -109,7 +95,7 @@ export function mergeProductWithPromotion<T extends { basePrice: string }>(
     discountedPrice: discountedPrice.toFixed(2),
     basePrice: discountedPrice.toFixed(2), // Remplacer le basePrice
     promotion,
-    savings
+    savings,
   }
 }
 
@@ -125,7 +111,7 @@ export function validatePromotionData(data: {
   if (data.discountPercentage <= 0 || data.discountPercentage > 100) {
     return {
       valid: false,
-      error: 'Le pourcentage de réduction doit être entre 1 et 100'
+      error: 'Le pourcentage de réduction doit être entre 1 et 100',
     }
   }
 
@@ -133,7 +119,7 @@ export function validatePromotionData(data: {
   if (data.endDate <= data.startDate) {
     return {
       valid: false,
-      error: 'La date de fin doit être après la date de début'
+      error: 'La date de fin doit être après la date de début',
     }
   }
 
@@ -146,7 +132,7 @@ export function validatePromotionData(data: {
   if (startDate < now) {
     return {
       valid: false,
-      error: 'La date de début ne peut pas être dans le passé'
+      error: 'La date de début ne peut pas être dans le passé',
     }
   }
 

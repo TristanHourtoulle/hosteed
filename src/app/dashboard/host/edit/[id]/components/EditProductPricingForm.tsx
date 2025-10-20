@@ -26,7 +26,9 @@ interface FormData {
 
 interface EditProductPricingFormProps {
   formData: FormData
-  onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void
+  onInputChange: (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => void
   onSpecialPriceCreated: () => void
   onRemoveSpecialPrice: (id: string) => void
   isSubmitting: boolean
@@ -41,7 +43,7 @@ export default function EditProductPricingForm({
   onRemoveSpecialPrice,
   isSubmitting,
   onSubmit,
-  itemVariants
+  itemVariants,
 }: EditProductPricingFormProps) {
   const [specialPriceModalOpen, setSpecialPriceModalOpen] = useState(false)
 
@@ -49,12 +51,12 @@ export default function EditProductPricingForm({
   const formatDayNames = (days: string[]) => {
     const dayNames: { [key: string]: string } = {
       MONDAY: 'Lun',
-      TUESDAY: 'Mar', 
+      TUESDAY: 'Mar',
       WEDNESDAY: 'Mer',
       THURSDAY: 'Jeu',
       FRIDAY: 'Ven',
       SATURDAY: 'Sam',
-      SUNDAY: 'Dim'
+      SUNDAY: 'Dim',
     }
     return days.map(day => dayNames[day] || day).join(', ')
   }

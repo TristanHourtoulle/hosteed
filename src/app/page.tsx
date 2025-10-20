@@ -16,7 +16,7 @@ export default function HomePage() {
         >
           Voir les hébergements
         </Link>
-        
+
         {/* Composant de debug temporaire */}
         <div className='mt-8'>
           <GooglePlacesDebug />

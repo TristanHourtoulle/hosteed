@@ -11,10 +11,7 @@ export async function POST(request: NextRequest) {
     const session = await auth()
 
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Non authentifié' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -27,16 +24,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const isValid = await validatePromotionCommission(
-      productId,
-      parseFloat(discountPercentage)
-    )
+    const isValid = await validatePromotionCommission(productId, parseFloat(discountPercentage))
 
     return NextResponse.json({
       valid: isValid,
       message: isValid
         ? 'Commission valide'
-        : 'Réduction trop importante. La plateforme ne pourrait pas couvrir ses frais.'
+        : 'Réduction trop importante. La plateforme ne pourrait pas couvrir ses frais.',
     })
   } catch (error) {
     console.error('Erreur lors de la validation de la commission:', error)

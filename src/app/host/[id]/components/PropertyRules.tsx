@@ -15,14 +15,14 @@ interface PropertyRulesProps {
 
 export default function PropertyRules({ maxPeople, rules }: PropertyRulesProps) {
   // Ne pas afficher la section si pas de données valides (valeurs par défaut)
-  const hasValidRules = rules && (
-    rules.checkInTime !== '15:00' || 
-    rules.checkOutTime !== '11:00' ||
-    rules.smokingAllowed ||
-    rules.petsAllowed ||
-    rules.eventsAllowed ||
-    rules.selfCheckIn
-  )
+  const hasValidRules =
+    rules &&
+    (rules.checkInTime !== '15:00' ||
+      rules.checkOutTime !== '11:00' ||
+      rules.smokingAllowed ||
+      rules.petsAllowed ||
+      rules.eventsAllowed ||
+      rules.selfCheckIn)
 
   // Si pas de maxPeople et pas de règles valides, ne rien afficher
   if (!maxPeople && !hasValidRules) return null
@@ -52,7 +52,7 @@ export default function PropertyRules({ maxPeople, rules }: PropertyRulesProps) 
             </div>
           </div>
         )}
-        
+
         {(maxPeople || hasValidRules) && (
           <div>
             <h4 className='font-medium text-gray-900 mb-3'>Pendant le séjour</h4>
@@ -63,7 +63,8 @@ export default function PropertyRules({ maxPeople, rules }: PropertyRulesProps) 
                   <li>• {rules.smokingAllowed ? 'Fumeur autorisé' : 'Interdiction de fumer'}</li>
                   <li>• {rules.petsAllowed ? 'Animaux autorisés' : 'Animaux non autorisés'}</li>
                   <li>
-                    • {rules.eventsAllowed ? 'Événements autorisés' : "Pas de fêtes ou d'événements"}
+                    •{' '}
+                    {rules.eventsAllowed ? 'Événements autorisés' : "Pas de fêtes ou d'événements"}
                   </li>
                   <li>• Respecter le voisinage</li>
                 </>

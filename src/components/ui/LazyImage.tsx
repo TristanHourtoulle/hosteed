@@ -27,7 +27,7 @@ export function LazyImage({
   priority = false,
   quality = 75,
   onLoad,
-  onError
+  onError,
 }: LazyImageProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
@@ -46,7 +46,7 @@ export function LazyImage({
       },
       {
         rootMargin: '100px', // Commencer à charger 100px avant d'être visible
-        threshold: 0.1
+        threshold: 0.1,
       }
     )
 
@@ -72,10 +72,7 @@ export function LazyImage({
     return (
       <div
         ref={imgRef}
-        className={cn(
-          'bg-gray-100 flex items-center justify-center text-gray-400',
-          className
-        )}
+        className={cn('bg-gray-100 flex items-center justify-center text-gray-400', className)}
         style={{ width, height }}
       >
         <div className='text-center'>

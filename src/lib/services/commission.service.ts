@@ -42,7 +42,7 @@ async function getCommissionByTypeId(typeId: string): Promise<CommissionSettings
 
   // Check cache first
   const cached = typeCommissionCache.get(typeId)
-  if (cached && (now - cached.timestamp) < CACHE_DURATION) {
+  if (cached && now - cached.timestamp < CACHE_DURATION) {
     return cached.settings
   }
 
@@ -51,8 +51,8 @@ async function getCommissionByTypeId(typeId: string): Promise<CommissionSettings
     const commission = await prisma.commission.findUnique({
       where: {
         typeRentId: typeId,
-        isActive: true
-      }
+        isActive: true,
+      },
     })
 
     let settings: CommissionSettings
@@ -87,14 +87,14 @@ async function getCommissionByTypeId(typeId: string): Promise<CommissionSettings
 async function getCommissionSettings(): Promise<CommissionSettings> {
   const now = Date.now()
 
-  if (cachedCommissionSettings && (now - cacheTimestamp) < CACHE_DURATION) {
+  if (cachedCommissionSettings && now - cacheTimestamp < CACHE_DURATION) {
     return cachedCommissionSettings
   }
 
   try {
     const settings = await prisma.commissionSettings.findFirst({
       where: { isActive: true },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     })
 
     if (!settings) {
@@ -137,17 +137,15 @@ export async function calculateCommissions(
   typeId?: string
 ): Promise<CommissionCalculation> {
   // Use type-specific commission if typeId provided, otherwise fallback to global
-  const settings = typeId
-    ? await getCommissionByTypeId(typeId)
-    : await getCommissionSettings()
+  const settings = typeId ? await getCommissionByTypeId(typeId) : await getCommissionSettings()
 
   const hostCommissionRate = settings.hostCommissionRate || 0
   const hostCommissionFixed = settings.hostCommissionFixed || 0
   const clientCommissionRate = settings.clientCommissionRate || 0
   const clientCommissionFixed = settings.clientCommissionFixed || 0
 
-  const hostCommission = (basePrice * hostCommissionRate) + hostCommissionFixed
-  const clientCommission = (basePrice * clientCommissionRate) + clientCommissionFixed
+  const hostCommission = basePrice * hostCommissionRate + hostCommissionFixed
+  const clientCommission = basePrice * clientCommissionRate + clientCommissionFixed
 
   const hostReceives = basePrice - hostCommission
   const clientPays = basePrice + clientCommission
@@ -165,7 +163,7 @@ export async function calculateCommissions(
       hostCommissionFixed,
       clientCommissionRate,
       clientCommissionFixed,
-    }
+    },
   }
 }
 
@@ -183,7 +181,7 @@ export async function calculateTotalRentPrice(
   additionalFees?: number,
   typeId?: string
 ): Promise<CommissionCalculation> {
-  const totalBasePrice = (basePrice * numberOfNights) + (additionalFees || 0)
+  const totalBasePrice = basePrice * numberOfNights + (additionalFees || 0)
   return await calculateCommissions(totalBasePrice, typeId)
 }
 

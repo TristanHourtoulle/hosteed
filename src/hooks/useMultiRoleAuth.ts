@@ -10,11 +10,7 @@ interface UseMultiRoleAuthOptions {
 }
 
 export function useMultiRoleAuth(options: UseMultiRoleAuthOptions) {
-  const {
-    allowedRoles,
-    redirectTo = '/auth',
-    redirectUnauthorized = '/'
-  } = options
+  const { allowedRoles, redirectTo = '/auth', redirectUnauthorized = '/' } = options
 
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -53,21 +49,21 @@ export function useMultiRoleAuth(options: UseMultiRoleAuthOptions) {
 // Hook spécialisé pour l'accès admin (ADMIN + HOST_MANAGER)
 export function useAdminAuth() {
   return useMultiRoleAuth({
-    allowedRoles: ['ADMIN', 'HOST_MANAGER']
+    allowedRoles: ['ADMIN', 'HOST_MANAGER'],
   })
 }
 
 // Hook spécialisé pour l'accès admin complet (ADMIN seulement)
 export function useFullAdminAuth() {
   return useMultiRoleAuth({
-    allowedRoles: ['ADMIN']
+    allowedRoles: ['ADMIN'],
   })
 }
 
 // Hook spécialisé pour l'accès host (tous les rôles host + admin)
 export function useHostAuth() {
   return useMultiRoleAuth({
-    allowedRoles: ['HOST', 'HOST_VERIFIED', 'HOST_MANAGER', 'ADMIN']
+    allowedRoles: ['HOST', 'HOST_VERIFIED', 'HOST_MANAGER', 'ADMIN'],
   })
 }
 
@@ -94,7 +90,7 @@ export function canManageHosts(userRole: UserRole | null | undefined): boolean {
 // Hook spécialisé pour l'accès blog (BLOGWRITER + ADMIN)
 export function useBlogAuth() {
   return useMultiRoleAuth({
-    allowedRoles: ['ADMIN', 'BLOGWRITER']
+    allowedRoles: ['ADMIN', 'BLOGWRITER'],
   })
 }
 

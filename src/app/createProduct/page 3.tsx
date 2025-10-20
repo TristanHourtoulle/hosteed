@@ -238,18 +238,27 @@ export default function CreateProductPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [typesData, equipmentsData, mealsData, securitiesData, servicesData, includedServicesData, extrasData, highlightsData, usersData] =
-          await Promise.all([
-            findAllTypeRent(),
-            findAllEquipments(),
-            findAllMeals(),
-            findAllSecurity(),
-            findAllServices(),
-            loadIncludedServices(),
-            loadExtras(),
-            loadHighlights(),
-            findAllUser(),
-          ])
+        const [
+          typesData,
+          equipmentsData,
+          mealsData,
+          securitiesData,
+          servicesData,
+          includedServicesData,
+          extrasData,
+          highlightsData,
+          usersData,
+        ] = await Promise.all([
+          findAllTypeRent(),
+          findAllEquipments(),
+          findAllMeals(),
+          findAllSecurity(),
+          findAllServices(),
+          loadIncludedServices(),
+          loadExtras(),
+          loadHighlights(),
+          findAllUser(),
+        ])
 
         setTypes(typesData || [])
         setEquipments(equipmentsData || [])
@@ -1138,7 +1147,8 @@ export default function CreateProductPage() {
                   <div>
                     <CardTitle className='text-xl'>Services et Options</CardTitle>
                     <p className='text-slate-600 text-sm mt-1'>
-                      Sélectionnez les services inclus, extras payants et points forts de votre hébergement
+                      Sélectionnez les services inclus, extras payants et points forts de votre
+                      hébergement
                     </p>
                   </div>
                 </div>

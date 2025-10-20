@@ -14,10 +14,10 @@ interface PerformanceMonitorProps {
   userId?: string
 }
 
-export function PerformanceMonitor({ 
-  enabled = true, 
+export function PerformanceMonitor({
+  enabled = true,
   debug = false,
-  userId 
+  userId,
 }: PerformanceMonitorProps) {
   useEffect(() => {
     if (!enabled || typeof window === 'undefined') return
@@ -26,7 +26,7 @@ export function PerformanceMonitor({
 
     try {
       monitor = initializePerformanceMonitoring()
-      
+
       if (userId) {
         // Set user ID for better analytics
         localStorage.setItem('userId', userId)
@@ -37,7 +37,7 @@ export function PerformanceMonitor({
         const logMetrics = () => {
           const metrics = monitor.getMetrics()
           const alerts = monitor.getAlerts()
-          
+
           console.group('🔍 Performance Metrics Debug')
           console.table(metrics)
           if (alerts.length > 0) {
@@ -53,7 +53,6 @@ export function PerformanceMonitor({
           setTimeout(logMetrics, 2000) // Wait for metrics to be collected
         })
       }
-
     } catch (error) {
       console.error('Failed to initialize performance monitoring:', error)
     }
@@ -93,13 +92,14 @@ export function usePerformanceMonitoring(options: { trackComponentLoad?: boolean
   useEffect(() => {
     if (options.trackComponentLoad) {
       const startTime = performance.now()
-      
+
       return () => {
         const endTime = performance.now()
         const loadTime = endTime - startTime
-        
+
         // Track component load time
-        if (loadTime > 100) { // Only track if > 100ms
+        if (loadTime > 100) {
+          // Only track if > 100ms
           console.log(`🐌 Slow component load: ${loadTime.toFixed(2)}ms`)
         }
       }
@@ -110,19 +110,19 @@ export function usePerformanceMonitoring(options: { trackComponentLoad?: boolean
     trackEvent: (eventName: string) => {
       // Track custom performance events
       performance.mark(`${eventName}-start`)
-      
+
       return {
         end: () => {
           performance.mark(`${eventName}-end`)
           performance.measure(eventName, `${eventName}-start`, `${eventName}-end`)
-          
+
           const measure = performance.getEntriesByName(eventName)[0]
           if (measure && measure.duration > 50) {
             console.log(`📊 ${eventName}: ${measure.duration.toFixed(2)}ms`)
           }
-        }
+        },
       }
-    }
+    },
   }
 }
 

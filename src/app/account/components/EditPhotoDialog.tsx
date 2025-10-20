@@ -113,10 +113,10 @@ export function EditPhotoDialog({ currentPhoto, onPhotoUpdate }: EditPhotoDialog
       onPhotoUpdate(preview)
       setIsOpen(false)
       setPreview(null)
-      
+
       // Trigger a refresh of the user profile in the header
       refreshUserProfile()
-      
+
       toast.success('Photo de profil mise à jour avec succès')
     } catch (error) {
       console.error('Erreur:', error)

@@ -3,8 +3,8 @@ import prisma from '@/lib/prisma'
 export async function findAllRentsByUserIdWithProducts(userId: string) {
   try {
     const rents = await prisma.rent.findMany({
-      where: { 
-        userId 
+      where: {
+        userId,
       },
       include: {
         product: {
@@ -15,32 +15,32 @@ export async function findAllRentsByUserIdWithProducts(userId: string) {
                 id: true,
                 name: true,
                 image: true,
-              }
+              },
             },
             type: true,
             equipments: true,
             servicesList: true,
             mealsList: true,
             securities: true,
-          }
+          },
         },
         options: true,
         Review: {
           select: {
-            id: true
-          }
+            id: true,
+          },
         },
         user: {
           select: {
             id: true,
             name: true,
             email: true,
-          }
-        }
+          },
+        },
       },
       orderBy: {
-        arrivingDate: 'desc'
-      }
+        arrivingDate: 'desc',
+      },
     })
 
     return rents
@@ -64,14 +64,14 @@ export async function findRentByIdWithFullDetails(rentId: string) {
                 name: true,
                 image: true,
                 email: true,
-              }
+              },
             },
             type: true,
             equipments: true,
             servicesList: true,
             mealsList: true,
             securities: true,
-          }
+          },
         },
         options: true,
         Review: true,
@@ -80,9 +80,9 @@ export async function findRentByIdWithFullDetails(rentId: string) {
             id: true,
             name: true,
             email: true,
-          }
-        }
-      }
+          },
+        },
+      },
     })
 
     return rent
@@ -97,23 +97,23 @@ export async function getBulkRentsWithProducts(rentIds: string[]) {
     const rents = await prisma.rent.findMany({
       where: {
         id: {
-          in: rentIds
-        }
+          in: rentIds,
+        },
       },
       include: {
         product: {
           include: {
             img: true,
             type: true,
-          }
+          },
         },
         options: true,
         Review: {
           select: {
-            id: true
-          }
-        }
-      }
+            id: true,
+          },
+        },
+      },
     })
 
     return rents
@@ -128,38 +128,38 @@ export async function getUserRentStatistics(userId: string) {
     const [totalRents, activeRents, completedRents, upcomingRents, totalSpent] = await Promise.all([
       // Total reservations
       prisma.rent.count({
-        where: { userId }
+        where: { userId },
       }),
-      
+
       // Active reservations (in progress)
       prisma.rent.count({
         where: {
           userId,
-          status: 'CHECKIN'
-        }
+          status: 'CHECKIN',
+        },
       }),
-      
+
       // Completed reservations
       prisma.rent.count({
         where: {
           userId,
-          status: 'CHECKOUT'
-        }
+          status: 'CHECKOUT',
+        },
       }),
-      
+
       // Upcoming reservations
       prisma.rent.count({
         where: {
           userId,
           status: 'RESERVED',
           arrivingDate: {
-            gt: new Date()
-          }
-        }
+            gt: new Date(),
+          },
+        },
       }),
-      
+
       // Total amount spent - simplified
-      Promise.resolve({ _sum: { totalPrice: 0 } })
+      Promise.resolve({ _sum: { totalPrice: 0 } }),
     ])
 
     return {
@@ -167,7 +167,7 @@ export async function getUserRentStatistics(userId: string) {
       activeRents,
       completedRents,
       upcomingRents,
-      totalSpent: totalSpent._sum.totalPrice || 0
+      totalSpent: totalSpent._sum.totalPrice || 0,
     }
   } catch (error) {
     console.error('Error fetching user rent statistics:', error)

@@ -61,7 +61,7 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
   // Gestion du clic en dehors des suggestions
   useEffect(() => {
     if (!hasMounted) return
-    
+
     function handleClickOutside(event: MouseEvent) {
       if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
         setShowSuggestions(false)

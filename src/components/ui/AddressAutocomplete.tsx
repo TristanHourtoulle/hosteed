@@ -53,15 +53,17 @@ interface AddressAutocompleteProps {
   className?: string
   countryFilter?: string
   onAddressSelect?: (address: string, placeId?: string) => void
+  allowFreeInput?: boolean // Allow manual text input as fallback
 }
 
 export default function AddressAutocomplete({
   value,
   onChange,
-  placeholder = "Entrez une adresse...",
-  className = "",
-  countryFilter = "MG",
-  onAddressSelect
+  placeholder = 'Entrez une adresse...',
+  className = '',
+  countryFilter = 'MG',
+  onAddressSelect,
+  allowFreeInput = false,
 }: AddressAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<GooglePlacePrediction[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -74,7 +76,8 @@ export default function AddressAutocomplete({
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   useEffect(() => {
-    const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+    const token =
+      Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
     setSessionToken(token)
   }, [])
 
@@ -94,7 +97,7 @@ export default function AddressAutocomplete({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-    // Recherche avec debounce
+  // Recherche avec debounce
   useEffect(() => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current)
@@ -122,7 +125,7 @@ export default function AddressAutocomplete({
           types: 'address',
           language: 'fr',
           country: countryFilter,
-          sessionToken
+          sessionToken,
         })
 
         const response = await fetch(`/api/places/autocomplete?${params.toString()}`)
@@ -156,12 +159,12 @@ export default function AddressAutocomplete({
     }
   }, [value, countryFilter, sessionToken, selectedPlaceId])
 
-    const handleSuggestionClick = async (suggestion: GooglePlacePrediction) => {
+  const handleSuggestionClick = async (suggestion: GooglePlacePrediction) => {
     try {
       const params = new URLSearchParams({
         placeId: suggestion.place_id,
         fields: 'formatted_address,geometry',
-        sessionToken
+        sessionToken,
       })
 
       const response = await fetch(`/api/places/details?${params.toString()}`)
@@ -190,7 +193,6 @@ export default function AddressAutocomplete({
       // Masquer définitivement les suggestions après sélection
       setShowSuggestions(false)
       setSuggestions([])
-
     } catch (error) {
       console.error('Erreur lors de la récupération des détails:', error)
       onChange(suggestion.description)
@@ -216,25 +218,25 @@ export default function AddressAutocomplete({
 
     if (mainText && secondaryText) {
       return (
-        <div className="flex flex-col">
-          <span className="font-medium text-slate-900">{mainText}</span>
-          <span className="text-sm text-slate-500">{secondaryText}</span>
+        <div className='flex flex-col'>
+          <span className='font-medium text-slate-900'>{mainText}</span>
+          <span className='text-sm text-slate-500'>{secondaryText}</span>
         </div>
       )
     }
 
-    return <span className="text-slate-900">{suggestion.description}</span>
+    return <span className='text-slate-900'>{suggestion.description}</span>
   }
 
   return (
     <div className={`relative z-50 ${className}`}>
-      <div className="relative">
-        <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+      <div className='relative'>
+        <MapPin className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400' />
         <Input
           ref={inputRef}
-          type="text"
+          type='text'
           value={value}
-          onChange={(e) => {
+          onChange={e => {
             // Si l'utilisateur modifie l'adresse sélectionnée, réinitialiser l'état
             if (selectedPlaceId) {
               setSelectedPlaceId('')
@@ -256,47 +258,45 @@ export default function AddressAutocomplete({
 
         {value && (
           <button
-            type="button"
+            type='button'
             onClick={clearInput}
-            className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 hover:bg-slate-100 rounded-full transition-colors"
+            className='absolute right-3 top-1/2 transform -translate-y-1/2 p-1 hover:bg-slate-100 rounded-full transition-colors'
           >
-            <X className="h-4 w-4 text-slate-400 hover:text-slate-600" />
+            <X className='h-4 w-4 text-slate-400 hover:text-slate-600' />
           </button>
         )}
       </div>
       {showSuggestions && (
         <div
           ref={suggestionsRef}
-          className="absolute z-[99999] w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-2xl max-h-60 overflow-y-auto"
+          className='absolute z-[99999] w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-2xl max-h-60 overflow-y-auto'
           style={{
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)'
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)',
           }}
         >
           {isLoading ? (
-            <div className="flex items-center justify-center p-4">
-              <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
-              <span className="ml-2 text-sm text-slate-600">Recherche en cours...</span>
+            <div className='flex items-center justify-center p-4'>
+              <Loader2 className='h-5 w-5 animate-spin text-blue-600' />
+              <span className='ml-2 text-sm text-slate-600'>Recherche en cours...</span>
             </div>
           ) : suggestions.length > 0 ? (
-            <div className="py-2">
+            <div className='py-2'>
               {suggestions.map((suggestion, index) => (
                 <button
                   key={`${suggestion.place_id}-${index}`}
-                  type="button"
+                  type='button'
                   onClick={() => handleSuggestionClick(suggestion)}
-                  className="w-full px-4 py-3 text-left hover:bg-slate-50 focus:bg-slate-50 focus:outline-none transition-colors border-b border-slate-100 last:border-b-0"
+                  className='w-full px-4 py-3 text-left hover:bg-slate-50 focus:bg-slate-50 focus:outline-none transition-colors border-b border-slate-100 last:border-b-0'
                 >
-                  <div className="flex items-start gap-3">
-                    <MapPin className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      {formatSuggestion(suggestion)}
-                    </div>
+                  <div className='flex items-start gap-3'>
+                    <MapPin className='h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0' />
+                    <div className='flex-1 min-w-0'>{formatSuggestion(suggestion)}</div>
                   </div>
                 </button>
               ))}
             </div>
           ) : value.length >= 3 ? (
-            <div className="px-4 py-3 text-sm text-slate-500 text-center">
+            <div className='px-4 py-3 text-sm text-slate-500 text-center'>
               Aucune adresse trouvée
             </div>
           ) : null}
@@ -304,8 +304,8 @@ export default function AddressAutocomplete({
       )}
 
       {isLoading && !showSuggestions && (
-        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-          <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+        <div className='absolute right-3 top-1/2 transform -translate-y-1/2'>
+          <Loader2 className='h-4 w-4 animate-spin text-slate-400' />
         </div>
       )}
     </div>

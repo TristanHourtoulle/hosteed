@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 import { findAllRentByUserId, cancelRent } from '@/lib/services/rents.service'
 import { findProductById } from '@/lib/services/product.service'
 import Image from 'next/image'
@@ -112,7 +112,11 @@ const getStatusConfig = (
 }
 
 export default function ReservationsPage() {
-  const { data: session } = useSession()
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const [rents, setRents] = useState<Rent[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -120,7 +124,7 @@ export default function ReservationsPage() {
 
   useEffect(() => {
     const fetchRents = async () => {
-      if (!session?.user?.id) return
+      if (!isAuthenticated || !session?.user?.id) return
       console.log(await getActualProduct())
       try {
         setLoading(true)
@@ -150,7 +154,7 @@ export default function ReservationsPage() {
     }
 
     fetchRents()
-  }, [session])
+  }, [isAuthenticated, session])
 
   const handleCancel = async (rentId: string) => {
     if (!confirm('Êtes-vous sûr de vouloir annuler cette réservation ?')) return
@@ -167,39 +171,19 @@ export default function ReservationsPage() {
     }
   }
 
-  if (!session) {
+  if (isAuthLoading || loading) {
     return (
-      <div className='min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4'>
-        <Card className='w-full max-w-md'>
-          <CardContent className='p-8 text-center'>
-            <div className='w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4'>
-              <Users className='w-8 h-8 text-blue-600' />
-            </div>
-            <h2 className='text-2xl font-bold text-gray-900 mb-2'>Connexion requise</h2>
-            <p className='text-gray-600 mb-6'>Veuillez vous connecter pour voir vos réservations</p>
-            <Button asChild className='w-full'>
-              <Link href='/auth/signin'>Se connecter</Link>
-            </Button>
-          </CardContent>
-        </Card>
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='flex flex-col items-center gap-4'>
+          <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin'></div>
+          <p className='text-slate-600 text-lg'>Chargement...</p>
+        </div>
       </div>
     )
   }
 
-  if (loading) {
-    return (
-      <div className='min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4'>
-        <Card className='w-full max-w-md'>
-          <CardContent className='p-8 text-center'>
-            <div className='w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4'>
-              <Loader className='w-8 h-8 text-blue-600 animate-spin' />
-            </div>
-            <h2 className='text-2xl font-bold text-gray-900 mb-2'>Chargement</h2>
-            <p className='text-gray-600'>Récupération de vos réservations...</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
+  if (!session) {
+    return null
   }
 
   if (error) {

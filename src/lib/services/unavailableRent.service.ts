@@ -304,7 +304,7 @@ export async function findUnavailableByProductId(
       orderBy: { startDate: 'asc' },
     })
 
-    return unavailabilities.map((u) => ({
+    return unavailabilities.map(u => ({
       id: u.id,
       title: u.title,
       description: u.description,
@@ -340,7 +340,7 @@ export async function findUnavailableByHostId(hostId: string): Promise<Formatted
       orderBy: { startDate: 'asc' },
     })
 
-    return unavailabilities.map((u) => ({
+    return unavailabilities.map(u => ({
       id: u.id,
       title: u.title,
       description: u.description,

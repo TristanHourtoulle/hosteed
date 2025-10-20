@@ -7,10 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { rejectWithdrawalRequest } from '@/lib/services/withdrawal.service'
 
-export async function PUT(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const session = await auth()
 
@@ -30,17 +27,10 @@ export async function PUT(
     const { rejectionReason } = body
 
     if (!rejectionReason) {
-      return NextResponse.json(
-        { error: 'La raison du refus est requise' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'La raison du refus est requise' }, { status: 400 })
     }
 
-    const withdrawalRequest = await rejectWithdrawalRequest(
-      id,
-      session.user.id,
-      rejectionReason
-    )
+    const withdrawalRequest = await rejectWithdrawalRequest(id, session.user.id, rejectionReason)
 
     // TODO: Envoyer email de notification à l'hôte
 

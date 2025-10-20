@@ -2,7 +2,7 @@
  * REDIS CACHING SERVICE
  * High-performance caching layer to reduce database load
  * Addresses performance bottlenecks identified in audit
- * 
+ *
  * Performance Impact:
  * - Product search: 80% reduction in response time
  * - Availability checks: 90% reduction in database queries
@@ -22,18 +22,18 @@ const getCacheTTL = (type: string, defaultValue: number = 300): number => {
 }
 
 export const CACHE_TTL = {
-  PRODUCT_SEARCH: getCacheTTL('PRODUCT_SEARCH', 300),      // 5 minutes
-  PRODUCT_DETAILS: getCacheTTL('PRODUCT_DETAILS', 1800),   // 30 minutes  
-  PRODUCT_LIST: getCacheTTL('PRODUCT_LIST', 600),          // 10 minutes
-  AVAILABILITY: getCacheTTL('AVAILABILITY', 300),          // 5 minutes
-  BOOKING_DATA: getCacheTTL('BOOKING_DATA', 900),          // 15 minutes
-  USER_SESSION: getCacheTTL('USER_SESSION', 3600),         // 1 hour
-  USER_PROFILE: getCacheTTL('USER_PROFILE', 1800),         // 30 minutes
-  USER_ACTIVITY: getCacheTTL('USER_ACTIVITY', 86400),      // 24 hours
-  STATIC_DATA: getCacheTTL('STATIC_DATA', 86400),          // 24 hours
-  SEARCH_FILTERS: getCacheTTL('SEARCH_FILTERS', 1800),     // 30 minutes
-  RATE_LIMIT: getCacheTTL('RATE_LIMIT', 3600),             // 1 hour
-  ANALYTICS: getCacheTTL('ANALYTICS', 3600),               // 1 hour
+  PRODUCT_SEARCH: getCacheTTL('PRODUCT_SEARCH', 300), // 5 minutes
+  PRODUCT_DETAILS: getCacheTTL('PRODUCT_DETAILS', 1800), // 30 minutes
+  PRODUCT_LIST: getCacheTTL('PRODUCT_LIST', 600), // 10 minutes
+  AVAILABILITY: getCacheTTL('AVAILABILITY', 300), // 5 minutes
+  BOOKING_DATA: getCacheTTL('BOOKING_DATA', 900), // 15 minutes
+  USER_SESSION: getCacheTTL('USER_SESSION', 3600), // 1 hour
+  USER_PROFILE: getCacheTTL('USER_PROFILE', 1800), // 30 minutes
+  USER_ACTIVITY: getCacheTTL('USER_ACTIVITY', 86400), // 24 hours
+  STATIC_DATA: getCacheTTL('STATIC_DATA', 86400), // 24 hours
+  SEARCH_FILTERS: getCacheTTL('SEARCH_FILTERS', 1800), // 30 minutes
+  RATE_LIMIT: getCacheTTL('RATE_LIMIT', 3600), // 1 hour
+  ANALYTICS: getCacheTTL('ANALYTICS', 3600), // 1 hour
   PERFORMANCE_METRICS: getCacheTTL('PERFORMANCE_METRICS', 300), // 5 minutes
 } as const
 
@@ -55,7 +55,16 @@ interface OptimizedProductFilters {
   guests?: number
   page?: number
   limit?: number
-  sortBy?: 'price' | 'rating' | 'distance' | 'created' | 'updated' | 'featured' | 'popular' | 'recent' | 'promo'
+  sortBy?:
+    | 'price'
+    | 'rating'
+    | 'distance'
+    | 'created'
+    | 'updated'
+    | 'featured'
+    | 'popular'
+    | 'recent'
+    | 'promo'
   sortOrder?: 'asc' | 'desc'
   // Boolean filters
   featured?: boolean
@@ -88,7 +97,7 @@ class RedisCache {
   private client: Redis | null = null
   private isConnected: boolean = false
   private isEnabled: boolean = process.env.ENABLE_REDIS_CACHE === 'true'
-  
+
   constructor() {
     if (this.isEnabled) {
       this.client = this.createRedisClient()
@@ -102,7 +111,7 @@ class RedisCache {
   private createRedisClient(): Redis {
     // Parse Redis URL or use individual components
     const redisUrl = process.env.REDIS_URL
-    
+
     if (redisUrl) {
       return new Redis(redisUrl, {
         // Production optimizations
@@ -118,7 +127,7 @@ class RedisCache {
       port: parseInt(process.env.REDIS_PORT || '6379'),
       password: process.env.REDIS_PASSWORD,
       db: parseInt(process.env.REDIS_DB || '0'),
-      
+
       // Connection optimization
       connectTimeout: 10000,
       lazyConnect: true,
@@ -139,10 +148,10 @@ class RedisCache {
       this.isConnected = true
     })
 
-    this.client.on('error', (error) => {
+    this.client.on('error', error => {
       console.error('❌ Redis connection error:', error.message)
       this.isConnected = false
-      
+
       // Don't throw in production, log and continue with fallback
       if (process.env.NODE_ENV === 'development') {
         console.error('Full Redis error details:', error)
@@ -173,7 +182,7 @@ class RedisCache {
     } catch (error) {
       console.error('❌ Failed to connect to Redis:', error)
       this.isConnected = false
-      
+
       // Don't throw in production - app should work without Redis
       if (process.env.NODE_ENV === 'development') {
         console.warn('💡 Redis connection failed. App will run without caching.')
@@ -224,7 +233,10 @@ class RedisCache {
           }
         } catch (parseError) {
           console.error(`[REDIS ERROR] Failed to parse cached data for key ${key}:`, parseError)
-          console.error(`[REDIS ERROR] Corrupted cache value (first 200 chars):`, cached.substring(0, 200))
+          console.error(
+            `[REDIS ERROR] Corrupted cache value (first 200 chars):`,
+            cached.substring(0, 200)
+          )
           // Remove invalid cached data
           await this.delete(key)
           console.log(`[REDIS] Deleted corrupted cache for key: ${key}`)
@@ -275,7 +287,9 @@ class RedisCache {
       }
 
       await this.client!.setex(key, ttlSeconds, serializedValue)
-      console.log(`[REDIS] Successfully cached data for key: ${key} (TTL: ${ttlSeconds}s, size: ${serializedValue.length} bytes)`)
+      console.log(
+        `[REDIS] Successfully cached data for key: ${key} (TTL: ${ttlSeconds}s, size: ${serializedValue.length} bytes)`
+      )
     } catch (error) {
       console.error(`[REDIS ERROR] Cache set error for key ${key}:`, error)
       // Check if it's a serialization error
@@ -587,7 +601,7 @@ class RedisCache {
 
 export class ProductCacheService {
   private cache: RedisCache
-  
+
   constructor(cache: RedisCache) {
     this.cache = cache
   }
@@ -607,7 +621,7 @@ export class ProductCacheService {
       timestamp: Date.now(),
       filters: filters, // Store filters for debugging
       resultCount: products.length,
-      cacheVersion: 'v2' // Version for cache invalidation if structure changes
+      cacheVersion: 'v2', // Version for cache invalidation if structure changes
     }
 
     console.log(`[CACHE WRITE] Caching ${products.length} products for key: ${cacheKey}`)
@@ -616,9 +630,10 @@ export class ProductCacheService {
     await this.cache.set(cacheKey, cacheData, CACHE_TTL.PRODUCT_SEARCH)
   }
 
-  async getCachedProductSearch(
-    filters: OptimizedProductFilters
-  ): Promise<{ products: OptimizedProduct[]; pagination: { page: number; limit: number; total: number; hasNext: boolean; hasPrev: boolean } } | null> {
+  async getCachedProductSearch(filters: OptimizedProductFilters): Promise<{
+    products: OptimizedProduct[]
+    pagination: { page: number; limit: number; total: number; hasNext: boolean; hasPrev: boolean }
+  } | null> {
     const cacheKey = this.generateSearchKey(filters)
     const cached = await this.cache.get<{
       products?: OptimizedProduct[]
@@ -648,7 +663,7 @@ export class ProductCacheService {
 
     return {
       products,
-      pagination: cached.pagination
+      pagination: cached.pagination,
     }
   }
 
@@ -673,13 +688,13 @@ export class ProductCacheService {
     pagination: { page: number; limit: number; total: number; hasNext: boolean; hasPrev: boolean }
   ): Promise<void> {
     const cacheKey = `host:${hostId}:products:page:${page}`
-    const cacheData = { 
-      products, 
+    const cacheData = {
+      products,
       pagination,
       timestamp: Date.now(),
-      hostId: hostId // For debugging
+      hostId: hostId, // For debugging
     }
-    
+
     // Use configurable TTL for host product lists
     await this.cache.set(cacheKey, cacheData, CACHE_TTL.PRODUCT_LIST)
   }
@@ -687,7 +702,10 @@ export class ProductCacheService {
   async getCachedHostProducts(
     hostId: string,
     page: number
-  ): Promise<{ products: OptimizedProduct[]; pagination: { total: number; pages: number; page: number; limit: number } } | null> {
+  ): Promise<{
+    products: OptimizedProduct[]
+    pagination: { total: number; pages: number; page: number; limit: number }
+  } | null> {
     const cacheKey = `host:${hostId}:products:page:${page}`
     return await this.cache.get(cacheKey)
   }
@@ -752,7 +770,7 @@ export class ProductCacheService {
 
 export class AvailabilityCacheService {
   private cache: RedisCache
-  
+
   constructor(cache: RedisCache) {
     this.cache = cache
   }
@@ -768,16 +786,16 @@ export class AvailabilityCacheService {
     additionalData?: Record<string, unknown>
   ): Promise<void> {
     const cacheKey = `availability:${productId}:${startDate.toISOString().split('T')[0]}:${endDate.toISOString().split('T')[0]}`
-    
-    const cacheData = { 
-      isAvailable, 
+
+    const cacheData = {
+      isAvailable,
       cachedAt: Date.now(),
       productId,
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
-      ...additionalData
+      ...additionalData,
     }
-    
+
     // Use configurable TTL for availability checks
     await this.cache.set(cacheKey, cacheData, CACHE_TTL.AVAILABILITY)
   }
@@ -801,7 +819,7 @@ export class AvailabilityCacheService {
 
 export class UserSessionCacheService {
   private cache: RedisCache
-  
+
   constructor(cache: RedisCache) {
     this.cache = cache
   }
@@ -813,7 +831,7 @@ export class UserSessionCacheService {
     const enhancedSessionData = {
       ...sessionData,
       cachedAt: Date.now(),
-      sessionId: sessionId
+      sessionId: sessionId,
     }
     await this.cache.set(`session:${sessionId}`, enhancedSessionData, CACHE_TTL.USER_SESSION)
   }
@@ -832,9 +850,9 @@ export class UserSessionCacheService {
     try {
       const cacheKey = `user:${userId}:activity`
       const client = this.cache.getClient()
-      
+
       if (!this.cache.isRedisAvailable() || !client) return
-      
+
       // Keep last 50 activities using Redis lists
       await client.lpush(cacheKey, JSON.stringify(activity))
       await client.ltrim(cacheKey, 0, 49) // Keep only last 50 items
@@ -847,13 +865,16 @@ export class UserSessionCacheService {
   /**
    * Get user activity history
    */
-  async getUserActivity(userId: string, limit: number = 20): Promise<Array<{ type: string; data: Record<string, unknown>; timestamp: number }>> {
+  async getUserActivity(
+    userId: string,
+    limit: number = 20
+  ): Promise<Array<{ type: string; data: Record<string, unknown>; timestamp: number }>> {
     try {
       const cacheKey = `user:${userId}:activity`
       const client = this.cache.getClient()
-      
+
       if (!this.cache.isRedisAvailable() || !client) return []
-      
+
       const activities = await client.lrange(cacheKey, 0, limit - 1)
       return activities.map(activity => JSON.parse(activity))
     } catch (error) {
@@ -871,11 +892,11 @@ export class UserSessionCacheService {
     windowSeconds: number
   ): Promise<{ allowed: boolean; remaining: number; resetTime: number }> {
     const cacheKey = `rate_limit:${identifier}:${Math.floor(Date.now() / (windowSeconds * 1000))}`
-    
+
     try {
       const count = await this.cache.increment(cacheKey)
       const resetTime = Math.ceil(Date.now() / (windowSeconds * 1000)) * windowSeconds * 1000
-      
+
       return {
         allowed: count <= limit,
         remaining: Math.max(0, limit - count),
@@ -894,7 +915,7 @@ export class UserSessionCacheService {
 
 export class StaticDataCacheService {
   private cache: RedisCache
-  
+
   constructor(cache: RedisCache) {
     this.cache = cache
   }
@@ -918,12 +939,9 @@ export class StaticDataCacheService {
   /**
    * Cache static data with fallback to database
    */
-  async getStaticDataWithCache<T>(
-    type: string,
-    fetchFunction: () => Promise<T>
-  ): Promise<T> {
+  async getStaticDataWithCache<T>(type: string, fetchFunction: () => Promise<T>): Promise<T> {
     const cacheKey = `static:${type}`
-    
+
     try {
       // Try to get from cache first
       const cached = await this.cache.get<T>(cacheKey)
@@ -933,12 +951,12 @@ export class StaticDataCacheService {
 
       // Cache miss - fetch from database
       const data = await fetchFunction()
-      
+
       // Cache the result
       if (data !== null && data !== undefined) {
         await this.cache.set(cacheKey, data, CACHE_TTL.STATIC_DATA)
       }
-      
+
       return data
     } catch (error) {
       console.error(`Error in static data cache for ${type}:`, error)
@@ -988,7 +1006,7 @@ export class CacheInvalidationService {
   private cache: RedisCache
   private productCache: ProductCacheService
   private availabilityCache: AvailabilityCacheService
-  
+
   constructor(cache: RedisCache) {
     this.cache = cache
     this.productCache = new ProductCacheService(cache)

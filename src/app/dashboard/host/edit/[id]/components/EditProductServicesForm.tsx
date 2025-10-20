@@ -85,7 +85,7 @@ export default function EditProductServicesForm({
   onServiceCreated,
   onExtraCreated,
   onHighlightCreated,
-  itemVariants
+  itemVariants,
 }: EditProductServicesFormProps) {
   const [serviceModalOpen, setServiceModalOpen] = useState(false)
   const [extraModalOpen, setExtraModalOpen] = useState(false)
@@ -307,8 +307,8 @@ export default function EditProductServicesForm({
         isOpen={serviceModalOpen}
         onClose={() => setServiceModalOpen(false)}
         onServiceCreated={onServiceCreated}
-        title="Créer un nouveau service"
-        description="Ajoutez un nouveau service à votre hébergement"
+        title='Créer un nouveau service'
+        description='Ajoutez un nouveau service à votre hébergement'
       />
 
       <CreateExtraModal

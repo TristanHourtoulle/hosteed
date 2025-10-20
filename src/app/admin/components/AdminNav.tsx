@@ -241,7 +241,7 @@ export function AdminNav() {
     .filter(group => hasRequiredRole(group.requiredRoles))
     .map(group => ({
       ...group,
-      items: group.items.filter(item => hasRequiredRole(item.requiredRoles))
+      items: group.items.filter(item => hasRequiredRole(item.requiredRoles)),
     }))
     .filter(group => group.items.length > 0) // Remove groups with no visible items
 

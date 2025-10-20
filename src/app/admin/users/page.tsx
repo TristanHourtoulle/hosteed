@@ -1,8 +1,8 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useAuth } from '@/hooks/useAuth'
 import { isFullAdmin } from '@/hooks/useAdminAuth'
 import { createUser } from '@/lib/services/user.service'
 import { User } from '@prisma/client'
@@ -81,9 +81,13 @@ const itemVariants: Variants = {
 }
 
 export default function UsersPage() {
-  const { data: session } = useSession()
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
-  
+
   // Use optimized pagination hook
   const {
     users,
@@ -214,22 +218,26 @@ export default function UsersPage() {
   }
 
   useEffect(() => {
-    if (!session?.user?.roles || !isFullAdmin(session.user.roles)) {
+    if (isAuthenticated && (!session?.user?.roles || !isFullAdmin(session.user.roles))) {
       router.push('/')
     }
-  }, [session, router])
+  }, [isAuthenticated, session, router])
 
   // Remove manual data fetching - handled by hook now
 
-  if (loading) {
+  if (isAuthLoading || loading) {
     return (
-      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center'>
-        <div className='flex items-center gap-3'>
-          <Loader2 className='h-8 w-8 animate-spin text-blue-600' />
-          <p className='text-gray-600 text-lg'>Chargement des utilisateurs...</p>
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='flex flex-col items-center gap-4'>
+          <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin'></div>
+          <p className='text-slate-600 text-lg'>Chargement...</p>
         </div>
       </div>
     )
+  }
+
+  if (!session) {
+    return null
   }
 
   if (error || hookError) {
@@ -237,7 +245,9 @@ export default function UsersPage() {
       <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-8'>
         <div className='max-w-7xl mx-auto'>
           <Alert variant='destructive' className='rounded-2xl'>
-            <AlertDescription>{error || hookError?.message || 'Erreur lors du chargement'}</AlertDescription>
+            <AlertDescription>
+              {error || hookError?.message || 'Erreur lors du chargement'}
+            </AlertDescription>
           </Alert>
         </div>
       </div>
@@ -297,7 +307,7 @@ export default function UsersPage() {
             const count = users.filter(user => user.roles === role).length
             return (
               <motion.div key={role} variants={itemVariants}>
-                <Card 
+                <Card
                   className='border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 backdrop-blur-sm cursor-pointer'
                   onClick={() => handleRoleFilter(roleFilter === role ? '' : role)}
                 >
@@ -314,7 +324,9 @@ export default function UsersPage() {
                                 : 'Utilisateurs'}
                           {roleFilter === role && ' (Filtré)'}
                         </p>
-                        <p className='text-2xl font-bold text-gray-900'>{roleFilter === role ? pagination.totalItems : count}</p>
+                        <p className='text-2xl font-bold text-gray-900'>
+                          {roleFilter === role ? pagination.totalItems : count}
+                        </p>
                       </div>
                       <RoleIcon role={role} size='md' />
                     </div>
@@ -568,7 +580,7 @@ export default function UsersPage() {
         {/* Results summary */}
         {users.length > 0 && (
           <div className='mt-4 text-center text-sm text-gray-500'>
-            Affichage de {((pagination.currentPage - 1) * pagination.itemsPerPage) + 1} à{' '}
+            Affichage de {(pagination.currentPage - 1) * pagination.itemsPerPage + 1} à{' '}
             {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} sur{' '}
             {pagination.totalItems} utilisateurs
           </div>

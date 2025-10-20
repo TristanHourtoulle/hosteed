@@ -13,14 +13,14 @@
  */
 
 import { useEffect, useState } from 'react'
-import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
 import { toast } from 'sonner'
 import {
   WithdrawalStatus,
   PaymentMethod,
   type WithdrawalRequest as PrismaWithdrawalRequest,
-  type PaymentAccount
+  type PaymentAccount,
 } from '@prisma/client'
 
 // Type étendu avec les relations
@@ -55,7 +55,11 @@ type HostBalance = {
 }
 
 export default function AdminWithdrawalsPage() {
-  const { data: session, status } = useSession()
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
 
   const [requests, setRequests] = useState<WithdrawalRequest[]>([])
@@ -90,14 +94,9 @@ export default function AdminWithdrawalsPage() {
   })
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth')
-      return
-    }
-
-    if (status === 'authenticated') {
+    if (isAuthenticated) {
       // Vérifier les permissions
-      if (!session.user.roles || !['ADMIN', 'HOST_MANAGER'].includes(session.user.roles)) {
+      if (!session?.user.roles || !['ADMIN', 'HOST_MANAGER'].includes(session.user.roles)) {
         toast.error('Accès non autorisé')
         router.push('/dashboard')
         return
@@ -106,7 +105,7 @@ export default function AdminWithdrawalsPage() {
       fetchRequests()
       fetchHosts()
     }
-  }, [status, router, session])
+  }, [isAuthenticated, router, session])
 
   const fetchRequests = async () => {
     console.log('🔄 [fetchRequests] Début du chargement des demandes')
@@ -115,9 +114,8 @@ export default function AdminWithdrawalsPage() {
 
     try {
       setLoading(true)
-      const url = filter === 'ALL'
-        ? '/api/admin/withdrawals'
-        : `/api/admin/withdrawals?status=${filter}`
+      const url =
+        filter === 'ALL' ? '/api/admin/withdrawals' : `/api/admin/withdrawals?status=${filter}`
 
       console.log('🌐 [fetchRequests] URL appelée:', url)
 
@@ -133,7 +131,10 @@ export default function AdminWithdrawalsPage() {
       if (response.ok) {
         const data = await response.json()
         console.log('✅ [fetchRequests] Données reçues:', data.requests.length, 'demandes')
-        console.log('📝 [fetchRequests] Détails des demandes:', data.requests.map((r: WithdrawalRequest) => ({ id: r.id, status: r.status })))
+        console.log(
+          '📝 [fetchRequests] Détails des demandes:',
+          data.requests.map((r: WithdrawalRequest) => ({ id: r.id, status: r.status }))
+        )
         setRequests(data.requests)
         console.log('💾 [fetchRequests] State mis à jour')
       } else {
@@ -184,9 +185,9 @@ export default function AdminWithdrawalsPage() {
   }
 
   const handleApprove = async (requestId: string) => {
-    console.log('✅ [handleApprove] Début de l\'approbation pour:', requestId)
+    console.log("✅ [handleApprove] Début de l'approbation pour:", requestId)
     if (!confirm('Approuver cette demande de retrait ?')) {
-      console.log('⏸️ [handleApprove] Annulé par l\'utilisateur')
+      console.log("⏸️ [handleApprove] Annulé par l'utilisateur")
       return
     }
 
@@ -195,7 +196,7 @@ export default function AdminWithdrawalsPage() {
       const response = await fetch(`/api/admin/withdrawals/${requestId}/approve`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminNotes: 'Approuvé' })
+        body: JSON.stringify({ adminNotes: 'Approuvé' }),
       })
 
       console.log('📥 [handleApprove] Réponse reçue, status:', response.status)
@@ -209,11 +210,11 @@ export default function AdminWithdrawalsPage() {
       } else {
         const error = await response.json()
         console.error('❌ [handleApprove] Erreur:', error)
-        toast.error(error.error || 'Erreur lors de l\'approbation')
+        toast.error(error.error || "Erreur lors de l'approbation")
       }
     } catch (error) {
       console.error('❌ [handleApprove] Exception:', error)
-      toast.error('Erreur lors de l\'approbation')
+      toast.error("Erreur lors de l'approbation")
     }
   }
 
@@ -221,7 +222,7 @@ export default function AdminWithdrawalsPage() {
     console.log('❌ [handleReject] Début du rejet pour:', requestId)
     const reason = prompt('Raison du refus :')
     if (!reason) {
-      console.log('⏸️ [handleReject] Annulé par l\'utilisateur')
+      console.log("⏸️ [handleReject] Annulé par l'utilisateur")
       return
     }
 
@@ -230,7 +231,7 @@ export default function AdminWithdrawalsPage() {
       const response = await fetch(`/api/admin/withdrawals/${requestId}/reject`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rejectionReason: reason })
+        body: JSON.stringify({ rejectionReason: reason }),
       })
 
       console.log('📥 [handleReject] Réponse reçue, status:', response.status)
@@ -255,14 +256,14 @@ export default function AdminWithdrawalsPage() {
   const handleMarkPaid = async (requestId: string) => {
     console.log('💰 [handleMarkPaid] Début du marquage comme payé pour:', requestId)
     if (!confirm('Marquer cette demande comme payée ?')) {
-      console.log('⏸️ [handleMarkPaid] Annulé par l\'utilisateur')
+      console.log("⏸️ [handleMarkPaid] Annulé par l'utilisateur")
       return
     }
 
     try {
       console.log('📤 [handleMarkPaid] Envoi de la requête PUT...')
       const response = await fetch(`/api/admin/withdrawals/${requestId}/mark-paid`, {
-        method: 'PUT'
+        method: 'PUT',
       })
 
       console.log('📥 [handleMarkPaid] Réponse reçue, status:', response.status)
@@ -287,15 +288,18 @@ export default function AdminWithdrawalsPage() {
   const handleValidateAccount = async (accountId: string) => {
     console.log('🏦 [handleValidateAccount] Début de la validation pour:', accountId)
     if (!confirm('Valider ce compte de paiement ?')) {
-      console.log('⏸️ [handleValidateAccount] Annulé par l\'utilisateur')
+      console.log("⏸️ [handleValidateAccount] Annulé par l'utilisateur")
       return
     }
 
     try {
       console.log('📤 [handleValidateAccount] Envoi de la requête PUT...')
-      const response = await fetch(`/api/admin/withdrawals/payment-accounts/${accountId}/validate`, {
-        method: 'PUT'
-      })
+      const response = await fetch(
+        `/api/admin/withdrawals/payment-accounts/${accountId}/validate`,
+        {
+          method: 'PUT',
+        }
+      )
 
       console.log('📥 [handleValidateAccount] Réponse reçue, status:', response.status)
 
@@ -322,7 +326,7 @@ export default function AdminWithdrawalsPage() {
     console.log('💵 [handleCreateWithdrawal] Montant:', withdrawalForm.amount)
 
     if (!selectedHost) {
-      console.log('❌ [handleCreateWithdrawal] Pas d\'hôte sélectionné')
+      console.log("❌ [handleCreateWithdrawal] Pas d'hôte sélectionné")
       toast.error('Veuillez sélectionner un hôte')
       return
     }
@@ -447,12 +451,19 @@ export default function AdminWithdrawalsPage() {
     return labels[method] || method
   }
 
-  if (loading || status === 'loading') {
+  if (isAuthLoading || loading) {
     return (
       <div className='min-h-screen flex items-center justify-center'>
-        <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600'></div>
+        <div className='flex flex-col items-center gap-4'>
+          <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin'></div>
+          <p className='text-slate-600 text-lg'>Chargement...</p>
+        </div>
       </div>
     )
+  }
+
+  if (!session) {
+    return null
   }
 
   return (
@@ -476,7 +487,7 @@ export default function AdminWithdrawalsPage() {
               </label>
               <select
                 value={selectedHost}
-                onChange={(e) => setSelectedHost(e.target.value)}
+                onChange={e => setSelectedHost(e.target.value)}
                 className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
               >
                 <option value=''>-- Choisir un hôte --</option>
@@ -498,11 +509,15 @@ export default function AdminWithdrawalsPage() {
                   </div>
                   <div>
                     <p className='text-blue-600'>Retiré</p>
-                    <p className='font-bold text-blue-900'>{hostBalance.totalWithdrawn.toFixed(2)}€</p>
+                    <p className='font-bold text-blue-900'>
+                      {hostBalance.totalWithdrawn.toFixed(2)}€
+                    </p>
                   </div>
                   <div>
                     <p className='text-blue-600'>Disponible</p>
-                    <p className='font-bold text-green-600'>{hostBalance.availableBalance.toFixed(2)}€</p>
+                    <p className='font-bold text-green-600'>
+                      {hostBalance.availableBalance.toFixed(2)}€
+                    </p>
                   </div>
                 </div>
               </div>
@@ -583,12 +598,24 @@ export default function AdminWithdrawalsPage() {
             <table className='min-w-full divide-y divide-gray-200'>
               <thead className='bg-gray-50'>
                 <tr>
-                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>Hôte</th>
-                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>Montant</th>
-                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>Méthode</th>
-                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>Statut</th>
-                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>Date</th>
-                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>Actions</th>
+                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
+                    Hôte
+                  </th>
+                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
+                    Montant
+                  </th>
+                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
+                    Méthode
+                  </th>
+                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
+                    Statut
+                  </th>
+                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
+                    Date
+                  </th>
+                  <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase'>
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className='bg-white divide-y divide-gray-200'>
@@ -599,7 +626,7 @@ export default function AdminWithdrawalsPage() {
                     </td>
                   </tr>
                 ) : (
-                  requests.map((request) => (
+                  requests.map(request => (
                     <tr key={request.id} className='hover:bg-gray-50'>
                       <td className='px-6 py-4'>
                         <div>
@@ -608,11 +635,15 @@ export default function AdminWithdrawalsPage() {
                         </div>
                       </td>
                       <td className='px-6 py-4 whitespace-nowrap'>
-                        <p className='text-sm font-bold text-gray-900'>{request.amount.toFixed(2)}€</p>
+                        <p className='text-sm font-bold text-gray-900'>
+                          {request.amount.toFixed(2)}€
+                        </p>
                       </td>
                       <td className='px-6 py-4 whitespace-nowrap'>
                         <div>
-                          <p className='text-sm text-gray-900'>{getPaymentMethodLabel(request.paymentMethod)}</p>
+                          <p className='text-sm text-gray-900'>
+                            {getPaymentMethodLabel(request.paymentMethod)}
+                          </p>
                           {!request.paymentAccount?.isValidated && (
                             <p className='text-xs text-orange-600'>Non validé</p>
                           )}
@@ -626,14 +657,15 @@ export default function AdminWithdrawalsPage() {
                       </td>
                       <td className='px-6 py-4 whitespace-nowrap text-sm'>
                         <div className='flex gap-2'>
-                          {request.status === WithdrawalStatus.ACCOUNT_VALIDATION && request.paymentAccount && (
-                            <button
-                              onClick={() => handleValidateAccount(request.paymentAccount!.id)}
-                              className='text-orange-600 hover:text-orange-900'
-                            >
-                              Valider compte
-                            </button>
-                          )}
+                          {request.status === WithdrawalStatus.ACCOUNT_VALIDATION &&
+                            request.paymentAccount && (
+                              <button
+                                onClick={() => handleValidateAccount(request.paymentAccount!.id)}
+                                className='text-orange-600 hover:text-orange-900'
+                              >
+                                Valider compte
+                              </button>
+                            )}
                           {request.status === WithdrawalStatus.PENDING && (
                             <>
                               <button
@@ -674,15 +706,18 @@ export default function AdminWithdrawalsPage() {
             <div className='bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto'>
               <div className='p-6'>
                 <div className='flex justify-between items-center mb-6'>
-                  <h2 className='text-2xl font-bold text-gray-900'>
-                    Créer une demande de retrait
-                  </h2>
+                  <h2 className='text-2xl font-bold text-gray-900'>Créer une demande de retrait</h2>
                   <button
                     onClick={() => setShowCreateModal(false)}
                     className='text-gray-400 hover:text-gray-600'
                   >
                     <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                      <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M6 18L18 6M6 6l12 12' />
+                      <path
+                        strokeLinecap='round'
+                        strokeLinejoin='round'
+                        strokeWidth={2}
+                        d='M6 18L18 6M6 6l12 12'
+                      />
                     </svg>
                   </button>
                 </div>
@@ -690,21 +725,29 @@ export default function AdminWithdrawalsPage() {
                 {/* Informations hôte */}
                 <div className='bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6'>
                   <p className='text-sm font-medium text-blue-900 mb-2'>
-                    Hôte : {hosts.find(h => h.id === selectedHost)?.name || hosts.find(h => h.id === selectedHost)?.email}
+                    Hôte :{' '}
+                    {hosts.find(h => h.id === selectedHost)?.name ||
+                      hosts.find(h => h.id === selectedHost)?.email}
                   </p>
                   {hostBalance && (
                     <div className='grid grid-cols-3 gap-4 text-sm'>
                       <div>
                         <p className='text-blue-600'>Total gagné</p>
-                        <p className='font-bold text-blue-900'>{hostBalance.totalEarned.toFixed(2)}€</p>
+                        <p className='font-bold text-blue-900'>
+                          {hostBalance.totalEarned.toFixed(2)}€
+                        </p>
                       </div>
                       <div>
                         <p className='text-blue-600'>Déjà retiré</p>
-                        <p className='font-bold text-blue-900'>{hostBalance.totalWithdrawn.toFixed(2)}€</p>
+                        <p className='font-bold text-blue-900'>
+                          {hostBalance.totalWithdrawn.toFixed(2)}€
+                        </p>
                       </div>
                       <div>
                         <p className='text-green-600'>Disponible</p>
-                        <p className='font-bold text-green-900'>{hostBalance.availableBalance.toFixed(2)}€</p>
+                        <p className='font-bold text-green-900'>
+                          {hostBalance.availableBalance.toFixed(2)}€
+                        </p>
                       </div>
                     </div>
                   )}
@@ -723,7 +766,9 @@ export default function AdminWithdrawalsPage() {
                       min='0'
                       max={hostBalance?.availableBalance || 0}
                       value={withdrawalForm.amount}
-                      onChange={(e) => setWithdrawalForm({ ...withdrawalForm, amount: e.target.value })}
+                      onChange={e =>
+                        setWithdrawalForm({ ...withdrawalForm, amount: e.target.value })
+                      }
                       className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
                       placeholder='0.00'
                     />
@@ -741,7 +786,12 @@ export default function AdminWithdrawalsPage() {
                     </label>
                     <select
                       value={withdrawalForm.withdrawalType}
-                      onChange={(e) => setWithdrawalForm({ ...withdrawalForm, withdrawalType: e.target.value as 'PARTIAL_50' | 'FULL_100' })}
+                      onChange={e =>
+                        setWithdrawalForm({
+                          ...withdrawalForm,
+                          withdrawalType: e.target.value as 'PARTIAL_50' | 'FULL_100',
+                        })
+                      }
                       className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
                     >
                       <option value='PARTIAL_50'>Partiel 50% (selon contrat)</option>
@@ -756,7 +806,12 @@ export default function AdminWithdrawalsPage() {
                     </label>
                     <select
                       value={withdrawalForm.paymentMethod}
-                      onChange={(e) => setWithdrawalForm({ ...withdrawalForm, paymentMethod: e.target.value as PaymentMethod })}
+                      onChange={e =>
+                        setWithdrawalForm({
+                          ...withdrawalForm,
+                          paymentMethod: e.target.value as PaymentMethod,
+                        })
+                      }
                       className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
                     >
                       <option value='SEPA_VIREMENT'>SEPA</option>
@@ -766,7 +821,8 @@ export default function AdminWithdrawalsPage() {
                       <option value='MONEYGRAM'>MoneyGram</option>
                     </select>
                     <p className='text-xs text-gray-500 mt-1'>
-                      Note : Le compte de paiement de l'hôte sera utilisé s'il existe, sinon un nouveau sera créé.
+                      Note : Le compte de paiement de l'hôte sera utilisé s'il existe, sinon un
+                      nouveau sera créé.
                     </p>
                   </div>
 
@@ -780,7 +836,12 @@ export default function AdminWithdrawalsPage() {
                         <input
                           type='text'
                           value={paymentDetails.accountHolderName}
-                          onChange={(e) => setPaymentDetails({ ...paymentDetails, accountHolderName: e.target.value })}
+                          onChange={e =>
+                            setPaymentDetails({
+                              ...paymentDetails,
+                              accountHolderName: e.target.value,
+                            })
+                          }
                           className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
                           placeholder='Jean Dupont'
                         />
@@ -792,7 +853,9 @@ export default function AdminWithdrawalsPage() {
                         <input
                           type='text'
                           value={paymentDetails.iban}
-                          onChange={(e) => setPaymentDetails({ ...paymentDetails, iban: e.target.value })}
+                          onChange={e =>
+                            setPaymentDetails({ ...paymentDetails, iban: e.target.value })
+                          }
                           className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
                           placeholder='FR76 XXXX XXXX XXXX XXXX XXXX XXX'
                         />
@@ -809,7 +872,12 @@ export default function AdminWithdrawalsPage() {
                         <input
                           type='text'
                           value={paymentDetails.accountHolderName}
-                          onChange={(e) => setPaymentDetails({ ...paymentDetails, accountHolderName: e.target.value })}
+                          onChange={e =>
+                            setPaymentDetails({
+                              ...paymentDetails,
+                              accountHolderName: e.target.value,
+                            })
+                          }
                           className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
                           placeholder='Jean Dupont'
                         />
@@ -821,7 +889,9 @@ export default function AdminWithdrawalsPage() {
                         <input
                           type='text'
                           value={paymentDetails.cardNumber}
-                          onChange={(e) => setPaymentDetails({ ...paymentDetails, cardNumber: e.target.value })}
+                          onChange={e =>
+                            setPaymentDetails({ ...paymentDetails, cardNumber: e.target.value })
+                          }
                           className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
                           placeholder='1234 5678 9012 3456'
                         />
@@ -833,7 +903,9 @@ export default function AdminWithdrawalsPage() {
                         <input
                           type='email'
                           value={paymentDetails.cardEmail}
-                          onChange={(e) => setPaymentDetails({ ...paymentDetails, cardEmail: e.target.value })}
+                          onChange={e =>
+                            setPaymentDetails({ ...paymentDetails, cardEmail: e.target.value })
+                          }
                           className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
                           placeholder='email@example.com'
                         />
@@ -850,7 +922,12 @@ export default function AdminWithdrawalsPage() {
                         <input
                           type='text'
                           value={paymentDetails.accountHolderName}
-                          onChange={(e) => setPaymentDetails({ ...paymentDetails, accountHolderName: e.target.value })}
+                          onChange={e =>
+                            setPaymentDetails({
+                              ...paymentDetails,
+                              accountHolderName: e.target.value,
+                            })
+                          }
                           className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
                           placeholder='Jean Dupont'
                         />
@@ -862,7 +939,9 @@ export default function AdminWithdrawalsPage() {
                         <input
                           type='tel'
                           value={paymentDetails.mobileNumber}
-                          onChange={(e) => setPaymentDetails({ ...paymentDetails, mobileNumber: e.target.value })}
+                          onChange={e =>
+                            setPaymentDetails({ ...paymentDetails, mobileNumber: e.target.value })
+                          }
                           className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
                           placeholder='+261 XX XX XXX XX'
                         />
@@ -879,7 +958,9 @@ export default function AdminWithdrawalsPage() {
                         <input
                           type='text'
                           value={paymentDetails.paypalUsername}
-                          onChange={(e) => setPaymentDetails({ ...paymentDetails, paypalUsername: e.target.value })}
+                          onChange={e =>
+                            setPaymentDetails({ ...paymentDetails, paypalUsername: e.target.value })
+                          }
                           className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
                           placeholder='@username'
                         />
@@ -891,7 +972,9 @@ export default function AdminWithdrawalsPage() {
                         <input
                           type='email'
                           value={paymentDetails.paypalEmail}
-                          onChange={(e) => setPaymentDetails({ ...paymentDetails, paypalEmail: e.target.value })}
+                          onChange={e =>
+                            setPaymentDetails({ ...paymentDetails, paypalEmail: e.target.value })
+                          }
                           className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
                           placeholder='email@example.com'
                         />
@@ -903,7 +986,9 @@ export default function AdminWithdrawalsPage() {
                         <input
                           type='tel'
                           value={paymentDetails.paypalPhone}
-                          onChange={(e) => setPaymentDetails({ ...paymentDetails, paypalPhone: e.target.value })}
+                          onChange={e =>
+                            setPaymentDetails({ ...paymentDetails, paypalPhone: e.target.value })
+                          }
                           className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
                           placeholder='+33 X XX XX XX XX'
                         />
@@ -915,7 +1000,9 @@ export default function AdminWithdrawalsPage() {
                         <input
                           type='text'
                           value={paymentDetails.paypalIban}
-                          onChange={(e) => setPaymentDetails({ ...paymentDetails, paypalIban: e.target.value })}
+                          onChange={e =>
+                            setPaymentDetails({ ...paymentDetails, paypalIban: e.target.value })
+                          }
                           className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
                           placeholder='FR76 XXXX XXXX XXXX XXXX XXXX XXX'
                         />
@@ -932,7 +1019,12 @@ export default function AdminWithdrawalsPage() {
                         <input
                           type='text'
                           value={paymentDetails.moneygramFullName}
-                          onChange={(e) => setPaymentDetails({ ...paymentDetails, moneygramFullName: e.target.value })}
+                          onChange={e =>
+                            setPaymentDetails({
+                              ...paymentDetails,
+                              moneygramFullName: e.target.value,
+                            })
+                          }
                           className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
                           placeholder='Jean Dupont'
                         />
@@ -944,7 +1036,9 @@ export default function AdminWithdrawalsPage() {
                         <input
                           type='tel'
                           value={paymentDetails.moneygramPhone}
-                          onChange={(e) => setPaymentDetails({ ...paymentDetails, moneygramPhone: e.target.value })}
+                          onChange={e =>
+                            setPaymentDetails({ ...paymentDetails, moneygramPhone: e.target.value })
+                          }
                           className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
                           placeholder='+261 XX XX XXX XX'
                         />
@@ -959,7 +1053,9 @@ export default function AdminWithdrawalsPage() {
                     </label>
                     <textarea
                       value={withdrawalForm.notes}
-                      onChange={(e) => setWithdrawalForm({ ...withdrawalForm, notes: e.target.value })}
+                      onChange={e =>
+                        setWithdrawalForm({ ...withdrawalForm, notes: e.target.value })
+                      }
                       className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500'
                       rows={3}
                       placeholder='Notes additionnelles...'

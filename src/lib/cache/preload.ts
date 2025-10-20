@@ -15,28 +15,12 @@ export async function preloadStaticData() {
         findAllEquipments,
         1000 * 60 * 60 * 24 // 24 hours
       ),
-      prefetchQuery(
-        CACHE_TAGS.staticData.meals,
-        findAllMeals,
-        1000 * 60 * 60 * 24
-      ),
-      prefetchQuery(
-        CACHE_TAGS.staticData.services,
-        findAllServices,
-        1000 * 60 * 60 * 24
-      ),
-      prefetchQuery(
-        CACHE_TAGS.staticData.security,
-        findAllSecurity,
-        1000 * 60 * 60 * 24
-      ),
-      prefetchQuery(
-        CACHE_TAGS.staticData.typeRent,
-        findAllTypeRent,
-        1000 * 60 * 60 * 24
-      ),
+      prefetchQuery(CACHE_TAGS.staticData.meals, findAllMeals, 1000 * 60 * 60 * 24),
+      prefetchQuery(CACHE_TAGS.staticData.services, findAllServices, 1000 * 60 * 60 * 24),
+      prefetchQuery(CACHE_TAGS.staticData.security, findAllSecurity, 1000 * 60 * 60 * 24),
+      prefetchQuery(CACHE_TAGS.staticData.typeRent, findAllTypeRent, 1000 * 60 * 60 * 24),
     ])
-    
+
     console.log('Static data preloaded successfully')
   } catch (error) {
     console.error('Error preloading static data:', error)
@@ -51,7 +35,7 @@ export async function preloadProducts() {
       findAllProducts,
       1000 * 60 * 5 // 5 minutes
     )
-    
+
     console.log('Products preloaded successfully')
   } catch (error) {
     console.error('Error preloading products:', error)
@@ -60,8 +44,5 @@ export async function preloadProducts() {
 
 // Call this function in your app initialization
 export async function initializeCache() {
-  await Promise.all([
-    preloadStaticData(),
-    preloadProducts(),
-  ])
+  await Promise.all([preloadStaticData(), preloadProducts()])
 }

@@ -37,8 +37,8 @@ async function askConfirmation(message: string): Promise<boolean> {
     output: process.stdout,
   })
 
-  return new Promise((resolve) => {
-    rl.question(`${message} (yes/no): `, (answer) => {
+  return new Promise(resolve => {
+    rl.question(`${message} (yes/no): `, answer => {
       rl.close()
       resolve(answer.toLowerCase() === 'yes')
     })
@@ -80,20 +80,24 @@ async function checkEnvironmentSafety(options: MigrationOptions): Promise<boolea
 
   // En production avec --force, demander confirmation
   if (isProduction || dbUrl.includes('prod')) {
-    console.log('\n⚠️  ATTENTION: Vous êtes sur le point de modifier la BASE DE DONNÉES DE PRODUCTION!')
+    console.log(
+      '\n⚠️  ATTENTION: Vous êtes sur le point de modifier la BASE DE DONNÉES DE PRODUCTION!'
+    )
     console.log('   Cette opération va:')
     console.log('   1. Créer des fichiers WebP sur le serveur')
     console.log('   2. Modifier les URLs des images dans la base de données')
-    console.log('   3. Les données base64 d\'origine seront remplacées\n')
+    console.log("   3. Les données base64 d'origine seront remplacées\n")
 
     const confirmed = await askConfirmation('⚠️  Êtes-vous ABSOLUMENT sûr de vouloir continuer?')
     if (!confirmed) {
-      console.log('\n❌ Migration annulée par l\'utilisateur.')
+      console.log("\n❌ Migration annulée par l'utilisateur.")
       return false
     }
 
     // Double confirmation pour la prod
-    const doubleConfirmed = await askConfirmation('⚠️  Dernière confirmation. Tapez "yes" pour continuer')
+    const doubleConfirmed = await askConfirmation(
+      '⚠️  Dernière confirmation. Tapez "yes" pour continuer'
+    )
     return doubleConfirmed
   }
 
@@ -109,7 +113,9 @@ async function migrateProductImages(options: MigrationOptions) {
   const { dryRun, limit } = options
 
   console.log('\n🚀 === MIGRATION DES IMAGES ===\n')
-  console.log(`Mode: ${dryRun ? 'DRY RUN (aucune modification)' : 'PRODUCTION (modifications réelles)'}`)
+  console.log(
+    `Mode: ${dryRun ? 'DRY RUN (aucune modification)' : 'PRODUCTION (modifications réelles)'}`
+  )
   if (limit) console.log(`Limit: ${limit} produits`)
 
   // Récupérer tous les produits avec des images base64
@@ -165,12 +171,7 @@ async function migrateProductImages(options: MigrationOptions) {
         const image = product.img[i]
 
         try {
-          const urls = await migrateBase64ToFileSystem(
-            image.img,
-            'products',
-            product.id,
-            i
-          )
+          const urls = await migrateBase64ToFileSystem(image.img, 'products', product.id, i)
 
           newImageUrls.push({
             id: image.id,
@@ -249,7 +250,7 @@ main()
     console.log('\n✨ Migration complete!')
     process.exit(0)
   })
-  .catch((error) => {
+  .catch(error => {
     console.error('\n❌ Fatal error:', error)
     process.exit(1)
   })

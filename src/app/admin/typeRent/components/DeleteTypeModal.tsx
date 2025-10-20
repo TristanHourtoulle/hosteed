@@ -66,10 +66,9 @@ export default function DeleteTypeModal({
         setShowFinalConfirmation(false)
       }
     }
-    
+
     checkProducts()
   }, [isOpen, typeToDelete, onError])
-
 
   const handleDelete = async () => {
     if (!typeToDelete) return
@@ -77,7 +76,7 @@ export default function DeleteTypeModal({
     setIsLoading(true)
     try {
       let success = false
-      
+
       if (associatedProducts.length > 0 && showFinalConfirmation) {
         // Supprimer le type avec tous les produits associés
         success = await deleteTypeRentWithProducts(typeToDelete.id)
@@ -137,17 +136,16 @@ export default function DeleteTypeModal({
                 <AlertTriangle className='h-5 w-5' />
                 Confirmation de suppression critique
               </DialogTitle>
-              <DialogDescription>
-                Attention ! Cette action est irréversible.
-              </DialogDescription>
+              <DialogDescription>Attention ! Cette action est irréversible.</DialogDescription>
             </DialogHeader>
-            
+
             <Alert variant='destructive' className='my-4'>
               <AlertTriangle className='h-4 w-4' />
               <AlertDescription>
                 <strong>ATTENTION :</strong> Vous êtes sur le point de supprimer le type de logement
-                &quot;{typeToDelete.name}&quot; ainsi que <strong>{associatedProducts.length} logement(s)</strong> associé(s).
-                Cette action est définitive et ne peut pas être annulée.
+                &quot;{typeToDelete.name}&quot; ainsi que{' '}
+                <strong>{associatedProducts.length} logement(s)</strong> associé(s). Cette action
+                est définitive et ne peut pas être annulée.
               </AlertDescription>
             </Alert>
 
@@ -162,18 +160,10 @@ export default function DeleteTypeModal({
             </div>
 
             <DialogFooter className='gap-2'>
-              <Button
-                variant='outline'
-                onClick={handleBackFromConfirmation}
-                disabled={isLoading}
-              >
+              <Button variant='outline' onClick={handleBackFromConfirmation} disabled={isLoading}>
                 Retour
               </Button>
-              <Button
-                variant='destructive'
-                onClick={handleDelete}
-                disabled={isLoading}
-              >
+              <Button variant='destructive' onClick={handleDelete} disabled={isLoading}>
                 {isLoading ? (
                   <>
                     <Loader2 className='h-4 w-4 animate-spin' />
@@ -197,26 +187,24 @@ export default function DeleteTypeModal({
                 Logements associés détectés
               </DialogTitle>
               <DialogDescription>
-                Ce type de logement est utilisé par {associatedProducts.length} logement(s).
-                Vous devez d&apos;abord modifier leur type ou les supprimer.
+                Ce type de logement est utilisé par {associatedProducts.length} logement(s). Vous
+                devez d&apos;abord modifier leur type ou les supprimer.
               </DialogDescription>
             </DialogHeader>
 
             <Alert className='my-4 border-orange-200 bg-orange-50'>
               <Home className='h-4 w-4 text-orange-600' />
               <AlertDescription className='text-orange-800'>
-                <strong>{associatedProducts.length} logement(s)</strong> utilise(nt) actuellement
-                le type &quot;{typeToDelete.name}&quot;
+                <strong>{associatedProducts.length} logement(s)</strong> utilise(nt) actuellement le
+                type &quot;{typeToDelete.name}&quot;
               </AlertDescription>
             </Alert>
 
             <div className='space-y-3'>
-              <p className='text-sm font-medium text-slate-700'>
-                Logements affectés :
-              </p>
+              <p className='text-sm font-medium text-slate-700'>Logements affectés :</p>
               <ScrollArea className='h-[200px] w-full rounded-md border p-4'>
                 <div className='space-y-2'>
-                  {associatedProducts.map((product) => (
+                  {associatedProducts.map(product => (
                     <div
                       key={product.id}
                       className='flex items-center justify-between p-2 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors'
@@ -230,15 +218,15 @@ export default function DeleteTypeModal({
                           product.status === 'Verified'
                             ? 'bg-green-50 text-green-700'
                             : product.status === 'Rejected'
-                            ? 'bg-red-50 text-red-700'
-                            : 'bg-yellow-50 text-yellow-700'
+                              ? 'bg-red-50 text-red-700'
+                              : 'bg-yellow-50 text-yellow-700'
                         }
                       >
                         {product.status === 'Verified'
                           ? 'Validé'
                           : product.status === 'Rejected'
-                          ? 'Rejeté'
-                          : 'En attente'}
+                            ? 'Rejeté'
+                            : 'En attente'}
                       </Badge>
                     </div>
                   ))}
@@ -256,11 +244,7 @@ export default function DeleteTypeModal({
             </div>
 
             <DialogFooter className='gap-2'>
-              <Button
-                variant='outline'
-                onClick={handleClose}
-                disabled={isLoading}
-              >
+              <Button variant='outline' onClick={handleClose} disabled={isLoading}>
                 Annuler
               </Button>
               <Button
@@ -282,11 +266,11 @@ export default function DeleteTypeModal({
                 Supprimer le type de logement
               </DialogTitle>
               <DialogDescription>
-                Êtes-vous sûr de vouloir supprimer le type &quot;{typeToDelete.name}&quot; ?
-                Cette action est irréversible.
+                Êtes-vous sûr de vouloir supprimer le type &quot;{typeToDelete.name}&quot; ? Cette
+                action est irréversible.
               </DialogDescription>
             </DialogHeader>
-            
+
             <Alert className='my-4 border-green-200 bg-green-50'>
               <Home className='h-4 w-4 text-green-600' />
               <AlertDescription className='text-green-800'>
@@ -295,18 +279,10 @@ export default function DeleteTypeModal({
             </Alert>
 
             <DialogFooter>
-              <Button
-                variant='outline'
-                onClick={handleClose}
-                disabled={isLoading}
-              >
+              <Button variant='outline' onClick={handleClose} disabled={isLoading}>
                 Annuler
               </Button>
-              <Button
-                onClick={handleDelete}
-                disabled={isLoading}
-                variant='destructive'
-              >
+              <Button onClick={handleDelete} disabled={isLoading} variant='destructive'>
                 {isLoading ? (
                   <>
                     <Loader2 className='h-4 w-4 animate-spin' />

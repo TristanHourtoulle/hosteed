@@ -6,7 +6,7 @@ import { ExtraPriceType } from '@prisma/client'
 export async function GET() {
   try {
     const session = await auth()
-    
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
@@ -16,29 +16,26 @@ export async function GET() {
       where: {
         OR: [
           { userId: null }, // Extras globaux
-          { userId: session.user.id } // Extras personnels de l'utilisateur
-        ]
+          { userId: session.user.id }, // Extras personnels de l'utilisateur
+        ],
       },
       orderBy: [
         { userId: 'asc' }, // Extras globaux en premier
-        { createdAt: 'desc' }
-      ]
+        { createdAt: 'desc' },
+      ],
     })
 
     return NextResponse.json(extras)
   } catch (error) {
     console.error('Erreur lors de la récupération des extras:', error)
-    return NextResponse.json(
-      { error: 'Erreur interne du serveur' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Erreur interne du serveur' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const session = await auth()
-    
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
@@ -48,30 +45,30 @@ export async function POST(request: NextRequest) {
 
     if (!name || !priceEUR || !priceMGA || !type) {
       return NextResponse.json(
-        { error: 'Tous les champs obligatoires doivent être renseignés (name, priceEUR, priceMGA, type)' },
+        {
+          error:
+            'Tous les champs obligatoires doivent être renseignés (name, priceEUR, priceMGA, type)',
+        },
         { status: 400 }
       )
     }
 
     // Vérifier que le type est valide
     if (!Object.values(ExtraPriceType).includes(type)) {
-      return NextResponse.json(
-        { error: 'Type de tarification invalide' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Type de tarification invalide' }, { status: 400 })
     }
 
     // Validation des prix
     const priceEURFloat = parseFloat(priceEUR)
     const priceMGAFloat = parseFloat(priceMGA)
-    
+
     if (isNaN(priceEURFloat) || priceEURFloat < 0) {
       return NextResponse.json(
         { error: 'Le prix en EUR doit être un nombre positif' },
         { status: 400 }
       )
     }
-    
+
     if (isNaN(priceMGAFloat) || priceMGAFloat < 0) {
       return NextResponse.json(
         { error: 'Le prix en MGA doit être un nombre positif' },
@@ -93,10 +90,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(extra, { status: 201 })
   } catch (error) {
-    console.error('Erreur lors de la création de l\'extra:', error)
-    return NextResponse.json(
-      { error: 'Erreur interne du serveur' },
-      { status: 500 }
-    )
+    console.error("Erreur lors de la création de l'extra:", error)
+    return NextResponse.json({ error: 'Erreur interne du serveur' }, { status: 500 })
   }
 }

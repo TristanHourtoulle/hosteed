@@ -12,7 +12,10 @@ import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import type { DateRange } from 'react-day-picker'
 import { getProfileImageUrl } from '@/lib/utils'
-import { calculateTotalRentPrice, type CommissionCalculation } from '@/lib/services/commission.service'
+import {
+  calculateTotalRentPrice,
+  type CommissionCalculation,
+} from '@/lib/services/commission.service'
 
 interface Reviews {
   id: string
@@ -142,16 +145,15 @@ export default function BookingCard({
   const nights = calculateNights()
 
   // Check for active promotion
-  const activePromotion = product.promotions && product.promotions.length > 0
-    ? product.promotions.find((promo) => {
-        const now = new Date()
-        return (
-          promo.isActive &&
-          new Date(promo.startDate) <= now &&
-          new Date(promo.endDate) >= now
-        )
-      })
-    : null
+  const activePromotion =
+    product.promotions && product.promotions.length > 0
+      ? product.promotions.find(promo => {
+          const now = new Date()
+          return (
+            promo.isActive && new Date(promo.startDate) <= now && new Date(promo.endDate) >= now
+          )
+        })
+      : null
 
   // Calculate price with promotion if applicable
   const effectiveBasePrice = activePromotion
@@ -230,14 +232,18 @@ export default function BookingCard({
             <div className='flex flex-col gap-1'>
               {activePromotion && originalBasePrice && (
                 <div className='flex items-center gap-2'>
-                  <span className='text-sm text-gray-400 line-through'>{originalBasePrice.toFixed(2)}€</span>
+                  <span className='text-sm text-gray-400 line-through'>
+                    {originalBasePrice.toFixed(2)}€
+                  </span>
                   <span className='bg-gradient-to-r from-red-500 to-pink-500 text-white px-2 py-0.5 rounded-full text-xs font-bold'>
                     -{activePromotion.discountPercentage}%
                   </span>
                 </div>
               )}
               <div className='flex items-baseline gap-2'>
-                <span className={`text-2xl font-semibold ${activePromotion ? 'text-green-600' : 'text-gray-900'}`}>
+                <span
+                  className={`text-2xl font-semibold ${activePromotion ? 'text-green-600' : 'text-gray-900'}`}
+                >
                   {effectiveBasePrice.toFixed(2)}€
                 </span>
                 <span className='text-gray-600'>par nuit</span>
@@ -274,7 +280,9 @@ export default function BookingCard({
             <div className='bg-gradient-to-r from-orange-100 to-red-100 border border-orange-200 rounded-lg px-3 py-2'>
               <div className='flex items-center gap-2'>
                 <span className='text-sm text-orange-700 font-medium'>Prix de base:</span>
-                <span className='text-sm text-orange-800 font-semibold line-through'>{product.originalBasePrice}€</span>
+                <span className='text-sm text-orange-800 font-semibold line-through'>
+                  {product.originalBasePrice}€
+                </span>
               </div>
             </div>
           )}
@@ -284,13 +292,16 @@ export default function BookingCard({
             <div className='bg-blue-50 border border-blue-200 rounded-lg px-3 py-2.5'>
               <div className='flex flex-col gap-1'>
                 <div className='flex items-center justify-between'>
-                  <span className='text-sm text-blue-700 font-medium'>Frais de service Hosteed</span>
+                  <span className='text-sm text-blue-700 font-medium'>
+                    Frais de service Hosteed
+                  </span>
                   <span className='text-sm text-blue-800 font-semibold'>
                     {defaultCommissionInfo.clientRate}% + {defaultCommissionInfo.clientFixed}€
                   </span>
                 </div>
                 <span className='text-xs text-blue-600'>
-                  Ces frais permettent de faire vivre la plateforme et d&apos;assurer un service de qualité
+                  Ces frais permettent de faire vivre la plateforme et d&apos;assurer un service de
+                  qualité
                 </span>
               </div>
             </div>

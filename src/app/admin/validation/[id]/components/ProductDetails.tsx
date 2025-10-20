@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import MarkdownRenderer from '@/components/ui/MarkdownRenderer'
 import {
   MapPin,
   Euro,
@@ -78,7 +79,14 @@ interface Product {
     additionalNotes?: string
   }
   includedServices?: { id: string; name: string; description: string | null; icon: string | null }[]
-  extras?: { id: string; name: string; description: string | null; priceEUR: number; priceMGA: number; type: ExtraPriceType }[]
+  extras?: {
+    id: string
+    name: string
+    description: string | null
+    priceEUR: number
+    priceMGA: number
+    type: ExtraPriceType
+  }[]
   highlights?: { id: string; name: string; description: string | null; icon: string | null }[]
 }
 
@@ -187,7 +195,7 @@ export function ProductDetails({ product }: ProductDetailsProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className='space-y-3'>
-            {product.user.map((host) => (
+            {product.user.map(host => (
               <div key={host.id} className='flex items-start space-x-3'>
                 {(host.image || host.profilePicture || host.profilePictureBase64) && (
                   <Image
@@ -202,10 +210,9 @@ export function ProductDetails({ product }: ProductDetailsProps) {
                 <div className='flex-1'>
                   <div className='flex items-center space-x-2'>
                     <span className='font-medium text-sm'>
-                      {host.name || host.lastname ? 
-                        `${host.name || ''} ${host.lastname || ''}`.trim() : 
-                        'Nom non renseigné'
-                      }
+                      {host.name || host.lastname
+                        ? `${host.name || ''} ${host.lastname || ''}`.trim()
+                        : 'Nom non renseigné'}
                     </span>
                   </div>
                   <p className='text-sm text-gray-600'>{host.email}</p>
@@ -241,7 +248,9 @@ export function ProductDetails({ product }: ProductDetailsProps) {
             {product.availableRooms && (
               <div className='flex items-center'>
                 <Building className='h-4 w-4 text-gray-400 mr-2' />
-                <span className='text-sm'>{Number(product.availableRooms)} chambre(s) disponible(s) (Hôtel)</span>
+                <span className='text-sm'>
+                  {Number(product.availableRooms)} chambre(s) disponible(s) (Hôtel)
+                </span>
               </div>
             )}
           </div>
@@ -285,7 +294,9 @@ export function ProductDetails({ product }: ProductDetailsProps) {
 
           <div>
             <h4 className='font-medium mb-2'>Description</h4>
-            <p className='text-sm text-gray-600 leading-relaxed'>{product.description}</p>
+            <div className='text-sm text-gray-600 leading-relaxed prose prose-sm max-w-none'>
+              <MarkdownRenderer content={product.description} />
+            </div>
           </div>
         </CardContent>
       </Card>

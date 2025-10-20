@@ -22,7 +22,13 @@ export default function DisablingRent() {
     const description = formData.get('description') as string
 
     try {
-      await createUnavailableRent(params.id as string, startDate, endDate, title, description || null)
+      await createUnavailableRent(
+        params.id as string,
+        startDate,
+        endDate,
+        title,
+        description || null
+      )
       alert("Période d'indisponibilité créée avec succès")
       if (formRef.current) {
         formRef.current.reset()

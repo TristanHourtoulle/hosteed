@@ -16,11 +16,13 @@ Ce guide explique comment migrer en toute sécurité les images de base64 (stock
 ## 🎯 Vue d'ensemble
 
 ### Situation actuelle
+
 - **Stockage**: Images en base64 dans PostgreSQL (table `images`)
 - **Taille**: ~300-400 KB par image en base64
 - **Performance**: Lent, pas de cache navigateur, charge la DB
 
 ### Situation après migration
+
 - **Stockage**: Fichiers WebP sur le VPS dans `/public/uploads/products/{productId}/`
 - **3 tailles par image**:
   - **Thumb** (300x200px) : ~10 KB
@@ -32,13 +34,13 @@ Ce guide explique comment migrer en toute sécurité les images de base64 (stock
 
 ## ✅ Avantages de la migration
 
-| Critère | Avant (Base64) | Après (WebP) | Gain |
-|---------|---------------|--------------|------|
-| Taille thumbnail | 300-400 KB | ~10 KB | **-97%** |
-| Cache navigateur | ❌ Aucun | ✅ 1 an | ♾️ |
-| Format | JPEG/PNG | WebP | +30% compression |
-| Charge DB | ❌ Élevée | ✅ Minimale | -95% |
-| Temps de chargement | 5 secondes | <500ms | **-90%** |
+| Critère             | Avant (Base64) | Après (WebP) | Gain             |
+| ------------------- | -------------- | ------------ | ---------------- |
+| Taille thumbnail    | 300-400 KB     | ~10 KB       | **-97%**         |
+| Cache navigateur    | ❌ Aucun       | ✅ 1 an      | ♾️               |
+| Format              | JPEG/PNG       | WebP         | +30% compression |
+| Charge DB           | ❌ Élevée      | ✅ Minimale  | -95%             |
+| Temps de chargement | 5 secondes     | <500ms       | **-90%**         |
 
 ---
 
@@ -63,6 +65,7 @@ pnpm test:images:migrate
 ```
 
 **Ce script va**:
+
 1. ✅ Vérifier que vous êtes en local
 2. ✅ Trouver 1 produit avec des images base64
 3. ✅ Convertir ses images en WebP (3 tailles)
@@ -97,6 +100,7 @@ pnpm test:images:migrate
 ### Étape 3: Vérifier les images générées
 
 Les images de test sont dans:
+
 ```
 /public/uploads/products/{productId}/
 ```
@@ -104,14 +108,17 @@ Les images de test sont dans:
 **Vérifications à faire**:
 
 1. **Ouvrir les images** pour vérifier la qualité visuelle:
+
    ```bash
    open public/uploads/products/cmdx7825k0001l1046mwhxg8w/
    ```
 
 2. **Vérifier les tailles**:
+
    ```bash
    ls -lh public/uploads/products/cmdx7825k0001l1046mwhxg8w/
    ```
+
    - Thumb: ~5-15 KB ✅
    - Medium: ~50-100 KB ✅
    - Full: ~200-500 KB ✅
@@ -168,6 +175,7 @@ pnpm images:migrate --limit 10
 ```
 
 **Le script va**:
+
 1. Demander confirmation
 2. Migrer 10 produits
 3. Modifier les URLs dans la DB
@@ -203,6 +211,7 @@ pnpm images:migrate --force
 ```
 
 **Le script va**:
+
 1. ✅ Vérifier l'environnement
 2. ⚠️ Demander DOUBLE confirmation (production)
 3. 🔄 Migrer TOUS les produits
@@ -241,6 +250,7 @@ psql $DATABASE_URL -c "
 ```
 
 **Résultat attendu**:
+
 ```
  total_images | migrated | base64_remaining
 --------------+----------+-----------------
@@ -302,6 +312,7 @@ ls -la public/uploads/products/
 ```
 
 **Solution**:
+
 ```bash
 chmod -R 755 public/uploads/
 ```
@@ -419,12 +430,12 @@ Sauvegarder le dossier `/public/uploads/` régulièrement:
 
 **Avant/Après**:
 
-| Métrique | Avant | Après | Gain |
-|----------|-------|-------|------|
-| Temps chargement /host | 5s | 0.5s | -90% |
-| Taille JSON API | 3 MB | 300 KB | -90% |
-| Taille DB | 500 MB | 50 MB | -90% |
-| Requêtes DB/page | 6 | 1 | -83% |
+| Métrique               | Avant  | Après  | Gain |
+| ---------------------- | ------ | ------ | ---- |
+| Temps chargement /host | 5s     | 0.5s   | -90% |
+| Taille JSON API        | 3 MB   | 300 KB | -90% |
+| Taille DB              | 500 MB | 50 MB  | -90% |
+| Requêtes DB/page       | 6      | 1      | -83% |
 
 ---
 

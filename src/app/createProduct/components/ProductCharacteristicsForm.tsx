@@ -23,14 +23,16 @@ interface FormData {
 
 interface ProductCharacteristicsFormProps {
   formData: FormData
-  onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void
+  onInputChange: (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => void
   itemVariants: Variants
 }
 
 export default function ProductCharacteristicsForm({
   formData,
   onInputChange,
-  itemVariants
+  itemVariants,
 }: ProductCharacteristicsFormProps) {
   // Check if this is a hotel type (where configuration is relevant)
   const isHotelType = useMemo(() => {
@@ -258,8 +260,8 @@ export default function ProductCharacteristicsForm({
             <CardContent className='space-y-6'>
               <div className='bg-white/60 rounded-lg p-4 border border-orange-200'>
                 <p className='text-amber-800 text-sm'>
-                  Les paramètres spécifiques aux hôtels seront configurés ici.
-                  Cette section sera développée selon les besoins spécifiques de votre établissement.
+                  Les paramètres spécifiques aux hôtels seront configurés ici. Cette section sera
+                  développée selon les besoins spécifiques de votre établissement.
                 </p>
               </div>
             </CardContent>

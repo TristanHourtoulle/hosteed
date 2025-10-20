@@ -61,6 +61,7 @@ Temps 0s ───────────────────────�
 ### Problème #2: Données Statiques Recharges À CHAQUE Visite
 
 Même avec React Query, les données statiques sont refetchées car:
+
 - `staleTime: 24h` est configuré MAIS...
 - Si l'utilisateur quitte et revient, le cache est vidé
 - Ces données changent rarement (types, équipements, etc.)
@@ -70,6 +71,7 @@ Même avec React Query, les données statiques sont refetchées car:
 **Fichier**: `src/app/api/products/search/route.ts`
 
 Analyse du temps de réponse:
+
 ```
 1. Requête DB Prisma:         ~1.5s
    - Includes multiples
@@ -109,7 +111,7 @@ Les résultats de recherche sont invalides trop rapidement.
 enabled: !staticQueries.some(q => q.isLoading)
 
 // ✅ APRÈS (parallèle)
-enabled: true  // Lancer immédiatement!
+enabled: true // Lancer immédiatement!
 ```
 
 Les produits et les données statiques se chargent en même temps.
@@ -184,7 +186,9 @@ REFRESH MATERIALIZED VIEW CONCURRENTLY product_search_view;
 skip: (page - 1) * limit
 
 // ✅ APRÈS (rapide même avec 10000 produits)
-cursor: { id: lastProductId }
+cursor: {
+  id: lastProductId
+}
 take: limit
 ```
 
@@ -221,6 +225,7 @@ img: {
 ```
 
 Créer une route dédiée:
+
 ```typescript
 // GET /api/products/[id]/thumbnail
 // Retourne UNIQUEMENT l'image, avec cache CDN
@@ -251,14 +256,14 @@ export default function HostPage() {
 
 ## 📈 Impact Estimé des Optimisations
 
-| Optimisation | Gain de Temps | Difficulté | Priorité |
-|--------------|---------------|------------|----------|
-| #1 - Paralléliser requêtes | -2.5s (50%) | 🟢 Facile | ⚡ CRITIQUE |
-| #2 - Données statiques SSR | -2s (40%) | 🟡 Moyen | ⚡ CRITIQUE |
-| #3 - Index DB + Vues | -1.2s (24%) | 🔴 Difficile | 🟡 Important |
-| #4 - Cache React Query | -0.5s/nav | 🟢 Facile | ⚡ CRITIQUE |
-| #5 - Lazy load images | -1.5s (30%) | 🟡 Moyen | ⚡ CRITIQUE |
-| #6 - Streaming SSR | Perçu -3s | 🟡 Moyen | 🟢 Nice-to-have |
+| Optimisation               | Gain de Temps | Difficulté   | Priorité        |
+| -------------------------- | ------------- | ------------ | --------------- |
+| #1 - Paralléliser requêtes | -2.5s (50%)   | 🟢 Facile    | ⚡ CRITIQUE     |
+| #2 - Données statiques SSR | -2s (40%)     | 🟡 Moyen     | ⚡ CRITIQUE     |
+| #3 - Index DB + Vues       | -1.2s (24%)   | 🔴 Difficile | 🟡 Important    |
+| #4 - Cache React Query     | -0.5s/nav     | 🟢 Facile    | ⚡ CRITIQUE     |
+| #5 - Lazy load images      | -1.5s (30%)   | 🟡 Moyen     | ⚡ CRITIQUE     |
+| #6 - Streaming SSR         | Perçu -3s     | 🟡 Moyen     | 🟢 Nice-to-have |
 
 ### Résultat Final Estimé
 

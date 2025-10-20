@@ -85,7 +85,11 @@ export async function calculateHostBalance(userId: string): Promise<HostBalance>
     where: {
       userId: userId,
       payment: {
-        in: [PaymentStatus.CLIENT_PAID, PaymentStatus.MID_TRANSFER_DONE, PaymentStatus.FULL_TRANSFER_DONE],
+        in: [
+          PaymentStatus.CLIENT_PAID,
+          PaymentStatus.MID_TRANSFER_DONE,
+          PaymentStatus.FULL_TRANSFER_DONE,
+        ],
       },
     },
     select: {
@@ -121,7 +125,11 @@ export async function calculateHostBalance(userId: string): Promise<HostBalance>
     where: {
       userId,
       status: {
-        in: [WithdrawalStatus.PENDING, WithdrawalStatus.ACCOUNT_VALIDATION, WithdrawalStatus.APPROVED],
+        in: [
+          WithdrawalStatus.PENDING,
+          WithdrawalStatus.ACCOUNT_VALIDATION,
+          WithdrawalStatus.APPROVED,
+        ],
       },
     },
     select: {
@@ -232,16 +240,17 @@ export async function validatePaymentAccount(
 /**
  * Supprimer un compte de paiement
  */
-export async function deletePaymentAccount(
-  userId: string,
-  accountId: string
-): Promise<void> {
+export async function deletePaymentAccount(userId: string, accountId: string): Promise<void> {
   // Vérifier qu'il n'y a pas de retraits en attente avec ce compte
   const pendingWithdrawals = await prisma.withdrawalRequest.count({
     where: {
       paymentAccountId: accountId,
       status: {
-        in: [WithdrawalStatus.PENDING, WithdrawalStatus.ACCOUNT_VALIDATION, WithdrawalStatus.APPROVED],
+        in: [
+          WithdrawalStatus.PENDING,
+          WithdrawalStatus.ACCOUNT_VALIDATION,
+          WithdrawalStatus.APPROVED,
+        ],
       },
     },
   })
@@ -265,14 +274,16 @@ export async function deletePaymentAccount(
 export async function createWithdrawalRequest(
   data: WithdrawalRequestData
 ): Promise<WithdrawalRequest> {
-  const { userId, amount, withdrawalType, paymentAccountId, paymentMethod, paymentDetails, notes } = data
+  const { userId, amount, withdrawalType, paymentAccountId, paymentMethod, paymentDetails, notes } =
+    data
 
   // 1. Vérifier le solde disponible
   const balance = await calculateHostBalance(userId)
 
-  const maxAmount = withdrawalType === WithdrawalType.PARTIAL_50
-    ? balance.amount50Percent
-    : balance.amount100Percent
+  const maxAmount =
+    withdrawalType === WithdrawalType.PARTIAL_50
+      ? balance.amount50Percent
+      : balance.amount100Percent
 
   if (amount > maxAmount) {
     throw new Error(`Montant demandé (${amount}€) supérieur au montant disponible (${maxAmount}€)`)
@@ -342,9 +353,7 @@ export async function getWithdrawalRequests(
   const where: Prisma.WithdrawalRequestWhereInput = { userId }
 
   if (filters?.status) {
-    where.status = Array.isArray(filters.status)
-      ? { in: filters.status }
-      : filters.status
+    where.status = Array.isArray(filters.status) ? { in: filters.status } : filters.status
   }
 
   return prisma.withdrawalRequest.findMany({
@@ -368,19 +377,15 @@ export async function getWithdrawalRequests(
 /**
  * Récupérer toutes les demandes de retrait (Admin)
  */
-export async function getAllWithdrawalRequests(
-  filters?: {
-    status?: WithdrawalStatus | WithdrawalStatus[]
-    limit?: number
-    offset?: number
-  }
-): Promise<WithdrawalRequest[]> {
+export async function getAllWithdrawalRequests(filters?: {
+  status?: WithdrawalStatus | WithdrawalStatus[]
+  limit?: number
+  offset?: number
+}): Promise<WithdrawalRequest[]> {
   const where: Prisma.WithdrawalRequestWhereInput = {}
 
   if (filters?.status) {
-    where.status = Array.isArray(filters.status)
-      ? { in: filters.status }
-      : filters.status
+    where.status = Array.isArray(filters.status) ? { in: filters.status } : filters.status
   }
 
   return prisma.withdrawalRequest.findMany({
@@ -493,8 +498,11 @@ export async function cancelWithdrawalRequest(
     throw new Error('Non autorisé')
   }
 
-  if (request.status !== WithdrawalStatus.PENDING && request.status !== WithdrawalStatus.ACCOUNT_VALIDATION) {
-    throw new Error('Impossible d\'annuler une demande déjà traitée')
+  if (
+    request.status !== WithdrawalStatus.PENDING &&
+    request.status !== WithdrawalStatus.ACCOUNT_VALIDATION
+  ) {
+    throw new Error("Impossible d'annuler une demande déjà traitée")
   }
 
   return prisma.withdrawalRequest.update({

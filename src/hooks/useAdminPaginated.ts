@@ -43,7 +43,12 @@ export function useAdminProductsPaginated() {
     return params.toString()
   }, [currentPage, itemsPerPage, searchTerm])
 
-  const { data: result, isLoading, error, refetch } = useQuery<AdminProductsResult>({
+  const {
+    data: result,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<AdminProductsResult>({
     queryKey: ['admin-products', searchParams],
     queryFn: async () => {
       const response = await fetch(`/api/admin/products?${searchParams}`)
@@ -111,7 +116,12 @@ export function useAdminUsersPaginated() {
     return params.toString()
   }, [currentPage, itemsPerPage, searchTerm, roleFilter])
 
-  const { data: result, isLoading, error, refetch } = useQuery<AdminUsersResult>({
+  const {
+    data: result,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<AdminUsersResult>({
     queryKey: ['admin-users', searchParams],
     queryFn: async () => {
       const response = await fetch(`/api/admin/users?${searchParams}`)

@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth'
 import {
   updatePromotion,
   cancelPromotion,
-  CreatePromotionInput
+  CreatePromotionInput,
 } from '@/lib/services/promotion.service'
 import prisma from '@/lib/prisma'
 
@@ -11,18 +11,12 @@ import prisma from '@/lib/prisma'
  * PUT /api/promotions/[id]
  * Mettre à jour une promotion
  */
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await auth()
 
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Non authentifié' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
     const { id } = await params
@@ -33,17 +27,14 @@ export async function PUT(
       include: {
         product: {
           select: {
-            userManager: true
-          }
-        }
-      }
+            userManager: true,
+          },
+        },
+      },
     })
 
     if (!promotion) {
-      return NextResponse.json(
-        { error: 'Promotion non trouvée' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Promotion non trouvée' }, { status: 404 })
     }
 
     // Vérifier les permissions
@@ -51,10 +42,7 @@ export async function PUT(
       session.user.roles !== 'ADMIN' &&
       promotion.product.userManager.toString() !== session.user.id
     ) {
-      return NextResponse.json(
-        { error: 'Non autorisé' },
-        { status: 403 }
-      )
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 403 })
     }
 
     const body = await request.json()
@@ -91,10 +79,7 @@ export async function DELETE(
     const session = await auth()
 
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Non authentifié' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
     const { id } = await params
@@ -105,17 +90,14 @@ export async function DELETE(
       include: {
         product: {
           select: {
-            userManager: true
-          }
-        }
-      }
+            userManager: true,
+          },
+        },
+      },
     })
 
     if (!promotion) {
-      return NextResponse.json(
-        { error: 'Promotion non trouvée' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Promotion non trouvée' }, { status: 404 })
     }
 
     // Vérifier les permissions
@@ -123,10 +105,7 @@ export async function DELETE(
       session.user.roles !== 'ADMIN' &&
       promotion.product.userManager.toString() !== session.user.id
     ) {
-      return NextResponse.json(
-        { error: 'Non autorisé' },
-        { status: 403 }
-      )
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 403 })
     }
 
     const cancelled = await cancelPromotion(id)
@@ -134,13 +113,10 @@ export async function DELETE(
     return NextResponse.json({
       success: true,
       message: 'Promotion annulée avec succès',
-      promotion: cancelled
+      promotion: cancelled,
     })
   } catch (error) {
-    console.error('Erreur lors de l\'annulation de la promotion:', error)
-    return NextResponse.json(
-      { error: 'Erreur interne du serveur' },
-      { status: 500 }
-    )
+    console.error("Erreur lors de l'annulation de la promotion:", error)
+    return NextResponse.json({ error: 'Erreur interne du serveur' }, { status: 500 })
   }
 }

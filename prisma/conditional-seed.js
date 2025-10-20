@@ -6,7 +6,7 @@ async function conditionalSeed() {
   try {
     // Vérifier si la base de données a déjà des données
     const typeRentCount = await prisma.typeRent.count()
-    
+
     if (typeRentCount === 0) {
       console.log('Base de données vide détectée, exécution du seed...')
       // Exécuter le seed principal

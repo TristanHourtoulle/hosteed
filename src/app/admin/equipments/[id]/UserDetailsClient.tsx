@@ -1,30 +1,38 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useAuth } from '@/hooks/useAuth'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/shadcnui/button'
 import { ArrowLeft } from 'lucide-react'
 import { LoadingDisplay } from './components/LoadingDisplay'
 import { UserPersonalInfo } from './components/UserPersonalInfo'
-import {EquipmentInterface} from "@/lib/interface/equipmentInterface";
+import { EquipmentInterface } from '@/lib/interface/equipmentInterface'
 
 export function UserDetailsClient({ id, name, icon }: EquipmentInterface) {
-  const { data: session } = useSession()
+  const {
+    session,
+    isLoading: isAuthLoading,
+    isAuthenticated,
+  } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
   const [loading] = useState(false)
 
   useEffect(() => {
-    if (!session?.user?.roles || session.user.roles !== 'ADMIN') {
+    if (isAuthenticated && (!session?.user?.roles || session.user.roles !== 'ADMIN')) {
       router.push('/')
       return
     }
-  }, [session, router])
+  }, [isAuthenticated, session, router])
 
-  if (loading) {
+  if (isAuthLoading || loading) {
     return <LoadingDisplay />
+  }
+
+  if (!session) {
+    return null
   }
 
   return (
@@ -48,7 +56,7 @@ export function UserDetailsClient({ id, name, icon }: EquipmentInterface) {
         </div>
 
         <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
-          <UserPersonalInfo id={id} name={name} icon={icon}/>
+          <UserPersonalInfo id={id} name={name} icon={icon} />
         </div>
       </motion.div>
     </div>

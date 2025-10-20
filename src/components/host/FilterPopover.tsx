@@ -49,11 +49,11 @@ export default function FilterPopover({
   services: _services,
   typeRooms: _typeRooms,
 }: FilterPopoverProps) {
-  // Suppress unused variable warnings for props that are passed but not used in current implementation  
+  // Suppress unused variable warnings for props that are passed but not used in current implementation
   void _typeRooms
   const [localFilters, setLocalFilters] = useState<FilterState>(filters)
   const [isOpen, setIsOpen] = useState(false)
-  
+
   // States pour contrôler l'affichage des sections déroulables
   const [expandedSections, setExpandedSections] = useState({
     equipments: false,
@@ -189,7 +189,7 @@ export default function FilterPopover({
                   </label>
                   <input
                     type='number'
-                    min="0"
+                    min='0'
                     placeholder='0 €'
                     value={localFilters.minPrice}
                     onChange={e => handleInputChange('minPrice', e.target.value)}
@@ -202,7 +202,7 @@ export default function FilterPopover({
                   </label>
                   <input
                     type='number'
-                    min="0"
+                    min='0'
                     placeholder='1000 €'
                     value={localFilters.maxPrice}
                     onChange={e => handleInputChange('maxPrice', e.target.value)}
@@ -229,7 +229,7 @@ export default function FilterPopover({
                   </label>
                   <input
                     type='number'
-                    min="1"
+                    min='1'
                     placeholder='1'
                     value={localFilters.minPeople}
                     onChange={e => handleInputChange('minPeople', e.target.value)}
@@ -242,7 +242,7 @@ export default function FilterPopover({
                   </label>
                   <input
                     type='number'
-                    min="1"
+                    min='1'
                     placeholder='10'
                     value={localFilters.maxPeople}
                     onChange={e => handleInputChange('maxPeople', e.target.value)}
@@ -269,7 +269,7 @@ export default function FilterPopover({
                   </label>
                   <input
                     type='number'
-                    min="0"
+                    min='0'
                     placeholder='1'
                     value={localFilters.minRooms}
                     onChange={e => handleInputChange('minRooms', e.target.value)}
@@ -282,7 +282,7 @@ export default function FilterPopover({
                   </label>
                   <input
                     type='number'
-                    min="0"
+                    min='0'
                     placeholder='5'
                     value={localFilters.maxRooms}
                     onChange={e => handleInputChange('maxRooms', e.target.value)}
@@ -298,7 +298,7 @@ export default function FilterPopover({
                   </label>
                   <input
                     type='number'
-                    min="0"
+                    min='0'
                     placeholder='1'
                     value={localFilters.minBathrooms}
                     onChange={e => handleInputChange('minBathrooms', e.target.value)}
@@ -311,7 +311,7 @@ export default function FilterPopover({
                   </label>
                   <input
                     type='number'
-                    min="0"
+                    min='0'
                     placeholder='3'
                     value={localFilters.maxBathrooms}
                     onChange={e => handleInputChange('maxBathrooms', e.target.value)}
@@ -327,7 +327,7 @@ export default function FilterPopover({
                   </label>
                   <input
                     type='number'
-                    min="0"
+                    min='0'
                     placeholder='20'
                     value={localFilters.sizeMin}
                     onChange={e => handleInputChange('sizeMin', e.target.value)}
@@ -340,7 +340,7 @@ export default function FilterPopover({
                   </label>
                   <input
                     type='number'
-                    min="0"
+                    min='0'
                     placeholder='200'
                     value={localFilters.sizeMax}
                     onChange={e => handleInputChange('sizeMax', e.target.value)}
@@ -354,10 +354,7 @@ export default function FilterPopover({
           {/* Équipements */}
           {_equipments.length > 0 && (
             <Card>
-              <div 
-                className='pb-3 cursor-pointer' 
-                onClick={() => toggleSection('equipments')}
-              >
+              <div className='pb-3 cursor-pointer' onClick={() => toggleSection('equipments')}>
                 <CardHeader className='pb-3'>
                   <CardTitle className='text-base flex items-center justify-between'>
                     <span>Équipements</span>
@@ -388,7 +385,11 @@ export default function FilterPopover({
                           type='checkbox'
                           checked={localFilters.selectedEquipments.includes(equipment.id)}
                           onChange={e =>
-                            handleCheckboxChange('selectedEquipments', equipment.id, e.target.checked)
+                            handleCheckboxChange(
+                              'selectedEquipments',
+                              equipment.id,
+                              e.target.checked
+                            )
                           }
                           className='w-4 h-4 text-blue-600 rounded focus:ring-blue-500 flex-shrink-0'
                         />
@@ -404,10 +405,7 @@ export default function FilterPopover({
           {/* Services */}
           {_services.length > 0 && (
             <Card>
-              <div 
-                className='pb-3 cursor-pointer' 
-                onClick={() => toggleSection('services')}
-              >
+              <div className='pb-3 cursor-pointer' onClick={() => toggleSection('services')}>
                 <CardHeader className='pb-3'>
                   <CardTitle className='text-base flex items-center justify-between'>
                     <span>Services</span>
@@ -430,7 +428,10 @@ export default function FilterPopover({
                 <CardContent>
                   <div className='grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto'>
                     {_services.map((service: { id: string; name: string }) => (
-                      <label key={service.id} className='flex items-center space-x-2 cursor-pointer p-2 hover:bg-gray-50 rounded'>
+                      <label
+                        key={service.id}
+                        className='flex items-center space-x-2 cursor-pointer p-2 hover:bg-gray-50 rounded'
+                      >
                         <input
                           type='checkbox'
                           checked={localFilters.selectedServices.includes(service.id)}
@@ -451,10 +452,7 @@ export default function FilterPopover({
           {/* Repas */}
           {_meals.length > 0 && (
             <Card>
-              <div 
-                className='pb-3 cursor-pointer' 
-                onClick={() => toggleSection('meals')}
-              >
+              <div className='pb-3 cursor-pointer' onClick={() => toggleSection('meals')}>
                 <CardHeader className='pb-3'>
                   <CardTitle className='text-base flex items-center justify-between'>
                     <span>Repas</span>
@@ -477,7 +475,10 @@ export default function FilterPopover({
                 <CardContent>
                   <div className='grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto'>
                     {_meals.map((meal: { id: string; name: string }) => (
-                      <label key={meal.id} className='flex items-center space-x-2 cursor-pointer p-2 hover:bg-gray-50 rounded'>
+                      <label
+                        key={meal.id}
+                        className='flex items-center space-x-2 cursor-pointer p-2 hover:bg-gray-50 rounded'
+                      >
                         <input
                           type='checkbox'
                           checked={localFilters.selectedMeals.includes(meal.id)}
@@ -498,10 +499,7 @@ export default function FilterPopover({
           {/* Sécurité */}
           {_securities.length > 0 && (
             <Card>
-              <div 
-                className='pb-3 cursor-pointer' 
-                onClick={() => toggleSection('securities')}
-              >
+              <div className='pb-3 cursor-pointer' onClick={() => toggleSection('securities')}>
                 <CardHeader className='pb-3'>
                   <CardTitle className='text-base flex items-center justify-between'>
                     <span>Sécurité</span>
@@ -524,12 +522,19 @@ export default function FilterPopover({
                 <CardContent>
                   <div className='grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto'>
                     {_securities.map((security: { id: string; name: string }) => (
-                      <label key={security.id} className='flex items-center space-x-2 cursor-pointer p-2 hover:bg-gray-50 rounded'>
+                      <label
+                        key={security.id}
+                        className='flex items-center space-x-2 cursor-pointer p-2 hover:bg-gray-50 rounded'
+                      >
                         <input
                           type='checkbox'
                           checked={localFilters.selectedSecurities.includes(security.id)}
                           onChange={e =>
-                            handleCheckboxChange('selectedSecurities', security.id, e.target.checked)
+                            handleCheckboxChange(
+                              'selectedSecurities',
+                              security.id,
+                              e.target.checked
+                            )
                           }
                           className='w-4 h-4 text-blue-600 rounded focus:ring-blue-500 flex-shrink-0'
                         />

@@ -151,13 +151,13 @@ pm2 restart hosteed
 
 ## 📊 Gains Attendus
 
-| Métrique | Avant | Après | Gain |
-|----------|-------|-------|------|
-| Temps chargement /host | 5s | <1s | **-80%** |
-| Taille JSON search (6 produits) | 3 MB | 10 KB | **-99%** |
-| Taille thumbnail | 500 KB | 13 KB | **-97%** |
-| Charge DB | Élevée | Minimale | **-95%** |
-| Cache navigateur | ❌ | ✅ 1 an | ♾️ |
+| Métrique                        | Avant  | Après    | Gain     |
+| ------------------------------- | ------ | -------- | -------- |
+| Temps chargement /host          | 5s     | <1s      | **-80%** |
+| Taille JSON search (6 produits) | 3 MB   | 10 KB    | **-99%** |
+| Taille thumbnail                | 500 KB | 13 KB    | **-97%** |
+| Charge DB                       | Élevée | Minimale | **-95%** |
+| Cache navigateur                | ❌     | ✅ 1 an  | ♾️       |
 
 ---
 
@@ -186,32 +186,35 @@ PGPASSWORD=jc8zC5gKJkkn4qL psql -h 51.222.87.54 -U hosteeddatabase -d hosteeddb 
 
 ## ⏱️ Timeline Estimée
 
-| Étape | Durée |
-|-------|-------|
-| Préparation + Backup | 15 min |
-| Test dry-run | 2 min |
-| Migration 10 produits | 5 min |
-| Vérifications | 5 min |
-| Migration 50 produits | 10 min |
-| Migration complète | 1-2h |
-| Vérifications finales | 10 min |
-| **TOTAL** | **2-3h** |
+| Étape                 | Durée    |
+| --------------------- | -------- |
+| Préparation + Backup  | 15 min   |
+| Test dry-run          | 2 min    |
+| Migration 10 produits | 5 min    |
+| Vérifications         | 5 min    |
+| Migration 50 produits | 10 min   |
+| Migration complète    | 1-2h     |
+| Vérifications finales | 10 min   |
+| **TOTAL**             | **2-3h** |
 
 ---
 
 ## 📋 Checklist Minimaliste
 
 **Avant**:
+
 - [ ] Backup DB créé
 - [ ] Espace disque OK (5-10 GB)
 - [ ] Code mis à jour
 
 **Pendant**:
+
 - [ ] Migration par lots (10 → 50 → tous)
 - [ ] Vérification après chaque lot
 - [ ] Site testé
 
 **Après**:
+
 - [ ] remaining = 0 en DB
 - [ ] Site fonctionne
 - [ ] Images s'affichent
