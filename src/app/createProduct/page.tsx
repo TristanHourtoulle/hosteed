@@ -401,7 +401,7 @@ export default function CreateProductPage() {
         console.log('✅ Images successfully linked to product:', successData)
       }
 
-      router.push('/dashboard')
+      router.push('/dashboard/host')
     } catch (error) {
       console.error('Error creating product:', error)
       setError(parseCreateProductError(error))
