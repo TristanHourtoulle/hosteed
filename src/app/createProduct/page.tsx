@@ -380,6 +380,7 @@ export default function CreateProductPage() {
 
       // Étape 2: Upload les images vers le serveur (WebP conversion + 3 sizes)
       const imageUrls = await uploadImagesToServer(imageUpload.selectedFiles, result.id)
+      console.log('📸 Image URLs to save in DB:', imageUrls)
 
       // Étape 3: Mettre à jour le produit avec les URLs des images
       const updateResponse = await fetch(`/api/products/${result.id}/images`, {
@@ -387,12 +388,17 @@ export default function CreateProductPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // IMPORTANT: Include session cookies
         body: JSON.stringify({ imageUrls }),
       })
 
       if (!updateResponse.ok) {
-        console.error('Erreur lors de la mise à jour des images, mais le produit a été créé')
+        const errorData = await updateResponse.json()
+        console.error('❌ Erreur lors de la mise à jour des images:', errorData)
         // On continue quand même car le produit existe
+      } else {
+        const successData = await updateResponse.json()
+        console.log('✅ Images successfully linked to product:', successData)
       }
 
       router.push('/dashboard')

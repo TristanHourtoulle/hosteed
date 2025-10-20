@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { MapPin } from 'lucide-react'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import PhoneInput from '@/components/ui/PhoneInput'
+import ProximityLandmarksField from '@/components/ui/ProximityLandmarksField'
 import type { FormData } from '../types'
 
 interface LocationContactSectionProps {
@@ -79,6 +80,13 @@ export default function LocationContactSection({
               />
             </div>
           </div>
+
+          <ProximityLandmarksField
+            landmarks={formData.proximityLandmarks}
+            onChange={landmarks =>
+              setFormData(prev => ({ ...prev, proximityLandmarks: landmarks }))
+            }
+          />
         </CardContent>
       </Card>
     </motion.div>
