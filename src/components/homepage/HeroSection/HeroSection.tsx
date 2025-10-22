@@ -1,11 +1,40 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import HeroSearch from './HeroSearch'
+import { useRouter } from 'next/navigation'
+import ModernSearchBar from '@/components/ui/modernSearchBar'
 
 export default function HeroSection() {
+  const router = useRouter()
+
+  const handleSearch = (data: {
+    location: string
+    checkIn: string
+    checkOut: string
+    guests: number
+  }) => {
+    const params = new URLSearchParams()
+
+    if (data.location) {
+      params.set('location', data.location)
+    }
+
+    if (data.checkIn) {
+      params.set('checkIn', data.checkIn)
+    }
+
+    if (data.checkOut) {
+      params.set('checkOut', data.checkOut)
+    }
+
+    if (data.guests > 1) {
+      params.set('guests', data.guests.toString())
+    }
+
+    router.push(`/host?${params.toString()}`)
+  }
   return (
-    <section className='relative h-screen min-h-[600px] flex items-center justify-center overflow-hidden'>
+    <section className='relative min-h-[calc(100vh-80px)] flex items-center justify-center overflow-hidden'>
       {/* Background Image with Overlay */}
       <div className='absolute inset-0 z-0'>
         <div
@@ -46,7 +75,7 @@ export default function HeroSection() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2, ease: 'easeOut' }}
         >
-          <HeroSearch />
+          <ModernSearchBar onSearch={handleSearch} />
         </motion.div>
       </div>
 
