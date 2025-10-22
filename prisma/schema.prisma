@@ -12,8 +12,19 @@ model TypeRent {
   name        String
   description String
   isHotelType Boolean     @default(false) // Indique si ce type fonctionne comme un hôtel
+  coverImage  String?     // Image de couverture pour affichage sur la homepage
   products    Product[]
   commission  Commission? // Nouvelle relation: Une commission par type de logement
+}
+
+model HomepageSettings {
+  id                  String   @id @default(cuid())
+  heroBackgroundImage String? // Image de fond de la Hero Section
+  howItWorksImage     String? // Image de la section "Comment ça marche"
+  updatedAt           DateTime @updatedAt
+  createdAt           DateTime @default(now())
+
+  @@map("homepage_settings")
 }
 
 model Equipment {

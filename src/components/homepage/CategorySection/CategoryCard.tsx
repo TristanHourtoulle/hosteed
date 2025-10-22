@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 interface CategoryCardProps {
   title: string
   description: string
-  imageUrl: string
+  imageUrl?: string
   count: number
   href: string
   index: number
@@ -33,7 +33,7 @@ export default function CategoryCard({
           {/* Background Image */}
           <div
             className='absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-500 group-hover:scale-110 bg-gradient-to-br from-gray-700 via-gray-600 to-gray-800'
-            style={{ backgroundImage: `url(${imageUrl})` }}
+            style={imageUrl ? { backgroundImage: `url(${imageUrl})` } : undefined}
           />
 
           {/* Overlay Gradient */}

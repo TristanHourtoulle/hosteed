@@ -1,6 +1,6 @@
 'use server'
 import prisma from '@/lib/prisma'
-import { TypeRent } from '@prisma/client'
+import { TypeRent, ProductValidation } from '@prisma/client'
 
 export async function findTypeById(id: string): Promise<TypeRent | null> {
   try {
@@ -15,8 +15,27 @@ export async function findTypeById(id: string): Promise<TypeRent | null> {
 
 export async function findAllTypeRent(): Promise<TypeRent[]> {
   try {
-    const result = await prisma.typeRent.findMany()
-    return result || []
+    const result = await prisma.typeRent.findMany({
+      include: {
+        _count: {
+          select: {
+            products: {
+              where: {
+                validate: ProductValidation.Approve, // Only count approved products
+              },
+            },
+          },
+        },
+      },
+    })
+
+    // Add productCount to each type and sort by count (descending)
+    return result
+      .map(type => ({
+        ...type,
+        productCount: type._count.products,
+      }))
+      .sort((a, b) => b._count.products - a._count.products) as unknown as TypeRent[]
   } catch (error) {
     console.error('Erreur lors de la recherche des types de location:', error)
     return []
@@ -26,7 +45,8 @@ export async function findAllTypeRent(): Promise<TypeRent[]> {
 export async function createTypeRent(
   name: string,
   description: string,
-  isHotelType: boolean = false
+  isHotelType: boolean = false,
+  coverImage?: string
 ): Promise<TypeRent | null> {
   try {
     return await prisma.typeRent.create({
@@ -34,6 +54,7 @@ export async function createTypeRent(
         name,
         description,
         isHotelType,
+        coverImage,
       },
     })
   } catch (error) {
@@ -46,13 +67,15 @@ export async function updateTypeRent(
   id: string,
   name: string,
   description: string,
-  isHotelType?: boolean
+  isHotelType?: boolean,
+  coverImage?: string | null
 ): Promise<TypeRent | null> {
   try {
     const updateData: {
       name: string
       description: string
       isHotelType?: boolean
+      coverImage?: string | null
     } = {
       name,
       description,
@@ -60,6 +83,10 @@ export async function updateTypeRent(
 
     if (isHotelType !== undefined) {
       updateData.isHotelType = isHotelType
+    }
+
+    if (coverImage !== undefined) {
+      updateData.coverImage = coverImage
     }
 
     return await prisma.typeRent.update({

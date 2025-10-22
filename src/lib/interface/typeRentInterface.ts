@@ -3,4 +3,5 @@ export interface TypeRentInterface {
   name: string
   description: string
   isHotelType?: boolean
+  coverImage?: string | null
 }

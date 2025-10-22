@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { useState, useEffect } from 'react'
 import { Bed, Calendar, Mail, MessageSquare } from 'lucide-react'
 import StepCard from './StepCard'
 import Image from 'next/image'
@@ -31,6 +32,23 @@ const steps = [
 ]
 
 export default function HowItWorksSection() {
+  const [sectionImage, setSectionImage] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch('/api/homepage-settings')
+        if (response.ok) {
+          const data = await response.json()
+          setSectionImage(data.howItWorksImage || null)
+        }
+      } catch (error) {
+        console.error('Error fetching homepage settings:', error)
+      }
+    }
+    fetchSettings()
+  }, [])
+
   return (
     <section className='py-16 md:py-24 bg-white'>
       <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
@@ -75,14 +93,18 @@ export default function HowItWorksSection() {
             transition={{ duration: 0.8 }}
             className='relative h-[500px] lg:h-[600px] rounded-2xl overflow-hidden shadow-2xl'
           >
-            <Image
-              src='/images/beach-relax.jpg'
-              alt='Couple relaxing on beach chairs in Madagascar'
-              fill
-              className='object-cover'
-              sizes='(max-width: 768px) 100vw, 50vw'
-              priority={false}
-            />
+            {sectionImage ? (
+              <Image
+                src={sectionImage}
+                alt='Comment ça marche'
+                fill
+                className='object-cover'
+                sizes='(max-width: 768px) 100vw, 50vw'
+                priority={false}
+              />
+            ) : (
+              <div className='absolute inset-0 bg-gradient-to-br from-[#015993] via-[#0379C7] to-[#015993]' />
+            )}
             <div className='absolute inset-0 bg-gradient-to-t from-black/20 to-transparent' />
           </motion.div>
         </div>
