@@ -2,10 +2,28 @@
 
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import ModernSearchBar from '@/components/ui/modernSearchBar'
+import Image from 'next/image'
 
 export default function HeroSection() {
   const router = useRouter()
+  const [backgroundImage, setBackgroundImage] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch('/api/homepage-settings')
+        if (response.ok) {
+          const data = await response.json()
+          setBackgroundImage(data.heroBackgroundImage || null)
+        }
+      } catch (error) {
+        console.error('Error fetching homepage settings:', error)
+      }
+    }
+    fetchSettings()
+  }, [])
 
   const handleSearch = (data: {
     location: string
@@ -37,12 +55,17 @@ export default function HeroSection() {
     <section className='relative min-h-[calc(100vh-80px)] flex items-center justify-center overflow-hidden'>
       {/* Background Image with Overlay */}
       <div className='absolute inset-0 z-0'>
-        <div
-          className='absolute inset-0 bg-cover bg-center bg-no-repeat bg-gradient-to-br from-[#015993] via-[#0379C7] to-[#015993]'
-          style={{
-            backgroundImage: "url('/images/hero-beach-madagascar.jpg')",
-          }}
-        />
+        {backgroundImage ? (
+          <Image
+            src={backgroundImage}
+            alt='Hero Background'
+            fill
+            className='object-cover'
+            priority
+          />
+        ) : (
+          <div className='absolute inset-0 bg-gradient-to-br from-[#015993] via-[#0379C7] to-[#015993]' />
+        )}
         {/* Gradient Overlay for better text readability */}
         <div className='absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/30' />
       </div>
