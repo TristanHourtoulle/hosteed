@@ -40,9 +40,12 @@ export default function SEOFieldsCard({ seoData, onSeoChange, articleTitle }: SE
     })
   }
 
-  // Auto-generate slug from title
+  // Auto-generate slug from SEO title
   const generateSlug = () => {
-    const slug = articleTitle
+    // Use metaTitle if available, otherwise fallback to articleTitle
+    const sourceTitle = seoData.metaTitle || articleTitle
+
+    const slug = sourceTitle
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '') // Remove accents
@@ -238,7 +241,7 @@ export default function SEOFieldsCard({ seoData, onSeoChange, articleTitle }: SE
                   variant='outline'
                   size='sm'
                   onClick={generateSlug}
-                  disabled={!articleTitle}
+                  disabled={!seoData.metaTitle && !articleTitle}
                   className='text-xs'
                 >
                   Auto-générer
