@@ -29,6 +29,7 @@ import {
   Edit3,
   Wallet,
   Tag,
+  Image as ImageIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/shadcnui/button'
 import {
@@ -209,6 +210,11 @@ const navGroups: NavGroup[] = [
         title: 'Types de location',
         href: '/admin/typeRent',
         icon: Home,
+      },
+      {
+        title: 'Images Homepage',
+        href: '/admin/homepage',
+        icon: ImageIcon,
       },
       {
         title: 'Retraits',
