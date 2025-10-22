@@ -1,4 +1,5 @@
 import { Euro } from 'lucide-react'
+import { formatCurrency } from '@/lib/utils/formatNumber'
 
 interface ProductExtra {
   id: string
@@ -32,9 +33,9 @@ export default function PropertyExtras({ extras }: PropertyExtrasProps) {
             </div>
             <div className='flex items-center gap-1 text-sm font-semibold text-gray-900 ml-4'>
               <Euro className='h-4 w-4' />
-              {extra.priceEUR.toFixed(2)}
+              {formatCurrency(extra.priceEUR, 'EUR')}
               <span className='text-gray-500 text-xs ml-1'>
-                ({extra.priceMGA.toLocaleString()} MGA)
+                ({formatCurrency(extra.priceMGA, 'MGA')})
               </span>
             </div>
           </div>

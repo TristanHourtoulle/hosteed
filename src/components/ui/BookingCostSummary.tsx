@@ -7,6 +7,7 @@ import {
   calculateTotalRentPrice,
   type CommissionCalculation,
 } from '@/lib/services/commission.service'
+import { formatCurrency } from '@/lib/utils/formatNumber'
 
 interface ExtraWithPricing {
   id: string
@@ -75,8 +76,7 @@ export default function BookingCostSummary({
           Hébergement ({numberOfDays} jour{numberOfDays > 1 ? 's' : ''})
         </span>
         <span className='font-medium'>
-          {baseTotal.toFixed(2)}
-          {currencySymbol}
+          {formatCurrency(baseTotal, currency)}
         </span>
       </div>
 
@@ -98,8 +98,7 @@ export default function BookingCostSummary({
                   <div className='text-gray-600 text-xs'>{description}</div>
                 </div>
                 <span className='font-medium'>
-                  {cost.toFixed(2)}
-                  {currencySymbol}
+                  {formatCurrency(cost, currency)}
                 </span>
               </div>
             )
@@ -115,16 +114,14 @@ export default function BookingCostSummary({
         <div className='flex justify-between items-center'>
           <span>Sous-total</span>
           <span className='font-medium'>
-            {grandTotal.toFixed(2)}
-            {currencySymbol}
+            {formatCurrency(grandTotal, currency)}
           </span>
         </div>
       ) : (
         <div className='flex justify-between items-center text-lg font-bold'>
           <span>Total</span>
           <span>
-            {grandTotal.toFixed(2)}
-            {currencySymbol}
+            {formatCurrency(grandTotal, currency)}
           </span>
         </div>
       )}
@@ -138,21 +135,21 @@ export default function BookingCostSummary({
             <div className='flex justify-between items-center'>
               <span className='text-green-700'>• Vous recevrez</span>
               <span className='font-medium text-green-700'>
-                {commissionCalc.hostReceives.toFixed(2)}€
+                {formatCurrency(commissionCalc.hostReceives, 'EUR')}
               </span>
             </div>
 
             <div className='flex justify-between items-center'>
               <span className='text-red-600'>• Commission hébergeur</span>
               <span className='font-medium text-red-600'>
-                -{commissionCalc.hostCommission.toFixed(2)}€
+                -{formatCurrency(commissionCalc.hostCommission, 'EUR')}
               </span>
             </div>
 
             <div className='flex justify-between items-center'>
               <span className='text-blue-600'>• Commission client</span>
               <span className='font-medium text-blue-600'>
-                +{commissionCalc.clientCommission.toFixed(2)}€
+                +{formatCurrency(commissionCalc.clientCommission, 'EUR')}
               </span>
             </div>
           </div>
@@ -160,7 +157,7 @@ export default function BookingCostSummary({
           {/* Total final avec commissions */}
           <div className='flex justify-between items-center text-lg font-bold'>
             <span>Prix final pour le client</span>
-            <span className='text-blue-700'>{commissionCalc.clientPays.toFixed(2)}€</span>
+            <span className='text-blue-700'>{formatCurrency(commissionCalc.clientPays, 'EUR')}</span>
           </div>
         </>
       )}
@@ -168,8 +165,7 @@ export default function BookingCostSummary({
       {/* Détail des extras si applicable */}
       {extrasTotal > 0 && !showCommissions && (
         <div className='text-xs text-gray-600'>
-          Dont {extrasTotal.toFixed(2)}
-          {currencySymbol} d&apos;options supplémentaires
+          Dont {formatCurrency(extrasTotal, currency)} d&apos;options supplémentaires
         </div>
       )}
     </div>

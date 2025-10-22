@@ -3,6 +3,7 @@
 import { Card, CardContent } from '@/components/ui/shadcnui/card'
 import { motion } from 'framer-motion'
 import { LucideIcon } from 'lucide-react'
+import { formatNumber } from '@/lib/utils/formatNumber'
 
 interface StatCardProps {
   title: string
@@ -39,7 +40,7 @@ export function StatCard({
                 <Icon className={`h-6 w-6 ${color}`} />
               </div>
               <div>
-                <p className='text-3xl font-bold text-slate-800'>{value.toLocaleString()}</p>
+                <p className='text-3xl font-bold text-slate-800'>{formatNumber(value)}</p>
                 <p className='text-sm font-medium text-slate-600'>{title}</p>
                 {description && <p className='text-xs text-slate-500 mt-1'>{description}</p>}
               </div>

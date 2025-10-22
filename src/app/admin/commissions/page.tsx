@@ -41,6 +41,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { Percent, DollarSign, Save, Plus, Edit2, Trash2, Power, Building2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { formatCurrency, formatPercentage } from '@/lib/utils/formatNumber'
 
 interface PropertyType {
   id: string
@@ -278,13 +279,6 @@ export default function CommissionsPage() {
     }
   }
 
-  const formatPercentage = (value: number) => {
-    return `${(value * 100).toFixed(1)}%`
-  }
-
-  const formatCurrency = (value: number) => {
-    return `${value.toFixed(2)}€`
-  }
 
   if (isAuthLoading || loading) {
     return (
@@ -376,7 +370,7 @@ export default function CommissionsPage() {
                     <div className='space-y-1'>
                       <div className='flex items-center gap-1'>
                         <Percent className='w-3 h-3 text-gray-400' />
-                        <span>{formatPercentage(commission.hostCommissionRate)}</span>
+                        <span>{formatPercentage(commission.hostCommissionRate, 1)}</span>
                       </div>
                       <div className='flex items-center gap-1'>
                         <DollarSign className='w-3 h-3 text-gray-400' />
@@ -388,7 +382,7 @@ export default function CommissionsPage() {
                     <div className='space-y-1'>
                       <div className='flex items-center gap-1'>
                         <Percent className='w-3 h-3 text-gray-400' />
-                        <span>{formatPercentage(commission.clientCommissionRate)}</span>
+                        <span>{formatPercentage(commission.clientCommissionRate, 1)}</span>
                       </div>
                       <div className='flex items-center gap-1'>
                         <DollarSign className='w-3 h-3 text-gray-400' />

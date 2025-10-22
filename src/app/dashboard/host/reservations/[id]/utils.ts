@@ -1,5 +1,6 @@
 import { RentWithDates } from '@/lib/services/rents.service'
 import { PaymentAmounts } from './types'
+import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/formatNumber'
 
 export const calculatePaymentAmounts = (rent: RentWithDates | null): PaymentAmounts => {
   if (!rent?.prices) return { halfAmount: 0, fullAmount: 0 }
@@ -23,8 +24,5 @@ export const formatDate = (date: Date) => {
 }
 
 export const formatCurrency = (amount: number) => {
-  return amount.toLocaleString('fr-FR', {
-    style: 'currency',
-    currency: 'EUR',
-  })
+  return formatCurrencyUtil(amount, 'EUR')
 }
