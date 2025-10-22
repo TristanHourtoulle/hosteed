@@ -211,6 +211,9 @@ model Product {
   keywords        String?
   slug            String?  @unique
 
+  // Calendar sync fields
+  calendarFeedToken String? @unique // Token sécurisé pour le flux ICS (export)
+
   // Performance indexes
   @@index([validate])
   @@index([userManager])
@@ -550,6 +553,9 @@ model User {
   paymentAccounts      PaymentAccount[]    @relation("UserPaymentAccounts") // Comptes de paiement enregistrés
   withdrawalRequests   WithdrawalRequest[] @relation("UserWithdrawals") // Demandes de retrait
   processedWithdrawals WithdrawalRequest[] @relation("ProcessedWithdrawals") // Retraits traités par cet admin
+
+  // Relation pour les calendriers externes (import centralisé)
+  externalCalendars ExternalCalendar[] @relation("UserExternalCalendars")
 
   // Relations pour le système de promotions
   createdPromotions ProductPromotion[]   @relation("CreatedPromotions") // Promotions créées par cet utilisateur
@@ -1028,4 +1034,66 @@ enum PricingPriority {
   SPECIAL_PRICE_FIRST // SpecialPrice remplace tout
   MOST_ADVANTAGEOUS   // Le plus avantageux pour le client
   STACK_DISCOUNTS     // Cumuler les deux réductions
+}
+
+// ============================================
+// CALENDAR SYNC SYSTEM MODELS
+// ============================================
+
+// Calendriers externes synchronisés (Airbnb, Booking.com, etc.)
+model ExternalCalendar {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation("UserExternalCalendars", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Informations du calendrier externe
+  name        String // Ex: "Calendrier Airbnb", "Google Calendar"
+  icalUrl     String // URL du flux iCal externe
+  color       String  @default("#3B82F6") // Couleur pour l'UI
+  description String? // Description optionnelle
+
+  // État de la synchronisation
+  isActive       Boolean   @default(true)
+  lastSyncAt     DateTime? // Dernière synchronisation réussie
+  lastSyncStatus String?   @default("pending") // "success", "error", "pending"
+  lastSyncError  String?   // Message d'erreur si sync échouée
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relation avec les mappings d'événements
+  eventMappings CalendarEventMapping[]
+
+  // Performance indexes
+  @@index([userId])
+  @@index([isActive])
+  @@index([lastSyncAt])
+  @@map("external_calendars")
+}
+
+// Modèle pour mapper les événements externes aux produits
+model CalendarEventMapping {
+  id                 String           @id @default(cuid())
+  externalCalendarId String
+  externalCalendar   ExternalCalendar @relation(fields: [externalCalendarId], references: [id], onDelete: Cascade)
+
+  // Identifiant unique de l'événement (généré depuis le UID de l'iCal ou combinaison date+titre)
+  eventUid   String
+  eventTitle String
+  startDate  DateTime
+  endDate    DateTime
+
+  // Produits à bloquer pour cet événement
+  productIds String[] // Array des IDs de produits à bloquer
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Performance indexes
+  @@unique([externalCalendarId, eventUid])
+  @@index([externalCalendarId])
+  @@index([startDate, endDate])
+  @@map("calendar_event_mappings")
 }

@@ -47,6 +47,20 @@ export default function HostNavbar() {
                 Calendrier
               </Link>
               <Link
+                href='/dashboard/host/calendars'
+                className={`inline-flex items-center px-1 pt-1 border-b-2 ${isActive('/dashboard/host/calendars')} text-sm font-medium`}
+              >
+                <svg className='h-5 w-5 mr-2' viewBox='0 0 24 24' fill='none' stroke='currentColor'>
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth='2'
+                    d='M8 7h12M8 12h12M8 17h12M3 7h.01M3 12h.01M3 17h.01'
+                  />
+                </svg>
+                Calendriers externes
+              </Link>
+              <Link
                 href='/dashboard/host/reservations'
                 className={`inline-flex items-center px-1 pt-1 border-b-2 ${isActive('/dashboard/host/reservations')} text-sm font-medium`}
               >
