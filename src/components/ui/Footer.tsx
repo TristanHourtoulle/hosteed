@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Facebook, Instagram, Linkedin } from 'lucide-react'
 
 export default function Footer() {
   const currentYear = new Date().getFullYear()
@@ -18,7 +19,7 @@ export default function Footer() {
             <p className='text-gray-600 mb-4'>
               Plateforme de réservation d&apos;hébergements, de transport et de services de voyage.
             </p>
-            <p className='text-gray-600'>
+            <p className='text-gray-600 mb-4'>
               <span className='font-semibold'>Contact:</span>{' '}
               <a
                 href='mailto:hello@hosteed.com'
@@ -27,6 +28,36 @@ export default function Footer() {
                 hello@hosteed.com
               </a>
             </p>
+            <div className='flex items-center space-x-4'>
+              <span className='text-gray-600 font-semibold'>Suivez-nous:</span>
+              <a
+                href='https://www.facebook.com/share/1SX5pohiJ8/'
+                target='_blank'
+                rel='noopener noreferrer'
+                aria-label='Facebook'
+                className='text-gray-600 hover:text-[#015993] transition-colors'
+              >
+                <Facebook className='w-5 h-5' />
+              </a>
+              <a
+                href='https://www.instagram.com/hosteed_com?igsh=cm5ocG41cHVyNDlp'
+                target='_blank'
+                rel='noopener noreferrer'
+                aria-label='Instagram'
+                className='text-gray-600 hover:text-[#015993] transition-colors'
+              >
+                <Instagram className='w-5 h-5' />
+              </a>
+              <a
+                href='https://www.linkedin.com/company/106405207'
+                target='_blank'
+                rel='noopener noreferrer'
+                aria-label='LinkedIn'
+                className='text-gray-600 hover:text-[#015993] transition-colors'
+              >
+                <Linkedin className='w-5 h-5' />
+              </a>
+            </div>
           </div>
 
           {/* Legal Links */}
