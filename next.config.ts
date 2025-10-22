@@ -13,15 +13,8 @@ const nextConfig: NextConfig = {
   // Performance optimizations
   poweredByHeader: false,
 
-  async redirects() {
-    return [
-      {
-        source: '/',
-        destination: '/host',
-        permanent: true,
-      },
-    ]
-  },
+  // Redirects removed - homepage now shows proper landing page
+  // Users can access /host directly for search/listings
 
   async rewrites() {
     return [
