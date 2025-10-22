@@ -7,7 +7,7 @@ export default function Footer() {
   return (
     <footer className='bg-white border-t border-gray-200'>
       <div className='container mx-auto px-4 sm:px-6 lg:px-8 py-12'>
-        <div className='grid grid-cols-1 md:grid-cols-4 gap-8'>
+        <div className='grid grid-cols-1 md:grid-cols-3 gap-8'>
           {/* Company Info */}
           <div className='col-span-1 md:col-span-2'>
             <div className='flex items-center space-x-2 mb-4'>
@@ -19,15 +19,26 @@ export default function Footer() {
             <p className='text-gray-600 mb-4'>
               Plateforme de réservation d&apos;hébergements, de transport et de services de voyage.
             </p>
-            <p className='text-gray-600 mb-4'>
-              <span className='font-semibold'>Contact:</span>{' '}
-              <a
-                href='mailto:hello@hosteed.com'
-                className='text-[#015993] hover:text-[#0379C7] transition-colors'
-              >
-                hello@hosteed.com
-              </a>
-            </p>
+            <div className='text-gray-600 mb-2'>
+              <p className='mb-2'>
+                <span className='font-semibold'>Service client:</span>{' '}
+                <a
+                  href='mailto:hello@hosteed.com'
+                  className='text-[#015993] hover:text-[#0379C7] transition-colors'
+                >
+                  hello@hosteed.com
+                </a>
+              </p>
+              <p className='mb-4'>
+                <span className='font-semibold'>Service partenariat:</span>{' '}
+                <a
+                  href='mailto:welcome-pro@hosteed.com'
+                  className='text-[#015993] hover:text-[#0379C7] transition-colors'
+                >
+                  welcome-pro@hosteed.com
+                </a>
+              </p>
+            </div>
             <div className='flex items-center space-x-4'>
               <span className='text-gray-600 font-semibold'>Suivez-nous:</span>
               <a
@@ -89,17 +100,6 @@ export default function Footer() {
                 Conditions hébergeurs
               </Link>
             </nav>
-          </div>
-
-          {/* Company Details */}
-          <div>
-            <h4 className='text-lg font-semibold text-gray-900 mb-4'>Société</h4>
-            <div className='text-gray-600 space-y-2'>
-              <p className='text-sm'>HOSTEED</p>
-              <p className='text-sm'>SIRET: 832 134 571 00021</p>
-              <p className='text-sm'>36 Avenue de Normandie</p>
-              <p className='text-sm'>93160 Noisy le Grand</p>
-            </div>
           </div>
         </div>
 
