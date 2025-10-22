@@ -65,14 +65,12 @@ Système complet de gestion des retraits pour les hôtes, permettant aux admins 
 **À créer:**
 
 - `/api/withdrawals/payment-accounts`
-
   - GET - Liste des comptes
   - POST - Créer un compte
   - PUT /:id - Mettre à jour
   - DELETE /:id - Supprimer
 
 - `/api/withdrawals/requests`
-
   - GET - Liste des demandes
   - POST - Créer une demande
 
@@ -140,20 +138,17 @@ PUT - Valider un compte de paiement
 **Composants nécessaires:**
 
 1. `BalanceCard` - Affichage du solde
-
    - Montant total disponible
    - Montant disponible à 50%
    - Montant disponible à 100%
    - Montant en attente
 
 2. `PaymentAccountSelector` - Sélection/ajout compte
-
    - Liste déroulante des comptes
    - Bouton "Ajouter un nouveau compte"
    - Indicateur de validation
 
 3. `WithdrawalRequestForm` - Formulaire de demande
-
    - Choix 50% ou 100%
    - Montant à retirer
    - Sélection du moyen de paiement
@@ -172,13 +167,11 @@ PUT - Valider un compte de paiement
 **Formulaires par méthode:**
 
 1. **SEPA**
-
    - Nom du titulaire
    - IBAN
    - Checkbox "Enregistrer pour les prochaines fois"
 
 2. **Pripeo**
-
    - Nom du titulaire
    - Numéro de carte
    - Email
@@ -186,13 +179,11 @@ PUT - Valider un compte de paiement
    - Checkbox "Enregistrer"
 
 3. **Mobile Money**
-
    - Nom associé
    - Numéro (+261 XX XX XXX XX)
    - Checkbox "Enregistrer"
 
 4. **PayPal**
-
    - Nom d'utilisateur
    - Email
    - Téléphone (avec code pays)
@@ -214,7 +205,6 @@ PUT - Valider un compte de paiement
 **Composants:**
 
 1. `WithdrawalRequestsTable` - Tableau des demandes
-
    - Colonnes:
      - Hôte (nom, email)
      - Montant
@@ -229,7 +219,6 @@ PUT - Valider un compte de paiement
      - Par hôte
 
 2. `WithdrawalDetailsModal` - Détails d'une demande
-
    - Informations hôte
    - Montant détaillé
    - Méthode de paiement choisie
@@ -255,29 +244,24 @@ PUT - Valider un compte de paiement
 **Emails à implémenter:**
 
 1. **Demande créée** (vers hôte)
-
    - Confirmation de réception
    - Montant demandé
    - Méthode de paiement
    - Délai de traitement estimé
 
 2. **Compte à valider** (vers admin)
-
    - Nouvelle demande nécessitant validation
    - Lien direct vers l'admin
 
 3. **Compte validé** (vers hôte)
-
    - Compte approuvé
    - Prochaines étapes
 
 4. **Demande approuvée** (vers hôte)
-
    - Demande approuvée
    - Paiement effectif sous 1 jour ouvré
 
 5. **Paiement effectué** (vers hôte)
-
    - Confirmation de paiement
    - Nouveau solde
    - Détails de la transaction

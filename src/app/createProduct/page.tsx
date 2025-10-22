@@ -1485,7 +1485,11 @@ export default function CreateProductPage() {
 
           {/* Section SEO */}
           <motion.div variants={itemVariants}>
-            <SEOFieldsCard seoData={seoData} onSeoChange={setSeoData} articleTitle={formData.name} />
+            <SEOFieldsCard
+              seoData={seoData}
+              onSeoChange={setSeoData}
+              articleTitle={formData.name}
+            />
           </motion.div>
 
           {/* Bouton de soumission */}

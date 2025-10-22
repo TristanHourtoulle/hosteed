@@ -903,7 +903,8 @@ export async function createProduct(data: CreateProductInput) {
     // Générer le slug si des données SEO sont fournies
     let slug: string | null = null
     if (data.seoData?.slug || data.seoData?.metaTitle) {
-      const baseSlug = data.seoData.slug || generateSlugFromName(data.seoData.metaTitle || data.name)
+      const baseSlug =
+        data.seoData.slug || generateSlugFromName(data.seoData.metaTitle || data.name)
       slug = await ensureUniqueSlug(baseSlug)
     }
 

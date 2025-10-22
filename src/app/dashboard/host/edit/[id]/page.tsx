@@ -853,7 +853,11 @@ export default function EditProductPage() {
 
           {/* SEO Section */}
           <motion.div variants={itemVariants}>
-            <SEOFieldsCard seoData={seoData} onSeoChange={setSeoData} articleTitle={formData.name} />
+            <SEOFieldsCard
+              seoData={seoData}
+              onSeoChange={setSeoData}
+              articleTitle={formData.name}
+            />
           </motion.div>
 
           {/* Submit Button */}

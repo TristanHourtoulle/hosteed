@@ -226,11 +226,9 @@ export async function POST(request: Request) {
 **Pour résoudre ton problème de performance MAINTENANT**:
 
 1. ✅ **Retirer les images de `/api/products/search`** (5 min)
-
    - Ne renvoyer que `{ id, name, basePrice, ... }` sans `img`
 
 2. ✅ **Créer la route `/api/products/[id]/thumbnail`** (15 min)
-
    - Optimisation avec sharp
    - Cache HTTP agressif
 

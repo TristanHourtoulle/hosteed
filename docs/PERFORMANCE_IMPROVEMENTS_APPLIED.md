@@ -207,7 +207,6 @@ Vous devriez voir:
 ### Phase 2: Amélioration Continue
 
 1. **Données statiques en SSR** (Next.js Server Components)
-
    - Pré-charger types/equipments au build time
    - Éliminer complètement ces 5 requêtes
    - Gain supplémentaire: -500ms

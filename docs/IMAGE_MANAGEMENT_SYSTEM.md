@@ -250,7 +250,6 @@ const info = await getImageInfo('/uploads/products/abc123/img_0_thumb.webp')
 ### Stratégie Recommandée
 
 1. **Phase 1: Setup** (Maintenant)
-
    - ✅ Service d'images créé
    - ✅ APIs créées
    - ✅ Scripts de migration prêts

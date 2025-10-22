@@ -156,7 +156,6 @@ docker-compose up -d
 #### Endpoints Disponibles
 
 1. **Recherche de Produits**
-
    - `findProductById(id: string)`: Recherche un produit par son ID
    - `findAllProducts()`: Récupère tous les produits validés
    - `findAllProductByHostId(id: string)`: Récupère tous les produits d'un hôte spécifique
@@ -173,7 +172,6 @@ docker-compose up -d
 #### Endpoints Disponibles
 
 1. **Recherche de Locations**
-
    - `getRentById(id: string)`: Recherche une location par son ID
    - `findAllRentByProduct(id: string)`: Récupère toutes les locations pour un produit spécifique
    - `findAllRentByUserId(id: string)`: Récupère toutes les locations d'un utilisateur
@@ -208,7 +206,6 @@ docker-compose up -d
 #### Endpoints Disponibles
 
 1. **Recherche d'Utilisateurs**
-
    - `findUserByEmail(email: string)`: Recherche un utilisateur par son email
    - `findAllUserByRoles(roles: UserRole)`: Récupère tous les utilisateurs ayant un rôle spécifique
 
@@ -251,7 +248,6 @@ docker-compose up -d
 #### Endpoints Disponibles
 
 1. **Gestion des Paiements**
-
    - `createPaymentIntent(params)`: Crée une intention de paiement avec les paramètres suivants:
      - `amount`: Montant en euros
      - `currency`: Devise (optionnel, par défaut: 'eur')

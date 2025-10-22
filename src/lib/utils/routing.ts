@@ -12,9 +12,6 @@ export function getProductUrl(product: { slug?: string | null; id: string }): st
  * @param product - Product object with optional slug and required id
  * @returns Product reservation URL path
  */
-export function getProductReservationUrl(product: {
-  slug?: string | null
-  id: string
-}): string {
+export function getProductReservationUrl(product: { slug?: string | null; id: string }): string {
   return `/host/${product.slug || product.id}/reservation`
 }
