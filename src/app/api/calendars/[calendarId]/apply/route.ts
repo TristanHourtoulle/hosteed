@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { getExternalCalendar, applyEventMappings } from '@/lib/services/centralized-calendar.service'
+import {
+  getExternalCalendar,
+  applyEventMappings,
+} from '@/lib/services/centralized-calendar.service'
 
 /**
  * POST /api/calendars/[calendarId]/apply

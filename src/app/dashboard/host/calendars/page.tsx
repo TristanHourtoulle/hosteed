@@ -9,10 +9,10 @@ export default function CentralizedCalendarsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-          <p className="text-slate-600 text-lg">Chargement...</p>
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='flex flex-col items-center gap-4'>
+          <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin'></div>
+          <p className='text-slate-600 text-lg'>Chargement...</p>
         </div>
       </div>
     )
@@ -23,9 +23,9 @@ export default function CentralizedCalendarsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className='min-h-screen bg-gray-100'>
       <HostNavbar />
-      <div className="container mx-auto py-6 px-4">
+      <div className='container mx-auto py-6 px-4'>
         <CentralizedCalendarManager />
       </div>
     </div>

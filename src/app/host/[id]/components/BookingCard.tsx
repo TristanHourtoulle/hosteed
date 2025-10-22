@@ -254,7 +254,9 @@ export default function BookingCard({
               <div className='flex items-center gap-1'>
                 <Star className='h-4 w-4 fill-yellow-400 text-yellow-400' />
                 <span className='text-sm font-medium'>{formatNumber(globalGrade, 1)}</span>
-                <span className='text-sm text-gray-500'>({formatNumber(product.reviews.length)})</span>
+                <span className='text-sm text-gray-500'>
+                  ({formatNumber(product.reviews.length)})
+                </span>
               </div>
             ) : (
               <div className='flex items-center gap-1'>
@@ -297,7 +299,8 @@ export default function BookingCard({
                     Frais de service Hosteed
                   </span>
                   <span className='text-sm text-blue-800 font-semibold'>
-                    {formatNumber(defaultCommissionInfo.clientRate)} % + {formatCurrency(defaultCommissionInfo.clientFixed)}
+                    {formatNumber(defaultCommissionInfo.clientRate)} % +{' '}
+                    {formatCurrency(defaultCommissionInfo.clientFixed)}
                   </span>
                 </div>
                 <span className='text-xs text-blue-600'>
@@ -516,20 +519,25 @@ export default function BookingCard({
             <div className='space-y-3 text-sm'>
               <div className='flex justify-between items-center'>
                 <span className='text-gray-600 underline decoration-dotted cursor-help'>
-                  {formatCurrency(effectiveBasePrice)} × {formatNumber(nights)} nuit{nights > 1 ? 's' : ''}
+                  {formatCurrency(effectiveBasePrice)} × {formatNumber(nights)} nuit
+                  {nights > 1 ? 's' : ''}
                   {activePromotion && (
                     <span className='ml-1 text-green-600 font-medium'>
                       (avec promotion -{formatNumber(activePromotion.discountPercentage)} %)
                     </span>
                   )}
                 </span>
-                <span className='text-gray-900 font-medium'>{formatCurrency(subtotal, 'EUR', 0)}</span>
+                <span className='text-gray-900 font-medium'>
+                  {formatCurrency(subtotal, 'EUR', 0)}
+                </span>
               </div>
               <div className='flex justify-between items-center'>
                 <span className='text-gray-600 underline decoration-dotted cursor-help'>
                   Frais de service Hosteed
                 </span>
-                <span className='text-gray-900 font-medium'>{formatCurrency(serviceFee, 'EUR', 0)}</span>
+                <span className='text-gray-900 font-medium'>
+                  {formatCurrency(serviceFee, 'EUR', 0)}
+                </span>
               </div>
               <div className='border-t border-gray-200 pt-3 flex justify-between items-center font-semibold text-base'>
                 <span>Total</span>

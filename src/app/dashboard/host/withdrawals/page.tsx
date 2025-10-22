@@ -887,7 +887,8 @@ export default function WithdrawalsPage() {
                     <h4 className='font-semibold text-blue-900 mb-2'>Résumé de votre demande</h4>
                     <div className='space-y-1 text-sm text-blue-800'>
                       <p>
-                        • Montant: <span className='font-bold'>{formatCurrency(selectedAmount)}</span>
+                        • Montant:{' '}
+                        <span className='font-bold'>{formatCurrency(selectedAmount)}</span>
                       </p>
                       <p>
                         • Type:{' '}

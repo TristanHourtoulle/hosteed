@@ -10,6 +10,7 @@ Le système hybride de calendrier combine:
 ## Architecture
 
 ### Backend
+
 - **Schéma Prisma modifié:**
   - `ExternalCalendar` maintenant lié au `User` (pas au `Product`)
   - Nouveau modèle `CalendarEventMapping` pour mapper événements → produits
@@ -27,6 +28,7 @@ Le système hybride de calendrier combine:
   - `POST /api/calendars/[id]/apply` - Appliquer mappings
 
 ### Frontend
+
 - **Nouvelle page:** `/dashboard/host/calendars` - Gestion centralisée
 - **Composants:**
   - `CentralizedCalendarManager` - Liste et gestion des calendriers
@@ -42,6 +44,7 @@ Le système hybride de calendrier combine:
 #### 1.1 Créer un calendrier externe
 
 1. **Démarrer l'app:**
+
    ```bash
    pnpm dev
    ```
@@ -60,6 +63,7 @@ Le système hybride de calendrier combine:
    - Clique sur "Ajouter"
 
 **Résultat attendu:**
+
 - Le calendrier apparaît dans la liste
 - Le statut est "pending" (horloge grise)
 - Toast de confirmation
@@ -69,6 +73,7 @@ Le système hybride de calendrier combine:
 1. **Cliquer sur le bouton "Sync" (icône refresh)**
 
 **Résultat attendu:**
+
 - Modal "Mapper les événements" s'ouvre automatiquement
 - Les événements du calendrier sont listés
 - Le statut passe à "success" (checkmark vert)
@@ -86,6 +91,7 @@ Dans le modal de mapping:
 3. **Cliquer sur "Sauvegarder et Appliquer"**
 
 **Résultat attendu:**
+
 - Toast: "Mappings appliqués! X blocs créés pour Y événements"
 - Modal se ferme
 - Le nombre d'événements mappés est affiché sur le calendrier
@@ -97,6 +103,7 @@ Dans le modal de mapping:
 3. **Vérifie que les dates des événements externes sont bloquées**
 
 **Vérification en base de données:**
+
 ```bash
 PGPASSWORD=postgres psql -h localhost -U postgres -d hosteed -c "
 SELECT \"startDate\", \"endDate\", title, description
@@ -121,6 +128,7 @@ LIMIT 10;
    - "Importer des calendriers" (ancien système, toujours fonctionnel)
 
 **Résultat attendu:**
+
 - L'URL change: `/dashboard/host/calendar?property=PRODUCT_ID`
 - Le calendrier affiche uniquement les données du produit sélectionné
 - Les boutons d'export/import sont visibles
@@ -139,6 +147,7 @@ curl "http://localhost:3000/api/calendar/[PRODUCT_ID]/feed.ics?token=[TOKEN]"
 ```
 
 **Résultat attendu:**
+
 - Fichier ICS contenant:
   - Les réservations du logement
   - Les blocs d'indisponibilité (y compris ceux créés par les calendriers externes)
@@ -153,6 +162,7 @@ curl "http://localhost:3000/api/calendar/[PRODUCT_ID]/feed.ics?token=[TOKEN]"
 4. **Clique sur "Mettre à jour"**
 
 **Résultat attendu:**
+
 - Toast de confirmation
 - Changements visibles immédiatement
 
@@ -168,6 +178,7 @@ curl "http://localhost:3000/api/calendar/[PRODUCT_ID]/feed.ics?token=[TOKEN]"
 4. **Clique sur "Sauvegarder et Appliquer"**
 
 **Résultat attendu:**
+
 - Les anciens blocs sont supprimés
 - De nouveaux blocs sont créés selon les nouveaux mappings
 
@@ -179,11 +190,13 @@ curl "http://localhost:3000/api/calendar/[PRODUCT_ID]/feed.ics?token=[TOKEN]"
 2. **Confirme la suppression**
 
 **Résultat attendu:**
+
 - Le calendrier disparaît
 - Tous ses mappings sont supprimés
 - Tous les blocs créés par ce calendrier sont supprimés
 
 **Vérification:**
+
 ```bash
 PGPASSWORD=postgres psql -h localhost -U postgres -d hosteed -c "
 SELECT COUNT(*)
@@ -203,6 +216,7 @@ WHERE description LIKE '%[SYNC:CALENDAR_ID]%';
 2. **Cliquer sur "Sync"**
 
 **Résultat attendu:**
+
 - Toast d'erreur
 - Le statut du calendrier passe à "error" (X rouge)
 - Le message d'erreur est affiché
@@ -213,6 +227,7 @@ WHERE description LIKE '%[SYNC:CALENDAR_ID]%';
 2. **Synchroniser**
 
 **Résultat attendu:**
+
 - Erreur de fetch affichée
 - Statut "error"
 
@@ -239,6 +254,7 @@ WHERE description LIKE '%[SYNC:CALENDAR_ID]%';
 Si tu veux tester localement sans Google Calendar, crée ce fichier:
 
 **test-calendar.ics:**
+
 ```ics
 BEGIN:VCALENDAR
 VERSION:2.0
@@ -271,6 +287,7 @@ END:VCALENDAR
 ```
 
 Puis serve-le localement:
+
 ```bash
 # Dans un terminal séparé
 cd /tmp
@@ -285,6 +302,7 @@ URL à utiliser: `http://localhost:8000/test-calendar.ics`
 ## Commandes Utiles pour le Débogage
 
 ### Voir tous les calendriers externes
+
 ```bash
 PGPASSWORD=postgres psql -h localhost -U postgres -d hosteed -c "
 SELECT ec.id, ec.name, ec.\"lastSyncStatus\", ec.\"lastSyncAt\", u.email as user_email
@@ -295,6 +313,7 @@ ORDER BY ec.\"createdAt\" DESC;
 ```
 
 ### Voir tous les mappings
+
 ```bash
 PGPASSWORD=postgres psql -h localhost -U postgres -d hosteed -c "
 SELECT cem.id, cem.\"eventTitle\", cem.\"startDate\", cem.\"endDate\",
@@ -308,6 +327,7 @@ LIMIT 20;
 ```
 
 ### Voir les blocs créés par les calendriers externes
+
 ```bash
 PGPASSWORD=postgres psql -h localhost -U postgres -d hosteed -c "
 SELECT up.\"startDate\", up.\"endDate\", up.title, up.description, p.name as product_name
@@ -320,6 +340,7 @@ LIMIT 20;
 ```
 
 ### Nettoyer les données de test
+
 ```bash
 PGPASSWORD=postgres psql -h localhost -U postgres -d hosteed -c "
 -- Supprimer tous les calendriers externes de test
@@ -365,20 +386,27 @@ DELETE FROM \"UnAvailableProduct\" WHERE description LIKE '%[SYNC:%';
 ## Problèmes Connus et Solutions
 
 ### Problème: "Module 'ical' not found"
+
 **Solution:**
+
 ```bash
 pnpm install ical
 ```
 
 ### Problème: Les mappings ne créent pas de blocs
+
 **Vérification:**
+
 1. Check que le calendrier a bien des événements
 2. Check que des produits ont été sélectionnés dans les mappings
 3. Check les logs de la console
 
 ### Problème: Le dropdown de produits est vide
+
 **Vérification:**
+
 1. L'utilisateur a-t-il des produits?
+
 ```bash
 PGPASSWORD=postgres psql -h localhost -U postgres -d hosteed -c "
 SELECT COUNT(*) FROM \"Product\"
@@ -390,13 +418,13 @@ WHERE \"userManager\" = (SELECT id FROM \"User\" WHERE email = 'ton@email.com');
 
 ## Différences avec l'Ancien Système
 
-| Aspect | Ancien Système | Nouveau Système (Hybride) |
-|--------|----------------|---------------------------|
-| **Import** | Par produit | Centralisé (niveau host) |
-| **Mapping** | Automatique 1:1 | Manuel, flexible N:N |
-| **Configuration** | Un calendrier par produit | Un calendrier pour tous |
-| **Export** | Par produit | Par produit (inchangé) |
-| **Flexibilité** | Faible | Élevée |
+| Aspect            | Ancien Système            | Nouveau Système (Hybride) |
+| ----------------- | ------------------------- | ------------------------- |
+| **Import**        | Par produit               | Centralisé (niveau host)  |
+| **Mapping**       | Automatique 1:1           | Manuel, flexible N:N      |
+| **Configuration** | Un calendrier par produit | Un calendrier pour tous   |
+| **Export**        | Par produit               | Par produit (inchangé)    |
+| **Flexibilité**   | Faible                    | Élevée                    |
 
 ---
 
@@ -414,6 +442,7 @@ WHERE \"userManager\" = (SELECT id FROM \"User\" WHERE email = 'ton@email.com');
 ## Support
 
 Si tu rencontres des problèmes:
+
 1. Check les logs de la console navigateur (F12)
 2. Check les logs du serveur Next.js
 3. Vérifie la base de données avec les commandes ci-dessus

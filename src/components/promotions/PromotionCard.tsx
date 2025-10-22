@@ -80,7 +80,9 @@ export default function PromotionCard({
                 {promotion.product.name}
               </h3>
               <div className='flex flex-wrap items-baseline gap-2'>
-                <span className='text-sm text-gray-500 line-through'>{formatCurrency(basePrice, 'EUR')}</span>
+                <span className='text-sm text-gray-500 line-through'>
+                  {formatCurrency(basePrice, 'EUR')}
+                </span>
                 <span className='text-lg sm:text-xl font-bold text-green-600'>
                   {formatCurrency(discountedPrice, 'EUR')}
                 </span>

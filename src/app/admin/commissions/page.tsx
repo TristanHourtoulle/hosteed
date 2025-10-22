@@ -279,7 +279,6 @@ export default function CommissionsPage() {
     }
   }
 
-
   if (isAuthLoading || loading) {
     return (
       <div className='min-h-screen flex items-center justify-center'>

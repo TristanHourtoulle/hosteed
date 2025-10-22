@@ -75,9 +75,7 @@ export default function BookingCostSummary({
         <span>
           Hébergement ({numberOfDays} jour{numberOfDays > 1 ? 's' : ''})
         </span>
-        <span className='font-medium'>
-          {formatCurrency(baseTotal, currency)}
-        </span>
+        <span className='font-medium'>{formatCurrency(baseTotal, currency)}</span>
       </div>
 
       {/* Extras */}
@@ -97,9 +95,7 @@ export default function BookingCostSummary({
                   <div className='font-medium'>{extra.name}</div>
                   <div className='text-gray-600 text-xs'>{description}</div>
                 </div>
-                <span className='font-medium'>
-                  {formatCurrency(cost, currency)}
-                </span>
+                <span className='font-medium'>{formatCurrency(cost, currency)}</span>
               </div>
             )
           })}
@@ -113,16 +109,12 @@ export default function BookingCostSummary({
       {showCommissions && commissionCalc ? (
         <div className='flex justify-between items-center'>
           <span>Sous-total</span>
-          <span className='font-medium'>
-            {formatCurrency(grandTotal, currency)}
-          </span>
+          <span className='font-medium'>{formatCurrency(grandTotal, currency)}</span>
         </div>
       ) : (
         <div className='flex justify-between items-center text-lg font-bold'>
           <span>Total</span>
-          <span>
-            {formatCurrency(grandTotal, currency)}
-          </span>
+          <span>{formatCurrency(grandTotal, currency)}</span>
         </div>
       )}
 
@@ -157,7 +149,9 @@ export default function BookingCostSummary({
           {/* Total final avec commissions */}
           <div className='flex justify-between items-center text-lg font-bold'>
             <span>Prix final pour le client</span>
-            <span className='text-blue-700'>{formatCurrency(commissionCalc.clientPays, 'EUR')}</span>
+            <span className='text-blue-700'>
+              {formatCurrency(commissionCalc.clientPays, 'EUR')}
+            </span>
           </div>
         </>
       )}
