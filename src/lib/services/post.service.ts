@@ -4,11 +4,11 @@ import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
-interface SEOData {
-  metaTitle: string
-  metaDescription: string
-  keywords: string
-  slug: string
+export interface SEOData {
+  metaTitle?: string
+  metaDescription?: string
+  keywords?: string
+  slug?: string
 }
 
 export async function createPost(

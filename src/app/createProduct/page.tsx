@@ -40,6 +40,7 @@ import ImageGalleryPreview from '@/components/ui/ImageGalleryPreview'
 import ErrorAlert, { ErrorDetails } from '@/components/ui/ErrorAlert'
 import { UserCombobox } from '@/components/ui/UserCombobox'
 import { parseCreateProductError, createValidationError } from '@/lib/utils/errorHandler'
+import SEOFieldsCard from '@/components/ui/SEOFieldsCard'
 
 // Import types, utilities, and hooks
 import type { NearbyPlace, ImageFile, TestBooking, SpecialPrice, FormData } from './types'
@@ -68,6 +69,19 @@ export default function CreateProductPage() {
   })
   const [userSelected, setUserSelected] = useState('')
   const [assignToOtherUser, setAssignToOtherUser] = useState(false)
+
+  // SEO data state
+  const [seoData, setSeoData] = useState<{
+    metaTitle?: string
+    metaDescription?: string
+    keywords?: string
+    slug?: string
+  }>({
+    metaTitle: '',
+    metaDescription: '',
+    keywords: '',
+    slug: '',
+  })
 
   // Modal states
   const [serviceModalOpen, setServiceModalOpen] = useState(false)
@@ -370,6 +384,8 @@ export default function CreateProductPage() {
           endDate: sp.endDate,
           activate: sp.activate,
         })),
+        // Données SEO
+        seoData: seoData,
       }
 
       const result = await createProduct(productData)
@@ -1466,6 +1482,11 @@ export default function CreateProductPage() {
               </Card>
             </motion.div>
           )}
+
+          {/* Section SEO */}
+          <motion.div variants={itemVariants}>
+            <SEOFieldsCard seoData={seoData} onSeoChange={setSeoData} articleTitle={formData.name} />
+          </motion.div>
 
           {/* Bouton de soumission */}
           <motion.div className='flex justify-center pt-8' variants={itemVariants}>

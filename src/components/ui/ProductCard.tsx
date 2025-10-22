@@ -7,6 +7,7 @@ import { useFavoritesOptimized } from '@/hooks/useFavoritesOptimized'
 import { motion } from 'framer-motion'
 import PromotionBadge from '@/components/promotions/PromotionBadge'
 import { getDaysUntilEnd, getUrgencyMessage } from '@/lib/utils/promotion'
+import { getProductUrl } from '@/lib/utils/routing'
 
 interface Review {
   grade: number
@@ -30,6 +31,7 @@ interface Product {
   name: string
   description: string
   address: string
+  slug?: string | null
   img?: { img: string }[] | null
   basePrice: string
   originalBasePrice?: string
@@ -200,7 +202,7 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
 
   return (
     <motion.div {...cardMotionProps}>
-      <Link href={`/host/${product.id}`} className='block'>
+      <Link href={getProductUrl(product)} className='block'>
         <motion.div
           className='bg-white rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 group'
           onMouseEnter={handleMouseEnter}

@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { CheckRentIsAvailable } from '@/lib/services/rents.service'
-import { findProductById } from '@/lib/services/product.service'
+import { findProductBySlugOrId } from '@/lib/services/product.service'
 import { findUserById } from '@/lib/services/user.service'
 import {
   calculateTotalRentPrice,
@@ -100,7 +100,7 @@ export default function ReservationPage() {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const productData = await findProductById(id as string)
+        const productData = await findProductBySlugOrId(id as string)
         if (productData) {
           setProduct(productData as unknown as Product)
         } else {

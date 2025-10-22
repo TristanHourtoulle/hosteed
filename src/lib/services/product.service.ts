@@ -10,6 +10,48 @@ import { invalidateProductCache } from '@/lib/cache/invalidation'
 import { create as createHotel, findHotelByManagerId } from '@/lib/services/hotel.service'
 import { createSpecialPrices } from '@/lib/services/specialPrices.service'
 
+// Interface pour les données SEO
+export interface SEOData {
+  metaTitle?: string
+  metaDescription?: string
+  keywords?: string
+  slug?: string
+}
+
+// Générer un slug à partir du nom du produit
+function generateSlugFromName(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Supprimer accents
+    .replace(/[^a-z0-9\s-]/g, '') // Supprimer caractères spéciaux
+    .replace(/\s+/g, '-') // Espaces → tirets
+    .replace(/-+/g, '-') // Tirets multiples → simple
+    .replace(/^-|-$/g, '') // Supprimer tirets début/fin
+}
+
+// Assurer l'unicité du slug
+async function ensureUniqueSlug(baseSlug: string, excludeProductId?: string): Promise<string> {
+  let uniqueSlug = baseSlug
+  let counter = 1
+
+  while (true) {
+    const existing = await prisma.product.findFirst({
+      where: {
+        slug: uniqueSlug,
+        ...(excludeProductId ? { id: { not: excludeProductId } } : {}),
+      },
+    })
+
+    if (!existing) break
+
+    uniqueSlug = `${baseSlug}-${counter}`
+    counter++
+  }
+
+  return uniqueSlug
+}
+
 // Interfaces pour typer les prix spéciaux
 interface SpecialPrice {
   id: string
@@ -227,6 +269,147 @@ export async function findProductById(id: string) {
     return null
   } catch (error) {
     console.error('Erreur lors de la recherche du produit:', error)
+    return null
+  }
+}
+
+/**
+ * Find a product by slug or ID (with fallback)
+ * This allows accessing products via SEO-friendly URLs while maintaining backward compatibility
+ */
+export async function findProductBySlugOrId(slugOrId: string) {
+  try {
+    // First, try to find by slug
+    let product = await prisma.product.findUnique({
+      where: { slug: slugOrId },
+      include: {
+        img: { take: 10 },
+        type: true,
+        equipments: { take: 20 },
+        servicesList: { take: 20 },
+        mealsList: { take: 10 },
+        options: { take: 10 },
+        rents: { take: 5, orderBy: { id: 'desc' } },
+        discount: { take: 5 },
+        user: { select: { name: true, email: true, image: true } },
+        securities: { take: 10 },
+        includedServices: { take: 15 },
+        extras: { take: 15 },
+        highlights: { take: 10 },
+        hotel: true,
+        rules: true,
+        nearbyPlaces: { take: 10 },
+        transportOptions: { take: 10 },
+        propertyInfo: true,
+        promotions: {
+          where: {
+            isActive: true,
+            startDate: { lte: new Date() },
+            endDate: { gte: new Date() },
+          },
+          select: {
+            id: true,
+            discountPercentage: true,
+            startDate: true,
+            endDate: true,
+            isActive: true,
+          },
+        },
+        reviews: {
+          where: { approved: true },
+          take: 10,
+          select: {
+            id: true,
+            title: true,
+            text: true,
+            grade: true,
+            welcomeGrade: true,
+            staff: true,
+            comfort: true,
+            equipment: true,
+            cleaning: true,
+            visitDate: true,
+            publishDate: true,
+            approved: true,
+          },
+        },
+      },
+    })
+
+    // If not found by slug, try by ID (fallback for old URLs)
+    if (!product) {
+      product = await prisma.product.findUnique({
+        where: { id: slugOrId },
+        include: {
+          img: { take: 10 },
+          type: true,
+          equipments: { take: 20 },
+          servicesList: { take: 20 },
+          mealsList: { take: 10 },
+          options: { take: 10 },
+          rents: { take: 5, orderBy: { id: 'desc' } },
+          discount: { take: 5 },
+          user: { select: { name: true, email: true, image: true } },
+          securities: { take: 10 },
+          includedServices: { take: 15 },
+          extras: { take: 15 },
+          highlights: { take: 10 },
+          hotel: true,
+          rules: true,
+          nearbyPlaces: { take: 10 },
+          transportOptions: { take: 10 },
+          propertyInfo: true,
+          promotions: {
+            where: {
+              isActive: true,
+              startDate: { lte: new Date() },
+              endDate: { gte: new Date() },
+            },
+            select: {
+              id: true,
+              discountPercentage: true,
+              startDate: true,
+              endDate: true,
+              isActive: true,
+            },
+          },
+          reviews: {
+            where: { approved: true },
+            take: 10,
+            select: {
+              id: true,
+              title: true,
+              text: true,
+              grade: true,
+              welcomeGrade: true,
+              staff: true,
+              comfort: true,
+              equipment: true,
+              cleaning: true,
+              visitDate: true,
+              publishDate: true,
+              approved: true,
+            },
+          },
+        },
+      })
+    }
+
+    if (product) {
+      // Apply special prices
+      const specialPrices = await getSpecialPricesForProduct(product.id)
+      const filteredSpecialPrices = filterActiveSpecialPrices(specialPrices)
+      const productWithSpecialPrice = applySpecialPriceToProduct(product, filteredSpecialPrices)
+
+      return {
+        ...productWithSpecialPrice,
+        specialPrices: filteredSpecialPrices,
+      }
+    }
+
+    return null
+  } catch (error) {
+    console.error('Erreur lors de la recherche du produit par slug ou ID:', error)
     return null
   }
 }
@@ -717,6 +900,13 @@ export async function createProduct(data: CreateProductInput) {
     if (invalidMeals.length > 0) console.warn('Invalid meal IDs:', invalidMeals)
     if (invalidSecurities.length > 0) console.warn('Invalid security IDs:', invalidSecurities)
 
+    // Générer le slug si des données SEO sont fournies
+    let slug: string | null = null
+    if (data.seoData?.slug || data.seoData?.metaTitle) {
+      const baseSlug = data.seoData.slug || generateSlugFromName(data.seoData.metaTitle || data.name)
+      slug = await ensureUniqueSlug(baseSlug)
+    }
+
     // Créer d'abord le produit de base
     const createdProduct = await prisma.product.create({
       data: {
@@ -742,6 +932,11 @@ export async function createProduct(data: CreateProductInput) {
         userManager: BigInt(0),
         // Gestion du nombre de chambres disponibles pour les hôtels
         availableRooms: data.hotelInfo ? data.hotelInfo.availableRooms : null,
+        // Champs SEO
+        metaTitle: data.seoData?.metaTitle || null,
+        metaDescription: data.seoData?.metaDescription || null,
+        keywords: data.seoData?.keywords || null,
+        slug: slug,
         type: { connect: { id: data.typeId } },
         user: {
           connect: data.userId.map(id => ({ id })),
@@ -1722,6 +1917,13 @@ interface UpdateProductInput {
   nearbyPlaces?: Array<{ name: string; distance: number; duration?: number; transport?: string }>
   isHotel?: boolean
   hotelInfo?: { name: string; availableRooms: number }
+  // SEO data
+  seoData?: {
+    metaTitle?: string
+    metaDescription?: string
+    keywords?: string
+    slug?: string
+  }
 }
 
 /**
@@ -1893,6 +2095,28 @@ export async function updateProduct(productId: string, data: UpdateProductInput)
     // Hotel info - just update availableRooms on Product
     if (data.isHotel !== undefined && data.isHotel && data.hotelInfo) {
       updateData.availableRooms = data.hotelInfo.availableRooms
+    }
+
+    // SEO data
+    if (data.seoData) {
+      if (data.seoData.metaTitle !== undefined) {
+        updateData.metaTitle = data.seoData.metaTitle || null
+      }
+      if (data.seoData.metaDescription !== undefined) {
+        updateData.metaDescription = data.seoData.metaDescription || null
+      }
+      if (data.seoData.keywords !== undefined) {
+        updateData.keywords = data.seoData.keywords || null
+      }
+      // Gérer le slug avec vérification d'unicité
+      if (data.seoData.slug !== undefined) {
+        const baseSlug = data.seoData.slug || ''
+        if (baseSlug) {
+          updateData.slug = await ensureUniqueSlug(baseSlug, productId)
+        } else {
+          updateData.slug = null
+        }
+      }
     }
 
     // Update product

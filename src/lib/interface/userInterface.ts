@@ -88,6 +88,13 @@ export interface CreateProductInput {
   hotelInfo?: HotelInfo | null
   // Prix spéciaux
   specialPrices?: SpecialPriceInput[]
+  // Données SEO
+  seoData?: {
+    metaTitle?: string
+    metaDescription?: string
+    keywords?: string
+    slug?: string
+  }
 }
 
 export interface Product {

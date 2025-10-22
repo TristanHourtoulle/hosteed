@@ -205,6 +205,12 @@ model Product {
   // Promotions system
   promotions ProductPromotion[] @relation("ProductPromotions")
 
+  // SEO fields
+  metaTitle       String?
+  metaDescription String?
+  keywords        String?
+  slug            String?  @unique
+
   // Performance indexes
   @@index([validate])
   @@index([userManager])

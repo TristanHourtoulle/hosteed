@@ -21,14 +21,7 @@ import { ArrowLeft, Save, Eye, Edit3, ImagePlus, X, Sparkles } from 'lucide-reac
 import Link from 'next/link'
 import { toast } from 'sonner'
 import Image from 'next/image'
-import SEOFieldsCard from '@/components/ui/SEOFieldsCard'
-
-interface SEOData {
-  metaTitle: string
-  metaDescription: string
-  keywords: string
-  slug: string
-}
+import SEOFieldsCard, { type SEOData } from '@/components/ui/SEOFieldsCard'
 
 interface Post {
   id: string
