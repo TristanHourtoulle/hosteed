@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { findProductById } from '@/lib/services/product.service'
+import { findProductBySlugOrId } from '@/lib/services/product.service'
 import { CheckRentIsAvailable } from '@/lib/services/rents.service'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -192,7 +192,7 @@ export default function ProductDetails() {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const productData = await findProductById(id as string)
+        const productData = await findProductBySlugOrId(id as string)
         if (productData) {
           console.log(productData)
           setProduct(productData as unknown as Product)

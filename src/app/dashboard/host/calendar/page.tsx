@@ -7,7 +7,10 @@ import { findAllReservationsByHostId, FormattedRent } from '@/lib/services/rent.
 import { FormattedUnavailability } from '@/lib/services/unavailableRent.service'
 import HostNavbar from '../components/HostNavbar'
 import UnavailabilityModal, { UnavailabilityData } from './UnavailabilityModal'
+import ExportCalendarModal from '@/components/calendar/ExportCalendarModal'
 import { toast } from 'sonner'
+import Link from 'next/link'
+import { Calendar as CalendarIcon } from 'lucide-react'
 
 function CalendarContent() {
   const router = useRouter()
@@ -22,6 +25,8 @@ function CalendarContent() {
   const [reservations, setReservations] = useState<FormattedRent[]>([])
   const [unavailabilities, setUnavailabilities] = useState<FormattedUnavailability[]>([])
   const [loading, setLoading] = useState(true)
+  const [propertyName, setPropertyName] = useState<string>('')
+  const [userProducts, setUserProducts] = useState<Array<{ id: string; name: string }>>([])
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedUnavailability, setSelectedUnavailability] = useState<{
@@ -151,6 +156,47 @@ function CalendarContent() {
     loadData()
   }, [fetchReservations, fetchUnavailabilities])
 
+  // Fetch user products for dropdown
+  useEffect(() => {
+    const fetchUserProducts = async () => {
+      if (!session?.user?.id) return
+
+      try {
+        const response = await fetch('/api/host/products')
+        if (response.ok) {
+          const data = await response.json()
+          setUserProducts(data.products || [])
+        }
+      } catch (error) {
+        console.error('Error fetching products:', error)
+      }
+    }
+
+    fetchUserProducts()
+  }, [session?.user?.id])
+
+  // Fetch property name when propertyId changes
+  useEffect(() => {
+    const fetchPropertyName = async () => {
+      if (!propertyId) {
+        setPropertyName('')
+        return
+      }
+
+      try {
+        const response = await fetch(`/api/products/${propertyId}`)
+        if (response.ok) {
+          const product = await response.json()
+          setPropertyName(product.name || '')
+        }
+      } catch (error) {
+        console.error('Error fetching property name:', error)
+      }
+    }
+
+    fetchPropertyName()
+  }, [propertyId])
+
   const handleCreateUnavailability = async (data: UnavailabilityData) => {
     const response = await fetch('/api/host/unavailability', {
       method: 'POST',
@@ -262,35 +308,77 @@ function CalendarContent() {
       <div className='container mx-auto py-6'>
         <div className='bg-white rounded-lg shadow-md'>
           <div className='p-6 border-b border-gray-200'>
-            <div className='flex justify-between items-center'>
-              <h1 className='text-2xl font-bold text-gray-900'>{formatMonthYear(currentDate)}</h1>
-              <div className='flex items-center gap-2'>
-                <button
-                  onClick={prevMonth}
-                  className='p-2 rounded-md hover:bg-gray-100 text-gray-700'
+            <div className='flex flex-col gap-4'>
+              <div className='flex justify-between items-center'>
+                <h1 className='text-2xl font-bold text-gray-900'>{formatMonthYear(currentDate)}</h1>
+                <div className='flex items-center gap-2'>
+                  <button
+                    onClick={prevMonth}
+                    className='p-2 rounded-md hover:bg-gray-100 text-gray-700'
+                  >
+                    <svg className='h-5 w-5' viewBox='0 0 24 24' fill='none' stroke='currentColor'>
+                      <path
+                        strokeLinecap='round'
+                        strokeLinejoin='round'
+                        strokeWidth='2'
+                        d='M15 19l-7-7 7-7'
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={nextMonth}
+                    className='p-2 rounded-md hover:bg-gray-100 text-gray-700'
+                  >
+                    <svg className='h-5 w-5' viewBox='0 0 24 24' fill='none' stroke='currentColor'>
+                      <path
+                        strokeLinecap='round'
+                        strokeLinejoin='round'
+                        strokeWidth='2'
+                        d='M9 5l7 7-7 7'
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* Product selector dropdown */}
+              <div className='flex items-center gap-3'>
+                <label htmlFor='product-select' className='text-sm font-medium text-gray-700'>
+                  Logement:
+                </label>
+                <select
+                  id='product-select'
+                  value={propertyId || ''}
+                  onChange={e => {
+                    const newPropertyId = e.target.value
+                    if (newPropertyId) {
+                      router.push(`/dashboard/host/calendar?property=${newPropertyId}`)
+                    } else {
+                      router.push('/dashboard/host/calendar')
+                    }
+                  }}
+                  className='flex-1 max-w-md border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
                 >
-                  <svg className='h-5 w-5' viewBox='0 0 24 24' fill='none' stroke='currentColor'>
-                    <path
-                      strokeLinecap='round'
-                      strokeLinejoin='round'
-                      strokeWidth='2'
-                      d='M15 19l-7-7 7-7'
-                    />
-                  </svg>
-                </button>
-                <button
-                  onClick={nextMonth}
-                  className='p-2 rounded-md hover:bg-gray-100 text-gray-700'
-                >
-                  <svg className='h-5 w-5' viewBox='0 0 24 24' fill='none' stroke='currentColor'>
-                    <path
-                      strokeLinecap='round'
-                      strokeLinejoin='round'
-                      strokeWidth='2'
-                      d='M9 5l7 7-7 7'
-                    />
-                  </svg>
-                </button>
+                  <option value=''>Tous les logements</option>
+                  {userProducts.map(product => (
+                    <option key={product.id} value={product.id}>
+                      {product.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Calendar Sync Buttons */}
+              <div className='flex gap-2'>
+                {propertyId && (
+                  <ExportCalendarModal productId={propertyId} productName={propertyName} />
+                )}
+                <Link href='/dashboard/host/calendars'>
+                  <button className='inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2'>
+                    <CalendarIcon className='h-4 w-4' />
+                    Importer des calendriers
+                  </button>
+                </Link>
               </div>
             </div>
             {!propertyId && (

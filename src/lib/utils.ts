@@ -52,7 +52,11 @@ export function calculateAverageRating(
     return acc + reviewAverage
   }, 0)
 
-  return (totalRating / reviews.length).toFixed(2)
+  // Return as string with French decimal formatting (comma instead of dot)
+  return (totalRating / reviews.length).toLocaleString('fr-FR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
 }
 
 export function getProfileImageUrl(imageUrl: string | null): string | null {

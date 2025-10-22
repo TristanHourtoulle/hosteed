@@ -10,7 +10,7 @@ import { saveImages } from '@/lib/services/image.service'
  * Body:
  * {
  *   images: string[], // Base64 images
- *   entityType: 'products' | 'users' | 'posts',
+ *   entityType: 'products' | 'users' | 'posts' | 'type-rent' | 'homepage',
  *   entityId: string
  * }
  *
@@ -32,7 +32,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No images provided' }, { status: 400 })
     }
 
-    if (!entityType || !['products', 'users', 'posts'].includes(entityType)) {
+    if (
+      !entityType ||
+      !['products', 'users', 'posts', 'type-rent', 'homepage'].includes(entityType)
+    ) {
       return NextResponse.json({ error: 'Invalid entity type' }, { status: 400 })
     }
 

@@ -36,7 +36,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/useAuth'
 import RichEditorGuide from '@/components/ui/RichEditorGuide'
-import SEOFieldsCard from '@/components/ui/SEOFieldsCard'
+import SEOFieldsCard, { type SEOData } from '@/components/ui/SEOFieldsCard'
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -54,13 +54,6 @@ const itemVariants = {
     opacity: 1,
     y: 0,
   },
-}
-
-interface SEOData {
-  metaTitle: string
-  metaDescription: string
-  keywords: string
-  slug: string
 }
 
 export default function CreatePostPage() {

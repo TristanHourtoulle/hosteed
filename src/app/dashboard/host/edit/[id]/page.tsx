@@ -43,6 +43,7 @@ import SortableImageGrid from '@/components/ui/SortableImageGrid'
 import ImageGalleryPreview from '@/components/ui/ImageGalleryPreview'
 import ErrorAlert, { ErrorDetails } from '@/components/ui/ErrorAlert'
 import { parseCreateProductError, createValidationError } from '@/lib/utils/errorHandler'
+import SEOFieldsCard from '@/components/ui/SEOFieldsCard'
 
 // Import types, utilities, and hooks from createProduct
 import type {
@@ -109,6 +110,19 @@ export default function EditProductPage() {
   // Special prices state
   const [specialPrices, setSpecialPrices] = useState<SpecialPrice[]>([])
 
+  // SEO data state
+  const [seoData, setSeoData] = useState<{
+    metaTitle?: string
+    metaDescription?: string
+    keywords?: string
+    slug?: string
+  }>({
+    metaTitle: '',
+    metaDescription: '',
+    keywords: '',
+    slug: '',
+  })
+
   // Update special prices when loaded
   useEffect(() => {
     if (loadedSpecialPrices.length > 0) {
@@ -129,6 +143,24 @@ export default function EditProductPage() {
       imageUpload.setSelectedFiles(loadedImages)
     }
   }, [loadedImages])
+
+  // Update SEO data when product is loaded
+  useEffect(() => {
+    if (loadedFormData) {
+      const formDataWithSEO = loadedFormData as typeof loadedFormData & {
+        metaTitle?: string
+        metaDescription?: string
+        keywords?: string
+        slug?: string
+      }
+      setSeoData({
+        metaTitle: formDataWithSEO.metaTitle || '',
+        metaDescription: formDataWithSEO.metaDescription || '',
+        keywords: formDataWithSEO.keywords || '',
+        slug: formDataWithSEO.slug || '',
+      })
+    }
+  }, [loadedFormData])
 
   // Destructure for easier access
   const { formData, setFormData, handleInputChange } = productForm
@@ -358,6 +390,8 @@ export default function EditProductPage() {
               availableRooms: Number(formData.availableRooms),
             }
           : null,
+        // SEO data
+        seoData: seoData,
       }
 
       const response = await fetch(`/api/products/${productId}`, {
@@ -814,6 +848,15 @@ export default function EditProductPage() {
               startDate={testBooking.startDate}
               endDate={testBooking.endDate}
               currency='EUR'
+            />
+          </motion.div>
+
+          {/* SEO Section */}
+          <motion.div variants={itemVariants}>
+            <SEOFieldsCard
+              seoData={seoData}
+              onSeoChange={setSeoData}
+              articleTitle={formData.name}
             />
           </motion.div>
 

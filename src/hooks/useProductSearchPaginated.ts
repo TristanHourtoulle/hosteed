@@ -162,6 +162,16 @@ export function useProductSearchPaginated() {
   const [selectedType, setSelectedType] = useState(typeRentId)
   const [guests, setGuests] = useState(1)
 
+  // Sync state with URL parameters when they change
+  useEffect(() => {
+    setSelectedType(typeRentId)
+  }, [typeRentId])
+
+  useEffect(() => {
+    setSearchTerm(searchQuery)
+    setLocation(searchQuery)
+  }, [searchQuery])
+
   const searchTimeout = useRef<NodeJS.Timeout | undefined>(undefined)
 
   // Filter state

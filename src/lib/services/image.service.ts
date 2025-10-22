@@ -27,6 +27,13 @@ export const IMAGE_SIZES = {
   full: { width: 1920, height: 1440, quality: 90 },
 } as const
 
+// Configuration haute qualité pour les images de homepage (pas de limitation de taille)
+export const HOMEPAGE_IMAGE_SIZES = {
+  thumb: { width: 400, height: 300, quality: 90 },
+  medium: { width: 1280, height: 960, quality: 95 },
+  full: { width: 3840, height: 2880, quality: 98 }, // 4K support
+} as const
+
 // Répertoire de base pour les uploads (VPS)
 const UPLOAD_BASE_DIR = path.join(process.cwd(), 'public', 'uploads')
 
@@ -37,7 +44,7 @@ export interface ImageUrls {
 }
 
 export interface SaveImageOptions {
-  entityType: 'products' | 'users' | 'posts'
+  entityType: 'products' | 'users' | 'posts' | 'type-rent' | 'homepage'
   entityId: string
   imageIndex?: number
 }
@@ -79,9 +86,10 @@ function generateFileName(prefix: string, size: keyof typeof IMAGE_SIZES): strin
 async function saveImageSize(
   buffer: Buffer,
   outputPath: string,
-  size: keyof typeof IMAGE_SIZES
+  size: keyof typeof IMAGE_SIZES,
+  isHomepage = false
 ): Promise<void> {
-  const config = IMAGE_SIZES[size]
+  const config = isHomepage ? HOMEPAGE_IMAGE_SIZES[size] : IMAGE_SIZES[size]
 
   await sharp(buffer)
     .resize(config.width, config.height, {
@@ -123,11 +131,14 @@ export async function saveImage(
     full: generateFileName(prefix, 'full'),
   }
 
+  // Utiliser haute qualité pour les images de homepage
+  const isHomepage = entityType === 'homepage'
+
   // Sauvegarder les 3 tailles en parallèle
   await Promise.all([
-    saveImageSize(buffer, path.join(entityDir, fileNames.thumb), 'thumb'),
-    saveImageSize(buffer, path.join(entityDir, fileNames.medium), 'medium'),
-    saveImageSize(buffer, path.join(entityDir, fileNames.full), 'full'),
+    saveImageSize(buffer, path.join(entityDir, fileNames.thumb), 'thumb', isHomepage),
+    saveImageSize(buffer, path.join(entityDir, fileNames.medium), 'medium', isHomepage),
+    saveImageSize(buffer, path.join(entityDir, fileNames.full), 'full', isHomepage),
   ])
 
   // Retourner les URLs publiques
@@ -156,7 +167,7 @@ export async function saveImages(
  * Supprime toutes les images d'une entité
  */
 export async function deleteEntityImages(
-  entityType: 'products' | 'users' | 'posts',
+  entityType: 'products' | 'users' | 'posts' | 'type-rent' | 'homepage',
   entityId: string
 ): Promise<void> {
   const entityDir = path.join(UPLOAD_BASE_DIR, entityType, entityId)
@@ -246,7 +257,7 @@ export async function getImageInfo(imageUrl: string): Promise<{
  * À exécuter périodiquement via un cron job
  */
 export async function cleanupOrphanedImages(
-  entityType: 'products' | 'users' | 'posts',
+  entityType: 'products' | 'users' | 'posts' | 'type-rent' | 'homepage',
   existingEntityIds: string[]
 ): Promise<number> {
   const entityTypeDir = path.join(UPLOAD_BASE_DIR, entityType)
@@ -276,7 +287,7 @@ export async function cleanupOrphanedImages(
  */
 export async function migrateBase64ToFileSystem(
   base64Image: string,
-  entityType: 'products' | 'users' | 'posts',
+  entityType: 'products' | 'users' | 'posts' | 'type-rent' | 'homepage',
   entityId: string,
   imageIndex: number
 ): Promise<ImageUrls> {

@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { CheckRentIsAvailable } from '@/lib/services/rents.service'
-import { findProductById } from '@/lib/services/product.service'
+import { findProductBySlugOrId } from '@/lib/services/product.service'
 import { findUserById } from '@/lib/services/user.service'
 import {
   calculateTotalRentPrice,
@@ -18,6 +18,7 @@ import { toast } from 'sonner'
 import Image from 'next/image'
 import ExtraSelectionStep from '@/components/booking/ExtraSelectionStep'
 import PhoneInput from '@/components/ui/PhoneInput'
+import { formatCurrency, formatNumber } from '@/lib/utils/formatNumber'
 
 interface Option {
   id: string
@@ -100,7 +101,7 @@ export default function ReservationPage() {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const productData = await findProductById(id as string)
+        const productData = await findProductBySlugOrId(id as string)
         if (productData) {
           setProduct(productData as unknown as Product)
         } else {
@@ -414,7 +415,9 @@ export default function ReservationPage() {
                     {product.reviews && product.reviews.length > 0 && (
                       <div className='flex items-center'>
                         <Star className='w-4 h-4 fill-yellow-400 text-yellow-400 mr-1' />
-                        <span className='text-sm font-medium'>{getAverageRating().toFixed(1)}</span>
+                        <span className='text-sm font-medium'>
+                          {formatNumber(getAverageRating(), 1)}
+                        </span>
                         <span className='text-sm text-gray-500 ml-1'>
                           ({product.reviews.length} avis)
                         </span>
@@ -586,10 +589,11 @@ export default function ReservationPage() {
                   <>
                     <div className='flex justify-between items-start'>
                       <span className='text-gray-600 text-sm sm:text-base flex-1 pr-2'>
-                        {product.basePrice}€ × {nights} nuit{nights > 1 ? 's' : ''}
+                        {formatCurrency(parseFloat(product.basePrice), 'EUR')} × {nights} nuit
+                        {nights > 1 ? 's' : ''}
                       </span>
                       <span className='font-medium text-sm sm:text-base flex-shrink-0'>
-                        {subtotal.toFixed(0)}€
+                        {formatCurrency(subtotal, 'EUR', 0)}
                       </span>
                     </div>
 
@@ -599,7 +603,7 @@ export default function ReservationPage() {
                           Options supplémentaires
                         </span>
                         <span className='font-medium text-sm sm:text-base flex-shrink-0'>
-                          +{extrasCost.toFixed(2)}€
+                          +{formatCurrency(extrasCost, 'EUR')}
                         </span>
                       </div>
                     )}
@@ -608,13 +612,13 @@ export default function ReservationPage() {
                         Frais de service
                       </span>
                       <span className='font-medium text-sm sm:text-base flex-shrink-0'>
-                        {serviceFee}€
+                        {formatCurrency(serviceFee, 'EUR', 0)}
                       </span>
                     </div>
                     <div className='border-t pt-4'>
                       <div className='flex justify-between text-lg sm:text-xl font-bold'>
                         <span>Total</span>
-                        <span>{total}€</span>
+                        <span>{formatCurrency(total, 'EUR', 0)}</span>
                       </div>
                     </div>
                   </>

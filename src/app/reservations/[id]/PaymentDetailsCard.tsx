@@ -1,5 +1,7 @@
 'use client'
 
+import { formatCurrency, formatPercentage } from '@/lib/utils/formatNumber'
+
 interface PaymentDetails {
   totalPricesPayable: number
   availablePrice: number
@@ -13,13 +15,6 @@ interface PaymentDetailsCardProps {
 }
 
 export default function PaymentDetailsCard({ paymentDetails }: PaymentDetailsCardProps) {
-  const formatCurrency = (amount: number) => {
-    return amount.toLocaleString('fr-FR', {
-      style: 'currency',
-      currency: 'EUR',
-    })
-  }
-
   return (
     <div className='bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden'>
       <div className='bg-gradient-to-r from-blue-50 to-indigo-50 p-6 border-b border-gray-100'>
@@ -78,7 +73,9 @@ export default function PaymentDetailsCard({ paymentDetails }: PaymentDetailsCar
 
         <div className='bg-gray-50 rounded-xl p-4 border border-gray-100'>
           <p className='text-sm font-medium text-gray-700 mb-2'>Commission plateforme</p>
-          <p className='text-xl font-bold text-gray-900'>{paymentDetails.commission}%</p>
+          <p className='text-xl font-bold text-gray-900'>
+            {formatPercentage(paymentDetails.commission / 100)}
+          </p>
         </div>
 
         <div className='mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200'>

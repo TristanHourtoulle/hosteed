@@ -25,6 +25,7 @@ import {
   BrushCleaning,
   Calculator,
   Wallet,
+  Image as ImageIcon,
 } from 'lucide-react'
 import { StatsOverview } from './components/StatsOverview'
 import { ActionCardGroup } from './components/ActionCardGroup'
@@ -265,6 +266,12 @@ export default function AdminDashboard() {
           description: 'Voir et gérer tous les types de logements',
           icon: Home,
           href: '/admin/typeRent',
+        },
+        {
+          title: "Images de la page d'accueil",
+          description: 'Configurer les images de la homepage',
+          icon: ImageIcon,
+          href: '/admin/homepage',
         },
       ],
     },

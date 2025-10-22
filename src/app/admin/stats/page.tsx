@@ -21,6 +21,7 @@ import {
 import { StatsOverview } from '../components/StatsOverview'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
 import { Separator } from '@/components/ui/shadcnui/separator'
+import { formatNumber } from '@/lib/utils/formatNumber'
 
 interface Stats {
   users: number
@@ -104,9 +105,8 @@ export default function AdminStats() {
 
   // Calculate some derived stats for better insights
   const totalProducts = stats.product + stats.productWaiting
-  const validationRate = totalProducts > 0 ? Math.round((stats.product / totalProducts) * 100) : 0
-  const averageRentsPerUser =
-    stats.users > 0 ? Math.round((stats.rent / stats.users) * 100) / 100 : 0
+  const validationRate = totalProducts > 0 ? (stats.product / totalProducts) * 100 : 0
+  const averageRentsPerUser = stats.users > 0 ? stats.rent / stats.users : 0
 
   const mainStats = [
     {
@@ -251,10 +251,10 @@ export default function AdminStats() {
                     <div className='space-y-1'>
                       <p className='text-3xl font-bold text-slate-800'>
                         {metric.format === 'percentage'
-                          ? `${metric.value}%`
+                          ? `${formatNumber(metric.value, 0)} %`
                           : metric.format === 'decimal'
-                            ? metric.value.toFixed(1)
-                            : metric.value.toLocaleString()}
+                            ? formatNumber(metric.value, 1)
+                            : formatNumber(metric.value)}
                       </p>
                       <p className='text-sm text-slate-500'>{metric.subtitle}</p>
                     </div>

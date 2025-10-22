@@ -1,4 +1,5 @@
 import { ExtraPriceType } from '@prisma/client'
+import { formatCurrency, formatNumber } from './formatNumber'
 
 interface BookingDetails {
   startDate: Date
@@ -58,27 +59,26 @@ export function getExtraCostPreview(
   currency: 'EUR' | 'MGA' = 'EUR'
 ): { cost: number; description: string } {
   const basePrice = currency === 'EUR' ? extra.priceEUR : extra.priceMGA
-  const currencySymbol = currency === 'EUR' ? '€' : 'Ar'
 
   let cost = basePrice
-  let description = `${basePrice}${currencySymbol}`
+  let description = formatCurrency(basePrice, currency)
 
   switch (extra.type) {
     case 'PER_DAY':
       cost = basePrice * numberOfDays
-      description = `${basePrice}${currencySymbol} × ${numberOfDays} jour${numberOfDays > 1 ? 's' : ''} = ${cost}${currencySymbol}`
+      description = `${formatCurrency(basePrice, currency)} × ${formatNumber(numberOfDays)} jour${numberOfDays > 1 ? 's' : ''} = ${formatCurrency(cost, currency)}`
       break
     case 'PER_PERSON':
       cost = basePrice * guestCount
-      description = `${basePrice}${currencySymbol} × ${guestCount} personne${guestCount > 1 ? 's' : ''} = ${cost}${currencySymbol}`
+      description = `${formatCurrency(basePrice, currency)} × ${formatNumber(guestCount)} personne${guestCount > 1 ? 's' : ''} = ${formatCurrency(cost, currency)}`
       break
     case 'PER_DAY_PERSON':
       cost = basePrice * numberOfDays * guestCount
-      description = `${basePrice}${currencySymbol} × ${numberOfDays} jour${numberOfDays > 1 ? 's' : ''} × ${guestCount} personne${guestCount > 1 ? 's' : ''} = ${cost}${currencySymbol}`
+      description = `${formatCurrency(basePrice, currency)} × ${formatNumber(numberOfDays)} jour${numberOfDays > 1 ? 's' : ''} × ${formatNumber(guestCount)} personne${guestCount > 1 ? 's' : ''} = ${formatCurrency(cost, currency)}`
       break
     case 'PER_BOOKING':
       cost = basePrice
-      description = `${basePrice}${currencySymbol} par réservation`
+      description = `${formatCurrency(basePrice, currency)} par réservation`
       break
   }
 

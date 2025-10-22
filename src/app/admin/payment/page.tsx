@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { isFullAdmin } from '@/hooks/useAdminAuth'
 import { getAllPaymentRequest } from '@/lib/services/payment.service'
 import { PaymentStatus, PaymentMethod, PaymentReqStatus } from '@prisma/client'
+import { formatCurrency } from '@/lib/utils/formatNumber'
 
 interface PayRequest {
   id: string
@@ -239,9 +240,7 @@ export default function PaymentAdminPage() {
           <div className='flex items-center gap-2 text-sm text-gray-600'>
             <span>💰 Montant total visible:</span>
             <span className='font-semibold text-gray-900'>
-              {filteredRequests
-                .reduce((sum, req) => sum + Number(req.prices), 0)
-                .toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+              {formatCurrency(filteredRequests.reduce((sum, req) => sum + Number(req.prices), 0))}
             </span>
           </div>
         </div>
@@ -305,10 +304,7 @@ export default function PaymentAdminPage() {
                         <div className='flex flex-col space-y-2'>
                           {getStatusBadge(request.PaymentRequest)}
                           <div className='text-lg font-semibold text-gray-900'>
-                            {Number(request.prices).toLocaleString('fr-FR', {
-                              style: 'currency',
-                              currency: 'EUR',
-                            })}
+                            {formatCurrency(Number(request.prices))}
                           </div>
                         </div>
                       </td>

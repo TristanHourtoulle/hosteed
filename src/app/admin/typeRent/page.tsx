@@ -37,6 +37,7 @@ import {
 import { findAllTypeRent, createTypeRent, updateTypeRent } from '@/lib/services/typeRent.service'
 import { TypeRentInterface } from '@/lib/interface/typeRentInterface'
 import DeleteTypeModal from './components/DeleteTypeModal'
+import ImageUpload from './components/ImageUpload'
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -76,6 +77,7 @@ export default function TypeRentPage() {
   const [newTypeName, setNewTypeName] = useState('')
   const [newTypeDescription, setNewTypeDescription] = useState('')
   const [newIsHotelType, setNewIsHotelType] = useState(false)
+  const [newCoverImage, setNewCoverImage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // États pour l'édition
@@ -84,6 +86,7 @@ export default function TypeRentPage() {
   const [editTypeName, setEditTypeName] = useState('')
   const [editTypeDescription, setEditTypeDescription] = useState('')
   const [editIsHotelType, setEditIsHotelType] = useState(false)
+  const [editCoverImage, setEditCoverImage] = useState<string | null>(null)
 
   // États pour la suppression
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
@@ -123,13 +126,19 @@ export default function TypeRentPage() {
 
     setIsSubmitting(true)
     try {
-      const newType = await createTypeRent(newTypeName, newTypeDescription, newIsHotelType)
+      const newType = await createTypeRent(
+        newTypeName,
+        newTypeDescription,
+        newIsHotelType,
+        newCoverImage || undefined
+      )
 
       if (newType) {
         setTypeRents([...typeRents, newType])
         setNewTypeName('')
         setNewTypeDescription('')
         setNewIsHotelType(false)
+        setNewCoverImage(null)
         setIsAddDialogOpen(false)
       } else {
         setError('Erreur lors de la création du type de logement')
@@ -147,6 +156,7 @@ export default function TypeRentPage() {
     setEditTypeName(type.name || '')
     setEditTypeDescription(type.description || '')
     setEditIsHotelType(type.isHotelType || false)
+    setEditCoverImage(type.coverImage || null)
     setIsEditDialogOpen(true)
   }
 
@@ -159,7 +169,8 @@ export default function TypeRentPage() {
         editingType.id,
         editTypeName,
         editTypeDescription,
-        editIsHotelType
+        editIsHotelType,
+        editCoverImage
       )
 
       if (updatedType) {
@@ -167,6 +178,7 @@ export default function TypeRentPage() {
         setEditTypeName('')
         setEditTypeDescription('')
         setEditIsHotelType(false)
+        setEditCoverImage(null)
         setEditingType(null)
         setIsEditDialogOpen(false)
       } else {
@@ -307,6 +319,11 @@ export default function TypeRentPage() {
                         }
                       />
                     </div>
+                    <ImageUpload
+                      currentImage={newCoverImage}
+                      onImageChange={setNewCoverImage}
+                      entityType='type-rent'
+                    />
                     <div className='flex items-center space-x-2 pt-2'>
                       <Checkbox
                         id='isHotelType'
@@ -386,6 +403,12 @@ export default function TypeRentPage() {
                         }
                       />
                     </div>
+                    <ImageUpload
+                      currentImage={editCoverImage}
+                      onImageChange={setEditCoverImage}
+                      entityType='type-rent'
+                      entityId={editingType?.id}
+                    />
                     <div className='flex items-center space-x-2 pt-2'>
                       <Checkbox
                         id='editIsHotelType'

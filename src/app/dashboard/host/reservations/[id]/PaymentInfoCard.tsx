@@ -2,6 +2,7 @@ import { RentWithDates } from '@/lib/services/rents.service'
 import { PayablePrices } from './types'
 import { PaymentStatus } from '@prisma/client'
 import { formatCurrency, calculatePaymentAmounts } from './utils'
+import { formatPercentage } from '@/lib/utils/formatNumber'
 import DebugSection from './DebugSection'
 
 interface PaymentInfoCardProps {
@@ -73,7 +74,9 @@ export default function PaymentInfoCard({
 
         <div className='bg-gray-50 rounded-xl p-4 border border-gray-100'>
           <p className='text-sm font-medium text-gray-700 mb-2'>Commission</p>
-          <p className='text-xl font-bold text-gray-900'>{prices?.commission || 0}%</p>
+          <p className='text-xl font-bold text-gray-900'>
+            {formatPercentage((prices?.commission || 0) / 100)}
+          </p>
         </div>
       </div>
 

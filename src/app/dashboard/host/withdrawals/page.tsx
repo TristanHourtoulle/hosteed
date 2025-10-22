@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/shadcnui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/shadcnui/tabs'
 import { toast } from 'sonner'
 import { PaymentMethod, WithdrawalStatus } from '@prisma/client'
+import { formatCurrency, formatNumber } from '@/lib/utils/formatNumber'
 import {
   Wallet,
   CreditCard,
@@ -367,23 +368,23 @@ export default function WithdrawalsPage() {
               <div className='bg-blue-50 rounded-lg p-4'>
                 <p className='text-sm text-blue-600 font-medium mb-1'>Total gagné</p>
                 <p className='text-3xl font-bold text-blue-900'>
-                  {balance.totalEarned.toFixed(2)}€
+                  {formatCurrency(balance.totalEarned)}
                 </p>
               </div>
               <div className='bg-gray-50 rounded-lg p-4'>
                 <p className='text-sm text-gray-600 font-medium mb-1'>Déjà retiré</p>
                 <p className='text-3xl font-bold text-gray-900'>
-                  {balance.totalWithdrawn.toFixed(2)}€
+                  {formatCurrency(balance.totalWithdrawn)}
                 </p>
               </div>
               <div className='bg-green-50 rounded-lg p-4'>
                 <p className='text-sm text-green-600 font-medium mb-1'>Disponible</p>
                 <p className='text-3xl font-bold text-green-900'>
-                  {balance.availableBalance.toFixed(2)}€
+                  {formatCurrency(balance.availableBalance)}
                 </p>
                 <div className='mt-2 text-xs text-gray-500 space-y-1'>
-                  <p>• 50% maintenant: {balance.amount50Percent.toFixed(2)}€</p>
-                  <p>• 100% (J+3): {balance.amount100Percent.toFixed(2)}€</p>
+                  <p>• 50% maintenant: {formatCurrency(balance.amount50Percent)}</p>
+                  <p>• 100% (J+3): {formatCurrency(balance.amount100Percent)}</p>
                 </div>
               </div>
             </div>
@@ -421,7 +422,7 @@ export default function WithdrawalsPage() {
                           {getStatusIcon(request.status)}
                           <div>
                             <p className='font-semibold text-gray-900'>
-                              {request.amount.toFixed(2)}€
+                              {formatCurrency(request.amount)}
                             </p>
                             <p className='text-sm text-gray-500'>
                               {getPaymentMethodLabel(request.paymentMethod)}
@@ -470,7 +471,7 @@ export default function WithdrawalsPage() {
                           <div className='flex items-center gap-4'>
                             {getStatusIcon(request.status)}
                             <div>
-                              <p className='font-semibold'>{request.amount.toFixed(2)}€</p>
+                              <p className='font-semibold'>{formatCurrency(request.amount)}</p>
                               <p className='text-sm text-gray-500'>
                                 {getPaymentMethodLabel(request.paymentMethod)}
                               </p>
@@ -505,7 +506,7 @@ export default function WithdrawalsPage() {
                           <div className='flex items-center gap-4'>
                             {getStatusIcon(request.status)}
                             <div>
-                              <p className='font-semibold'>{request.amount.toFixed(2)}€</p>
+                              <p className='font-semibold'>{formatCurrency(request.amount)}</p>
                               <p className='text-sm text-gray-500'>
                                 {getPaymentMethodLabel(request.paymentMethod)}
                               </p>
@@ -540,7 +541,7 @@ export default function WithdrawalsPage() {
                           <div className='flex items-center gap-4'>
                             {getStatusIcon(request.status)}
                             <div>
-                              <p className='font-semibold'>{request.amount.toFixed(2)}€</p>
+                              <p className='font-semibold'>{formatCurrency(request.amount)}</p>
                               <p className='text-sm text-gray-500'>
                                 {getPaymentMethodLabel(request.paymentMethod)}
                               </p>
@@ -579,7 +580,7 @@ export default function WithdrawalsPage() {
                       >
                         <p className='font-semibold text-gray-900'>50% maintenant</p>
                         <p className='text-2xl font-bold text-blue-600 mt-1'>
-                          {balance?.amount50Percent.toFixed(2)}€
+                          {formatCurrency(balance?.amount50Percent || 0)}
                         </p>
                         <p className='text-xs text-gray-500 mt-1'>Disponible immédiatement</p>
                       </button>
@@ -594,7 +595,7 @@ export default function WithdrawalsPage() {
                       >
                         <p className='font-semibold text-gray-900'>100% (J+3)</p>
                         <p className='text-2xl font-bold text-blue-600 mt-1'>
-                          {balance?.amount100Percent.toFixed(2)}€
+                          {formatCurrency(balance?.amount100Percent || 0)}
                         </p>
                         <p className='text-xs text-gray-500 mt-1'>Après 3 jours ouvrés</p>
                       </button>
@@ -886,7 +887,8 @@ export default function WithdrawalsPage() {
                     <h4 className='font-semibold text-blue-900 mb-2'>Résumé de votre demande</h4>
                     <div className='space-y-1 text-sm text-blue-800'>
                       <p>
-                        • Montant: <span className='font-bold'>{selectedAmount.toFixed(2)}€</span>
+                        • Montant:{' '}
+                        <span className='font-bold'>{formatCurrency(selectedAmount)}</span>
                       </p>
                       <p>
                         • Type:{' '}
@@ -920,7 +922,7 @@ export default function WithdrawalsPage() {
                       className='flex-1'
                       disabled={submitting || selectedAmount <= 0}
                     >
-                      {submitting ? 'Création...' : `Demander ${selectedAmount.toFixed(2)}€`}
+                      {submitting ? 'Création...' : `Demander ${formatCurrency(selectedAmount)}`}
                     </Button>
                   </div>
                 </form>

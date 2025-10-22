@@ -5,6 +5,7 @@ import { Calendar, Trash2, Edit, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/shadcnui/button'
 import PromotionBadge from './PromotionBadge'
 import { getDaysUntilEnd, getUrgencyMessage } from '@/lib/utils/promotion'
+import { formatCurrency } from '@/lib/utils/formatNumber'
 
 interface Product {
   id: string
@@ -79,9 +80,11 @@ export default function PromotionCard({
                 {promotion.product.name}
               </h3>
               <div className='flex flex-wrap items-baseline gap-2'>
-                <span className='text-sm text-gray-500 line-through'>{basePrice.toFixed(2)}€</span>
+                <span className='text-sm text-gray-500 line-through'>
+                  {formatCurrency(basePrice, 'EUR')}
+                </span>
                 <span className='text-lg sm:text-xl font-bold text-green-600'>
-                  {discountedPrice.toFixed(2)}€
+                  {formatCurrency(discountedPrice, 'EUR')}
                 </span>
                 <span className='text-xs sm:text-sm text-green-600'>/ nuit</span>
               </div>

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
 import { Badge } from '@/components/ui/shadcnui/badge'
 import { Calculator, TrendingUp, TrendingDown, Info } from 'lucide-react'
+import { formatCurrency, formatPercentage } from '@/lib/utils/formatNumber'
 
 // Interface pour les calculs de commission
 interface CommissionCalculation {
@@ -24,13 +25,15 @@ interface CommissionCalculation {
 // Fonction pour formater les résultats
 function formatCommissionBreakdown(calculation: CommissionCalculation) {
   return {
-    basePrice: `${calculation.basePrice.toFixed(2)}€`,
-    hostCommission: `${calculation.hostCommission.toFixed(2)}€`,
-    clientCommission: `${calculation.clientCommission.toFixed(2)}€`,
-    hostReceives: `${calculation.hostReceives.toFixed(2)}€`,
-    clientPays: `${calculation.clientPays.toFixed(2)}€`,
-    hostCommissionPercentage: `${(calculation.breakdown.hostCommissionRate * 100).toFixed(2)}%`,
-    clientCommissionPercentage: `${(calculation.breakdown.clientCommissionRate * 100).toFixed(2)}%`,
+    basePrice: formatCurrency(calculation.basePrice),
+    hostCommission: formatCurrency(calculation.hostCommission),
+    clientCommission: formatCurrency(calculation.clientCommission),
+    hostReceives: formatCurrency(calculation.hostReceives),
+    clientPays: formatCurrency(calculation.clientPays),
+    hostCommissionPercentage: formatPercentage(calculation.breakdown.hostCommissionRate, 2),
+    clientCommissionPercentage: formatPercentage(calculation.breakdown.clientCommissionRate, 2),
+    hostCommissionFixed: formatCurrency(calculation.breakdown.hostCommissionFixed),
+    clientCommissionFixed: formatCurrency(calculation.breakdown.clientCommissionFixed),
   }
 }
 
@@ -144,8 +147,7 @@ export default function CommissionDisplay({
             <span className='text-sm text-gray-600'>Commission hébergeur</span>
             {showDetails && (
               <span className='text-xs text-gray-400'>
-                ({formatted.hostCommissionPercentage} +{' '}
-                {calculation.breakdown.hostCommissionFixed.toFixed(2)}€)
+                ({formatted.hostCommissionPercentage} + {formatted.hostCommissionFixed})
               </span>
             )}
           </div>
@@ -161,8 +163,7 @@ export default function CommissionDisplay({
             <span className='text-sm text-gray-600'>Commission client</span>
             {showDetails && (
               <span className='text-xs text-gray-400'>
-                ({formatted.clientCommissionPercentage} +{' '}
-                {calculation.breakdown.clientCommissionFixed.toFixed(2)}€)
+                ({formatted.clientCommissionPercentage} + {formatted.clientCommissionFixed})
               </span>
             )}
           </div>

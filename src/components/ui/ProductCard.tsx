@@ -7,6 +7,8 @@ import { useFavoritesOptimized } from '@/hooks/useFavoritesOptimized'
 import { motion } from 'framer-motion'
 import PromotionBadge from '@/components/promotions/PromotionBadge'
 import { getDaysUntilEnd, getUrgencyMessage } from '@/lib/utils/promotion'
+import { getProductUrl } from '@/lib/utils/routing'
+import { formatCurrency } from '@/lib/utils/formatNumber'
 
 interface Review {
   grade: number
@@ -30,6 +32,7 @@ interface Product {
   name: string
   description: string
   address: string
+  slug?: string | null
   img?: { img: string }[] | null
   basePrice: string
   originalBasePrice?: string
@@ -92,23 +95,23 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
     if (hasActivePromotion && activePromotion) {
       const discounted = basePrice * (1 - activePromotion.discountPercentage / 100)
       return {
-        displayPrice: discounted.toFixed(2),
-        originalPrice: basePrice.toFixed(2),
-        savings: (basePrice - discounted).toFixed(2),
+        displayPrice: formatCurrency(discounted),
+        originalPrice: formatCurrency(basePrice),
+        savings: formatCurrency(basePrice - discounted),
       }
     }
 
     // Fallback to special price if exists
     if (product.specialPriceApplied && product.originalBasePrice) {
       return {
-        displayPrice: product.basePrice,
-        originalPrice: product.originalBasePrice,
-        savings: (parseFloat(product.originalBasePrice) - basePrice).toFixed(2),
+        displayPrice: formatCurrency(parseFloat(product.basePrice)),
+        originalPrice: formatCurrency(parseFloat(product.originalBasePrice)),
+        savings: formatCurrency(parseFloat(product.originalBasePrice) - basePrice),
       }
     }
 
     return {
-      displayPrice: basePrice.toFixed(2),
+      displayPrice: formatCurrency(basePrice),
       originalPrice: null,
       savings: null,
     }
@@ -200,7 +203,7 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
 
   return (
     <motion.div {...cardMotionProps}>
-      <Link href={`/host/${product.id}`} className='block'>
+      <Link href={getProductUrl(product)} className='block'>
         <motion.div
           className='bg-white rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 group'
           onMouseEnter={handleMouseEnter}
@@ -353,13 +356,13 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
                 {/* Prix avec ou sans promotion */}
                 <div className='flex flex-col gap-1'>
                   {originalPrice && (
-                    <span className='text-sm text-gray-400 line-through'>{originalPrice}€</span>
+                    <span className='text-sm text-gray-400 line-through'>{originalPrice}</span>
                   )}
                   <div className='flex items-baseline gap-1'>
                     <span
                       className={`font-bold text-lg ${hasActivePromotion ? 'text-green-600' : 'text-gray-900'}`}
                     >
-                      {displayPrice}€
+                      {displayPrice}
                     </span>
                     <span className='text-gray-400 text-sm font-light'>/ nuit</span>
                   </div>
@@ -370,7 +373,7 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
                       className='bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-lg px-2 py-1'
                     >
                       <span className='text-xs text-green-700 font-semibold'>
-                        Économisez {savings}€
+                        Économisez {savings}
                       </span>
                     </motion.div>
                   )}

@@ -41,6 +41,7 @@ import {
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
+import { formatNumber, formatCurrency } from '@/lib/utils/formatNumber'
 
 interface SpecialPrice {
   id: string
@@ -402,7 +403,9 @@ export default function PropertyDashboard() {
               <div className='flex items-center justify-between'>
                 <div>
                   <p className='text-sm text-gray-600 mb-1'>Revenus totaux</p>
-                  <p className='text-2xl font-bold text-gray-900'>{totalRevenue}€</p>
+                  <p className='text-2xl font-bold text-gray-900'>
+                    {formatCurrency(totalRevenue, 'EUR', 0)}
+                  </p>
                 </div>
                 <Euro className='h-8 w-8 text-green-500' />
               </div>
@@ -416,7 +419,9 @@ export default function PropertyDashboard() {
                 <div>
                   <p className='text-sm text-gray-600 mb-1'>Note moyenne</p>
                   <div className='flex items-center gap-2'>
-                    <p className='text-2xl font-bold text-gray-900'>{averageRating.toFixed(1)}</p>
+                    <p className='text-2xl font-bold text-gray-900'>
+                      {formatNumber(averageRating, 1)}
+                    </p>
                     <Star className='h-5 w-5 fill-yellow-400 text-yellow-400' />
                   </div>
                 </div>
@@ -508,7 +513,9 @@ export default function PropertyDashboard() {
                               {reservation.status}
                             </div>
                           </Badge>
-                          <p className='font-medium text-gray-900'>{reservation.prices}€</p>
+                          <p className='font-medium text-gray-900'>
+                            {formatCurrency(reservation.prices, 'EUR', 0)}
+                          </p>
                           <Button asChild size='sm' variant='outline'>
                             <Link href={`/dashboard/host/reservations/${reservation.id}`}>
                               Voir détails
@@ -612,9 +619,11 @@ export default function PropertyDashboard() {
                             </div>
                             <div>
                               <p className='font-medium text-gray-900'>
-                                {price.pricesEuro}€ / nuit
+                                {formatCurrency(Number(price.pricesEuro), 'EUR', 0)} / nuit
                               </p>
-                              <p className='text-sm text-gray-500'>Prix MGA: {price.pricesMga}</p>
+                              <p className='text-sm text-gray-500'>
+                                Prix MGA: {formatCurrency(Number(price.pricesMga), 'MGA', 0)}
+                              </p>
                             </div>
                           </div>
                           <Badge
@@ -722,7 +731,9 @@ export default function PropertyDashboard() {
                     </div>
                     <div className='flex justify-between items-center'>
                       <span className='text-gray-600'>Revenus moyens/nuit</span>
-                      <span className='font-semibold'>{product.basePrice}€</span>
+                      <span className='font-semibold'>
+                        {formatCurrency(Number(product.basePrice), 'EUR', 0)}
+                      </span>
                     </div>
                     <div className='flex justify-between items-center'>
                       <span className='text-gray-600'>Temps de réponse moyen</span>

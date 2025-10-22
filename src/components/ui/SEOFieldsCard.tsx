@@ -19,11 +19,11 @@ import {
 import { Button } from '@/components/ui/shadcnui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/shadcnui/tabs'
 
-interface SEOData {
-  metaTitle: string
-  metaDescription: string
-  keywords: string
-  slug: string
+export interface SEOData {
+  metaTitle?: string
+  metaDescription?: string
+  keywords?: string
+  slug?: string
 }
 
 interface SEOFieldsCardProps {
@@ -40,9 +40,12 @@ export default function SEOFieldsCard({ seoData, onSeoChange, articleTitle }: SE
     })
   }
 
-  // Auto-generate slug from title
+  // Auto-generate slug from SEO title
   const generateSlug = () => {
-    const slug = articleTitle
+    // Use metaTitle if available, otherwise fallback to articleTitle
+    const sourceTitle = seoData.metaTitle || articleTitle
+
+    const slug = sourceTitle
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '') // Remove accents
@@ -55,7 +58,7 @@ export default function SEOFieldsCard({ seoData, onSeoChange, articleTitle }: SE
   }
 
   const getMetaTitleStatus = () => {
-    const length = seoData.metaTitle.length
+    const length = seoData.metaTitle?.length || 0
     if (length === 0)
       return { status: 'empty', color: 'text-slate-400', message: 'Titre non renseigné' }
     if (length < 30)
@@ -74,7 +77,7 @@ export default function SEOFieldsCard({ seoData, onSeoChange, articleTitle }: SE
   }
 
   const getMetaDescriptionStatus = () => {
-    const length = seoData.metaDescription.length
+    const length = seoData.metaDescription?.length || 0
     if (length === 0)
       return { status: 'empty', color: 'text-slate-400', message: 'Description non renseignée' }
     if (length < 120)
@@ -162,14 +165,14 @@ export default function SEOFieldsCard({ seoData, onSeoChange, articleTitle }: SE
                     <AlertCircle className='w-4 h-4 text-orange-600' />
                   )}
                   <span className={`text-xs ${titleStatus.color}`}>
-                    {seoData.metaTitle.length}/60
+                    {seoData.metaTitle?.length || 0}/60
                   </span>
                 </div>
               </div>
               <Input
                 id='metaTitle'
                 placeholder={articleTitle || 'Titre optimisé pour les moteurs de recherche...'}
-                value={seoData.metaTitle}
+                value={seoData.metaTitle || ''}
                 onChange={e => handleChange('metaTitle', e.target.value)}
                 className='focus:border-purple-300 focus:ring-purple-200'
               />
@@ -193,14 +196,14 @@ export default function SEOFieldsCard({ seoData, onSeoChange, articleTitle }: SE
                     <AlertCircle className='w-4 h-4 text-orange-600' />
                   )}
                   <span className={`text-xs ${descriptionStatus.color}`}>
-                    {seoData.metaDescription.length}/160
+                    {seoData.metaDescription?.length || 0}/160
                   </span>
                 </div>
               </div>
               <Textarea
                 id='metaDescription'
                 placeholder='Description claire et engageante de votre article pour les résultats de recherche...'
-                value={seoData.metaDescription}
+                value={seoData.metaDescription || ''}
                 onChange={e => handleChange('metaDescription', e.target.value)}
                 className='resize-none focus:border-purple-300 focus:ring-purple-200'
                 rows={3}
@@ -217,7 +220,7 @@ export default function SEOFieldsCard({ seoData, onSeoChange, articleTitle }: SE
               <Input
                 id='keywords'
                 placeholder='voyage, madagascar, hébergement, écotourisme...'
-                value={seoData.keywords}
+                value={seoData.keywords || ''}
                 onChange={e => handleChange('keywords', e.target.value)}
                 className='focus:border-purple-300 focus:ring-purple-200'
               />
@@ -238,7 +241,7 @@ export default function SEOFieldsCard({ seoData, onSeoChange, articleTitle }: SE
                   variant='outline'
                   size='sm'
                   onClick={generateSlug}
-                  disabled={!articleTitle}
+                  disabled={!seoData.metaTitle && !articleTitle}
                   className='text-xs'
                 >
                   Auto-générer
@@ -251,7 +254,7 @@ export default function SEOFieldsCard({ seoData, onSeoChange, articleTitle }: SE
                 <Input
                   id='slug'
                   placeholder='mon-article-genial'
-                  value={seoData.slug}
+                  value={seoData.slug || ''}
                   onChange={e =>
                     handleChange('slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))
                   }

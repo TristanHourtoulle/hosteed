@@ -16,6 +16,7 @@ import {
   calculateTotalRentPrice,
   type CommissionCalculation,
 } from '@/lib/services/commission.service'
+import { formatCurrency, formatNumber, formatPercentage } from '@/lib/utils/formatNumber'
 
 interface Reviews {
   id: string
@@ -233,10 +234,10 @@ export default function BookingCard({
               {activePromotion && originalBasePrice && (
                 <div className='flex items-center gap-2'>
                   <span className='text-sm text-gray-400 line-through'>
-                    {originalBasePrice.toFixed(2)}€
+                    {formatCurrency(originalBasePrice)}
                   </span>
                   <span className='bg-gradient-to-r from-red-500 to-pink-500 text-white px-2 py-0.5 rounded-full text-xs font-bold'>
-                    -{activePromotion.discountPercentage}%
+                    -{formatNumber(activePromotion.discountPercentage)} %
                   </span>
                 </div>
               )}
@@ -244,7 +245,7 @@ export default function BookingCard({
                 <span
                   className={`text-2xl font-semibold ${activePromotion ? 'text-green-600' : 'text-gray-900'}`}
                 >
-                  {effectiveBasePrice.toFixed(2)}€
+                  {formatCurrency(effectiveBasePrice)}
                 </span>
                 <span className='text-gray-600'>par nuit</span>
               </div>
@@ -252,8 +253,10 @@ export default function BookingCard({
             {product.reviews && product.reviews.length > 0 ? (
               <div className='flex items-center gap-1'>
                 <Star className='h-4 w-4 fill-yellow-400 text-yellow-400' />
-                <span className='text-sm font-medium'>{globalGrade.toFixed(1)}</span>
-                <span className='text-sm text-gray-500'>({product.reviews.length})</span>
+                <span className='text-sm font-medium'>{formatNumber(globalGrade, 1)}</span>
+                <span className='text-sm text-gray-500'>
+                  ({formatNumber(product.reviews.length)})
+                </span>
               </div>
             ) : (
               <div className='flex items-center gap-1'>
@@ -269,7 +272,7 @@ export default function BookingCard({
               <div className='flex flex-col gap-1'>
                 <span className='text-sm text-green-700 font-medium'>🎉 Promotion active!</span>
                 <span className='text-sm text-green-800 font-semibold'>
-                  Économisez {(originalBasePrice! - effectiveBasePrice).toFixed(2)}€ par nuit
+                  Économisez {formatCurrency(originalBasePrice! - effectiveBasePrice)} par nuit
                 </span>
               </div>
             </div>
@@ -281,7 +284,7 @@ export default function BookingCard({
               <div className='flex items-center gap-2'>
                 <span className='text-sm text-orange-700 font-medium'>Prix de base:</span>
                 <span className='text-sm text-orange-800 font-semibold line-through'>
-                  {product.originalBasePrice}€
+                  {formatCurrency(Number.parseFloat(product.originalBasePrice))}
                 </span>
               </div>
             </div>
@@ -296,7 +299,8 @@ export default function BookingCard({
                     Frais de service Hosteed
                   </span>
                   <span className='text-sm text-blue-800 font-semibold'>
-                    {defaultCommissionInfo.clientRate}% + {defaultCommissionInfo.clientFixed}€
+                    {formatNumber(defaultCommissionInfo.clientRate)} % +{' '}
+                    {formatCurrency(defaultCommissionInfo.clientFixed)}
                   </span>
                 </div>
                 <span className='text-xs text-blue-600'>
@@ -515,24 +519,29 @@ export default function BookingCard({
             <div className='space-y-3 text-sm'>
               <div className='flex justify-between items-center'>
                 <span className='text-gray-600 underline decoration-dotted cursor-help'>
-                  {effectiveBasePrice.toFixed(2)}€ × {nights} nuit{nights > 1 ? 's' : ''}
+                  {formatCurrency(effectiveBasePrice)} × {formatNumber(nights)} nuit
+                  {nights > 1 ? 's' : ''}
                   {activePromotion && (
                     <span className='ml-1 text-green-600 font-medium'>
-                      (avec promotion -{activePromotion.discountPercentage}%)
+                      (avec promotion -{formatNumber(activePromotion.discountPercentage)} %)
                     </span>
                   )}
                 </span>
-                <span className='text-gray-900 font-medium'>{subtotal.toFixed(0)}€</span>
+                <span className='text-gray-900 font-medium'>
+                  {formatCurrency(subtotal, 'EUR', 0)}
+                </span>
               </div>
               <div className='flex justify-between items-center'>
                 <span className='text-gray-600 underline decoration-dotted cursor-help'>
                   Frais de service Hosteed
                 </span>
-                <span className='text-gray-900 font-medium'>{serviceFee}€</span>
+                <span className='text-gray-900 font-medium'>
+                  {formatCurrency(serviceFee, 'EUR', 0)}
+                </span>
               </div>
               <div className='border-t border-gray-200 pt-3 flex justify-between items-center font-semibold text-base'>
                 <span>Total</span>
-                <span>{total.toFixed(0)}€</span>
+                <span>{formatCurrency(total, 'EUR', 0)}</span>
               </div>
             </div>
           </div>
