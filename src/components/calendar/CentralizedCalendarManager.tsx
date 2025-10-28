@@ -5,6 +5,16 @@ import { Button } from '@/components/ui/button'
 import { Calendar, Plus, Trash2, Edit2, RefreshCw, CheckCircle, XCircle, Clock } from 'lucide-react'
 import { toast } from 'sonner'
 import EventMappingModal from './EventMappingModal'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/shadcnui/dialog'
+import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 
 interface ExternalCalendar {
   id: string
@@ -318,81 +328,96 @@ export default function CentralizedCalendarManager() {
       )}
 
       {/* Modal Ajout/Édition */}
-      {(showAddModal || editingCalendar) && (
-        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
-          <div className='bg-white rounded-lg shadow-xl p-6 w-full max-w-lg'>
-            <h3 className='text-xl font-bold mb-4'>
+      <Dialog
+        open={showAddModal || !!editingCalendar}
+        onOpenChange={open => {
+          if (!open) {
+            setShowAddModal(false)
+            setEditingCalendar(null)
+            setFormData({ name: '', icalUrl: '', color: '#3B82F6', description: '' })
+          }
+        }}
+      >
+        <DialogContent className='max-w-lg'>
+          <DialogHeader>
+            <DialogTitle>
               {editingCalendar ? 'Modifier le calendrier' : 'Ajouter un calendrier'}
-            </h3>
-            <div className='space-y-4'>
-              <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>Nom</label>
-                <input
-                  type='text'
-                  value={formData.name}
-                  onChange={e => setFormData({ ...formData, name: e.target.value })}
-                  className='w-full border border-gray-300 rounded-md px-3 py-2'
-                  placeholder='ex: Calendrier Airbnb'
-                />
-              </div>
-              <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>URL ICS</label>
-                <input
-                  type='url'
-                  value={formData.icalUrl}
-                  onChange={e => setFormData({ ...formData, icalUrl: e.target.value })}
-                  className='w-full border border-gray-300 rounded-md px-3 py-2'
-                  placeholder='https://calendar.google.com/calendar/ical/...'
-                />
-              </div>
-              <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>Couleur</label>
-                <input
-                  type='color'
-                  value={formData.color}
-                  onChange={e => setFormData({ ...formData, color: e.target.value })}
-                  className='w-20 h-10 border border-gray-300 rounded-md'
-                />
-              </div>
-              <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
-                  Description (optionnel)
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={e => setFormData({ ...formData, description: e.target.value })}
-                  className='w-full border border-gray-300 rounded-md px-3 py-2'
-                  rows={3}
-                  placeholder='Description du calendrier'
-                />
-              </div>
+            </DialogTitle>
+            <DialogDescription>
+              Configurez votre calendrier externe en renseignant les informations ci-dessous.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className='space-y-4 py-4'>
+            <div className='space-y-2'>
+              <Label htmlFor='name'>Nom</Label>
+              <Input
+                id='name'
+                type='text'
+                value={formData.name}
+                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                placeholder='ex: Calendrier Airbnb'
+              />
             </div>
-            <div className='flex gap-2 mt-6'>
-              <Button
-                onClick={() => {
-                  setShowAddModal(false)
-                  setEditingCalendar(null)
-                  setFormData({ name: '', icalUrl: '', color: '#3B82F6', description: '' })
-                }}
-                variant='outline'
-                className='flex-1'
-              >
-                Annuler
-              </Button>
-              <Button
-                onClick={editingCalendar ? handleUpdateCalendar : handleCreateCalendar}
-                className='flex-1'
-              >
-                {editingCalendar ? 'Mettre à jour' : 'Ajouter'}
-              </Button>
+            <div className='space-y-2'>
+              <Label htmlFor='icalUrl'>URL ICS</Label>
+              <Input
+                id='icalUrl'
+                type='url'
+                value={formData.icalUrl}
+                onChange={e => setFormData({ ...formData, icalUrl: e.target.value })}
+                placeholder='https://calendar.google.com/calendar/ical/...'
+              />
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='color'>Couleur</Label>
+              <input
+                id='color'
+                type='color'
+                value={formData.color}
+                onChange={e => setFormData({ ...formData, color: e.target.value })}
+                className='w-20 h-10 border border-gray-300 rounded-md cursor-pointer'
+              />
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='description'>Description (optionnel)</Label>
+              <textarea
+                id='description'
+                value={formData.description}
+                onChange={e => setFormData({ ...formData, description: e.target.value })}
+                className='w-full border border-gray-300 rounded-md px-3 py-2 min-h-[80px]'
+                rows={3}
+                placeholder='Description du calendrier'
+              />
             </div>
           </div>
-        </div>
-      )}
+
+          <DialogFooter className='flex gap-2'>
+            <Button
+              onClick={() => {
+                setShowAddModal(false)
+                setEditingCalendar(null)
+                setFormData({ name: '', icalUrl: '', color: '#3B82F6', description: '' })
+              }}
+              variant='outline'
+              className='flex-1'
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={editingCalendar ? handleUpdateCalendar : handleCreateCalendar}
+              className='flex-1'
+            >
+              {editingCalendar ? 'Mettre à jour' : 'Ajouter'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal de mapping des événements */}
-      {showMappingModal && selectedCalendar && (
+      {selectedCalendar && (
         <EventMappingModal
+          isOpen={showMappingModal}
           calendar={selectedCalendar}
           events={calendarEvents}
           onClose={() => {
