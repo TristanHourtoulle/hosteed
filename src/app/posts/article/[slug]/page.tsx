@@ -85,7 +85,8 @@ export default async function PostPage({ params }: PageProps) {
     return readingTime
   }
 
-  const shareUrl = `https://hosteed.com/posts/article/${post.slug || post.id}`
+  // Use relative URL - ShareButton will construct the full URL
+  const shareUrl = `/posts/article/${post.slug || post.id}`
 
   return (
     <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50'>
