@@ -6,6 +6,7 @@ import SearchHeader from '@/components/host/SearchHeader'
 import SearchResults from '@/components/host/SearchResults'
 import LoadingState from '@/components/host/LoadingState'
 import ErrorState from '@/components/host/ErrorState'
+import { SponsoredSection, SpecialOffersSection } from '@/components/homepage'
 
 function HostPageContent() {
   const {
@@ -64,6 +65,14 @@ function HostPageContent() {
             typeRooms={[]}
           />
         </div>
+
+        {/* Sponsored and Special Offers - Only show when no filters are active */}
+        {!hasActiveFilters && (
+          <>
+            <SponsoredSection />
+            <SpecialOffersSection />
+          </>
+        )}
 
         {/* Results Section */}
         <div className='pb-8'>
