@@ -801,6 +801,11 @@ model Post {
   author          User     @relation("AuthoredPosts", fields: [authorId], references: [id], onDelete: Cascade)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  // Performance indexes
+  @@index([createdAt(sort: Desc)])
+  @@index([authorId])
+  @@index([slug])
 }
 
 model SpecialPrices {

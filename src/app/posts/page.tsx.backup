@@ -202,80 +202,78 @@ export default function PostsPage() {
               )}
             </div>
           ) : (
-            <>
-              <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-8'>
-                {regularPosts.map(post => (
-                  <article
-                    key={post.id}
-                    className='group relative flex flex-col bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100'
-                  >
-                    <div className='relative h-64 w-full overflow-hidden rounded-t-2xl'>
-                      <Image
-                        src={post.image || '/placeholder.jpg'}
-                        alt={post.title}
-                        fill
-                        className='object-cover transition-transform duration-300 group-hover:scale-105'
-                      />
-                    </div>
-                    <div className='flex-1 p-6'>
-                      <h3 className='text-xl font-semibold text-gray-900 mb-3 line-clamp-2'>
-                        {post.title}
-                      </h3>
-                      <p className='text-gray-600 mb-4 line-clamp-3'>
-                        {truncateText(post.content, 150)}
-                      </p>
-                      <div className='flex items-center justify-between text-sm text-gray-500'>
-                        <div className='flex items-center'>
-                          <Clock className='h-4 w-4 mr-1' />
-                          <span>{estimateReadingTime(post.content)} min de lecture</span>
-                        </div>
-                        <div className='flex items-center'>
-                          <Calendar className='h-4 w-4 mr-1' />
-                          <span>
-                            {format(new Date(post.createdAt), 'dd MMM yyyy', { locale: fr })}
-                          </span>
-                        </div>
+            <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-8'>
+              {regularPosts.map(post => (
+                <article
+                  key={post.id}
+                  className='group relative flex flex-col bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100'
+                >
+                  <div className='relative h-64 w-full overflow-hidden rounded-t-2xl'>
+                    <Image
+                      src={post.image || '/placeholder.jpg'}
+                      alt={post.title}
+                      fill
+                      className='object-cover transition-transform duration-300 group-hover:scale-105'
+                    />
+                  </div>
+                  <div className='flex-1 p-6'>
+                    <h3 className='text-xl font-semibold text-gray-900 mb-3 line-clamp-2'>
+                      {post.title}
+                    </h3>
+                    <p className='text-gray-600 mb-4 line-clamp-3'>
+                      {truncateText(post.content, 150)}
+                    </p>
+                    <div className='flex items-center justify-between text-sm text-gray-500'>
+                      <div className='flex items-center'>
+                        <Clock className='h-4 w-4 mr-1' />
+                        <span>{estimateReadingTime(post.content)} min de lecture</span>
+                      </div>
+                      <div className='flex items-center'>
+                        <Calendar className='h-4 w-4 mr-1' />
+                        <span>
+                          {format(new Date(post.createdAt), 'dd MMM yyyy', { locale: fr })}
+                        </span>
                       </div>
                     </div>
-                    <Link
-                      href={`/posts/article/${post.slug || post.id}`}
-                      className='absolute inset-0'
-                    >
-                      <span className='sr-only'>Lire l&apos;article</span>
-                    </Link>
-                  </article>
-                ))}
-              </div>
-
-              {/* Pagination Controls */}
-              {totalPages > 1 && (
-                <div className='mt-12 flex justify-center items-center gap-4'>
-                  <Button
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={!hasPrev || loading}
-                    variant='outline'
-                    className='flex items-center gap-2'
-                  >
-                    <ChevronRight className='h-4 w-4 rotate-180' />
-                    Précédent
-                  </Button>
-                  <div className='flex items-center gap-2'>
-                    <span className='text-sm text-gray-600'>
-                      Page {currentPage} sur {totalPages}
-                    </span>
                   </div>
-                  <Button
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    disabled={!hasNext || loading}
-                    variant='outline'
-                    className='flex items-center gap-2'
+                  <Link
+                    href={`/posts/article/${post.slug || post.id}`}
+                    className='absolute inset-0'
                   >
-                    Suivant
-                    <ChevronRight className='h-4 w-4' />
-                  </Button>
+                    <span className='sr-only'>Lire l&apos;article</span>
+                  </Link>
+                </article>
+              ))}
+            </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className='mt-12 flex justify-center items-center gap-4'>
+                <Button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={!hasPrev || loading}
+                  variant='outline'
+                  className='flex items-center gap-2'
+                >
+                  <ChevronRight className='h-4 w-4 rotate-180' />
+                  Précédent
+                </Button>
+                <div className='flex items-center gap-2'>
+                  <span className='text-sm text-gray-600'>
+                    Page {currentPage} sur {totalPages}
+                  </span>
                 </div>
-              )}
-            </>
+                <Button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={!hasNext || loading}
+                  variant='outline'
+                  className='flex items-center gap-2'
+                >
+                  Suivant
+                  <ChevronRight className='h-4 w-4' />
+                </Button>
+              </div>
+            )}
           )}
         </div>
       </div>
