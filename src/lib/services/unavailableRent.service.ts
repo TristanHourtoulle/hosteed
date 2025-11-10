@@ -314,8 +314,9 @@ export async function findUnavailableByProductId(
       id: u.id,
       title: u.title,
       description: u.description,
-      start: u.startDate.toISOString(),
-      end: u.endDate.toISOString(),
+      // Utiliser toISOString().split('T')[0] pour garder uniquement YYYY-MM-DD sans timezone
+      start: u.startDate.toISOString().split('T')[0],
+      end: u.endDate.toISOString().split('T')[0],
       productId: u.productId,
       type: 'unavailability' as const,
     }))
@@ -350,8 +351,9 @@ export async function findUnavailableByHostId(hostId: string): Promise<Formatted
       id: u.id,
       title: u.title,
       description: u.description,
-      start: u.startDate.toISOString(),
-      end: u.endDate.toISOString(),
+      // Utiliser toISOString().split('T')[0] pour garder uniquement YYYY-MM-DD sans timezone
+      start: u.startDate.toISOString().split('T')[0],
+      end: u.endDate.toISOString().split('T')[0],
       productId: u.product.id,
       propertyName: u.product.name,
       type: 'unavailability' as const,

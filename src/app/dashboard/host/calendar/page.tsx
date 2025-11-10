@@ -99,8 +99,14 @@ function CalendarContent() {
 
   const getReservationsForDay = (date: Date) => {
     return reservations.filter(reservation => {
+      // Parser les dates en forçant l'heure locale à minuit pour éviter les problèmes de timezone
       const startDate = new Date(reservation.start)
       const endDate = new Date(reservation.end)
+
+      // Normaliser à minuit en heure locale
+      startDate.setHours(0, 0, 0, 0)
+      endDate.setHours(0, 0, 0, 0)
+
       // Logique "nuit d'hôtel" : afficher du startDate (inclus) au endDate (exclu)
       // Exemple : réservation du 12 au 13 = affiche sur le 12, pas sur le 13
       return date >= startDate && date < endDate
@@ -109,8 +115,25 @@ function CalendarContent() {
 
   const getUnavailabilitiesForDay = (date: Date) => {
     return unavailabilities.filter(unavail => {
-      const startDate = new Date(unavail.start)
-      const endDate = new Date(unavail.end)
+      // Parser les dates en forçant l'heure locale à minuit pour éviter les problèmes de timezone
+      const [startYear, startMonth, startDay] = unavail.start.split('-').map(Number)
+      const startDate = new Date(startYear, startMonth - 1, startDay)
+
+      const [endYear, endMonth, endDay] = unavail.end.split('-').map(Number)
+      const endDate = new Date(endYear, endMonth - 1, endDay)
+
+      // Debug log
+      if (unavail.id === 'cmhtdss3b0000s6vjhwc04k30') {
+        console.log('🗓️ [CALENDAR] Checking unavailability:', {
+          unavail,
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+          checkingDate: date.toISOString(),
+          condition: `${date.toISOString()} >= ${startDate.toISOString()} && ${date.toISOString()} < ${endDate.toISOString()}`,
+          result: date >= startDate && date < endDate,
+        })
+      }
+
       // Logique "nuit d'hôtel" : afficher du startDate (inclus) au endDate (exclu)
       // Exemple : blocage du 12 au 13 = affiche sur le 12, pas sur le 13
       return date >= startDate && date < endDate
