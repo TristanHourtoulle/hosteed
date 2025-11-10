@@ -32,8 +32,6 @@ interface ProductPricingFormProps {
   ) => void
   onSpecialPriceCreated: () => void
   onRemoveSpecialPrice: (id: string) => void
-  isSubmitting: boolean
-  onSubmit: (e: React.FormEvent) => void
   itemVariants: Variants
 }
 
@@ -42,8 +40,6 @@ export default function ProductPricingForm({
   onInputChange,
   onSpecialPriceCreated,
   onRemoveSpecialPrice,
-  isSubmitting,
-  onSubmit,
   itemVariants,
 }: ProductPricingFormProps) {
   const [specialPriceModalOpen, setSpecialPriceModalOpen] = useState(false)
@@ -179,53 +175,6 @@ export default function ProductPricingForm({
             <div className='mt-6'>
               <CommissionDisplay basePrice={parseFloat(formData.basePrice) || 0} />
             </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Submit Section */}
-      <motion.div variants={itemVariants}>
-        <Card className='border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50'>
-          <CardHeader>
-            <CardTitle className='flex items-center gap-3 text-orange-800'>
-              🏡 Finalisation de votre annonce
-            </CardTitle>
-          </CardHeader>
-          <CardContent className='space-y-6'>
-            <div className='bg-white/60 rounded-lg p-6 border border-orange-200'>
-              <h3 className='font-semibold text-orange-900 mb-3'>Avant de publier</h3>
-              <ul className='text-sm text-orange-800 space-y-2'>
-                <li className='flex items-center gap-2'>
-                  <span className='w-2 h-2 bg-orange-500 rounded-full'></span>
-                  Vérifiez que toutes les informations sont exactes
-                </li>
-                <li className='flex items-center gap-2'>
-                  <span className='w-2 h-2 bg-orange-500 rounded-full'></span>
-                  Assurez-vous d&apos;avoir ajouté des photos de qualité
-                </li>
-                <li className='flex items-center gap-2'>
-                  <span className='w-2 h-2 bg-orange-500 rounded-full'></span>
-                  Votre annonce sera soumise à validation avant publication
-                </li>
-              </ul>
-            </div>
-
-            <Button
-              type='submit'
-              size='lg'
-              disabled={isSubmitting}
-              onClick={onSubmit}
-              className='w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold py-3 text-base shadow-lg'
-            >
-              {isSubmitting ? (
-                <div className='flex items-center gap-2'>
-                  <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white'></div>
-                  Création en cours...
-                </div>
-              ) : (
-                'Créer mon hébergement'
-              )}
-            </Button>
           </CardContent>
         </Card>
       </motion.div>

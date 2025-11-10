@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 interface NumberInputProps {
   id: string
   name: string
-  value: string
+  value: string | undefined
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
   className?: string
   required?: boolean
@@ -27,7 +27,7 @@ export default function NumberInput({
   allowDecimals = false,
 }: NumberInputProps) {
   // Format number with spaces (1000 -> 1 000)
-  const formatNumberWithSpaces = (value: string) => {
+  const formatNumberWithSpaces = (value: string | undefined) => {
     if (!value) return ''
     const num = value.replace(/\s/g, '')
     if (!num) return ''

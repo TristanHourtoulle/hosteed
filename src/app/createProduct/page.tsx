@@ -630,8 +630,6 @@ export default function CreateProductPage() {
             onRemoveSpecialPrice={(id: string) =>
               setSpecialPrices(prev => prev.filter(sp => sp.id !== id))
             }
-            isSubmitting={isLoading}
-            onSubmit={handleSubmit}
             itemVariants={itemVariants}
           />
 
@@ -1166,40 +1164,6 @@ export default function CreateProductPage() {
                 </div>
               </CardHeader>
               <CardContent className='space-y-6'>
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-                  <div className='space-y-2'>
-                    <label htmlFor='surface' className='text-sm font-medium text-slate-700'>
-                      Surface (m²)
-                    </label>
-                    <Input
-                      id='surface'
-                      name='surface'
-                      type='number'
-                      min='1'
-                      placeholder='Ex: 85'
-                      value={formData.surface}
-                      onChange={handleInputChange}
-                      className='border-slate-200 focus:border-cyan-300 focus:ring-cyan-200'
-                    />
-                  </div>
-
-                  <div className='space-y-2'>
-                    <label htmlFor='maxPeople' className='text-sm font-medium text-slate-700'>
-                      Nombre max de personnes
-                    </label>
-                    <Input
-                      id='maxPeople'
-                      name='maxPeople'
-                      type='number'
-                      min='1'
-                      placeholder='Ex: 6'
-                      value={formData.maxPeople}
-                      onChange={handleInputChange}
-                      className='border-slate-200 focus:border-cyan-300 focus:ring-cyan-200'
-                    />
-                  </div>
-                </div>
-
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
                   <div className='flex items-center space-x-2'>
                     <input
