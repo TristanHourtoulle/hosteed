@@ -28,6 +28,7 @@ export default function NumberInput({
 }: NumberInputProps) {
   // Format number with spaces (1000 -> 1 000)
   const formatNumberWithSpaces = (value: string) => {
+    if (!value) return ''
     const num = value.replace(/\s/g, '')
     if (!num) return ''
 
