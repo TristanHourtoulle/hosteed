@@ -1,3 +1,5 @@
 export { default as BasicInfoSection } from './BasicInfoSection'
 export { default as LocationContactSection } from './LocationContactSection'
 export { default as ServiceSelectionSection } from './ServiceSelectionSection'
+export { default as ProductCharacteristicsForm } from './ProductCharacteristicsForm'
+export { default as ProductPricingForm } from './ProductPricingForm'

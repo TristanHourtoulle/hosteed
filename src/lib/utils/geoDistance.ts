@@ -6,12 +6,7 @@
  * @param lon2 Longitude of second point
  * @returns Distance in kilometers
  */
-export function calculateDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number {
+export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371 // Radius of the Earth in kilometers
   const dLat = degreesToRadians(lat2 - lat1)
   const dLon = degreesToRadians(lon2 - lon1)
@@ -70,7 +65,7 @@ export function isWithinRadius(
  * @returns Filtered products with distance information
  */
 export function filterProductsByRadius<
-  T extends { latitude: number; longitude: number; id: string }
+  T extends { latitude: number; longitude: number; id: string },
 >(
   products: T[],
   centerLat: number,

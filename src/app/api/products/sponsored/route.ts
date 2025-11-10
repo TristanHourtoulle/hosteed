@@ -23,7 +23,7 @@ export async function GET() {
     }
 
     // Transform the data to match the expected format for ProductCard
-    const products = promotedProducts.map((promoted) => {
+    const products = promotedProducts.map(promoted => {
       const product = convertBigIntToNumber(promoted.product) as Record<string, unknown>
       return {
         ...product,

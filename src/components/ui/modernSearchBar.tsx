@@ -129,10 +129,7 @@ export default function ModernSearchBar({
   }
 
   // Gérer la sélection d'une ville depuis les suggestions (avec coordonnées GPS)
-  const handleCitySelect = (
-    city: GooglePlacePrediction,
-    coords?: { lat: number; lng: number }
-  ) => {
+  const handleCitySelect = (city: GooglePlacePrediction, coords?: { lat: number; lng: number }) => {
     setLocation(city.description)
     setCoordinates(coords || null)
 

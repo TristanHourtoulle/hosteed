@@ -79,17 +79,12 @@ export default function SponsoredSection() {
         <div className='container mx-auto px-4'>
           <div className='flex items-center justify-center gap-2 mb-8'>
             <Sparkles className='w-6 h-6 text-amber-600 animate-pulse' />
-            <h2 className='text-2xl md:text-3xl font-bold text-gray-900'>
-              Annonces Sponsorisées
-            </h2>
+            <h2 className='text-2xl md:text-3xl font-bold text-gray-900'>Annonces Sponsorisées</h2>
             <Sparkles className='w-6 h-6 text-amber-600 animate-pulse' />
           </div>
           <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6'>
             {[...Array(8)].map((_, i) => (
-              <div
-                key={i}
-                className='h-96 bg-gray-200 animate-pulse rounded-lg'
-              />
+              <div key={i} className='h-96 bg-gray-200 animate-pulse rounded-lg' />
             ))}
           </div>
         </div>
@@ -107,9 +102,7 @@ export default function SponsoredSection() {
         {/* Section Header */}
         <div className='flex items-center justify-center gap-2 mb-8'>
           <Sparkles className='w-6 h-6 text-amber-600' />
-          <h2 className='text-2xl md:text-3xl font-bold text-gray-900'>
-            Annonces Sponsorisées
-          </h2>
+          <h2 className='text-2xl md:text-3xl font-bold text-gray-900'>Annonces Sponsorisées</h2>
           <Sparkles className='w-6 h-6 text-amber-600' />
         </div>
 

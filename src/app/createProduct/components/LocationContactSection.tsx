@@ -42,12 +42,15 @@ export default function LocationContactSection({
           <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
             <div className='space-y-2'>
               <label htmlFor='address' className='text-sm font-medium text-slate-700'>
-                Adresse complète
+                Localisation <span className='text-red-500'>*</span>
               </label>
+              <p className='text-xs text-slate-500 mb-1'>
+                Localisation visible sur l&apos;annonce (Google Maps)
+              </p>
               <AddressAutocomplete
                 value={formData.address}
                 onChange={value => setFormData(prev => ({ ...prev, address: value }))}
-                placeholder='Numéro, rue, code postal, ville'
+                placeholder='Ex: Antananarivo, Madagascar'
                 className='border-slate-200 focus:border-green-300 focus:ring-green-200'
                 countryFilter='MG'
                 onAddressSelect={(address, placeId) => {
@@ -62,8 +65,11 @@ export default function LocationContactSection({
 
             <div className='space-y-2'>
               <label htmlFor='phone' className='text-sm font-medium text-slate-700'>
-                Téléphone de contact
+                Téléphone de contact <span className='text-red-500'>*</span>
               </label>
+              <p className='text-xs text-slate-500 mb-1'>
+                Visible uniquement dans le mail de confirmation
+              </p>
               <PhoneInput
                 value={formData.phone}
                 defaultCountry={formData.phoneCountry}
@@ -79,6 +85,25 @@ export default function LocationContactSection({
                 className='border-slate-200 focus:border-green-300 focus:ring-green-200'
               />
             </div>
+          </div>
+
+          <div className='space-y-2'>
+            <label htmlFor='completeAddress' className='text-sm font-medium text-slate-700'>
+              Adresse complète ou lien Google Maps
+            </label>
+            <p className='text-xs text-slate-500 mb-1'>
+              Adresse détaillée visible uniquement dans le mail de confirmation. Permet aux clients
+              de localiser précisément votre établissement.
+            </p>
+            <textarea
+              id='completeAddress'
+              name='completeAddress'
+              value={formData.completeAddress}
+              onChange={e => setFormData(prev => ({ ...prev, completeAddress: e.target.value }))}
+              placeholder='Ex : Lot AEN 2Ter Bis Analamahitsy, Antananarivo 101 - Près de la Station Total, à côté de la Pharmacie Soa'
+              className='w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-300 min-h-[80px] resize-y'
+              rows={3}
+            />
           </div>
 
           <ProximityLandmarksField

@@ -358,6 +358,7 @@ export default function EditProductPage() {
         name: formData.name,
         description: formData.description,
         address: formData.address,
+        completeAddress: formData.completeAddress || null,
         longitude: longitude,
         latitude: latitude,
         basePrice: formData.basePrice,

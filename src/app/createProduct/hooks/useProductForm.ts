@@ -6,6 +6,7 @@ const initialFormData: FormData = {
   name: '',
   description: '',
   address: '',
+  completeAddress: '',
   placeId: '',
   phone: '',
   phoneCountry: 'MG',

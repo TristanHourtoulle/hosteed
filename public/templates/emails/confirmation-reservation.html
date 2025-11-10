@@ -100,17 +100,29 @@
         </div>
 
         <div class="section">
-          <div class="section-title">📍 Adresse :</div>
+          <div class="section-title">📍 Localisation :</div>
           <div class="info-item">{{listing_adress}}</div>
-          <div class="info-item">
-            ℹ️ Il est important de contacter l'hôte avant de vous y rendre. Il peut vous donner plus
-            de précisions et d'informations sur la situation géographique de l'établissement.
-          </div>
         </div>
 
         <div class="section">
-          <div class="section-title">📞 Numéro de téléphone de l'hôte :</div>
-          <div class="info-item">{{phone_number}}</div>
+          <div class="section-title">📞 Informations de contact :</div>
+          <div class="info-item"><strong>Téléphone :</strong> {{phone_number}}</div>
+          {{#if complete_address}}
+          <div class="info-item" style="margin-top: 12px;">
+            <strong>Adresse complète :</strong><br />
+            {{complete_address}}
+          </div>
+          {{/if}}
+          {{#if proximity_landmarks}}
+          <div class="info-item" style="margin-top: 12px;">
+            <strong>Points de repère :</strong><br />
+            {{proximity_landmarks}}
+          </div>
+          {{/if}}
+          <div class="info-item" style="margin-top: 12px;">
+            ℹ️ Il est important de contacter l'hôte avant de vous y rendre. Il peut vous donner plus
+            de précisions et d'informations sur la situation géographique de l'établissement.
+          </div>
         </div>
 
         <div class="section">

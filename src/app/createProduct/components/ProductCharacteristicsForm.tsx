@@ -2,7 +2,8 @@
 
 import { motion, Variants } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
+import NumberInput from '@/components/ui/NumberInput'
+import TimeInput from '@/components/ui/TimeInput'
 import { Users, Home } from 'lucide-react'
 import { useMemo } from 'react'
 
@@ -65,10 +66,9 @@ export default function ProductCharacteristicsForm({
                 <label htmlFor='room' className='text-sm font-medium text-slate-700'>
                   Nombre de chambres *
                 </label>
-                <Input
+                <NumberInput
                   id='room'
                   name='room'
-                  type='number'
                   min='1'
                   placeholder='Ex: 3'
                   value={formData.room}
@@ -82,10 +82,9 @@ export default function ProductCharacteristicsForm({
                 <label htmlFor='bathroom' className='text-sm font-medium text-slate-700'>
                   Nombre de salles de bain *
                 </label>
-                <Input
+                <NumberInput
                   id='bathroom'
                   name='bathroom'
-                  type='number'
                   min='1'
                   placeholder='Ex: 2'
                   value={formData.bathroom}
@@ -101,10 +100,9 @@ export default function ProductCharacteristicsForm({
                 <label htmlFor='surface' className='text-sm font-medium text-slate-700'>
                   Surface (m²)
                 </label>
-                <Input
+                <NumberInput
                   id='surface'
                   name='surface'
-                  type='number'
                   min='1'
                   placeholder='Ex: 85'
                   value={formData.surface}
@@ -117,10 +115,9 @@ export default function ProductCharacteristicsForm({
                 <label htmlFor='maxPeople' className='text-sm font-medium text-slate-700'>
                   Nombre max de personnes *
                 </label>
-                <Input
+                <NumberInput
                   id='maxPeople'
                   name='maxPeople'
-                  type='number'
                   min='1'
                   placeholder='Ex: 6'
                   value={formData.maxPeople}
@@ -135,10 +132,9 @@ export default function ProductCharacteristicsForm({
               <label htmlFor='minPeople' className='text-sm font-medium text-slate-700'>
                 Nombre min de personnes
               </label>
-              <Input
+              <NumberInput
                 id='minPeople'
                 name='minPeople'
-                type='number'
                 min='1'
                 placeholder='Ex: 2'
                 value={formData.minPeople}
@@ -182,10 +178,9 @@ export default function ProductCharacteristicsForm({
                 <label htmlFor='arriving' className='text-sm font-medium text-slate-700'>
                   Heure d&apos;arrivée
                 </label>
-                <Input
+                <TimeInput
                   id='arriving'
                   name='arriving'
-                  type='time'
                   value={formData.arriving}
                   onChange={onInputChange}
                   className='border-slate-200 focus:border-purple-300 focus:ring-purple-200'
@@ -196,10 +191,9 @@ export default function ProductCharacteristicsForm({
                 <label htmlFor='leaving' className='text-sm font-medium text-slate-700'>
                   Heure de départ
                 </label>
-                <Input
+                <TimeInput
                   id='leaving'
                   name='leaving'
-                  type='time'
                   value={formData.leaving}
                   onChange={onInputChange}
                   className='border-slate-200 focus:border-purple-300 focus:ring-purple-200'

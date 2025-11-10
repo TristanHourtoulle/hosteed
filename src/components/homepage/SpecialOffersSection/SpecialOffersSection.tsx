@@ -70,16 +70,16 @@ export default function SpecialOffersSection() {
               endDate: Date
               product: Product
             }) => ({
-          ...promo.product,
-          promotions: [
-            {
-              id: promo.id,
-              discountPercentage: promo.discountPercentage,
-              startDate: promo.startDate,
-              endDate: promo.endDate,
-              isActive: true,
-            },
-          ],
+              ...promo.product,
+              promotions: [
+                {
+                  id: promo.id,
+                  discountPercentage: promo.discountPercentage,
+                  startDate: promo.startDate,
+                  endDate: promo.endDate,
+                  isActive: true,
+                },
+              ],
             })
           ) || []
 
@@ -102,9 +102,7 @@ export default function SpecialOffersSection() {
           <div className='text-center mb-8'>
             <div className='flex items-center justify-center gap-2 mb-2'>
               <Tag className='w-6 h-6 text-green-600' />
-              <h2 className='text-2xl md:text-3xl font-bold text-gray-900'>
-                Offres Spéciales
-              </h2>
+              <h2 className='text-2xl md:text-3xl font-bold text-gray-900'>Offres Spéciales</h2>
               <TrendingDown className='w-6 h-6 text-green-600' />
             </div>
             <p className='text-gray-600 text-sm'>
@@ -113,10 +111,7 @@ export default function SpecialOffersSection() {
           </div>
           <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6'>
             {[...Array(4)].map((_, i) => (
-              <div
-                key={i}
-                className='h-96 bg-gray-200 animate-pulse rounded-lg'
-              />
+              <div key={i} className='h-96 bg-gray-200 animate-pulse rounded-lg' />
             ))}
           </div>
         </div>
@@ -135,9 +130,7 @@ export default function SpecialOffersSection() {
         <div className='text-center mb-8'>
           <div className='flex items-center justify-center gap-2 mb-2'>
             <Tag className='w-6 h-6 text-green-600' />
-            <h2 className='text-2xl md:text-3xl font-bold text-gray-900'>
-              Offres Spéciales
-            </h2>
+            <h2 className='text-2xl md:text-3xl font-bold text-gray-900'>Offres Spéciales</h2>
             <TrendingDown className='w-6 h-6 text-green-600' />
           </div>
           <p className='text-gray-600 text-sm md:text-base'>

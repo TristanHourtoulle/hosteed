@@ -20,9 +20,7 @@ export async function GET(request: NextRequest) {
     // GPS coordinates for radius-based search (from Google Places API)
     const lat = searchParams.get('lat') ? parseFloat(searchParams.get('lat')!) : null
     const lon = searchParams.get('lon') ? parseFloat(searchParams.get('lon')!) : null
-    const radius = searchParams.get('radius')
-      ? parseFloat(searchParams.get('radius')!)
-      : 30 // Default 30km radius
+    const radius = searchParams.get('radius') ? parseFloat(searchParams.get('radius')!) : 30 // Default 30km radius
 
     // Filtering options
     const featured = searchParams.get('featured') === 'true'
@@ -453,9 +451,7 @@ export async function GET(request: NextRequest) {
 
     // Apply GPS radius filtering (if lat/lon provided from Google Places)
     if (lat !== null && lon !== null) {
-      console.log(
-        `[SEARCH API] Applying GPS filter: center (${lat}, ${lon}), radius ${radius}km`
-      )
+      console.log(`[SEARCH API] Applying GPS filter: center (${lat}, ${lon}), radius ${radius}km`)
       filteredProducts = filterProductsByRadius(filteredProducts, lat, lon, radius)
       console.log(`[SEARCH API] GPS filter returned ${filteredProducts.length} products`)
     }

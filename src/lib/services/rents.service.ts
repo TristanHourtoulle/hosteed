@@ -531,6 +531,12 @@ export async function createRent(params: {
           arriving_date: createdRent.arrivingDate.toDateString(),
           leaving_date: createdRent.leavingDate.toDateString(),
           reservationUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
+          complete_address: createdRent.product.completeAddress || '',
+          proximity_landmarks:
+            createdRent.product.proximityLandmarks &&
+            createdRent.product.proximityLandmarks.length > 0
+              ? createdRent.product.proximityLandmarks.join(', ')
+              : '',
         }
       )
     } else {
@@ -549,6 +555,12 @@ export async function createRent(params: {
           arriving_date: createdRent.arrivingDate.toDateString(),
           leaving_date: createdRent.leavingDate.toDateString(),
           reservationUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
+          complete_address: createdRent.product.completeAddress || '',
+          proximity_landmarks:
+            createdRent.product.proximityLandmarks &&
+            createdRent.product.proximityLandmarks.length > 0
+              ? createdRent.product.proximityLandmarks.join(', ')
+              : '',
         }
       )
     }
@@ -597,11 +609,11 @@ export async function confirmRentByHost(id: string) {
     await sendTemplatedMail(
       rent.user.email,
       "Réservation confirmée par l'hôte 🎉",
-      'host-confirmation.html',
+      'confirmation-reservation.html',
       {
         name: rent.user.name || '',
         listing_title: rent.product.name,
-        listing_address: rent.product.address,
+        listing_adress: rent.product.address,
         check_in: rent.product.arriving,
         check_out: rent.product.leaving,
         categories: rent.product.type.name,
@@ -609,6 +621,11 @@ export async function confirmRentByHost(id: string) {
         arriving_date: rent.arrivingDate.toDateString(),
         leaving_date: rent.leavingDate.toDateString(),
         reservationUrl: process.env.NEXTAUTH_URL + '/reservation/' + rent.id,
+        complete_address: rent.product.completeAddress || '',
+        proximity_landmarks:
+          rent.product.proximityLandmarks && rent.product.proximityLandmarks.length > 0
+            ? rent.product.proximityLandmarks.join(', ')
+            : '',
       }
     )
 
@@ -681,6 +698,11 @@ export async function approveRent(id: string) {
       arriving_date: createdRent.arrivingDate.toDateString(),
       leaving_date: createdRent.leavingDate.toDateString(),
       reservationUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
+      complete_address: createdRent.product.completeAddress || '',
+      proximity_landmarks:
+        createdRent.product.proximityLandmarks && createdRent.product.proximityLandmarks.length > 0
+          ? createdRent.product.proximityLandmarks.join(', ')
+          : '',
     }
   )
   return {

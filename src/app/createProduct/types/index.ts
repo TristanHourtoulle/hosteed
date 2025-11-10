@@ -75,7 +75,8 @@ export interface ImageFile {
 export interface FormData {
   name: string
   description: string
-  address: string
+  address: string // Localisation Google Maps (visible sur l'annonce)
+  completeAddress: string // Adresse complète manuelle (visible dans le mail de confirmation)
   placeId?: string
   phone: string
   phoneCountry: string

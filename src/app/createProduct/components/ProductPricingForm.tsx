@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { motion, Variants } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
+import NumberInput from '@/components/ui/NumberInput'
 import { Button } from '@/components/ui/button'
 import { Euro, Calendar, Plus } from 'lucide-react'
 import CreateSpecialPriceModal from '@/components/ui/CreateSpecialPriceModal'
@@ -16,6 +16,7 @@ interface SpecialPrice {
   day: string[]
   startDate: Date | null
   endDate: Date | null
+  activate?: boolean
 }
 
 interface FormData {
@@ -85,16 +86,14 @@ export default function ProductPricingForm({
                 <label htmlFor='basePrice' className='text-sm font-medium text-slate-700'>
                   Prix de base par nuit (EUR) *
                 </label>
-                <Input
+                <NumberInput
                   id='basePrice'
                   name='basePrice'
-                  type='number'
-                  min='1'
-                  step='0.01'
                   placeholder='Ex: 85.00'
                   value={formData.basePrice}
                   onChange={onInputChange}
                   required
+                  allowDecimals={true}
                   className='border-slate-200 focus:border-yellow-300 focus:ring-yellow-200'
                 />
               </div>
@@ -103,15 +102,13 @@ export default function ProductPricingForm({
                 <label htmlFor='basePriceMGA' className='text-sm font-medium text-slate-700'>
                   Prix de base par nuit (MGA)
                 </label>
-                <Input
+                <NumberInput
                   id='basePriceMGA'
                   name='basePriceMGA'
-                  type='number'
-                  min='0'
-                  step='1'
-                  placeholder='Ex: 385000'
+                  placeholder='Ex: 385 000'
                   value={formData.basePriceMGA}
                   onChange={onInputChange}
+                  allowDecimals={false}
                   className='border-slate-200 focus:border-yellow-300 focus:ring-yellow-200'
                 />
               </div>

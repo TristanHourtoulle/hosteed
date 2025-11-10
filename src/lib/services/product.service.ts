@@ -914,6 +914,7 @@ export async function createProduct(data: CreateProductInput) {
         name: data.name,
         description: data.description,
         address: data.address,
+        completeAddress: data.completeAddress || null,
         longitude: Number(data.longitude),
         latitude: Number(data.latitude),
         basePrice: data.basePrice,
@@ -1895,6 +1896,7 @@ interface UpdateProductInput {
   name?: string
   description?: string
   address?: string
+  completeAddress?: string | null
   longitude?: number | string
   latitude?: number | string
   basePrice?: string
@@ -2005,6 +2007,8 @@ export async function updateProduct(productId: string, data: UpdateProductInput)
     if (data.name !== undefined) updateData.name = data.name
     if (data.description !== undefined) updateData.description = data.description
     if (data.address !== undefined) updateData.address = data.address
+    if (data.completeAddress !== undefined)
+      updateData.completeAddress = data.completeAddress || null
     if (data.longitude !== undefined) updateData.longitude = Number(data.longitude)
     if (data.latitude !== undefined) updateData.latitude = Number(data.latitude)
     if (data.basePrice !== undefined) updateData.basePrice = data.basePrice

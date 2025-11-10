@@ -55,7 +55,8 @@ export interface SpecialPriceInput {
 export interface CreateProductInput {
   name: string
   description: string
-  address: string
+  address: string // Localisation Google Maps (visible sur l'annonce)
+  completeAddress?: string | null // Adresse complète manuelle (visible dans le mail de confirmation)
   longitude: number | string
   latitude: number | string
   basePrice: string
