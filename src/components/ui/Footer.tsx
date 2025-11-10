@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Facebook, Instagram, Linkedin } from 'lucide-react'
+import Image from 'next/image'
 
 export default function Footer() {
   const currentYear = new Date().getFullYear()
@@ -11,10 +12,16 @@ export default function Footer() {
           {/* Company Info */}
           <div className='col-span-1 md:col-span-2'>
             <div className='flex items-center space-x-2 mb-4'>
-              <div className='w-8 h-8 bg-gradient-to-r from-[#015993] to-[#0379C7] rounded-lg flex items-center justify-center'>
-                <span className='text-white font-bold text-sm'>H</span>
-              </div>
-              <h3 className='text-xl font-bold text-gray-900'>Hosteed</h3>
+              <Link href='/' className='flex items-center cursor-pointer'>
+                <Image
+                  src='/logo-hosteed.png'
+                  alt='Hosteed'
+                  width={120}
+                  height={120}
+                  priority
+                  className='h-20 w-auto'
+                />
+              </Link>
             </div>
             <p className='text-gray-600 mb-4'>
               Plateforme de réservation d&apos;hébergements, de transport et de services de voyage.
@@ -48,7 +55,13 @@ export default function Footer() {
                 aria-label='Facebook'
                 className='text-gray-600 hover:text-[#015993] transition-colors'
               >
-                <Facebook className='w-5 h-5' />
+                <Image
+                  className='w-5 h-5'
+                  src='/images/Icône Facebook.png'
+                  alt='Facebook'
+                  width={20}
+                  height={20}
+                />
               </a>
               <a
                 href='https://www.instagram.com/hosteed_com?igsh=cm5ocG41cHVyNDlp'
@@ -57,7 +70,13 @@ export default function Footer() {
                 aria-label='Instagram'
                 className='text-gray-600 hover:text-[#015993] transition-colors'
               >
-                <Instagram className='w-5 h-5' />
+                <Image
+                  className='w-5 h-5'
+                  src='/images/Instagram (2).png'
+                  alt='Instagram'
+                  width={20}
+                  height={20}
+                />
               </a>
               <a
                 href='https://www.linkedin.com/company/106405207'
@@ -66,7 +85,29 @@ export default function Footer() {
                 aria-label='LinkedIn'
                 className='text-gray-600 hover:text-[#015993] transition-colors'
               >
-                <Linkedin className='w-5 h-5' />
+                <Image
+                  className='w-5 h-5'
+                  src='/images/Logo Linkedin.png'
+                  alt='LinkedIn'
+                  width={20}
+                  height={20}
+                />
+              </a>
+
+              <a
+                href='https://www.youtube.com/@Hosteed_com'
+                target='_blank'
+                rel='noopener noreferrer'
+                aria-label='YouTube'
+                className='text-gray-600 hover:text-[#015993] transition-colors'
+              >
+                <Image
+                  className='w-5 h-5'
+                  src='/images/Youtube (1).png'
+                  alt='YouTube'
+                  width={20}
+                  height={20}
+                />
               </a>
             </div>
           </div>
