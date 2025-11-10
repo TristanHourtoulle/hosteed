@@ -18,7 +18,6 @@ interface FormData {
   arriving: string
   leaving: string
   autoAccept: boolean
-  contract: boolean
   typeRentId: string
 }
 
@@ -201,34 +200,18 @@ export default function ProductCharacteristicsForm({
               </div>
             </div>
 
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-              <div className='flex items-center space-x-2'>
-                <input
-                  id='autoAccept'
-                  name='autoAccept'
-                  type='checkbox'
-                  checked={formData.autoAccept}
-                  onChange={onInputChange}
-                  className='w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500'
-                />
-                <label htmlFor='autoAccept' className='text-sm font-medium text-slate-700'>
-                  Acceptation automatique des réservations
-                </label>
-              </div>
-
-              <div className='flex items-center space-x-2'>
-                <input
-                  id='contract'
-                  name='contract'
-                  type='checkbox'
-                  checked={formData.contract}
-                  onChange={onInputChange}
-                  className='w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500'
-                />
-                <label htmlFor='contract' className='text-sm font-medium text-slate-700'>
-                  Contrat de location requis
-                </label>
-              </div>
+            <div className='flex items-center space-x-2'>
+              <input
+                id='autoAccept'
+                name='autoAccept'
+                type='checkbox'
+                checked={formData.autoAccept}
+                onChange={onInputChange}
+                className='w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500'
+              />
+              <label htmlFor='autoAccept' className='text-sm font-medium text-slate-700'>
+                Acceptation automatique des réservations
+              </label>
             </div>
           </CardContent>
         </Card>
