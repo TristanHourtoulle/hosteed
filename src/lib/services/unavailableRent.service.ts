@@ -69,6 +69,8 @@ export async function createUnavailableRent(
     if (!title || title.trim() === '') {
       throw new Error('Le titre est obligatoire')
     }
+    // Logique "nuit d'hôtel" : vérifier les chevauchements en excluant les jours de départ
+    // Une réservation du 12 au 13 occupe la nuit du 12, donc le 13 est libre
     const existingRents = await prisma.rent.findMany({
       where: {
         productId: productId,
@@ -77,21 +79,21 @@ export async function createUnavailableRent(
           {
             arrivingDate: {
               gte: startDate,
-              lte: endDate,
+              lt: endDate,
             },
           },
           {
             leavingDate: {
-              gte: startDate,
-              lte: endDate,
+              gt: startDate,
+              lt: endDate,
             },
           },
           {
             arrivingDate: {
-              lte: startDate,
+              lt: startDate,
             },
             leavingDate: {
-              gte: endDate,
+              gt: endDate,
             },
           },
         ],
@@ -101,6 +103,8 @@ export async function createUnavailableRent(
     if (existingRents.length > 0) {
       throw new Error('Il existe déjà des réservations sur cette période')
     }
+    // Logique "nuit d'hôtel" : vérifier les chevauchements en excluant les jours de fin
+    // Un blocage du 12 au 13 bloque la nuit du 12, donc le 13 est libre
     const existingUnavailable = await prisma.unAvailableProduct.findMany({
       where: {
         productId: productId,
@@ -108,21 +112,21 @@ export async function createUnavailableRent(
           {
             startDate: {
               gte: startDate,
-              lte: endDate,
+              lt: endDate,
             },
           },
           {
             endDate: {
-              gte: startDate,
-              lte: endDate,
+              gt: startDate,
+              lt: endDate,
             },
           },
           {
             startDate: {
-              lte: startDate,
+              lt: startDate,
             },
             endDate: {
-              gte: endDate,
+              gt: endDate,
             },
           },
         ],
@@ -185,6 +189,7 @@ export async function updateUnavailableRent(
     }
 
     // Vérifier chevauchements avec réservations
+    // Logique "nuit d'hôtel" : vérifier les chevauchements en excluant les jours de départ
     const existingRents = await prisma.rent.findMany({
       where: {
         productId: existing.productId,
@@ -193,21 +198,21 @@ export async function updateUnavailableRent(
           {
             arrivingDate: {
               gte: newStartDate,
-              lte: newEndDate,
+              lt: newEndDate,
             },
           },
           {
             leavingDate: {
-              gte: newStartDate,
-              lte: newEndDate,
+              gt: newStartDate,
+              lt: newEndDate,
             },
           },
           {
             arrivingDate: {
-              lte: newStartDate,
+              lt: newStartDate,
             },
             leavingDate: {
-              gte: newEndDate,
+              gt: newEndDate,
             },
           },
         ],
@@ -219,6 +224,7 @@ export async function updateUnavailableRent(
     }
 
     // Vérifier chevauchements avec autres indisponibilités (exclure la courante)
+    // Logique "nuit d'hôtel" : vérifier les chevauchements en excluant les jours de fin
     const existingUnavailable = await prisma.unAvailableProduct.findMany({
       where: {
         productId: existing.productId,
@@ -227,21 +233,21 @@ export async function updateUnavailableRent(
           {
             startDate: {
               gte: newStartDate,
-              lte: newEndDate,
+              lt: newEndDate,
             },
           },
           {
             endDate: {
-              gte: newStartDate,
-              lte: newEndDate,
+              gt: newStartDate,
+              lt: newEndDate,
             },
           },
           {
             startDate: {
-              lte: newStartDate,
+              lt: newStartDate,
             },
             endDate: {
-              gte: newEndDate,
+              gt: newEndDate,
             },
           },
         ],

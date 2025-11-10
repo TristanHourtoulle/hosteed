@@ -144,9 +144,12 @@ model Product {
   priceMGA         String
   room             BigInt?
   bathroom         BigInt?
+  surface          BigInt? // Surface en m²
   arriving         Int
   leaving          Int
   autoAccept       Boolean
+  accessibility    Boolean           @default(false) // Accessible aux personnes à mobilité réduite
+  petFriendly      Boolean           @default(false) // Animaux acceptés
   equipement       BigInt?
   meal             BigInt?
   services         BigInt?

@@ -63,8 +63,12 @@ export interface CreateProductInput {
   priceMGA: string
   room?: number | string | null
   bathroom?: number | string | null
+  surface?: number | string | null
   arriving: number | string
   leaving: number | string
+  autoAccept?: boolean
+  accessibility?: boolean
+  petFriendly?: boolean
   phone?: string
   phoneCountry?: string
   proximityLandmarks?: string[]

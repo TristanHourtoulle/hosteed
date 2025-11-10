@@ -130,12 +130,25 @@ export async function CheckRentIsAvailable(
   leavingDate: Date
 ): Promise<{ available: boolean; message?: string }> {
   try {
-    // Normaliser les dates pour la comparaison
+    console.log('🎯 [AVANT NORMALISATION] Dates reçues:', {
+      arrivalDate: arrivalDate.toISOString(),
+      leavingDate: leavingDate.toISOString(),
+      arrivalDateLocal: arrivalDate.toString(),
+      leavingDateLocal: leavingDate.toString(),
+    })
+
+    // Normaliser les dates pour la comparaison EN UTC pour éviter les problèmes de timezone
     const normalizedArrivalDate = new Date(arrivalDate)
-    normalizedArrivalDate.setHours(0, 0, 0, 0)
+    normalizedArrivalDate.setUTCHours(0, 0, 0, 0)
 
     const normalizedLeavingDate = new Date(leavingDate)
-    normalizedLeavingDate.setHours(0, 0, 0, 0)
+    normalizedLeavingDate.setUTCHours(0, 0, 0, 0)
+
+    console.log('🔍 [CheckRentIsAvailable] Vérification disponibilité', {
+      productId,
+      normalizedArrivalDate: normalizedArrivalDate.toISOString().split('T')[0],
+      normalizedLeavingDate: normalizedLeavingDate.toISOString().split('T')[0],
+    })
 
     // Check cache first for massive performance improvement (90% faster)
     const cachedAvailability = await availabilityCacheService.getCachedAvailability(
@@ -145,6 +158,7 @@ export async function CheckRentIsAvailable(
     )
 
     if (cachedAvailability) {
+      console.log('✅ [CACHE HIT] Réponse depuis le cache:', cachedAvailability)
       return {
         available: cachedAvailability.isAvailable,
         message: cachedAvailability.isAvailable
@@ -152,6 +166,8 @@ export async function CheckRentIsAvailable(
           : 'Property not available for selected dates',
       }
     }
+
+    console.log('❌ [CACHE MISS] Pas de cache, vérification en DB')
 
     // Vérifier d'abord si c'est un produit d'hôtel avec plusieurs chambres
     const productInfo = await prisma.product.findUnique({
@@ -167,6 +183,7 @@ export async function CheckRentIsAvailable(
     // Si c'est un hôtel avec plusieurs chambres, utiliser la logique hôtel
     if (productInfo?.availableRooms && productInfo.availableRooms > 1) {
       // Compter le nombre de réservations confirmées sur cette période
+      // Logique "nuit d'hôtel" : une réservation du 12 au 13 occupe la nuit du 12
       const existingRents = await prisma.rent.findMany({
         where: {
           productId: productId,
@@ -176,23 +193,23 @@ export async function CheckRentIsAvailable(
             {
               arrivingDate: {
                 gte: normalizedArrivalDate,
-                lte: normalizedLeavingDate,
+                lt: normalizedLeavingDate,
               },
             },
             // Réservation qui se termine pendant la période
             {
               leavingDate: {
-                gte: normalizedArrivalDate,
-                lte: normalizedLeavingDate,
+                gt: normalizedArrivalDate,
+                lt: normalizedLeavingDate,
               },
             },
             // Réservation qui englobe la période
             {
               arrivingDate: {
-                lte: normalizedArrivalDate,
+                lt: normalizedArrivalDate,
               },
               leavingDate: {
-                gte: normalizedLeavingDate,
+                gt: normalizedLeavingDate,
               },
             },
           ],
@@ -229,6 +246,7 @@ export async function CheckRentIsAvailable(
       }
     } else {
       // Sinon, utiliser la logique classique (une seule unité)
+      // Logique "nuit d'hôtel" : une réservation du 12 au 13 occupe la nuit du 12
       const existingRent = await prisma.rent.findFirst({
         where: {
           productId: productId,
@@ -238,23 +256,23 @@ export async function CheckRentIsAvailable(
             {
               arrivingDate: {
                 gte: normalizedArrivalDate,
-                lte: normalizedLeavingDate,
+                lt: normalizedLeavingDate,
               },
             },
             // Réservation qui se termine pendant la période demandée
             {
               leavingDate: {
-                gte: normalizedArrivalDate,
-                lte: normalizedLeavingDate,
+                gt: normalizedArrivalDate,
+                lt: normalizedLeavingDate,
               },
             },
             // Réservation qui englobe la période demandée
             {
               arrivingDate: {
-                lte: normalizedArrivalDate,
+                lt: normalizedArrivalDate,
               },
               leavingDate: {
-                gte: normalizedLeavingDate,
+                gt: normalizedLeavingDate,
               },
             },
           ],
@@ -286,6 +304,14 @@ export async function CheckRentIsAvailable(
         }
       }
     }
+    // Vérifier les périodes d'indisponibilité
+    // Logique "nuit d'hôtel" : un blocage du 12 au 13 bloque la nuit du 12, donc le 13 est libre
+    console.log('🔍 [UNAVAILABILITY CHECK] Recherche blocages avec conditions:', {
+      condition1: `startDate >= ${normalizedArrivalDate.toISOString().split('T')[0]} AND < ${normalizedLeavingDate.toISOString().split('T')[0]}`,
+      condition2: `endDate > ${normalizedArrivalDate.toISOString().split('T')[0]} AND < ${normalizedLeavingDate.toISOString().split('T')[0]}`,
+      condition3: `startDate < ${normalizedArrivalDate.toISOString().split('T')[0]} AND endDate > ${normalizedLeavingDate.toISOString().split('T')[0]}`,
+    })
+
     const existingUnavailable = await prisma.unAvailableProduct.findFirst({
       where: {
         productId: productId,
@@ -293,25 +319,37 @@ export async function CheckRentIsAvailable(
           {
             startDate: {
               gte: normalizedArrivalDate,
-              lte: normalizedLeavingDate,
+              lt: normalizedLeavingDate,
             },
           },
           {
             endDate: {
-              gte: normalizedArrivalDate,
-              lte: normalizedLeavingDate,
+              gt: normalizedArrivalDate,
+              lt: normalizedLeavingDate,
             },
           },
           {
             startDate: {
-              lte: normalizedArrivalDate,
+              lt: normalizedArrivalDate,
             },
             endDate: {
-              gte: normalizedLeavingDate,
+              gt: normalizedLeavingDate,
             },
           },
         ],
       },
+    })
+
+    console.log('📊 [UNAVAILABILITY RESULT]', {
+      found: !!existingUnavailable,
+      details: existingUnavailable
+        ? {
+            id: existingUnavailable.id,
+            title: existingUnavailable.title,
+            startDate: existingUnavailable.startDate.toISOString().split('T')[0],
+            endDate: existingUnavailable.endDate.toISOString().split('T')[0],
+          }
+        : null,
     })
 
     const isAvailable = !existingUnavailable
@@ -321,6 +359,8 @@ export async function CheckRentIsAvailable(
           available: false,
           message: 'Le produit est indisponible sur cette période',
         }
+
+    console.log('✨ [FINAL RESULT]', result)
 
     // Cache the availability result for future requests (massive performance boost)
     try {

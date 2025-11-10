@@ -101,7 +101,9 @@ function CalendarContent() {
     return reservations.filter(reservation => {
       const startDate = new Date(reservation.start)
       const endDate = new Date(reservation.end)
-      return date >= startDate && date <= endDate
+      // Logique "nuit d'hôtel" : afficher du startDate (inclus) au endDate (exclu)
+      // Exemple : réservation du 12 au 13 = affiche sur le 12, pas sur le 13
+      return date >= startDate && date < endDate
     })
   }
 
@@ -109,7 +111,9 @@ function CalendarContent() {
     return unavailabilities.filter(unavail => {
       const startDate = new Date(unavail.start)
       const endDate = new Date(unavail.end)
-      return date >= startDate && date <= endDate
+      // Logique "nuit d'hôtel" : afficher du startDate (inclus) au endDate (exclu)
+      // Exemple : blocage du 12 au 13 = affiche sur le 12, pas sur le 13
+      return date >= startDate && date < endDate
     })
   }
 
