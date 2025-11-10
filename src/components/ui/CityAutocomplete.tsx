@@ -9,7 +9,7 @@ import {
 import { MapPin, Loader2 } from 'lucide-react'
 
 interface CityAutocompleteProps {
-  onCitySelect?: (city: GooglePlacePrediction) => void
+  onCitySelect?: (city: GooglePlacePrediction, coordinates?: { lat: number; lng: number }) => void
   onInputChange?: (value: string) => void // Nouvelle prop pour la saisie libre
   placeholder?: string
   className?: string
@@ -120,14 +120,32 @@ export function CityAutocomplete({
 
   // Gérer la sélection d'une ville
   const handleCitySelect = useCallback(
-    (city: GooglePlacePrediction) => {
+    async (city: GooglePlacePrediction) => {
       setInputValue(city.description)
       setShowSuggestions(false)
       setSuggestions([])
       setSelectedIndex(-1)
-      if (onCitySelect) {
-        onCitySelect(city)
+
+      // Récupérer les coordonnées GPS via l'API Google Places Details
+      try {
+        const details = await googleSuggestionService.getPlaceDetails({
+          placeId: city.place_id,
+          fields: ['geometry'],
+          sessionToken: sessionTokenRef.current,
+        })
+
+        const coordinates = details?.geometry?.location
+        if (onCitySelect) {
+          onCitySelect(city, coordinates)
+        }
+      } catch (error) {
+        console.error('Error fetching place details:', error)
+        // Call onCitySelect without coordinates if error
+        if (onCitySelect) {
+          onCitySelect(city)
+        }
       }
+
       // Si on permet la saisie libre, notifier aussi le parent
       if (allowFreeInput && onInputChange) {
         onInputChange(city.description)

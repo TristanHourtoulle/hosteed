@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getActualProduct } from '@/lib/services/promotedProduct.service'
 
 // Helper function to convert BigInt to Number
-function convertBigIntToNumber(obj: any): any {
+function convertBigIntToNumber(obj: unknown): unknown {
   if (obj === null || obj === undefined) return obj
   if (typeof obj === 'bigint') return Number(obj)
   if (Array.isArray(obj)) return obj.map(convertBigIntToNumber)
@@ -24,7 +24,7 @@ export async function GET() {
 
     // Transform the data to match the expected format for ProductCard
     const products = promotedProducts.map((promoted) => {
-      const product = convertBigIntToNumber(promoted.product)
+      const product = convertBigIntToNumber(promoted.product) as Record<string, unknown>
       return {
         ...product,
         PromotedProduct: [

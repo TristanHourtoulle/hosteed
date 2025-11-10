@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { ProductValidation } from '@prisma/client'
 import { productCacheService } from '@/lib/cache/redis-cache.service'
+import { filterProductsByRadius } from '@/lib/utils/geoDistance'
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
@@ -15,6 +16,13 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || searchParams.get('q') || ''
     const typeRentId = searchParams.get('typeRentId') || searchParams.get('type') || ''
     const location = searchParams.get('location') || ''
+
+    // GPS coordinates for radius-based search (from Google Places API)
+    const lat = searchParams.get('lat') ? parseFloat(searchParams.get('lat')!) : null
+    const lon = searchParams.get('lon') ? parseFloat(searchParams.get('lon')!) : null
+    const radius = searchParams.get('radius')
+      ? parseFloat(searchParams.get('radius')!)
+      : 30 // Default 30km radius
 
     // Filtering options
     const featured = searchParams.get('featured') === 'true'
@@ -142,7 +150,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Add search filter
-    if (search || location) {
+    // If GPS coordinates are provided, skip text-based location search (use GPS radius filter instead)
+    if ((search || location) && !(lat !== null && lon !== null)) {
       const searchTerm = search || location
       whereClause.OR = [
         { name: { contains: searchTerm, mode: 'insensitive' } },
@@ -442,11 +451,21 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // Apply GPS radius filtering (if lat/lon provided from Google Places)
+    if (lat !== null && lon !== null) {
+      console.log(
+        `[SEARCH API] Applying GPS filter: center (${lat}, ${lon}), radius ${radius}km`
+      )
+      filteredProducts = filterProductsByRadius(filteredProducts, lat, lon, radius)
+      console.log(`[SEARCH API] GPS filter returned ${filteredProducts.length} products`)
+    }
+
     // Promo filtering is now handled at database level
 
     // Build response with pagination metadata
-    // Note: We use filteredProducts.length for accurate count after client-side price filtering
-    const finalTotal = minPrice || maxPrice ? filteredProducts.length : totalCount
+    // Note: We use filteredProducts.length for accurate count after client-side filtering (price, GPS)
+    const finalTotal =
+      minPrice || maxPrice || (lat !== null && lon !== null) ? filteredProducts.length : totalCount
     const pagination = {
       page,
       limit,
