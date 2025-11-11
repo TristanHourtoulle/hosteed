@@ -174,9 +174,10 @@ model Product {
   contract         Boolean           @default(false)
   sizeRoom         Int?
   availableRooms   Int? // Nombre de chambres disponibles pour les hôtels
+  ownerId          String // ID du propriétaire du produit
   options          Options[]
   type             TypeRent          @relation(fields: [typeId], references: [id])
-  user             User[]
+  owner            User              @relation("OwnedProducts", fields: [ownerId], references: [id], onDelete: Cascade)
   rents            Rent[]
   reviews          Review[]
   specificPrices   SpecificPrices[]
@@ -529,7 +530,7 @@ model User {
   Authenticator Authenticator[]
   Rent          Rent[]
   sessions      Session[]
-  Product       Product[]
+  ownedProducts Product[]     @relation("OwnedProducts")
   Chat          Chat[]
   favorites     Favorite[]
 

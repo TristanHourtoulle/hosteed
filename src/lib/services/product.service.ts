@@ -943,9 +943,7 @@ export async function createProduct(data: CreateProductInput) {
         keywords: data.seoData?.keywords || null,
         slug: slug,
         type: { connect: { id: data.typeId } },
-        user: {
-          connect: data.userId.map(id => ({ id })),
-        },
+        ownerId: Array.isArray(data.userId) ? data.userId[0] : data.userId,
         equipments: {
           connect: validEquipmentIds.map(equipmentId => ({ id: equipmentId })),
         },

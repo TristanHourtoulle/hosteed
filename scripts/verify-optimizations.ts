@@ -145,7 +145,7 @@ async function verifyPerformanceQueries() {
         img: {
           take: 1,
         },
-        user: {
+        owner: {
           select: { name: true, profilePicture: true },
         },
       },
