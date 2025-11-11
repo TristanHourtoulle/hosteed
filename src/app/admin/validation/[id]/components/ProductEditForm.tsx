@@ -143,12 +143,12 @@ interface Product {
   leaving: number
   validate: ProductValidation
   img?: { img: string }[]
-  user: {
+  owner: {
     id: string
     name?: string | null
     lastname?: string | null
     email: string
-  }[]
+  }
   type?: { id: string; name: string; description: string }
   equipments?: { id: string; name: string; icon: string }[]
   mealsList?: { id: string; name: string }[]

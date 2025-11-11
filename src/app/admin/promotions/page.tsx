@@ -44,11 +44,11 @@ interface Promotion {
     address: string
     basePrice: string
     img?: { img: string }[]
-    user: {
+    owner: {
       id: string
       name: string | null
       email: string
-    }[]
+    }
   }
 }
 
@@ -59,11 +59,11 @@ interface Product {
   basePrice: string
   validate?: string
   img?: { img: string; id?: string }[]
-  user: {
+  owner: {
     id: string
     name: string | null
     email: string
-  }[]
+  }
 }
 
 interface OverlappingPromotion {
