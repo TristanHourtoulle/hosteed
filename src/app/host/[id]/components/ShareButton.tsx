@@ -11,18 +11,55 @@ interface ShareButtonProps {
 export function ShareButton({ className }: ShareButtonProps) {
   const handleShare = async () => {
     try {
-      if (typeof window === 'undefined' || !navigator.clipboard) {
-        throw new Error('Clipboard not available')
+      // Check if we're in a browser environment
+      if (typeof window === 'undefined') {
+        throw new Error('Not in browser environment')
       }
-      await navigator.clipboard.writeText(window.location.href)
-      toast.success('Lien copié dans le presse-papier !', {
-        description: 'Vous pouvez maintenant le partager avec vos amis.',
-      })
+
+      const url = window.location.href
+
+      // Try Web Share API first (works better on mobile)
+      if (navigator.share) {
+        await navigator.share({
+          title: document.title,
+          url: url,
+        })
+        toast.success('Partagé avec succès !')
+        return
+      }
+
+      // Fallback to clipboard API
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(url)
+        toast.success('Lien copié dans le presse-papier !', {
+          description: 'Vous pouvez maintenant le partager avec vos amis.',
+        })
+        return
+      }
+
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea')
+      textArea.value = url
+      textArea.style.position = 'fixed'
+      textArea.style.left = '-999999px'
+      textArea.style.top = '-999999px'
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+
+      try {
+        document.execCommand('copy')
+        textArea.remove()
+        toast.success('Lien copié dans le presse-papier !')
+      } catch (err) {
+        textArea.remove()
+        throw err
+      }
     } catch (err) {
+      console.error('Share error:', err)
       toast.error('Impossible de copier le lien', {
         description: "Veuillez réessayer ou copier l'URL manuellement.",
       })
-      console.error(err)
     }
   }
 
