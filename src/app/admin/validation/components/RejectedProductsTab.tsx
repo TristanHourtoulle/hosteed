@@ -227,9 +227,9 @@ export function RejectedProductsTab({ products, onUpdate }: RejectedProductsTabP
                   <div className='text-sm text-gray-600'>
                     <span>Hôte: </span>
                     <span className='font-medium'>
-                      {product.user[0]?.name && product.user[0]?.lastname
-                        ? `${product.user[0].name} ${product.user[0].lastname}`
-                        : product.user[0]?.email || 'Utilisateur inconnu'}
+                      {product.owner?.name && product.owner?.lastname
+                        ? `${product.owner.name} ${product.owner.lastname}`
+                        : product.owner?.email || 'Utilisateur inconnu'}
                     </span>
                   </div>
 

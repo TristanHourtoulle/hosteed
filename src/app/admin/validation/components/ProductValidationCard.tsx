@@ -80,7 +80,7 @@ function ProductValidationCard({ product, currentUserId, onUpdate }: ProductVali
 
   // Memoize user display name to prevent recalculation
   const userDisplayName = useMemo(() => {
-    const user = product.user[0]
+    const user = product.owner
     if (user?.name && user?.lastname) {
       return `${user.name} ${user.lastname}`
     }

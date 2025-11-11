@@ -46,7 +46,7 @@ export function ProductSidebar({
       return 'Hôte non défini'
     }
 
-    const user = product.user[0]
+    const user = product.owner
     if (!user) return 'Hôte non défini'
 
     const firstName = user.name?.trim()
@@ -76,14 +76,14 @@ export function ProductSidebar({
           <div className='flex items-center space-x-3'>
             {product.user &&
             product.user.length > 0 &&
-            (product.user[0]?.image ||
-              product.user[0]?.profilePicture ||
-              product.user[0]?.profilePictureBase64) ? (
+            (product.owner?.image ||
+              product.owner?.profilePicture ||
+              product.owner?.profilePictureBase64) ? (
               <Image
                 src={
-                  product.user[0].image ||
-                  product.user[0].profilePicture ||
-                  product.user[0].profilePictureBase64 ||
+                  product.owner.image ||
+                  product.owner.profilePicture ||
+                  product.owner.profilePictureBase64 ||
                   ''
                 }
                 alt='Photo de profil'
@@ -101,7 +101,7 @@ export function ProductSidebar({
               <p className='font-medium'>{getHostName()}</p>
               <p className='text-sm text-gray-500'>
                 {product.user && product.user.length > 0
-                  ? product.user[0].email
+                  ? product.owner.email
                   : 'Email non disponible'}
               </p>
             </div>

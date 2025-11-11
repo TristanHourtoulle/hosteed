@@ -715,7 +715,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
           meals: formData.mealIds,
           images: finalImages,
         },
-        product.user[0]?.id // Utiliser l'ID du premier utilisateur comme hostId
+        product.owner?.id // Utiliser l'ID du premier utilisateur comme hostId
       )
 
       if (updatedProduct) {
@@ -1814,7 +1814,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
                     id='transportation'
                     name='transportation'
                     type='text'
-                    placeholder='Ex: Métro, Bus, Parking gratuit'
+                    placeholder='Bus, Taxi, Taxi moto, Cyclo pousse, Tuk tuk'
                     value={formData.transportation}
                     onChange={handleInputChange}
                     className='border-slate-200 focus:border-cyan-300 focus:ring-cyan-200'
