@@ -38,6 +38,7 @@ import {
 import { findTypeById, updateTypeRent } from '@/lib/services/typeRent.service'
 import { TypeRentInterface } from '@/lib/interface/typeRentInterface'
 import DeleteTypeModal from '../components/DeleteTypeModal'
+import { ProductValidation } from '@prisma/client'
 
 interface Product {
   id: string
@@ -266,11 +267,11 @@ export default function TypeRentDetailPage({ params }: { params: Promise<{ id: s
                   {products.length} logement{products.length > 1 ? 's' : ''}
                 </Badge>
                 <Badge variant='secondary' className='bg-green-50 text-green-700 px-3 py-1'>
-                  {products.filter(p => p.validate === 'Verified').length} validé
-                  {products.filter(p => p.validate === 'Verified').length > 1 ? 's' : ''}
+                  {products.filter(p => p.validate === ProductValidation.Approve).length} validé
+                  {products.filter(p => p.validate === ProductValidation.Approve).length > 1 ? 's' : ''}
                 </Badge>
                 <Badge variant='secondary' className='bg-yellow-50 text-yellow-700 px-3 py-1'>
-                  {products.filter(p => p.validate === 'NotVerified').length} en attente
+                  {products.filter(p => p.validate === ProductValidation.NotVerified).length} en attente
                 </Badge>
               </div>
             </div>
