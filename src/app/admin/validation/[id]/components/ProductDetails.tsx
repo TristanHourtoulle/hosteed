@@ -40,7 +40,7 @@ interface Product {
   arriving: number
   leaving: number
   img?: { img: string }[]
-  user: {
+  owner: {
     id: string
     name?: string | null
     lastname?: string | null
@@ -48,7 +48,7 @@ interface Product {
     image?: string | null
     profilePicture?: string | null
     profilePictureBase64?: string | null
-  }[]
+  }
   type?: { name: string; description: string }
   equipments?: { name: string; icon: string }[]
   mealsList?: { name: string }[]
@@ -186,7 +186,7 @@ export function ProductDetails({ product }: ProductDetailsProps) {
       )}
 
       {/* Informations sur l'hôte */}
-      {product.user && product.user.length > 0 && (
+      {product.owner && (
         <Card>
           <CardHeader>
             <CardTitle className='flex items-center'>
@@ -195,30 +195,35 @@ export function ProductDetails({ product }: ProductDetailsProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className='space-y-3'>
-            {product.user.map(host => (
-              <div key={host.id} className='flex items-start space-x-3'>
-                {(host.image || host.profilePicture || host.profilePictureBase64) && (
-                  <Image
-                    src={host.image || host.profilePicture || host.profilePictureBase64 || ''}
-                    alt={`Photo de ${host.name || host.email}`}
-                    width={48}
-                    height={48}
-                    className='rounded-full object-cover'
-                    unoptimized
-                  />
-                )}
-                <div className='flex-1'>
-                  <div className='flex items-center space-x-2'>
-                    <span className='font-medium text-sm'>
-                      {host.name || host.lastname
-                        ? `${host.name || ''} ${host.lastname || ''}`.trim()
-                        : 'Nom non renseigné'}
-                    </span>
-                  </div>
-                  <p className='text-sm text-gray-600'>{host.email}</p>
+            <div className='flex items-start space-x-3'>
+              {(product.owner.image ||
+                product.owner.profilePicture ||
+                product.owner.profilePictureBase64) && (
+                <Image
+                  src={
+                    product.owner.image ||
+                    product.owner.profilePicture ||
+                    product.owner.profilePictureBase64 ||
+                    ''
+                  }
+                  alt={`Photo de ${product.owner.name || product.owner.email}`}
+                  width={48}
+                  height={48}
+                  className='rounded-full object-cover'
+                  unoptimized
+                />
+              )}
+              <div className='flex-1'>
+                <div className='flex items-center space-x-2'>
+                  <span className='font-medium text-sm'>
+                    {product.owner.name || product.owner.lastname
+                      ? `${product.owner.name || ''} ${product.owner.lastname || ''}`.trim()
+                      : 'Nom non renseigné'}
+                  </span>
                 </div>
+                <p className='text-sm text-gray-600'>{product.owner.email}</p>
               </div>
-            ))}
+            </div>
           </CardContent>
         </Card>
       )}

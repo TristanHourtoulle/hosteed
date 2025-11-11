@@ -43,6 +43,15 @@ import CommissionDisplay from '@/components/ui/CommissionDisplay'
 import ErrorAlert, { ErrorDetails } from '@/components/ui/ErrorAlert'
 import { compressImages, formatFileSize } from '@/lib/utils/imageCompression'
 
+// Import section components from createProduct
+import {
+  BasicInfoSection,
+  LocationContactSection,
+  ProductCharacteristicsForm,
+  ProductPricingForm,
+  ServiceSelectionSection,
+} from '@/app/createProduct/components'
+
 interface Equipment {
   id: string
   name: string

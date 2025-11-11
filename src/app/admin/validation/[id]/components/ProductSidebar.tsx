@@ -11,7 +11,7 @@ import { ProductValidation } from '@prisma/client'
 interface Product {
   id: string
   validate: ProductValidation
-  user: {
+  owner: {
     id: string
     name?: string | null
     lastname?: string | null
@@ -19,7 +19,7 @@ interface Product {
     image?: string | null
     profilePicture?: string | null
     profilePictureBase64?: string | null
-  }[]
+  }
 }
 
 interface ProductSidebarProps {
@@ -42,12 +42,11 @@ export function ProductSidebar({
   handleRequestRecheck,
 }: ProductSidebarProps) {
   const getHostName = () => {
-    if (!product.user || product.user.length === 0) {
+    if (!product.owner) {
       return 'Hôte non défini'
     }
 
     const user = product.owner
-    if (!user) return 'Hôte non défini'
 
     const firstName = user.name?.trim()
     const lastName = user.lastname?.trim()
@@ -74,11 +73,10 @@ export function ProductSidebar({
         </CardHeader>
         <CardContent>
           <div className='flex items-center space-x-3'>
-            {product.user &&
-            product.user.length > 0 &&
-            (product.owner?.image ||
-              product.owner?.profilePicture ||
-              product.owner?.profilePictureBase64) ? (
+            {product.owner &&
+            (product.owner.image ||
+              product.owner.profilePicture ||
+              product.owner.profilePictureBase64) ? (
               <Image
                 src={
                   product.owner.image ||
@@ -100,9 +98,7 @@ export function ProductSidebar({
             <div>
               <p className='font-medium'>{getHostName()}</p>
               <p className='text-sm text-gray-500'>
-                {product.user && product.user.length > 0
-                  ? product.owner.email
-                  : 'Email non disponible'}
+                {product.owner ? product.owner.email : 'Email non disponible'}
               </p>
             </div>
           </div>

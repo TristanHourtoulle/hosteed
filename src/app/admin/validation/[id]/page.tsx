@@ -82,7 +82,7 @@ interface Product {
   originalProductId?: string
   originalProduct?: Product
   img?: { img: string }[]
-  user: {
+  owner: {
     id: string
     name?: string | null
     lastname?: string | null
@@ -90,7 +90,7 @@ interface Product {
     image?: string | null
     profilePicture?: string | null
     profilePictureBase64?: string | null
-  }[]
+  }
   type?: { id: string; name: string; description: string }
   equipments?: { id: string; name: string; icon: string }[]
   mealsList?: { id: string; name: string }[]
