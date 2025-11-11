@@ -18,22 +18,10 @@ export function ShareButton({ className }: ShareButtonProps) {
 
       const url = window.location.href
 
-      // Try Web Share API first (works better on mobile)
-      if (navigator.share) {
-        await navigator.share({
-          title: document.title,
-          url: url,
-        })
-        toast.success('Partagé avec succès !')
-        return
-      }
-
-      // Fallback to clipboard API
+      // Try clipboard API first
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(url)
-        toast.success('Lien copié dans le presse-papier !', {
-          description: 'Vous pouvez maintenant le partager avec vos amis.',
-        })
+        toast.success('Lien copié dans le presse-papier !')
         return
       }
 
@@ -48,18 +36,21 @@ export function ShareButton({ className }: ShareButtonProps) {
       textArea.select()
 
       try {
-        document.execCommand('copy')
+        const successful = document.execCommand('copy')
         textArea.remove()
-        toast.success('Lien copié dans le presse-papier !')
+
+        if (successful) {
+          toast.success('Lien copié dans le presse-papier !')
+        } else {
+          throw new Error('execCommand failed')
+        }
       } catch (err) {
         textArea.remove()
         throw err
       }
     } catch (err) {
       console.error('Share error:', err)
-      toast.error('Impossible de copier le lien', {
-        description: "Veuillez réessayer ou copier l'URL manuellement.",
-      })
+      toast.error('Impossible de copier le lien')
     }
   }
 
