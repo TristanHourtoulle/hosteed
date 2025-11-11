@@ -407,8 +407,8 @@ export default function ProductDetails() {
 
             <div className='mt-12'>
               <HostInformation
-                hostName={product.user[0]?.name || 'Hôte inconnu'}
-                hostImage={product.user[0]?.image}
+                hostName={product.owner?.name || 'Hôte inconnu'}
+                hostImage={product.owner?.image}
               />
             </div>
           </div>

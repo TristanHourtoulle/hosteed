@@ -24,18 +24,18 @@ export default function PropertyOverview({ product }: PropertyOverviewProps) {
         <div className='flex-1'>
           <h2 className='text-xl sm:text-2xl font-semibold text-gray-900 mb-1'>{product.name}</h2>
           <p className='text-gray-600 text-sm sm:text-base'>
-            Hébergé par {product.user[0]?.name || 'Hosteed'}
+            Hébergé par {product.owner?.name || 'Hosteed'}
           </p>
         </div>
         <div className='relative w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden flex-shrink-0'>
           {(() => {
-            const imageUrl = product.user[0]?.image
-              ? getProfileImageUrl(product.user[0].image)
+            const imageUrl = product.owner?.image
+              ? getProfileImageUrl(product.owner.image)
               : null
             return imageUrl ? (
               <Image
                 src={imageUrl}
-                alt={`Photo de profil de ${product.user[0]?.name}`}
+                alt={`Photo de profil de ${product.owner?.name}`}
                 fill
                 className='object-cover'
               />
@@ -46,7 +46,7 @@ export default function PropertyOverview({ product }: PropertyOverviewProps) {
                   background: `linear-gradient(45deg, #6366f1, #8b5cf6)`,
                 }}
               >
-                {product.user[0]?.name?.charAt(0).toUpperCase() || 'H'}
+                {product.owner?.name?.charAt(0).toUpperCase() || 'H'}
               </div>
             )
           })()}

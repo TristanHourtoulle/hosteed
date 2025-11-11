@@ -313,13 +313,13 @@ export default function BookingCard({
           <div className='flex items-center gap-2'>
             <div className='relative h-10 w-10 rounded-full overflow-hidden'>
               {(() => {
-                const imageUrl = product.user[0]?.image
-                  ? getProfileImageUrl(product.user[0].image)
+                const imageUrl = product.owner?.image
+                  ? getProfileImageUrl(product.owner.image)
                   : null
                 return imageUrl ? (
                   <Image
                     src={imageUrl}
-                    alt={`Photo de profil de ${product.user[0]?.name}`}
+                    alt={`Photo de profil de ${product.owner?.name}`}
                     fill
                     className='object-cover'
                   />
@@ -330,14 +330,14 @@ export default function BookingCard({
                       background: `linear-gradient(45deg, #FF512F, #DD2476)`,
                     }}
                   >
-                    {product.user[0]?.name?.charAt(0).toUpperCase() || 'H'}
+                    {product.owner?.name?.charAt(0).toUpperCase() || 'H'}
                   </div>
                 )
               })()}
             </div>
             <div className='flex flex-col'>
               <span className='text-sm font-medium text-gray-900'>
-                {product.user[0]?.name || 'Hosteed'}
+                {product.owner?.name || 'Hosteed'}
               </span>
               <span className='text-xs text-gray-500'>Hôte</span>
             </div>
