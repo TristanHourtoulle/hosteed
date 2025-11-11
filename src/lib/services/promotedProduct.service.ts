@@ -140,7 +140,7 @@ export async function getProductsAvailableForPromotion() {
       include: {
         img: true,
         type: true,
-        user: {
+        owner: {
           select: {
             id: true,
             name: true,
