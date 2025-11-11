@@ -105,6 +105,7 @@ export default function BookingCard({
     to: formData.leavingDate ? new Date(formData.leavingDate) : undefined,
   })
   const [priceCalculation, setPriceCalculation] = useState<CommissionCalculation | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [defaultCommissionInfo, setDefaultCommissionInfo] = useState<{
     clientRate: number
     clientFixed: number
@@ -290,8 +291,8 @@ export default function BookingCard({
             </div>
           )}
 
-          {/* Frais de service - Toute la largeur */}
-          {defaultCommissionInfo && (
+          {/* Frais de service - Masqué */}
+          {/* {defaultCommissionInfo && (
             <div className='bg-blue-50 border border-blue-200 rounded-lg px-3 py-2.5'>
               <div className='flex flex-col gap-1'>
                 <div className='flex items-center justify-between'>
@@ -309,7 +310,7 @@ export default function BookingCard({
                 </span>
               </div>
             </div>
-          )}
+          )} */}
           <div className='flex items-center gap-2'>
             <div className='relative h-10 w-10 rounded-full overflow-hidden'>
               {(() => {
@@ -531,14 +532,15 @@ export default function BookingCard({
                   {formatCurrency(subtotal, 'EUR', 0)}
                 </span>
               </div>
-              <div className='flex justify-between items-center'>
+              {/* Frais de service - Masqué */}
+              {/* <div className='flex justify-between items-center'>
                 <span className='text-gray-600 underline decoration-dotted cursor-help'>
                   Frais de service Hosteed
                 </span>
                 <span className='text-gray-900 font-medium'>
                   {formatCurrency(serviceFee, 'EUR', 0)}
                 </span>
-              </div>
+              </div> */}
               <div className='border-t border-gray-200 pt-3 flex justify-between items-center font-semibold text-base'>
                 <span>Total</span>
                 <span>{formatCurrency(total, 'EUR', 0)}</span>
