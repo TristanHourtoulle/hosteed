@@ -188,7 +188,6 @@ export default function CreateSpecialPriceModal({
                         Prix en euros (€)
                       </label>
                       <div className='relative'>
-                        <DollarSign className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400' />
                         <Input
                           id='pricesEuro'
                           name='pricesEuro'
@@ -209,7 +208,6 @@ export default function CreateSpecialPriceModal({
                         Prix en Ariary (MGA)
                       </label>
                       <div className='relative'>
-                        <Euro className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400' />
                         <Input
                           id='pricesMga'
                           name='pricesMga'

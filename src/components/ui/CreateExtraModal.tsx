@@ -201,7 +201,7 @@ export default function CreateExtraModal({
               Annuler
             </Button>
             <Button type='submit' disabled={loading}>
-              {loading ? 'Création...' : 'Créer l&apos;extra'}
+              {loading ? 'Création...' : "Créer l'extra"}
             </Button>
           </DialogFooter>
         </form>

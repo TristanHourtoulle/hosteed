@@ -1281,7 +1281,7 @@ export default function CreateProductPage() {
                     id='transportation'
                     name='transportation'
                     type='text'
-                    placeholder='Ex: Métro, Bus, Parking gratuit'
+                    placeholder='Bus, Taxi, Taxi moto, Cyclo pousse, Tuk tuk'
                     value={formData.transportation}
                     onChange={handleInputChange}
                     className='border-slate-200 focus:border-cyan-300 focus:ring-cyan-200'
