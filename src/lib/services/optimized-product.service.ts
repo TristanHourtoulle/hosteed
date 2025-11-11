@@ -302,10 +302,10 @@ export async function searchProductsOptimized(
           avgRating: 0, // TODO: Calculate from reviews efficiently
           reviewCount: 0, // TODO: Count reviews efficiently
           host: {
-            id: product.user[0]?.id || '',
-            name: product.user[0]?.name || null,
-            lastname: product.user[0]?.lastname || null,
-            isVerified: product.user[0]?.isVerifiedTraveler || false,
+            id: product.owner?.id || '',
+            name: product.owner?.name || null,
+            lastname: product.owner?.lastname || null,
+            isVerified: product.owner?.isVerifiedTraveler || false,
           },
           distanceKm,
           specialPriceActive: hasSpecialPrice,

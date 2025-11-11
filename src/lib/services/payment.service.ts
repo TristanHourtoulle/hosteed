@@ -132,8 +132,8 @@ export async function createPayRequest(
       hasContract: !!rent.product.contract,
     })
 
-    // Trouver l'hôte (propriétaire du produit) - prendre le premier utilisateur associé au produit
-    const host = rent.product.user[0]
+    // Trouver l'hôte (propriétaire du produit)
+    const host = rent.product.owner
     if (!host) throw new Error('No host found for this product')
 
     const totalPrice = Number(rent.prices)

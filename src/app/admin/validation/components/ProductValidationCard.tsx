@@ -18,13 +18,13 @@ interface Product {
   basePrice: string
   validate: ProductValidation
   img?: { img: string }[]
-  user: {
+  owner: {
     id: string
     name?: string | null
     lastname?: string | null
     email: string
     image?: string | null
-  }[]
+  }
   // Nouvelles métadonnées pour le contexte de validation
   isRecentlyModified?: boolean
   wasRecheckRequested?: boolean
@@ -85,7 +85,7 @@ function ProductValidationCard({ product, currentUserId, onUpdate }: ProductVali
       return `${user.name} ${user.lastname}`
     }
     return user?.email || 'Utilisateur inconnu'
-  }, [product.user])
+  }, [product.owner])
 
   // Memoize whether validation actions should be shown
   const showValidationActions = useMemo(() => {
