@@ -5,12 +5,11 @@ import { useRouter, useParams } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
-  Home,
-  Users,
-  Euro,
+
+
+
   Camera,
   ArrowLeft,
   Plus,
@@ -19,7 +18,7 @@ import {
   Package,
   Highlighter,
   Star,
-  FileText,
+
   UtensilsCrossed,
   Shield,
   Zap,
@@ -37,7 +36,7 @@ import { googleSuggestionService } from '@/lib/services/GoogleSuggestion.service
 import CreateServiceModal from '@/components/ui/CreateServiceModal'
 import CreateExtraModal from '@/components/ui/CreateExtraModal'
 import CreateHighlightModal from '@/components/ui/CreateHighlightModal'
-import CreateSpecialPriceModal from '@/components/ui/CreateSpecialPriceModal'
+
 import BookingCostSummary from '@/components/ui/BookingCostSummary'
 import SortableImageGrid from '@/components/ui/SortableImageGrid'
 import ImageGalleryPreview from '@/components/ui/ImageGalleryPreview'
@@ -47,13 +46,11 @@ import SEOFieldsCard from '@/components/ui/SEOFieldsCard'
 
 // Import types, utilities, and hooks from createProduct
 import type {
-  NearbyPlace,
   ImageFile,
   TestBooking,
-  SpecialPrice,
   FormData,
 } from '@/app/createProduct/types'
-import { DayEnum } from '@prisma/client'
+
 import { containerVariants, itemVariants } from '@/app/createProduct/utils'
 import {
   useProductData,
@@ -74,7 +71,7 @@ export default function EditProductPage() {
   const {
     formData: loadedFormData,
     images: loadedImages,
-    specialPrices: loadedSpecialPrices,
+    // specialPrices: loadedSpecialPrices,
     isLoading: isLoadingProduct,
     error: loadError,
   } = useProductLoader(productId)
@@ -88,17 +85,17 @@ export default function EditProductPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<ErrorDetails | null>(null)
   const [showGalleryPreview, setShowGalleryPreview] = useState(false)
-  const [newPlace, setNewPlace] = useState<NearbyPlace>({
-    name: '',
-    distance: '',
-    unit: 'mètres',
-  })
+  // const [newPlace, setNewPlace] = useState<NearbyPlace>({
+  //   name: '',
+  //   distance: '',
+  //   unit: 'mètres',
+  // })
 
   // Modal states
   const [serviceModalOpen, setServiceModalOpen] = useState(false)
   const [extraModalOpen, setExtraModalOpen] = useState(false)
   const [highlightModalOpen, setHighlightModalOpen] = useState(false)
-  const [specialPriceModalOpen, setSpecialPriceModalOpen] = useState(false)
+  // const [specialPriceModalOpen, setSpecialPriceModalOpen] = useState(false)
 
   // Test booking for cost preview
   const [testBooking] = useState<TestBooking>({
@@ -108,7 +105,7 @@ export default function EditProductPage() {
   })
 
   // Special prices state
-  const [specialPrices, setSpecialPrices] = useState<SpecialPrice[]>([])
+  // const [specialPrices, setSpecialPrices] = useState<SpecialPrice[]>([])
 
   // SEO data state
   const [seoData, setSeoData] = useState<{
@@ -124,11 +121,11 @@ export default function EditProductPage() {
   })
 
   // Update special prices when loaded
-  useEffect(() => {
-    if (loadedSpecialPrices.length > 0) {
-      setSpecialPrices(loadedSpecialPrices)
-    }
-  }, [loadedSpecialPrices])
+  // useEffect(() => {
+  //   if (loadedSpecialPrices.length > 0) {
+  //     setSpecialPrices(loadedSpecialPrices)
+  //   }
+  // }, [loadedSpecialPrices])
 
   // Update form data when product is loaded
   useEffect(() => {
@@ -173,7 +170,7 @@ export default function EditProductPage() {
     includedServices,
     extras,
     highlights,
-    users,
+    // users,
     refreshIncludedServices,
     refreshExtras,
     refreshHighlights,
@@ -192,13 +189,13 @@ export default function EditProductPage() {
     refreshHighlights()
   }
 
-  const handleSpecialPriceCreated = (newSpecialPrice: Omit<SpecialPrice, 'id'>) => {
-    const specialPriceWithId: SpecialPrice = {
-      ...newSpecialPrice,
-      id: `temp-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-    }
-    setSpecialPrices(prev => [...prev, specialPriceWithId])
-  }
+  // const handleSpecialPriceCreated = (newSpecialPrice: Omit<SpecialPrice, 'id'>) => {
+  //   const specialPriceWithId: SpecialPrice = {
+  //     ...newSpecialPrice,
+  //     id: `temp-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+  //   }
+  //   setSpecialPrices(prev => [...prev, specialPriceWithId])
+  // }
 
   // Calcul mémorisé pour les extras sélectionnés avec leurs données complètes
   const selectedExtras = useMemo(() => {
