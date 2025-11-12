@@ -1,8 +1,9 @@
 'use client'
 
 import { ProductPromotion } from '@prisma/client'
-import { Calendar, Trash2, Edit, Clock } from 'lucide-react'
+import { Calendar, Trash2, Edit, Clock, User } from 'lucide-react'
 import { Button } from '@/components/ui/shadcnui/button'
+import { Badge } from '@/components/ui/shadcnui/badge'
 import PromotionBadge from './PromotionBadge'
 import { getDaysUntilEnd, getUrgencyMessage } from '@/lib/utils/promotion'
 import { formatCurrency } from '@/lib/utils/formatNumber'
@@ -11,6 +12,11 @@ interface Product {
   id: string
   name: string
   basePrice: string
+  owner?: {
+    id: string
+    name: string
+    email: string
+  }
 }
 
 interface PromotionCardProps {
@@ -18,6 +24,8 @@ interface PromotionCardProps {
   onEdit?: () => void
   onCancel?: () => void
   showActions?: boolean
+  showOwner?: boolean
+  AlertDialogTrigger?: React.ComponentType<{ asChild?: boolean; children: React.ReactNode }>
 }
 
 function formatDate(date: Date): string {
@@ -33,6 +41,8 @@ export default function PromotionCard({
   onEdit,
   onCancel,
   showActions = true,
+  showOwner = false,
+  AlertDialogTrigger,
 }: PromotionCardProps) {
   const daysUntilEnd = getDaysUntilEnd(promotion.endDate)
   const urgencyMessage = getUrgencyMessage(promotion.endDate)
@@ -70,6 +80,12 @@ export default function PromotionCard({
                 <Clock className='w-3 h-3' />
                 {urgencyMessage}
               </span>
+            )}
+            {showOwner && promotion.product?.owner && (
+              <Badge variant='outline' className='bg-blue-50 text-blue-700 border-blue-200'>
+                <User className='w-3 h-3 mr-1' />
+                {promotion.product.owner.name || promotion.product.owner.email}
+              </Badge>
             )}
           </div>
 
@@ -110,15 +126,28 @@ export default function PromotionCard({
               </Button>
             )}
             {onCancel && promotion.isActive && (
-              <Button
-                onClick={onCancel}
-                variant='outline'
-                size='sm'
-                className='flex-1 sm:flex-none text-red-600 hover:text-red-700 hover:bg-red-50'
-              >
-                <Trash2 className='w-4 h-4 sm:mr-2' />
-                <span className='hidden sm:inline'>Annuler</span>
-              </Button>
+              AlertDialogTrigger ? (
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    className='flex-1 sm:flex-none text-red-600 hover:text-red-700 hover:bg-red-50'
+                  >
+                    <Trash2 className='w-4 h-4 sm:mr-2' />
+                    <span className='hidden sm:inline'>Annuler</span>
+                  </Button>
+                </AlertDialogTrigger>
+              ) : (
+                <Button
+                  onClick={onCancel}
+                  variant='outline'
+                  size='sm'
+                  className='flex-1 sm:flex-none text-red-600 hover:text-red-700 hover:bg-red-50'
+                >
+                  <Trash2 className='w-4 h-4 sm:mr-2' />
+                  <span className='hidden sm:inline'>Annuler</span>
+                </Button>
+              )
             )}
           </div>
         )}
