@@ -8,32 +8,46 @@ import { validatePromotionCommission } from '@/lib/services/promotion.service'
  */
 export async function POST(request: NextRequest) {
   try {
+    console.log('🔷 [API validate-commission] Request received')
+
     const session = await auth()
 
     if (!session?.user?.id) {
+      console.log('❌ [API validate-commission] User not authenticated')
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
+    console.log('✅ [API validate-commission] User authenticated:', session.user.id)
+
     const body = await request.json()
     const { productId, discountPercentage } = body
+    console.log('📥 [API validate-commission] Request body:', { productId, discountPercentage })
 
     if (!productId || discountPercentage === undefined) {
+      console.log('❌ [API validate-commission] Missing parameters')
       return NextResponse.json(
         { error: 'Paramètres manquants: productId et discountPercentage requis' },
         { status: 400 }
       )
     }
 
-    const isValid = await validatePromotionCommission(productId, parseFloat(discountPercentage))
+    const parsedDiscount = parseFloat(discountPercentage)
+    console.log('🔍 [API validate-commission] Calling validatePromotionCommission with:', { productId, parsedDiscount })
 
-    return NextResponse.json({
+    const isValid = await validatePromotionCommission(productId, parsedDiscount)
+    console.log('📊 [API validate-commission] Validation result:', isValid)
+
+    const response = {
       valid: isValid,
       message: isValid
         ? 'Commission valide'
         : 'Réduction trop importante. La plateforme ne pourrait pas couvrir ses frais.',
-    })
+    }
+    console.log('📤 [API validate-commission] Sending response:', response)
+
+    return NextResponse.json(response)
   } catch (error) {
-    console.error('Erreur lors de la validation de la commission:', error)
+    console.error('❌ [API validate-commission] Error:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Erreur interne du serveur' },
       { status: 500 }
