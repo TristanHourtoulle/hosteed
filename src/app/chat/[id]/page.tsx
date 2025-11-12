@@ -4,7 +4,6 @@ import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { useParams } from 'next/navigation'
 import { Button } from '@/components/ui/shadcnui/button'
-import { Card, CardContent } from '@/components/ui/shadcnui/card'
 import { createMessage, getChatRent, markMessagesAsRead } from '@/lib/services/chat.service'
 import { getRentById } from '@/lib/services/rents.service'
 import { ArrowLeft, Send, MessageCircle, User as UserIcon, Home } from 'lucide-react'
@@ -46,7 +45,6 @@ export default function ChatPage() {
   const {
     session,
     isLoading: isAuthLoading,
-    isAuthenticated,
   } = useAuth({ required: true, redirectTo: '/auth' })
   const params = useParams()
   const rentId = params.id as string
@@ -64,14 +62,12 @@ export default function ChatPage() {
     const checkIfHost = async () => {
       if (!session?.user?.id) return
       const rent = await getRentById(rentId)
-      if (!rent || !rent.product?.user) return
+      if (!rent || !rent.product?.owner) return
 
       // Stocker les informations de la réservation
       setRentInfo(rent)
 
-      const isUserHost = rent.product.user.some(
-        (user: { id: string }) => user.id === session.user?.id
-      )
+      const isUserHost = rent.product.owner.id === session.user?.id
       setIsHost(isUserHost)
     }
     checkIfHost()

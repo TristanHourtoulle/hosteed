@@ -18,7 +18,6 @@ function CalendarContent() {
   const {
     session,
     isLoading: isAuthLoading,
-    isAuthenticated,
   } = useAuth({ required: true, redirectTo: '/auth' })
   const propertyId = searchParams.get('property')
   const [currentDate, setCurrentDate] = useState(new Date())

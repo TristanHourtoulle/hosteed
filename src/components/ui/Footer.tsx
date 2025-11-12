@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { Facebook, Instagram, Linkedin } from 'lucide-react'
 import Image from 'next/image'
 
 export default function Footer() {
@@ -14,7 +13,7 @@ export default function Footer() {
             <div className='flex items-center space-x-2 mb-4'>
               <Link href='/' className='flex items-center cursor-pointer'>
                 <Image
-                  src='/logo-hosteed.png'
+                  src='/logo-web-transparent.svg'
                   alt='Hosteed'
                   width={120}
                   height={120}

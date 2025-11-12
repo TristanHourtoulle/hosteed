@@ -23,7 +23,7 @@ export default function NumberInput({
   className,
   required,
   placeholder,
-  min,
+  // min,
   allowDecimals = false,
 }: NumberInputProps) {
   // Format number with spaces (1000 -> 1 000)

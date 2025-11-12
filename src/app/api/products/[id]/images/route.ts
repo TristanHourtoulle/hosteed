@@ -39,11 +39,11 @@ async function deleteImageFiles(imageUrl: string) {
           try {
             await fs.unlink(sizeFile)
             console.log(`🗑️  Deleted ${size}: ${sizeFile}`)
-          } catch (err) {
+          } catch (_err) { // eslint-disable-line @typescript-eslint/no-unused-vars
             // File might not exist, continue
           }
         }
-      } catch (err) {
+      } catch (_err) { // eslint-disable-line @typescript-eslint/no-unused-vars
         // File doesn't exist in this location, try next
         continue
       }
@@ -77,7 +77,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const product = await prisma.product.findUnique({
       where: { id: productId },
       include: {
-        user: true,
+        owner: true,
         img: true, // Récupérer les images existantes
       },
     })
@@ -86,7 +86,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Produit non trouvé' }, { status: 404 })
     }
 
-    const isOwner = product.user.some(u => u.id === session.user.id)
+    const isOwner = product.owner.id === session.user.id
     if (!isOwner) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 403 })
     }

@@ -37,8 +37,8 @@ export function ProximityLandmarksField({
         <div className='space-y-1'>
           <label className='text-sm font-medium text-slate-700'>Points de repère</label>
           <p className='text-xs text-slate-500'>
-            Ajoutez des points de repère pour aider à localiser votre logement (ex: "À proximité de
-            la plage", "Face au marché central")
+            Ajoutez des points de repère pour aider à localiser votre logement (ex: &quot;À proximité de
+            la plage&quot;, &quot;Face au marché central&quot;)
           </p>
         </div>
         <Button
@@ -58,7 +58,7 @@ export function ProximityLandmarksField({
         <div className='text-center py-8 border-2 border-dashed border-slate-200 rounded-lg bg-slate-50'>
           <MapPin className='h-8 w-8 text-slate-400 mx-auto mb-2' />
           <p className='text-sm text-slate-500'>Aucun point de repère ajouté</p>
-          <p className='text-xs text-slate-400 mt-1'>Cliquez sur "Ajouter" pour commencer</p>
+          <p className='text-xs text-slate-400 mt-1'>Cliquez sur &quot;Ajouter&quot; pour commencer</p>
         </div>
       ) : (
         <div className='space-y-2'>
@@ -106,7 +106,7 @@ export function ProximityLandmarksField({
             <p className='text-xs text-blue-700 mt-1'>
               Ces points de repère seront visibles uniquement par les clients ayant effectué une
               réservation et les administrateurs. Ils ne seront pas affichés sur la page publique de
-              l'annonce.
+              l&apos;annonce.
             </p>
           </div>
         </div>

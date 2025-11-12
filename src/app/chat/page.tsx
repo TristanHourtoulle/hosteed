@@ -5,8 +5,6 @@ import { useAuth } from '@/hooks/useAuth'
 import { getAllUserChats } from '@/lib/services/chat.service'
 import { Chat, Rent, User } from '@prisma/client'
 import { MessageCircle, ArrowLeft } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/shadcnui/card'
-import { Button } from '@/components/ui/shadcnui/button'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
@@ -33,7 +31,6 @@ export default function ChatIndexPage() {
   const {
     session,
     isLoading: isAuthLoading,
-    isAuthenticated,
   } = useAuth({ required: true, redirectTo: '/auth' })
   const [chats, setChats] = useState<GroupedChat[]>([])
   const [loading, setLoading] = useState(true)

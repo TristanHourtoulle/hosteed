@@ -213,7 +213,7 @@ const Navbar = () => {
           <div className='flex items-center'>
             <Link href='/' className='flex items-center cursor-pointer'>
               <Image
-                src='/logo-hosteed.png'
+                src='/logo-web-transparent.svg'
                 alt='Hosteed'
                 width={120}
                 height={120}
