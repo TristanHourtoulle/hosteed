@@ -8,6 +8,8 @@ const initialFormData: FormData = {
   address: '',
   completeAddress: '',
   placeId: '',
+  latitude: 0,
+  longitude: 0,
   phone: '',
   phoneCountry: 'MG',
   room: '',

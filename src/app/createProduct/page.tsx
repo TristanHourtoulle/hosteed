@@ -35,7 +35,6 @@ import {
 } from './components'
 
 import { createProduct } from '@/lib/services/product.service'
-import { googleSuggestionService } from '@/lib/services/GoogleSuggestion.service'
 import CreateServiceModal from '@/components/ui/CreateServiceModal'
 import CreateExtraModal from '@/components/ui/CreateExtraModal'
 import CreateHighlightModal from '@/components/ui/CreateHighlightModal'
@@ -312,25 +311,9 @@ export default function CreateProductPage() {
     }
 
     try {
-      // Récupérer les coordonnées géographiques si un placeId est disponible
-      let latitude = 0
-      let longitude = 0
-
-      if (formData.placeId) {
-        try {
-          const placeDetails = await googleSuggestionService.getPlaceDetails({
-            placeId: formData.placeId,
-            fields: ['geometry'],
-          })
-
-          if (placeDetails?.geometry?.location) {
-            latitude = placeDetails.geometry.location.lat
-            longitude = placeDetails.geometry.location.lng
-            console.log('Coordonnées récupérées:', { latitude, longitude })
-          }
-        } catch (error) {
-          console.warn('Impossible de récupérer les coordonnées:', error)
-        }
+      // Les coordonnées sont déjà disponibles dans formData (récupérées lors de la sélection dans CityAutocomplete)
+      if (formData.latitude === 0 || formData.longitude === 0) {
+        console.warn('⚠️ Coordonnées GPS manquantes, le produit sera créé sans localisation précise')
       }
 
       // Déterminer l'utilisateur final (admin peut assigner à un autre utilisateur)
@@ -341,14 +324,14 @@ export default function CreateProductPage() {
       console.log('specialPrices state:', specialPrices)
       console.log('specialPrices length:', specialPrices.length)
 
-      // Étape 1: Créer le produit SANS les images pour obtenir un ID
+      // Étape 1: Créer le produit avec les coordonnées déjà disponibles
       const productData = {
         name: formData.name,
         description: formData.description,
         address: formData.address,
         completeAddress: formData.completeAddress || null,
-        longitude: longitude,
-        latitude: latitude,
+        longitude: formData.longitude,
+        latitude: formData.latitude,
         basePrice: formData.basePrice,
         priceMGA: formData.priceMGA,
         room: formData.room ? Number(formData.room) : null,

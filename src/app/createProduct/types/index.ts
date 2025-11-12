@@ -78,6 +78,8 @@ export interface FormData {
   address: string // Localisation Google Maps (visible sur l'annonce)
   completeAddress: string // Adresse complète manuelle (visible dans le mail de confirmation)
   placeId?: string
+  latitude: number // Coordonnées GPS (latitude) récupérées via Google Places API
+  longitude: number // Coordonnées GPS (longitude) récupérées via Google Places API
   phone: string
   phoneCountry: string
   room: string
