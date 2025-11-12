@@ -8,7 +8,7 @@ import { isAdmin } from '@/hooks/useAdminAuth'
 import { motion, Variants } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, XCircle, ArrowLeft } from 'lucide-react'
+import { XCircle, ArrowLeft } from 'lucide-react'
 import { getProductsForValidation, getValidationStats } from './actions'
 import { ValidationStatsCards } from './components/ValidationStatsCards'
 import ValidationTabs from './components/ValidationTabs'
@@ -46,13 +46,13 @@ interface Product {
   isDraft?: boolean
   originalProductId?: string | null
   img?: { img: string }[]
-  user: {
+  owner: {
     id: string
     name?: string | null
     lastname?: string | null
     email: string
     image?: string | null
-  }[]
+  }
   isRecentlyModified?: boolean
   wasRecheckRequested?: boolean
 }

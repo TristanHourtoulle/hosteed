@@ -87,7 +87,7 @@ interface Product {
   longitude?: number
   latitude?: number
   rules: Rules[]
-  user: User[]
+  owner: User
   nearbyPlaces?: {
     name: string
     distance: number

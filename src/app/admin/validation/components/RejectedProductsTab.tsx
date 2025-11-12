@@ -19,13 +19,13 @@ interface Product {
   basePrice: string
   validate: ProductValidation
   img?: { img: string }[]
-  user: {
+  owner: {
     id: string
     name?: string | null
     lastname?: string | null
     email: string
     image?: string | null
-  }[]
+  }
 }
 
 interface RejectedProductsTabProps {

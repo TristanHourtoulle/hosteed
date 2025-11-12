@@ -259,9 +259,9 @@ const arePropsEqual = (
     }
   }
 
-  // Check if user data changed (focus on first user which is displayed)
-  const prevUser = prevProduct.user[0]
-  const nextUser = nextProduct.user[0]
+  // Check if user data changed
+  const prevUser = prevProduct.owner
+  const nextUser = nextProduct.owner
 
   if (
     prevUser?.id !== nextUser?.id ||

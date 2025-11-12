@@ -268,11 +268,7 @@ export async function findAllReservationsByHostId(hostId: string): Promise<Forma
     const rents = await prisma.rent.findMany({
       where: {
         product: {
-          user: {
-            some: {
-              id: hostId,
-            },
-          },
+          ownerId: hostId,
         },
       },
       include: {

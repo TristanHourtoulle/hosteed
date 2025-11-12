@@ -16,7 +16,7 @@ import {
   calculateTotalRentPrice,
   type CommissionCalculation,
 } from '@/lib/services/commission.service'
-import { formatCurrency, formatNumber, formatPercentage } from '@/lib/utils/formatNumber'
+import { formatCurrency, formatNumber } from '@/lib/utils/formatNumber'
 
 interface Reviews {
   id: string
@@ -71,7 +71,7 @@ interface Product {
   contract?: boolean
   longitude?: number
   latitude?: number
-  user: User[]
+  owner: User
   typeId?: string // Property type ID for commission calculation
   type?: { id: string; name: string } // Property type relation
   promotions?: ProductPromotion[]

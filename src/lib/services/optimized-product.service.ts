@@ -265,8 +265,7 @@ export async function searchProductsOptimized(
           },
 
           // Host info with verification status
-          user: {
-            take: 1, // Assuming single host per product
+          owner: {
             select: {
               id: true,
               name: true,
@@ -350,9 +349,7 @@ export async function getHostProductsOptimized(
   const { page = 1, limit = 20, includeImages = false, includeDrafts = true } = options
 
   const whereClause: Prisma.ProductWhereInput = {
-    user: {
-      some: { id: hostId },
-    },
+    ownerId: hostId,
     ...(includeDrafts ? {} : { isDraft: false }),
   }
 

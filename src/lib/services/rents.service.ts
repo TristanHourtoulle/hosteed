@@ -36,7 +36,7 @@ type RentWithRelations = Prisma.RentGetPayload<{
       include: {
         img: true
         type: true
-        user: {
+        owner: {
           select: {
             id: true
             name: true
@@ -56,7 +56,7 @@ type RentWithReviews = Prisma.RentGetPayload<{
       include: {
         img: true
         type: true
-        user: {
+        owner: {
           select: {
             id: true
             name: true
@@ -105,7 +105,7 @@ export async function getRentById(id: string): Promise<RentWithDatesAndReviews |
         product: {
           include: {
             img: true,
-            user: true,
+            owner: true,
             type: true,
           },
         },
@@ -400,7 +400,7 @@ export async function findAllRentByProduct(id: string): Promise<RentWithDates | 
           include: {
             img: true,
             type: true,
-            user: {
+            owner: {
               select: {
                 id: true,
                 name: true,
@@ -508,7 +508,7 @@ export async function createRent(params: {
           include: {
             img: true,
             type: true,
-            user: {
+            owner: {
               select: {
                 id: true,
                 name: true,
@@ -525,7 +525,7 @@ export async function createRent(params: {
       where: { id: createdRent.productId },
       select: {
         type: true,
-        user: {
+        owner: {
           select: {
             id: true,
             name: true,
@@ -543,17 +543,15 @@ export async function createRent(params: {
         bookUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
       })
     })
-    if (!createdRent.product.user || !Array.isArray(createdRent.product.user)) {
-      console.error('Les utilisateurs du produit ne sont pas disponibles')
+    if (!createdRent.product.owner) {
+      console.error('Le propriétaire du produit n\'est pas disponible')
       return null
     }
 
-    createdRent.product.user.map(async host => {
-      await sendTemplatedMail(host.email, 'Nouvelle réservation !', 'new-book.html', {
-        bookId: createdRent.id,
-        name: host.name || '',
-        bookUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
-      })
+    await sendTemplatedMail(createdRent.product.owner.email, 'Nouvelle réservation !', 'new-book.html', {
+      bookId: createdRent.id,
+      name: createdRent.product.owner.name || '',
+      bookUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
     })
     if (product.autoAccept) {
       await sendTemplatedMail(
@@ -620,7 +618,7 @@ export async function confirmRentByHost(id: string) {
           include: {
             img: true,
             type: true,
-            user: {
+            owner: {
               select: {
                 id: true,
                 name: true,
@@ -690,7 +688,7 @@ export async function approveRent(id: string) {
         include: {
           img: true,
           type: true,
-          user: {
+          owner: {
             select: {
               id: true,
               name: true,
@@ -761,7 +759,7 @@ export async function findAllRentByUserId(id: string): Promise<RentWithRelations
           include: {
             img: true,
             type: true,
-            user: {
+            owner: {
               select: {
                 id: true,
                 name: true,
@@ -789,11 +787,7 @@ export async function findRentByHostUserId(id: string) {
     const rents = await prisma.rent.findMany({
       where: {
         product: {
-          user: {
-            some: {
-              id: id,
-            },
-          },
+          ownerId: id,
         },
       },
       include: {
@@ -824,11 +818,7 @@ export async function findAllReservationsByHostId(hostId: string): Promise<Forma
     const rents = await prisma.rent.findMany({
       where: {
         product: {
-          user: {
-            some: {
-              id: hostId,
-            },
-          },
+          ownerId: hostId,
         },
       },
       include: {
@@ -988,7 +978,7 @@ export async function rejectRentRequest(
         user: true,
         product: {
           include: {
-            user: {
+            owner: {
               select: {
                 id: true,
                 name: true,

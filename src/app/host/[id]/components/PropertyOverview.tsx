@@ -10,7 +10,7 @@ interface Product {
   bathroom?: number
   maxPeople?: number
   sizeRoom?: number
-  user: User[]
+  owner: User
 }
 
 interface PropertyOverviewProps {

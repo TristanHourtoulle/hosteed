@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useQuery, useQueries } from '@tanstack/react-query'
 import { CACHE_TAGS } from '@/lib/cache/query-client'
@@ -97,11 +97,11 @@ interface Product {
   }>
 }
 
-interface Suggestion {
-  display_name: string
-  lat: string
-  lon: string
-}
+// interface Suggestion {
+//   display_name: string
+//   lat: string
+//   lon: string
+// }
 
 interface FilterState {
   selectedSecurities: string[]
@@ -158,7 +158,7 @@ export function useProductSearchPaginated() {
   const [searchTerm, setSearchTerm] = useState(searchQuery)
   const [location, setLocation] = useState(searchQuery)
   const [gpsCoordinates, setGpsCoordinates] = useState<{ lat: number; lng: number } | null>(null)
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  // const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [selectedType, setSelectedType] = useState(typeRentId)
   const [guests, setGuests] = useState(1)
@@ -173,7 +173,7 @@ export function useProductSearchPaginated() {
     setLocation(searchQuery)
   }, [searchQuery])
 
-  const searchTimeout = useRef<NodeJS.Timeout | undefined>(undefined)
+  // const searchTimeout = useRef<NodeJS.Timeout | undefined>(undefined)
 
   // Filter state
   const [filters, setFilters] = useState<FilterState>({
@@ -523,7 +523,7 @@ export function useProductSearchPaginated() {
     // Search state
     searchTerm,
     location,
-    suggestions,
+    // suggestions,
     showSuggestions,
     selectedType,
     typeRent,

@@ -187,7 +187,7 @@ export async function findProductById(id: string) {
         discount: {
           take: 5, // ✅ Limite les réductions
         },
-        user: {
+        owner: {
           select: {
             name: true,
             email: true,
@@ -654,7 +654,7 @@ export async function findAllProductByHostIdPaginated(
       type: {
         select: { name: true, id: true },
       },
-      user: {
+      owner: {
         select: {
           id: true,
           name: true,
@@ -685,7 +685,7 @@ export async function findAllProductByHostIdPaginated(
       type: {
         select: { name: true, id: true },
       },
-      user: {
+      owner: {
         select: {
           id: true,
           name: true,
@@ -742,13 +742,7 @@ export async function findAllProductByHostIdPaginated(
     const [products, totalCount] = await Promise.all([
       prisma.product.findMany({
         where: {
-          user: {
-            some: {
-              id: {
-                equals: hostId,
-              },
-            },
-          },
+          ownerId: hostId,
           isDraft: false,
         },
         include:
@@ -763,13 +757,7 @@ export async function findAllProductByHostIdPaginated(
       }),
       prisma.product.count({
         where: {
-          user: {
-            some: {
-              id: {
-                equals: hostId,
-              },
-            },
-          },
+          ownerId: hostId,
           isDraft: false,
         },
       }),
@@ -943,7 +931,7 @@ export async function createProduct(data: CreateProductInput) {
         keywords: data.seoData?.keywords || null,
         slug: slug,
         type: { connect: { id: data.typeId } },
-        ownerId: Array.isArray(data.userId) ? data.userId[0] : data.userId,
+        owner: { connect: { id: Array.isArray(data.userId) ? data.userId[0] : data.userId } },
         equipments: {
           connect: validEquipmentIds.map(equipmentId => ({ id: equipmentId })),
         },
@@ -1210,7 +1198,7 @@ export async function findProductByValidation(validationStatus: ProductValidatio
       },
       include: {
         img: true,
-        user: true,
+        owner: true,
       },
     })
     if (!request) return null
@@ -1227,27 +1215,25 @@ export async function validateProduct(id: string) {
       where: { id },
       data: { validate: ProductValidation.Approve },
       include: {
-        user: true,
+        owner: true,
         img: true,
       },
     })
     if (product) {
-      if (!product.user || !Array.isArray(product.user)) {
-        console.error('Les utilisateurs du produit ne sont pas disponibles')
+      if (!product.owner) {
+        console.error('Le propriétaire du produit n\'est pas disponible')
         return null
       }
-      product.user.map(async user => {
-        await sendTemplatedMail(
-          user.email,
-          'Votre annonce a été validée',
-          'annonce-approved.html',
-          {
-            name: user.name || '',
-            productName: product.name,
-            annonceUrl: process.env.NEXTAUTH_URL + '/host/' + product.id,
-          }
-        )
-      })
+      await sendTemplatedMail(
+        product.owner.email,
+        'Votre annonce a été validée',
+        'annonce-approved.html',
+        {
+          name: product.owner.name || '',
+          productName: product.name,
+          annonceUrl: process.env.NEXTAUTH_URL + '/host/' + product.id,
+        }
+      )
     }
 
     // Invalider le cache après validation
@@ -1266,25 +1252,23 @@ export async function rejectProduct(id: string) {
       where: { id },
       data: { validate: ProductValidation.Refused },
       include: {
-        user: true,
+        owner: true,
       },
     })
 
     if (product) {
-      if (!product.user || !Array.isArray(product.user)) {
-        console.error('Les utilisateurs du produit ne sont pas disponibles')
+      if (!product.owner) {
+        console.error('Le propriétaire du produit n\'est pas disponible')
         return null
       }
-      product.user.map(async user => {
-        await sendTemplatedMail(
-          user.email,
-          'Votre annonce a été rejetée',
-          'annonce-rejected.html',
-          {
-            productName: product.name,
-          }
-        )
-      })
+      await sendTemplatedMail(
+        product.owner.email,
+        'Votre annonce a été rejetée',
+        'annonce-rejected.html',
+        {
+          productName: product.name,
+        }
+      )
     }
 
     // Invalider le cache après rejet
@@ -1303,7 +1287,7 @@ export async function deleteRejectedProduct(id: string) {
     const product = await prisma.product.findUnique({
       where: { id },
       include: {
-        user: true,
+        owner: true,
       },
     })
 
@@ -1323,7 +1307,7 @@ export async function deleteRejectedProduct(id: string) {
     // Invalider le cache après suppression
     await invalidateProductCache(id)
 
-    return { success: true, productName: product.name, userEmails: product.user.map(u => u.email) }
+    return { success: true, productName: product.name, userEmails: [product.owner.email] }
   } catch (error) {
     console.error('Erreur lors de la suppression du produit rejeté:', error)
     return { success: false, error: error instanceof Error ? error.message : 'Erreur inconnue' }
@@ -1339,7 +1323,7 @@ export async function deleteMultipleRejectedProducts(ids: string[]) {
         validate: ProductValidation.Refused, // Sécurité supplémentaire
       },
       include: {
-        user: true,
+        owner: true,
       },
     })
 
@@ -1366,7 +1350,7 @@ export async function deleteMultipleRejectedProducts(ids: string[]) {
       success: true,
       deletedCount: deletedCount.count,
       productNames: products.map(p => p.name),
-      userEmails: [...new Set(products.flatMap(p => p.user.map(u => u.email)))], // Emails uniques
+      userEmails: [...new Set(products.map(p => p.owner.email))], // Emails uniques
     }
   } catch (error) {
     console.error('Erreur lors de la suppression en masse:', error)
@@ -1453,7 +1437,7 @@ export async function resubmitProductWithChange(
         servicesList: true,
         mealsList: true,
         options: true,
-        user: true,
+        owner: true,
       },
     })
 
@@ -1537,7 +1521,7 @@ export async function createDraftProduct(originalProductId: string) {
         propertyInfo: true,
         options: true,
         typeRoom: true,
-        user: true,
+        owner: true,
       },
     })
 
@@ -1612,9 +1596,7 @@ export async function createDraftProduct(originalProductId: string) {
         highlights: {
           connect: originalProduct.highlights.map(highlight => ({ id: highlight.id })),
         },
-        user: {
-          connect: originalProduct.user.map(u => ({ id: u.id })),
-        },
+        ownerId: originalProduct.owner.id,
         nearbyPlaces: {
           create: originalProduct.nearbyPlaces.map(place => ({
             name: place.name,
@@ -1823,7 +1805,7 @@ export async function rejectDraftChanges(draftId: string, reason: string): Promi
     const draft = await prisma.product.findUnique({
       where: { id: draftId, isDraft: true },
       include: {
-        user: true,
+        owner: true,
       },
     })
 
@@ -1840,15 +1822,14 @@ export async function rejectDraftChanges(draftId: string, reason: string): Promi
     })
 
     // Send rejection email to host
-    if (draft.user && draft.user.length > 0) {
-      const host = draft.user[0]
+    if (draft.owner) {
       try {
         await sendTemplatedMail(
-          host.email,
+          draft.owner.email,
           'Votre demande de modification a été rejetée',
           'modification-rejected.html',
           {
-            name: host.name || 'Hébergeur',
+            name: draft.owner.name || 'Hébergeur',
             productName: draft.name,
             reason: reason,
             supportEmail: process.env.SUPPORT_EMAIL || 'support@hosteed.com',

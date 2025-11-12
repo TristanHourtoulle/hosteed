@@ -48,7 +48,7 @@ export async function createValidationComment(data: CreateValidationCommentInput
         },
         product: {
           include: {
-            user: {
+            owner: {
               select: {
                 name: true,
                 email: true,
@@ -120,7 +120,7 @@ export async function resolveValidationComment(commentId: string, resolvedBy: st
         },
         product: {
           include: {
-            user: {
+            owner: {
               select: {
                 name: true,
                 email: true,
@@ -262,7 +262,7 @@ export async function getProductsWithPendingComments() {
         },
       },
       include: {
-        user: {
+        owner: {
           select: {
             name: true,
             email: true,

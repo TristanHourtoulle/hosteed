@@ -68,11 +68,7 @@ export async function getAllUserChats(userId: string) {
           {
             rent: {
               product: {
-                user: {
-                  some: {
-                    id: userId,
-                  },
-                },
+                ownerId: userId,
               },
             },
           },

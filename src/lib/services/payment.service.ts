@@ -117,7 +117,7 @@ export async function createPayRequest(
       include: {
         product: {
           include: {
-            user: true,
+            owner: true,
           },
         },
         user: true, // Locataire

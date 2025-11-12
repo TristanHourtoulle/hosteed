@@ -331,9 +331,7 @@ export async function findUnavailableByHostId(hostId: string): Promise<Formatted
     const unavailabilities = await prisma.unAvailableProduct.findMany({
       where: {
         product: {
-          user: {
-            some: { id: hostId },
-          },
+          ownerId: hostId,
         },
       },
       include: {
