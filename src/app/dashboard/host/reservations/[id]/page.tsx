@@ -17,6 +17,7 @@ import StatusBadge from './StatusBadge'
 import ActionButtons from './ActionButtons'
 import ReservationDetailsCard from './ReservationDetailsCard'
 import PaymentInfoCard from './PaymentInfoCard'
+import PricingDetailsCard from './PricingDetailsCard'
 import PaymentRequestModal from './PaymentRequestModal'
 import { PayablePrices } from './types'
 
@@ -38,6 +39,10 @@ export default function RentDetailsPage({ params }: { params: Promise<{ id: stri
   const [isRejecting, setIsRejecting] = useState(false)
 
   const resolvedParams = use(params)
+
+  // Check if user is admin or host manager (can see sensitive info)
+  const isAdminOrManager =
+    session?.user?.roles === 'ADMIN' || session?.user?.roles === 'HOST_MANAGER'
 
   useEffect(() => {
     const fetchData = async () => {
@@ -295,20 +300,29 @@ export default function RentDetailsPage({ params }: { params: Promise<{ id: stri
         </div>
 
         {/* Main Content Grid */}
-        <div className='grid grid-cols-1 xl:grid-cols-3 gap-8'>
-          {/* Reservation Details Card */}
-          <div className='xl:col-span-2'>
-            <ReservationDetailsCard rent={rent} />
+        <div className='space-y-8'>
+          {/* Top Row: Reservation Details + Payment Info */}
+          <div className='grid grid-cols-1 xl:grid-cols-3 gap-8'>
+            {/* Reservation Details Card */}
+            <div className='xl:col-span-2'>
+              <ReservationDetailsCard rent={rent} showSensitiveInfo={isAdminOrManager} />
+            </div>
+
+            {/* Payment Information Card */}
+            <div>
+              <PaymentInfoCard
+                rent={rent}
+                prices={prices}
+                updating={updating}
+                onPaymentRequest={handlePaymentRequest}
+                showSensitiveInfo={isAdminOrManager}
+              />
+            </div>
           </div>
 
-          {/* Payment Information Card */}
+          {/* Pricing Details Card - Full Width */}
           <div>
-            <PaymentInfoCard
-              rent={rent}
-              prices={prices}
-              updating={updating}
-              onPaymentRequest={handlePaymentRequest}
-            />
+            <PricingDetailsCard rent={rent} />
           </div>
         </div>
       </div>
