@@ -25,9 +25,23 @@ export async function getPayablePricesPerRent(rentId: string): Promise<PayablePr
     if (!rent) throw new Error('Rent not found')
     if (!rent.product) throw new Error('Product not found')
 
-    const totalPrice = Number(rent.prices)
-    const commission = rent.product.commission
-    const price = totalPrice - totalPrice * (commission / 100)
+    // Use new pricing fields with fallback to legacy calculation
+    let price: number
+    let totalPrice: number
+    let commission: number
+
+    if (rent.hostAmount !== null && rent.hostAmount !== undefined) {
+      // New pricing system
+      price = Number(rent.hostAmount)
+      totalPrice = Number(rent.totalAmount || rent.prices)
+      commission = Number(rent.hostCommission || 0)
+    } else {
+      // Legacy calculation for old reservations
+      totalPrice = Number(rent.prices)
+      commission = rent.product.commission
+      price = totalPrice - totalPrice * (commission / 100)
+    }
+
     const product = rent.product as Product & { contract: boolean }
 
     let availablePrice = 0
@@ -136,9 +150,22 @@ export async function createPayRequest(
     const host = rent.product.owner
     if (!host) throw new Error('No host found for this product')
 
-    const totalPrice = Number(rent.prices)
-    const commission = rent.product.commission
-    const price = totalPrice - totalPrice * (commission / 100)
+    // Use new pricing fields with fallback to legacy calculation
+    let price: number
+    let totalPrice: number
+    let commission: number
+
+    if (rent.hostAmount !== null && rent.hostAmount !== undefined) {
+      // New pricing system
+      price = Number(rent.hostAmount)
+      totalPrice = Number(rent.totalAmount || rent.prices)
+      commission = Number(rent.hostCommission || 0)
+    } else {
+      // Legacy calculation for old reservations
+      totalPrice = Number(rent.prices)
+      commission = rent.product.commission
+      price = totalPrice - totalPrice * (commission / 100)
+    }
 
     let payrequest
     let requestedAmount = price

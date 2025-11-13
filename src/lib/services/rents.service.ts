@@ -432,6 +432,7 @@ export async function createRent(params: {
   options: string[]
   stripeId: string
   prices: number
+  selectedExtras?: Array<{ extraId: string; quantity: number }> // NEW: extras sélectionnés
 }): Promise<RentWithRelations | null> {
   try {
     if (
@@ -482,10 +483,21 @@ export async function createRent(params: {
     // Check if the product has autoAccept enabled
     const productSettings = await prisma.product.findUnique({
       where: { id: params.productId },
-      select: { autoAccept: true },
+      select: { autoAccept: true, ownerId: true },
     })
 
     const shouldAutoAccept = productSettings?.autoAccept || false
+
+    // ✨ NEW: Calculer le prix COMPLET avec toutes les composantes
+    const { calculateCompleteBookingPrice } = await import('./booking-pricing.service')
+    const pricingDetails = await calculateCompleteBookingPrice(
+      params.productId,
+      params.arrivingDate,
+      params.leavingDate,
+      params.peopleNumber,
+      params.selectedExtras || [],
+      productSettings?.ownerId
+    )
 
     const createdRent = await prisma.rent.create({
       data: {
@@ -497,11 +509,32 @@ export async function createRent(params: {
         notes: BigInt(0),
         accepted: shouldAutoAccept,
         confirmed: shouldAutoAccept,
-        prices: BigInt(params.prices),
+        prices: BigInt(params.prices), // DEPRECATED: Garder pour compatibilité
         stripeId: params.stripeId || null,
         options: {
           connect: params.options.map(optionId => ({ id: optionId })),
         },
+        // ✨ NEW: Stocker tous les détails de pricing
+        basePricePerNight: pricingDetails.basePricing.averageNightlyPrice,
+        numberOfNights: pricingDetails.basePricing.numberOfNights,
+        subtotal: pricingDetails.basePricing.subtotal,
+        discountAmount: pricingDetails.basePricing.totalSavings,
+        promotionApplied: pricingDetails.basePricing.promotionApplied,
+        specialPriceApplied: pricingDetails.basePricing.specialPriceApplied,
+        totalSavings: pricingDetails.basePricing.totalSavings,
+        extrasTotal: pricingDetails.extrasTotal,
+        clientCommission: pricingDetails.clientCommission,
+        hostCommission: pricingDetails.hostCommission,
+        platformAmount: pricingDetails.platformAmount,
+        hostAmount: pricingDetails.hostAmount,
+        totalAmount: pricingDetails.totalAmount,
+        // Stocker le breakdown complet en JSON pour audit
+        pricingSnapshot: JSON.parse(JSON.stringify({
+          dailyBreakdown: pricingDetails.basePricing.dailyBreakdown,
+          extrasDetails: pricingDetails.extrasDetails,
+          summary: pricingDetails.summary,
+          calculatedAt: new Date().toISOString(),
+        })),
       },
       include: {
         product: {
@@ -519,8 +552,27 @@ export async function createRent(params: {
         },
         user: true,
         options: true,
+        extras: true, // NEW: Include extras in response
       },
     })
+
+    // ✨ NEW: Créer les entrées RentExtra pour chaque extra sélectionné
+    if (params.selectedExtras && params.selectedExtras.length > 0) {
+      for (const extra of params.selectedExtras) {
+        const extraDetail = pricingDetails.extrasDetails.find(e => e.extraId === extra.extraId)
+        if (extraDetail) {
+          await prisma.rentExtra.create({
+            data: {
+              rentId: createdRent.id,
+              extraId: extra.extraId,
+              quantity: extra.quantity,
+              totalPrice: extraDetail.total,
+            },
+          })
+        }
+      }
+    }
+
     const request = await prisma.product.findUnique({
       where: { id: createdRent.productId },
       select: {
@@ -970,7 +1022,7 @@ export async function rejectRentRequest(
       where: {
         id: rentId,
         product: {
-          userManager: BigInt(hostId),
+          ownerId: hostId,
         },
         status: RentStatus.WAITING,
       },
