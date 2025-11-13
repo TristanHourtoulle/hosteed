@@ -368,7 +368,7 @@ model Rent {
   numberPeople BigInt
   notes        BigInt
   accepted     Boolean
-  prices       BigInt
+  prices       BigInt // DEPRECATED: Use detailed price fields below
   arrivingDate DateTime
   leavingDate  DateTime
   payment      PaymentStatus @default(NOT_PAID)
@@ -386,6 +386,39 @@ model Rent {
   UserRating    UserRating[] // Nouvelle relation pour les notes bidirectionnelles
   extras        RentExtra[] // Relation avec les extras sélectionnés
 
+  // ============================================
+  // DETAILED PRICING BREAKDOWN
+  // ============================================
+  // Prix de base et nuitées
+  basePricePerNight Float? // Prix de base par nuit (€)
+  numberOfNights    Int? // Nombre de nuits
+  subtotal          Float? // Sous-total = basePricePerNight × numberOfNights (€)
+
+  // Réductions et promotions
+  discountAmount       Float? @default(0) // Montant total des réductions (€)
+  promotionApplied     Boolean @default(false) // Promotion appliquée ?
+  specialPriceApplied  Boolean @default(false) // Prix spécial appliqué ?
+  totalSavings         Float? @default(0) // Économies totales (€)
+
+  // Extras
+  extrasTotal Float? @default(0) // Total des extras sélectionnés (€)
+
+  // Commissions
+  clientCommission Float? @default(0) // Commission payée par le client (€)
+  hostCommission   Float? @default(0) // Commission déduite à l'hôte (€)
+  platformAmount   Float? @default(0) // Montant total pour la plateforme (€)
+  hostAmount       Float? @default(0) // Montant net pour l'hôte (€)
+
+  // Total final
+  totalAmount Float? // Prix total final payé par le client (€)
+
+  // Pricing snapshot for auditing (JSON with full daily breakdown)
+  pricingSnapshot Json? // Stores DailyPriceBreakdown[] for complete transparency
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Performance indexes
   @@index([userId])
   @@index([productId])
@@ -397,6 +430,8 @@ model Rent {
   @@index([productId, arrivingDate, leavingDate])
   @@index([userId, status])
   @@index([confirmed])
+  @@index([totalAmount])
+  @@index([createdAt])
 }
 
 model RentRejection {
