@@ -21,6 +21,10 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Phone,
+  Maximize2,
+  Sparkles,
+  Gift,
 } from 'lucide-react'
 import ImageGallery from './ImageGallery'
 import { ExtraPriceType } from '@prisma/client'
@@ -33,10 +37,13 @@ interface Product {
   basePrice: string
   priceMGA?: string
   availableRooms?: number
-  guest: number
-  bedroom: number
-  bed: number
-  bathroom: number
+  room?: number // ✅ Correct field name
+  bathroom?: number
+  maxPeople?: number // ✅ Instead of 'guest'
+  minPeople?: number
+  surface?: number // Surface en m²
+  phone?: string
+  phoneCountry?: string
   arriving: number
   leaving: number
   img?: { img: string }[]
@@ -72,12 +79,12 @@ interface Product {
   }[]
   transportOptions?: { name: string; description: string }[]
   propertyInfo?: {
-    hasStairs: boolean
-    hasElevator: boolean
-    hasHandicapAccess: boolean
-    hasPetsOnProperty: boolean
+    hasStairs?: boolean
+    hasElevator?: boolean
+    hasHandicapAccess?: boolean
+    hasPetsOnProperty?: boolean
     additionalNotes?: string
-  }
+  } | null
   includedServices?: { id: string; name: string; description: string | null; icon: string | null }[]
   extras?: {
     id: string
@@ -279,23 +286,47 @@ export function ProductDetails({ product }: ProductDetailsProps) {
           </div>
 
           <div className='flex flex-wrap gap-4'>
-            <div className='flex items-center space-x-2'>
-              <Users className='h-4 w-4 text-gray-400' />
-              <span className='text-sm'>{product.guest} invité(s)</span>
-            </div>
-            <div className='flex items-center space-x-2'>
-              <Bed className='h-4 w-4 text-gray-400' />
-              <span className='text-sm'>{product.bedroom} chambre(s)</span>
-            </div>
-            <div className='flex items-center space-x-2'>
-              <Bed className='h-4 w-4 text-gray-400' />
-              <span className='text-sm'>{product.bed} lit(s)</span>
-            </div>
-            <div className='flex items-center space-x-2'>
-              <Bath className='h-4 w-4 text-gray-400' />
-              <span className='text-sm'>{product.bathroom} salle(s) de bain</span>
-            </div>
+            {product.maxPeople && (
+              <div className='flex items-center space-x-2'>
+                <Users className='h-4 w-4 text-gray-400' />
+                <span className='text-sm'>{product.maxPeople} invité(s) max</span>
+              </div>
+            )}
+            {product.minPeople && (
+              <div className='flex items-center space-x-2'>
+                <Users className='h-4 w-4 text-gray-400' />
+                <span className='text-sm'>{product.minPeople} invité(s) min</span>
+              </div>
+            )}
+            {product.room && (
+              <div className='flex items-center space-x-2'>
+                <Bed className='h-4 w-4 text-gray-400' />
+                <span className='text-sm'>{product.room} chambre(s)</span>
+              </div>
+            )}
+            {product.bathroom && (
+              <div className='flex items-center space-x-2'>
+                <Bath className='h-4 w-4 text-gray-400' />
+                <span className='text-sm'>{product.bathroom} salle(s) de bain</span>
+              </div>
+            )}
+            {product.surface && (
+              <div className='flex items-center space-x-2'>
+                <Maximize2 className='h-4 w-4 text-gray-400' />
+                <span className='text-sm'>{product.surface}m²</span>
+              </div>
+            )}
           </div>
+
+          {product.phone && (
+            <div className='flex items-center space-x-2'>
+              <Phone className='h-4 w-4 text-gray-400' />
+              <span className='text-sm'>
+                {product.phoneCountry && `+${product.phoneCountry} `}
+                {product.phone}
+              </span>
+            </div>
+          )}
 
           <div>
             <h4 className='font-medium mb-2'>Description</h4>
@@ -383,6 +414,121 @@ export function ProductDetails({ product }: ProductDetailsProps) {
                 <Badge key={index} variant='outline' className='bg-green-50'>
                   {security.name}
                 </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Services inclus */}
+      {product.includedServices && product.includedServices.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className='flex items-center'>
+              <CheckSquare className='h-4 w-4 mr-2' />
+              Services inclus
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+              {product.includedServices.map((service) => (
+                <div key={service.id} className='flex items-start space-x-3 p-3 bg-gray-50 rounded-lg'>
+                  {service.icon && <span className='text-xl'>{service.icon}</span>}
+                  <div className='flex-1'>
+                    <h4 className='font-medium text-sm'>{service.name}</h4>
+                    {service.description && (
+                      <p className='text-xs text-gray-600 mt-1'>{service.description}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Extras / Services supplémentaires */}
+      {product.extras && product.extras.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className='flex items-center'>
+              <Gift className='h-4 w-4 mr-2' />
+              Services supplémentaires (payants)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className='space-y-3'>
+              {product.extras.map((extra) => (
+                <div key={extra.id} className='flex items-start justify-between p-3 bg-gray-50 rounded-lg'>
+                  <div className='flex-1'>
+                    <h4 className='font-medium text-sm'>{extra.name}</h4>
+                    {extra.description && (
+                      <p className='text-xs text-gray-600 mt-1'>{extra.description}</p>
+                    )}
+                    <p className='text-xs text-gray-500 mt-1'>Type: {extra.type}</p>
+                  </div>
+                  <div className='text-right ml-4'>
+                    <p className='font-medium text-sm'>{extra.priceEUR}€</p>
+                    {extra.priceMGA > 0 && (
+                      <p className='text-xs text-gray-600'>{extra.priceMGA} Ar</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Points forts personnalisés */}
+      {product.highlights && product.highlights.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className='flex items-center'>
+              <Sparkles className='h-4 w-4 mr-2' />
+              Points forts
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+              {product.highlights.map((highlight) => (
+                <div key={highlight.id} className='flex items-start space-x-3 p-3 bg-blue-50 rounded-lg'>
+                  {highlight.icon && <span className='text-xl'>{highlight.icon}</span>}
+                  <div className='flex-1'>
+                    <h4 className='font-medium text-sm'>{highlight.name}</h4>
+                    {highlight.description && (
+                      <p className='text-xs text-gray-600 mt-1'>{highlight.description}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Lieux à proximité */}
+      {product.nearbyPlaces && product.nearbyPlaces.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className='flex items-center'>
+              <MapPin className='h-4 w-4 mr-2' />
+              Lieux à proximité
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className='space-y-2'>
+              {product.nearbyPlaces.map((place, index) => (
+                <div key={index} className='flex items-center justify-between py-2 border-b last:border-b-0'>
+                  <div className='flex-1'>
+                    <p className='font-medium text-sm'>{place.name}</p>
+                    <p className='text-xs text-gray-500'>{place.transport}</p>
+                  </div>
+                  <div className='text-right'>
+                    <p className='text-sm text-gray-600'>{place.distance}</p>
+                    {place.duration && <p className='text-xs text-gray-500'>{place.duration}</p>}
+                  </div>
+                </div>
               ))}
             </div>
           </CardContent>

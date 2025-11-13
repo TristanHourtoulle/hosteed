@@ -7,16 +7,7 @@ import NumberInput from '@/components/ui/NumberInput'
 import { Euro, Calendar, Plus } from 'lucide-react'
 import CreateSpecialPriceModal from '@/components/ui/CreateSpecialPriceModal'
 import CommissionDisplay from '@/components/ui/CommissionDisplay'
-
-interface SpecialPrice {
-  id: string
-  pricesMga: string
-  pricesEuro: string
-  day: string[]
-  startDate: Date | null
-  endDate: Date | null
-  activate?: boolean
-}
+import type { SpecialPrice } from '@/types/product-form'
 
 interface FormData {
   basePrice: string
@@ -29,7 +20,7 @@ interface ProductPricingFormProps {
   onInputChange: (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => void
-  onSpecialPriceCreated: () => void
+  onSpecialPriceCreated: (specialPrice: Omit<SpecialPrice, 'id'>) => void
   onRemoveSpecialPrice: (id: string) => void
   itemVariants: Variants
 }
@@ -46,6 +37,14 @@ export default function ProductPricingForm({
   // Format day names for display
   const formatDayNames = (days: string[]) => {
     const dayNames: { [key: string]: string } = {
+      Monday: 'Lun',
+      Tuesday: 'Mar',
+      Wednesday: 'Mer',
+      Thursday: 'Jeu',
+      Friday: 'Ven',
+      Saturday: 'Sam',
+      Sunday: 'Dim',
+      // Legacy format support
       MONDAY: 'Lun',
       TUESDAY: 'Mar',
       WEDNESDAY: 'Mer',

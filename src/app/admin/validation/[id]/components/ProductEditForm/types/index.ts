@@ -1,14 +1,19 @@
-import { ExtraPriceType, ProductValidation, DayEnum } from '@prisma/client'
+import { ExtraPriceType, ProductValidation } from '@prisma/client'
 
-export interface SpecialPrice {
-  id: string
-  pricesMga: string
-  pricesEuro: string
-  day: DayEnum[]
-  startDate: Date | null
-  endDate: Date | null
-  activate: boolean
-}
+// ===== RE-EXPORT UNIFIED TYPES =====
+// Import unified form types from central location
+export type {
+  ProductFormData,
+  NearbyPlace,
+  ImageFile,
+  SpecialPrice,
+} from '@/types/product-form'
+
+// Alias for backward compatibility
+export type { ProductFormData as FormData } from '@/types/product-form'
+
+// ===== ENTITY INTERFACES =====
+// These interfaces represent database entities from Prisma
 
 export interface Equipment {
   id: string
@@ -59,35 +64,32 @@ export interface PropertyHighlight {
   userId: string | null
 }
 
-export interface NearbyPlace {
-  name: string
-  distance: string
-  unit: 'mètres' | 'kilomètres'
-}
-
-export interface ImageFile {
-  file: File | null
-  preview: string
-  id: string
-  isExisting?: boolean
-  url?: string
-}
-
 export interface Product {
   id: string
   name: string
   description: string
   address: string
+  latitude?: number
+  longitude?: number
   basePrice: string
   priceMGA?: string
   availableRooms?: number
-  guest: number
-  bedroom: number
-  bed: number
-  bathroom: number
-  arriving: number
-  leaving: number
+  room?: number // Nombre de chambres (bedroom in schema is actually 'room')
+  bathroom?: number
+  arriving: number // Hour as integer (e.g., 14 for 14:00)
+  leaving: number // Hour as integer (e.g., 12 for 12:00)
   validate: ProductValidation
+  phone?: string
+  phoneCountry?: string
+  surface?: number
+  minPeople?: number
+  maxPeople?: number
+  nearbyPlaces?: { name: string; distance: string; duration: string; transport: string }[]
+  propertyInfo?: {
+    hasHandicapAccess?: boolean
+    hasPetsOnProperty?: boolean
+  } | null
+  hotel?: { id: string; name: string }[] // Array because it's a one-to-many relation
   img?: { img: string }[]
   owner: {
     id: string
@@ -117,50 +119,3 @@ export interface ProductEditFormProps {
   onSave: (updatedProduct: Product) => void
   onCancel: () => void
 }
-
-export interface FormData {
-  name: string
-  description: string
-  address: string // Localisation Google Maps (visible sur l'annonce)
-  completeAddress: string // Adresse complète manuelle (visible dans le mail de confirmation)
-  placeId?: string
-  phone: string
-  phoneCountry: string
-  room: string
-  bathroom: string
-  arriving: string
-  leaving: string
-  basePrice: string
-  priceMGA: string
-  basePriceMGA: string
-  specialPrices: SpecialPrice[]
-  autoAccept: boolean
-  typeId: string
-  equipmentIds: string[]
-  mealIds: string[]
-  securityIds: string[]
-  serviceIds: string[]
-  includedServiceIds: string[]
-  extraIds: string[]
-  highlightIds: string[]
-  surface: string
-  maxPeople: string
-  minPeople: string
-  accessibility: boolean
-  petFriendly: boolean
-  nearbyPlaces: NearbyPlace[]
-  proximityLandmarks: string[] // Points de repère pour localisation (texte libre)
-  transportation: string
-  typeRentId: string
-  isHotel: boolean
-  hotelName: string
-  availableRooms: string
-  [key: string]: unknown
-}
-
-// Test booking interface - currently unused but kept for future features
-// export interface TestBooking {
-//   startDate: Date
-//   endDate: Date
-//   guestCount: number
-// }

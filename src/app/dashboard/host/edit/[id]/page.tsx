@@ -30,12 +30,14 @@ import {
   BasicInfoSection,
   LocationContactSection,
   ServiceSelectionSection,
+  ProductCharacteristicsForm,
+  ProductPricingForm,
 } from '@/app/createProduct/components'
 
-import { googleSuggestionService } from '@/lib/services/GoogleSuggestion.service'
 import CreateServiceModal from '@/components/ui/CreateServiceModal'
 import CreateExtraModal from '@/components/ui/CreateExtraModal'
 import CreateHighlightModal from '@/components/ui/CreateHighlightModal'
+import CreateSpecialPriceModal from '@/components/ui/CreateSpecialPriceModal'
 
 import BookingCostSummary from '@/components/ui/BookingCostSummary'
 import SortableImageGrid from '@/components/ui/SortableImageGrid'
@@ -49,6 +51,7 @@ import type {
   ImageFile,
   TestBooking,
   FormData,
+  SpecialPrice,
 } from '@/app/createProduct/types'
 
 import { containerVariants, itemVariants } from '@/app/createProduct/utils'
@@ -71,7 +74,7 @@ export default function EditProductPage() {
   const {
     formData: loadedFormData,
     images: loadedImages,
-    // specialPrices: loadedSpecialPrices,
+    specialPrices: loadedSpecialPrices,
     isLoading: isLoadingProduct,
     error: loadError,
   } = useProductLoader(productId)
@@ -85,17 +88,12 @@ export default function EditProductPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<ErrorDetails | null>(null)
   const [showGalleryPreview, setShowGalleryPreview] = useState(false)
-  // const [newPlace, setNewPlace] = useState<NearbyPlace>({
-  //   name: '',
-  //   distance: '',
-  //   unit: 'mètres',
-  // })
 
   // Modal states
   const [serviceModalOpen, setServiceModalOpen] = useState(false)
   const [extraModalOpen, setExtraModalOpen] = useState(false)
   const [highlightModalOpen, setHighlightModalOpen] = useState(false)
-  // const [specialPriceModalOpen, setSpecialPriceModalOpen] = useState(false)
+  const [specialPriceModalOpen, setSpecialPriceModalOpen] = useState(false)
 
   // Test booking for cost preview
   const [testBooking] = useState<TestBooking>({
@@ -105,7 +103,7 @@ export default function EditProductPage() {
   })
 
   // Special prices state
-  // const [specialPrices, setSpecialPrices] = useState<SpecialPrice[]>([])
+  const [specialPrices, setSpecialPrices] = useState<SpecialPrice[]>([])
 
   // SEO data state
   const [seoData, setSeoData] = useState<{
@@ -121,15 +119,21 @@ export default function EditProductPage() {
   })
 
   // Update special prices when loaded
-  // useEffect(() => {
-  //   if (loadedSpecialPrices.length > 0) {
-  //     setSpecialPrices(loadedSpecialPrices)
-  //   }
-  // }, [loadedSpecialPrices])
+  useEffect(() => {
+    if (loadedSpecialPrices.length > 0) {
+      setSpecialPrices(loadedSpecialPrices)
+    }
+  }, [loadedSpecialPrices])
 
   // Update form data when product is loaded
   useEffect(() => {
     if (loadedFormData && loadedFormData.name) {
+      console.log('📍 Loading product data with GPS:', {
+        latitude: loadedFormData.latitude,
+        longitude: loadedFormData.longitude,
+        arriving: loadedFormData.arriving,
+        leaving: loadedFormData.leaving,
+      })
       productForm.setFormData(loadedFormData)
     }
   }, [loadedFormData])
@@ -189,13 +193,27 @@ export default function EditProductPage() {
     refreshHighlights()
   }
 
-  // const handleSpecialPriceCreated = (newSpecialPrice: Omit<SpecialPrice, 'id'>) => {
-  //   const specialPriceWithId: SpecialPrice = {
-  //     ...newSpecialPrice,
-  //     id: `temp-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-  //   }
-  //   setSpecialPrices(prev => [...prev, specialPriceWithId])
-  // }
+  const handleSpecialPriceCreated = (newSpecialPrice: Omit<SpecialPrice, 'id'>) => {
+    const specialPriceWithId: SpecialPrice = {
+      ...newSpecialPrice,
+      id: `temp-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+    }
+    setSpecialPrices(prev => [...prev, specialPriceWithId])
+    // Sync with formData
+    setFormData(prev => ({
+      ...prev,
+      specialPrices: [...prev.specialPrices, specialPriceWithId],
+    }))
+  }
+
+  const handleRemoveSpecialPrice = (id: string) => {
+    setSpecialPrices(prev => prev.filter(sp => sp.id !== id))
+    // Sync with formData
+    setFormData(prev => ({
+      ...prev,
+      specialPrices: prev.specialPrices.filter(sp => sp.id !== id),
+    }))
+  }
 
   // Calcul mémorisé pour les extras sélectionnés avec leurs données complètes
   const selectedExtras = useMemo(() => {
@@ -330,24 +348,17 @@ export default function EditProductPage() {
     }
 
     try {
-      // Récupérer les coordonnées si nécessaire
-      let latitude = 0
-      let longitude = 0
+      // Les coordonnées GPS sont déjà disponibles dans formData
+      // (récupérées lors de la sélection dans CityAutocomplete)
+      console.log('📍 Current formData GPS before submission:', {
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+        arriving: formData.arriving,
+        leaving: formData.leaving,
+      })
 
-      if (formData.placeId) {
-        try {
-          const placeDetails = await googleSuggestionService.getPlaceDetails({
-            placeId: formData.placeId,
-            fields: ['geometry'],
-          })
-
-          if (placeDetails?.geometry?.location) {
-            latitude = placeDetails.geometry.location.lat
-            longitude = placeDetails.geometry.location.lng
-          }
-        } catch (error) {
-          console.warn('Impossible de récupérer les coordonnées:', error)
-        }
+      if (formData.latitude === 0 || formData.longitude === 0) {
+        console.warn('⚠️ Coordonnées GPS manquantes pour le produit')
       }
 
       // Étape 1: Mettre à jour le produit
@@ -356,17 +367,22 @@ export default function EditProductPage() {
         description: formData.description,
         address: formData.address,
         completeAddress: formData.completeAddress || null,
-        longitude: longitude,
-        latitude: latitude,
+        longitude: formData.longitude || 0,
+        latitude: formData.latitude || 0,
         basePrice: formData.basePrice,
         priceMGA: formData.priceMGA,
         room: formData.room ? Number(formData.room) : null,
         bathroom: formData.bathroom ? Number(formData.bathroom) : null,
-        arriving: Number(formData.arriving),
-        leaving: Number(formData.leaving),
+        surface: formData.surface ? Number(formData.surface) : null,
+        arriving: formData.arriving ? Number(formData.arriving) : 15,
+        leaving: formData.leaving ? Number(formData.leaving) : 12,
         phone: formData.phone,
         phoneCountry: formData.phoneCountry || 'MG',
+        minPeople: formData.minPeople ? Number(formData.minPeople) : null,
         maxPeople: formData.maxPeople ? Number(formData.maxPeople) : null,
+        accessibility: formData.accessibility || false,
+        petFriendly: formData.petFriendly || false,
+        autoAccept: formData.autoAccept || false,
         typeId: formData.typeId,
         equipmentIds: formData.equipmentIds,
         serviceIds: formData.serviceIds,
@@ -381,6 +397,7 @@ export default function EditProductPage() {
           duration: 0,
           transport: place.unit === 'kilomètres' ? 'voiture' : 'à pied',
         })),
+        proximityLandmarks: formData.proximityLandmarks || [],
         isHotel: formData.isHotel,
         hotelInfo: formData.isHotel
           ? {
@@ -388,6 +405,15 @@ export default function EditProductPage() {
               availableRooms: Number(formData.availableRooms),
             }
           : null,
+        // Special prices
+        specialPrices: specialPrices.map(sp => ({
+          pricesMga: sp.pricesMga,
+          pricesEuro: sp.pricesEuro,
+          day: sp.day,
+          startDate: sp.startDate,
+          endDate: sp.endDate,
+          activate: sp.activate,
+        })),
         // SEO data
         seoData: seoData,
       }
@@ -533,6 +559,22 @@ export default function EditProductPage() {
           <LocationContactSection
             formData={formData}
             setFormData={setFormData}
+            itemVariants={itemVariants}
+          />
+
+          {/* Product Characteristics Form */}
+          <ProductCharacteristicsForm
+            formData={formData}
+            onInputChange={handleInputChange}
+            itemVariants={itemVariants}
+          />
+
+          {/* Product Pricing Form */}
+          <ProductPricingForm
+            formData={formData}
+            onInputChange={handleInputChange}
+            onSpecialPriceCreated={handleSpecialPriceCreated}
+            onRemoveSpecialPrice={handleRemoveSpecialPrice}
             itemVariants={itemVariants}
           />
 
@@ -902,6 +944,11 @@ export default function EditProductPage() {
         isOpen={highlightModalOpen}
         onClose={() => setHighlightModalOpen(false)}
         onHighlightCreated={handleHighlightCreated}
+      />
+      <CreateSpecialPriceModal
+        isOpen={specialPriceModalOpen}
+        onClose={() => setSpecialPriceModalOpen(false)}
+        onSpecialPriceCreated={handleSpecialPriceCreated}
       />
 
       {/* Gallery Preview */}

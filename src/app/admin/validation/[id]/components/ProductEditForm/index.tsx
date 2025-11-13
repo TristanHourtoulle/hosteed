@@ -4,15 +4,16 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Edit3, Save } from 'lucide-react'
-import { resubmitProductWithChange } from '@/lib/services/product.service'
 import ErrorAlert from '@/components/ui/ErrorAlert'
 import CreateServiceModal from '@/components/ui/CreateServiceModal'
 import CreateExtraModal from '@/components/ui/CreateExtraModal'
 import CreateHighlightModal from '@/components/ui/CreateHighlightModal'
+import CreateSpecialPriceModal from '@/components/ui/CreateSpecialPriceModal'
 
 // Import createProduct components for reuse
 import {
   BasicInfoSection,
+  LocationContactSection,
   ProductCharacteristicsForm,
   ProductPricingForm,
 } from '@/app/createProduct/components'
@@ -39,7 +40,7 @@ import {
 } from './utils'
 
 // Import types
-import type { Product, ProductEditFormProps } from './types'
+import type { Product, ProductEditFormProps, SpecialPrice } from './types'
 
 export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormProps) {
   const [isLoading, setIsLoading] = useState(false)
@@ -48,6 +49,10 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
   const [serviceModalOpen, setServiceModalOpen] = useState(false)
   const [extraModalOpen, setExtraModalOpen] = useState(false)
   const [highlightModalOpen, setHighlightModalOpen] = useState(false)
+  const [specialPriceModalOpen, setSpecialPriceModalOpen] = useState(false)
+
+  // Special prices state - initialized from product or empty
+  const [specialPrices, setSpecialPrices] = useState<SpecialPrice[]>([])
 
 
   // Custom hooks
@@ -98,6 +103,29 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
     setImageError(err)
   }
 
+  // Special price handlers
+  const handleSpecialPriceCreated = (newSpecialPrice: Omit<SpecialPrice, 'id'>) => {
+    const specialPriceWithId: SpecialPrice = {
+      ...newSpecialPrice,
+      id: `temp-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+    }
+    setSpecialPrices(prev => [...prev, specialPriceWithId])
+    // Sync with formData
+    setFormData(prev => ({
+      ...prev,
+      specialPrices: [...prev.specialPrices, specialPriceWithId],
+    }))
+  }
+
+  const handleRemoveSpecialPrice = (id: string) => {
+    setSpecialPrices(prev => prev.filter(sp => sp.id !== id))
+    // Sync with formData
+    setFormData(prev => ({
+      ...prev,
+      specialPrices: prev.specialPrices.filter(sp => sp.id !== id),
+    }))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
@@ -111,36 +139,91 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
       return
     }
 
+    // Helper to convert "HH:mm" to hour integer
+    const parseHour = (timeStr: string): number => {
+      if (!timeStr) return 0
+      const hour = parseInt(timeStr.split(':')[0])
+      return isNaN(hour) ? 0 : hour
+    }
+
     try {
       // Préparer les images
       const finalImages = await prepareImagesForSubmit()
 
-      const updatedProduct = await resubmitProductWithChange(
-        product.id,
-        {
-          name: formData.name,
-          description: formData.description,
-          address: formData.address,
-          longitude: 0,
-          latitude: 0,
-          basePrice: formData.basePrice,
-          room: formData.room ? parseInt(formData.room) : null,
-          bathroom: formData.bathroom ? parseInt(formData.bathroom) : null,
-          arriving: parseInt(formData.arriving),
-          leaving: parseInt(formData.leaving),
-          typeId: formData.typeId,
-          securities: formData.securityIds,
-          equipments: formData.equipmentIds,
-          services: formData.serviceIds,
-          meals: formData.mealIds,
-          images: finalImages,
-        },
-        product.owner?.id
-      )
-
-      if (updatedProduct) {
-        onSave(updatedProduct as unknown as Product)
+      // Prepare complete update data with all fields
+      const updateData = {
+        name: formData.name,
+        description: formData.description,
+        address: formData.address,
+        completeAddress: formData.completeAddress || null,
+        longitude: formData.longitude || product.longitude || 0,
+        latitude: formData.latitude || product.latitude || 0,
+        basePrice: formData.basePrice,
+        priceMGA: formData.priceMGA || null,
+        room: formData.room ? parseInt(formData.room) : null,
+        bathroom: formData.bathroom ? parseInt(formData.bathroom) : null,
+        arriving: parseHour(formData.arriving), // Convert "14:00" to 14
+        leaving: parseHour(formData.leaving), // Convert "12:00" to 12
+        phone: formData.phone,
+        phoneCountry: formData.phoneCountry || 'MG',
+        typeId: formData.typeId,
+        maxPeople: formData.maxPeople ? parseInt(formData.maxPeople) : null,
+        // Relations
+        equipmentIds: formData.equipmentIds,
+        serviceIds: formData.serviceIds,
+        mealIds: formData.mealIds,
+        securityIds: formData.securityIds,
+        includedServiceIds: formData.includedServiceIds,
+        extraIds: formData.extraIds,
+        highlightIds: formData.highlightIds,
+        // Nearby places
+        nearbyPlaces: formData.nearbyPlaces.map(place => ({
+          name: place.name,
+          distance: place.distance ? Number(place.distance) : 0,
+          duration: 0,
+          transport: place.unit === 'kilomètres' ? 'voiture' : 'à pied',
+        })),
+        proximityLandmarks: formData.proximityLandmarks,
+        // Hotel info
+        isHotel: formData.isHotel,
+        hotelInfo: formData.isHotel
+          ? {
+              name: formData.hotelName,
+              availableRooms: Number(formData.availableRooms) || 0,
+            }
+          : undefined,
       }
+
+      console.log('📤 Sending update to API:', updateData)
+
+      // Use API endpoint instead of service function
+      const response = await fetch(`/api/products/${product.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la mise à jour')
+      }
+
+      const updatedProduct = await response.json()
+
+      // Update images separately if needed
+      if (finalImages.length > 0) {
+        await fetch(`/api/products/${product.id}/images`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ imageUrls: finalImages }),
+        })
+      }
+
+      onSave(updatedProduct as unknown as Product)
     } catch (error) {
       console.error('Erreur lors de la mise à jour du produit:', error)
       setError({
@@ -211,21 +294,22 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
           <div className='grid grid-cols-1 gap-8'>
             {/* Reuse BasicInfoSection from createProduct */}
             <BasicInfoSection
-              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-              // @ts-ignore - FormData types are compatible but not identical
               formData={formData}
               types={types}
               handleInputChange={handleInputChange}
-              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-              // @ts-ignore - FormData types are compatible but not identical
+              setFormData={setFormData}
+              itemVariants={itemVariants}
+            />
+
+            {/* Location & Contact Section */}
+            <LocationContactSection
+              formData={formData}
               setFormData={setFormData}
               itemVariants={itemVariants}
             />
 
             {/* Reuse ProductCharacteristicsForm from createProduct */}
             <ProductCharacteristicsForm
-              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-              // @ts-ignore - FormData types are compatible but not identical
               formData={formData}
               onInputChange={handleInputChange}
               itemVariants={itemVariants}
@@ -233,16 +317,10 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
 
             {/* Reuse ProductPricingForm from createProduct */}
             <ProductPricingForm
-              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-              // @ts-ignore - FormData types are compatible but not identical
               formData={formData}
               onInputChange={handleInputChange}
-              onSpecialPriceCreated={() => {
-                // Special prices are managed separately, no-op for now
-              }}
-              onRemoveSpecialPrice={() => {
-                // Special prices are managed separately, no-op for now
-              }}
+              onSpecialPriceCreated={handleSpecialPriceCreated}
+              onRemoveSpecialPrice={handleRemoveSpecialPrice}
               itemVariants={itemVariants}
             />
 
@@ -333,6 +411,12 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
         isOpen={highlightModalOpen}
         onClose={() => setHighlightModalOpen(false)}
         onHighlightCreated={handleHighlightCreated}
+      />
+
+      <CreateSpecialPriceModal
+        isOpen={specialPriceModalOpen}
+        onClose={() => setSpecialPriceModalOpen(false)}
+        onSpecialPriceCreated={handleSpecialPriceCreated}
       />
     </div>
   )
