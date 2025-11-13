@@ -79,6 +79,22 @@ export async function POST(req: Request) {
       ) {
         try {
           console.log('Creating reservation from session metadata...')
+
+          // ✨ NEW: Parser les extras depuis les métadonnées
+          let selectedExtras: Array<{ extraId: string; quantity: number }> = []
+          if (metadata.selectedExtras) {
+            try {
+              const extraIds = JSON.parse(metadata.selectedExtras)
+              // Convertir les IDs en objets avec quantity = 1 par défaut
+              selectedExtras = extraIds.map((id: string) => ({
+                extraId: id,
+                quantity: 1, // TODO: Si besoin de quantités différentes, les passer dans metadata
+              }))
+            } catch (error) {
+              console.error('Error parsing selectedExtras:', error)
+            }
+          }
+
           const newRent = await createRent({
             productId: metadata.productId,
             userId: metadata.userId,
@@ -88,6 +104,7 @@ export async function POST(req: Request) {
             options: metadata.options ? JSON.parse(metadata.options) : [],
             stripeId: paymentIntentObj.id,
             prices: Number(metadata.prices),
+            selectedExtras, // ✨ NEW: Passer les extras
           })
 
           if (newRent) {

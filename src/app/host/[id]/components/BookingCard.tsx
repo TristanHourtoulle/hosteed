@@ -12,11 +12,8 @@ import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import type { DateRange } from 'react-day-picker'
 import { getProfileImageUrl } from '@/lib/utils'
-import {
-  calculateTotalRentPrice,
-  type CommissionCalculation,
-} from '@/lib/services/commission.service'
 import { formatCurrency, formatNumber } from '@/lib/utils/formatNumber'
+import { calculateBookingPrice, type BookingPriceResult } from '@/lib/services/booking-pricing.service'
 
 interface Reviews {
   id: string
@@ -75,6 +72,9 @@ interface Product {
   typeId?: string // Property type ID for commission calculation
   type?: { id: string; name: string } // Property type relation
   promotions?: ProductPromotion[]
+  extras?: { id: string; name: string; priceEUR: number }[] // Available extras
+  includedServices?: { id: string; name: string }[] // Included services
+  availableRooms?: number // For hotels
 }
 
 interface FormData {
@@ -99,17 +99,12 @@ export default function BookingCard({
   isAvailable,
   today,
 }: BookingCardProps) {
-  const [guests, setGuests] = useState(1)
+  const [guests, setGuests] = useState(product.minPeople || 1)
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: formData.arrivingDate ? new Date(formData.arrivingDate) : undefined,
     to: formData.leavingDate ? new Date(formData.leavingDate) : undefined,
   })
-  const [priceCalculation, setPriceCalculation] = useState<CommissionCalculation | null>(null)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [defaultCommissionInfo, setDefaultCommissionInfo] = useState<{
-    clientRate: number
-    clientFixed: number
-  } | null>(null)
+  const [bookingPricing, setBookingPricing] = useState<BookingPriceResult | null>(null)
 
   // Update parent component when date range changes
   const handleDateRangeChange = (range: DateRange | undefined) => {
@@ -145,85 +140,50 @@ export default function BookingCard({
   }
 
   const nights = calculateNights()
-
-  // Check for active promotion
-  const activePromotion =
-    product.promotions && product.promotions.length > 0
-      ? product.promotions.find(promo => {
-          const now = new Date()
-          return (
-            promo.isActive && new Date(promo.startDate) <= now && new Date(promo.endDate) >= now
-          )
-        })
-      : null
-
-  // Calculate price with promotion if applicable
-  const effectiveBasePrice = activePromotion
-    ? parseFloat(product.basePrice) * (1 - activePromotion.discountPercentage / 100)
-    : parseFloat(product.basePrice)
-
-  const originalBasePrice = activePromotion ? parseFloat(product.basePrice) : null
-
-  // Effect to load default commission info on mount
-  useEffect(() => {
-    const loadCommissionInfo = async () => {
-      try {
-        const typeId = product.type?.id || product.typeId
-        if (!typeId) return
-
-        const calculation = await calculateTotalRentPrice(
-          effectiveBasePrice,
-          1, // 1 night for reference
-          0, // no extras
-          typeId
-        )
-
-        if (calculation.breakdown) {
-          setDefaultCommissionInfo({
-            clientRate: calculation.breakdown.clientCommissionRate * 100,
-            clientFixed: calculation.breakdown.clientCommissionFixed,
-          })
-        }
-      } catch (error) {
-        console.error('Error loading commission info:', error)
-      }
-    }
-
-    loadCommissionInfo()
-  }, [effectiveBasePrice, product.type?.id, product.typeId])
-
-  // Effect to calculate prices when dates change
-  useEffect(() => {
-    const updatePrices = async () => {
-      if (nights > 0) {
-        try {
-          // Use typeId from product.type relation, fallback to product.typeId field
-          const typeId = product.type?.id || product.typeId
-
-          const calculation = await calculateTotalRentPrice(
-            effectiveBasePrice,
-            nights,
-            25, // cleaning fee
-            typeId // Pass typeId for type-specific commission
-          )
-          setPriceCalculation(calculation)
-        } catch (error) {
-          console.error('Error calculating prices:', error)
-          setPriceCalculation(null)
-        }
-      } else {
-        setPriceCalculation(null)
-      }
-    }
-
-    updatePrices()
-  }, [nights, effectiveBasePrice, product.type?.id, product.typeId])
-
-  const subtotal = effectiveBasePrice * nights
-  const serviceFee = priceCalculation ? Math.round(priceCalculation.clientCommission) : 0
-  const total = priceCalculation ? Math.round(priceCalculation.clientPays) : subtotal + serviceFee
-
   const hasValidDates = dateRange?.from && dateRange?.to
+
+  // ✨ NEW: Calculate booking price jour par jour (promotions + special prices)
+  useEffect(() => {
+    const fetchBookingPrice = async () => {
+      if (!dateRange?.from || !dateRange?.to || nights <= 0) {
+        setBookingPricing(null)
+        return
+      }
+
+      try {
+        const pricing = await calculateBookingPrice(
+          product.id,
+          dateRange.from,
+          dateRange.to,
+          product.owner?.id
+        )
+        setBookingPricing(pricing)
+        console.log('💰 [BookingCard] Pricing calculated:', {
+          subtotal: pricing.subtotal,
+          totalSavings: pricing.totalSavings,
+          promotionApplied: pricing.promotionApplied,
+          specialPriceApplied: pricing.specialPriceApplied,
+          averageNightlyPrice: pricing.averageNightlyPrice,
+        })
+      } catch (error) {
+        console.error('Error calculating booking price:', error)
+        setBookingPricing(null)
+      }
+    }
+
+    fetchBookingPrice()
+  }, [dateRange, product.id, product.owner?.id, nights])
+
+  // Use booking pricing if available, otherwise fallback to simple calculation
+  const effectiveBasePrice = bookingPricing?.averageNightlyPrice || parseFloat(product.basePrice)
+  const subtotal = bookingPricing?.subtotal || effectiveBasePrice * nights
+  const totalSavings = bookingPricing?.totalSavings || 0
+  const hasPromotions = bookingPricing?.promotionApplied || false
+  const hasSpecialPrices = bookingPricing?.specialPriceApplied || false
+  const originalTotalPrice = subtotal + totalSavings
+
+  // Note: Service fees are NOT shown in BookingCard, only in reservation page
+  const total = subtotal
 
   return (
     <div className='sticky top-20'>
@@ -232,23 +192,25 @@ export default function BookingCard({
           {/* Prix et notes sur la même ligne */}
           <div className='flex items-center justify-between'>
             <div className='flex flex-col gap-1'>
-              {activePromotion && originalBasePrice && (
+              {totalSavings > 0 && (
                 <div className='flex items-center gap-2'>
                   <span className='text-sm text-gray-400 line-through'>
-                    {formatCurrency(originalBasePrice)}
+                    {formatCurrency(parseFloat(product.basePrice))}
                   </span>
                   <span className='bg-gradient-to-r from-red-500 to-pink-500 text-white px-2 py-0.5 rounded-full text-xs font-bold'>
-                    -{formatNumber(activePromotion.discountPercentage)} %
+                    Réduction
                   </span>
                 </div>
               )}
               <div className='flex items-baseline gap-2'>
                 <span
-                  className={`text-2xl font-semibold ${activePromotion ? 'text-green-600' : 'text-gray-900'}`}
+                  className={`text-2xl font-semibold ${totalSavings > 0 ? 'text-green-600' : 'text-gray-900'}`}
                 >
                   {formatCurrency(effectiveBasePrice)}
                 </span>
-                <span className='text-gray-600'>par nuit</span>
+                <span className='text-gray-600'>
+                  {bookingPricing ? 'prix moyen / nuit' : 'par nuit'}
+                </span>
               </div>
             </div>
             {product.reviews && product.reviews.length > 0 ? (
@@ -267,50 +229,53 @@ export default function BookingCard({
             )}
           </div>
 
-          {/* Badge de promotion si active */}
-          {activePromotion && (
+          {/* Badge de promotion/prix spécial si actif */}
+          {totalSavings > 0 && (hasPromotions || hasSpecialPrices) && (
             <div className='bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg px-3 py-2'>
               <div className='flex flex-col gap-1'>
-                <span className='text-sm text-green-700 font-medium'>🎉 Promotion active!</span>
+                <span className='text-sm text-green-700 font-medium'>
+                  🎉 {hasPromotions && hasSpecialPrices
+                    ? 'Promotions & Prix spéciaux actifs'
+                    : hasPromotions
+                      ? 'Promotion active'
+                      : 'Prix spéciaux actifs'}
+                </span>
                 <span className='text-sm text-green-800 font-semibold'>
-                  Économisez {formatCurrency(originalBasePrice! - effectiveBasePrice)} par nuit
+                  Économisez {formatCurrency(totalSavings, 'EUR', 0)} sur ce séjour
                 </span>
               </div>
             </div>
           )}
 
-          {/* Prix spécial si applicable (pour la compatibilité) */}
-          {!activePromotion && product.specialPriceApplied && product.originalBasePrice && (
-            <div className='bg-gradient-to-r from-orange-100 to-red-100 border border-orange-200 rounded-lg px-3 py-2'>
+
+          {/* Extras disponibles - Hint */}
+          {product.extras && product.extras.length > 0 && (
+            <div className='bg-blue-50 border border-blue-200 rounded-lg px-3 py-2'>
+              <div className='flex items-center justify-between'>
+                <span className='text-sm text-blue-700 font-medium'>
+                  ✨ {product.extras.length} option{product.extras.length > 1 ? 's' : ''}{' '}
+                  supplémentaire{product.extras.length > 1 ? 's' : ''} disponible
+                  {product.extras.length > 1 ? 's' : ''}
+                </span>
+              </div>
+              <span className='text-xs text-blue-600 mt-1 block'>
+                À ajouter lors de la réservation
+              </span>
+            </div>
+          )}
+
+          {/* Hotel info - Available rooms */}
+          {product.availableRooms && product.availableRooms > 0 && (
+            <div className='bg-purple-50 border border-purple-200 rounded-lg px-3 py-2'>
               <div className='flex items-center gap-2'>
-                <span className='text-sm text-orange-700 font-medium'>Prix de base:</span>
-                <span className='text-sm text-orange-800 font-semibold line-through'>
-                  {formatCurrency(Number.parseFloat(product.originalBasePrice))}
+                <span className='text-sm text-purple-700 font-medium'>
+                  🏨 {product.availableRooms} chambre{product.availableRooms > 1 ? 's' : ''}{' '}
+                  disponible{product.availableRooms > 1 ? 's' : ''}
                 </span>
               </div>
             </div>
           )}
 
-          {/* Frais de service - Masqué */}
-          {/* {defaultCommissionInfo && (
-            <div className='bg-blue-50 border border-blue-200 rounded-lg px-3 py-2.5'>
-              <div className='flex flex-col gap-1'>
-                <div className='flex items-center justify-between'>
-                  <span className='text-sm text-blue-700 font-medium'>
-                    Frais de service Hosteed
-                  </span>
-                  <span className='text-sm text-blue-800 font-semibold'>
-                    {formatNumber(defaultCommissionInfo.clientRate)} % +{' '}
-                    {formatCurrency(defaultCommissionInfo.clientFixed)}
-                  </span>
-                </div>
-                <span className='text-xs text-blue-600'>
-                  Ces frais permettent de faire vivre la plateforme et d&apos;assurer un service de
-                  qualité
-                </span>
-              </div>
-            </div>
-          )} */}
           <div className='flex items-center gap-2'>
             <div className='relative h-10 w-10 rounded-full overflow-hidden'>
               {(() => {
@@ -428,9 +393,13 @@ export default function BookingCard({
                         {guests} {guests === 1 ? 'voyageur' : 'voyageurs'}
                       </span>
                     </div>
-                    {product.maxPeople && (
+                    {(product.minPeople || product.maxPeople) && (
                       <div className='text-xs text-gray-500'>
-                        Max {product.maxPeople} voyageur{product.maxPeople > 1 ? 's' : ''}
+                        {product.minPeople && product.maxPeople
+                          ? `${product.minPeople}-${product.maxPeople} voyageur${product.maxPeople > 1 ? 's' : ''}`
+                          : product.maxPeople
+                            ? `Max ${product.maxPeople} voyageur${product.maxPeople > 1 ? 's' : ''}`
+                            : `Min ${product.minPeople} voyageur${product.minPeople! > 1 ? 's' : ''}`}
                       </div>
                     )}
                   </div>
@@ -448,11 +417,14 @@ export default function BookingCard({
                         size='icon'
                         className='rounded-full flex items-center justify-center h-8 w-8'
                         onClick={() => {
-                          if (guests > 1) {
+                          const minGuests = product.minPeople || 1
+                          if (guests > minGuests) {
                             setGuests(guests - 1)
                             return
                           }
-                          toast.error('Vous ne pouvez pas avoir moins de 1 voyageur')
+                          toast.error(
+                            `Nombre minimum de voyageurs: ${minGuests}`
+                          )
                         }}
                       >
                         <Minus className='h-4 w-4' />
@@ -518,32 +490,42 @@ export default function BookingCard({
         {hasValidDates && isAvailable && (
           <div className='mt-6 pt-6 border-t border-gray-200'>
             <div className='space-y-3 text-sm'>
+              {/* Afficher le prix d'origine si réductions */}
+              {totalSavings > 0 && (
+                <div className='flex justify-between items-center text-gray-400'>
+                  <span className='line-through'>
+                    {formatCurrency(parseFloat(product.basePrice))} × {formatNumber(nights)} nuit
+                    {nights > 1 ? 's' : ''}
+                  </span>
+                  <span className='line-through'>{formatCurrency(originalTotalPrice, 'EUR', 0)}</span>
+                </div>
+              )}
+
+              {/* Prix avec réductions */}
               <div className='flex justify-between items-center'>
-                <span className='text-gray-600 underline decoration-dotted cursor-help'>
-                  {formatCurrency(effectiveBasePrice)} × {formatNumber(nights)} nuit
-                  {nights > 1 ? 's' : ''}
-                  {activePromotion && (
-                    <span className='ml-1 text-green-600 font-medium'>
-                      (avec promotion -{formatNumber(activePromotion.discountPercentage)} %)
+                <span className={`text-gray-600 ${totalSavings > 0 ? 'font-medium text-green-700' : ''}`}>
+                  {bookingPricing
+                    ? `Prix moyen ${formatCurrency(effectiveBasePrice)} × ${formatNumber(nights)} nuit${nights > 1 ? 's' : ''}`
+                    : `${formatCurrency(effectiveBasePrice)} × ${formatNumber(nights)} nuit${nights > 1 ? 's' : ''}`}
+                  {totalSavings > 0 && (
+                    <span className='ml-1 text-green-600 font-medium text-xs'>
+                      (avec réductions)
                     </span>
                   )}
                 </span>
-                <span className='text-gray-900 font-medium'>
+                <span className={`font-medium ${totalSavings > 0 ? 'text-green-700' : 'text-gray-900'}`}>
                   {formatCurrency(subtotal, 'EUR', 0)}
                 </span>
               </div>
-              {/* Frais de service - Masqué */}
-              {/* <div className='flex justify-between items-center'>
-                <span className='text-gray-600 underline decoration-dotted cursor-help'>
-                  Frais de service Hosteed
-                </span>
-                <span className='text-gray-900 font-medium'>
-                  {formatCurrency(serviceFee, 'EUR', 0)}
-                </span>
-              </div> */}
+
+              {/* Total */}
               <div className='border-t border-gray-200 pt-3 flex justify-between items-center font-semibold text-base'>
                 <span>Total</span>
                 <span>{formatCurrency(total, 'EUR', 0)}</span>
+              </div>
+
+              <div className='text-xs text-gray-500 text-center mt-2'>
+                Les frais de service seront détaillés lors de la réservation
               </div>
             </div>
           </div>
