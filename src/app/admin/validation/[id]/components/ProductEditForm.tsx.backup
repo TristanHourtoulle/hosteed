@@ -143,12 +143,12 @@ interface Product {
   leaving: number
   validate: ProductValidation
   img?: { img: string }[]
-  user: {
+  owner: {
     id: string
     name?: string | null
     lastname?: string | null
     email: string
-  }[]
+  }
   type?: { id: string; name: string; description: string }
   equipments?: { id: string; name: string; icon: string }[]
   mealsList?: { id: string; name: string }[]
@@ -715,7 +715,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
           meals: formData.mealIds,
           images: finalImages,
         },
-        product.user[0]?.id // Utiliser l'ID du premier utilisateur comme hostId
+        product.owner?.id // Utiliser l'ID du premier utilisateur comme hostId
       )
 
       if (updatedProduct) {
@@ -789,7 +789,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
         )}
 
         <form onSubmit={handleSubmit} className='space-y-8'>
-          <div className='grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch'>
+          <div className='grid grid-cols-1 gap-8 items-stretch'>
             {/* Colonne de gauche */}
             <div className='space-y-6 h-full'>
               {/* Informations principales */}
@@ -1814,7 +1814,7 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
                     id='transportation'
                     name='transportation'
                     type='text'
-                    placeholder='Ex: Métro, Bus, Parking gratuit'
+                    placeholder='Bus, Taxi, Taxi moto, Cyclo pousse, Tuk tuk'
                     value={formData.transportation}
                     onChange={handleInputChange}
                     className='border-slate-200 focus:border-cyan-300 focus:ring-cyan-200'

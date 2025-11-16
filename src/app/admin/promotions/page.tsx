@@ -29,7 +29,7 @@ import { fr } from 'date-fns/locale'
 import OverlapConfirmationModal from '@/components/promotions/OverlapConfirmationModal'
 import PromotionBadge from '@/components/promotions/PromotionBadge'
 import { getFullSizeImageUrl } from '@/lib/utils/imageUtils'
-import { ProductPromotion } from '@prisma/client'
+import { ProductPromotion, ProductValidation } from '@prisma/client'
 
 interface Promotion {
   id: string
@@ -44,11 +44,11 @@ interface Promotion {
     address: string
     basePrice: string
     img?: { img: string }[]
-    user: {
+    owner: {
       id: string
       name: string | null
       email: string
-    }[]
+    }
   }
 }
 
@@ -59,11 +59,11 @@ interface Product {
   basePrice: string
   validate?: string
   img?: { img: string; id?: string }[]
-  user: {
+  owner: {
     id: string
     name: string | null
     email: string
-  }[]
+  }
 }
 
 interface OverlappingPromotion {
@@ -117,7 +117,9 @@ export default function AdminPromotionsPage() {
         const data = await productsRes.json()
 
         // Filter only validated products (validate = 'Approve' in DB)
-        const validatedProducts = data.products.filter((p: Product) => p.validate === 'Approve')
+        const validatedProducts = data.products.filter(
+          (p: Product) => p.validate === ProductValidation.Approve
+        )
         setProducts(validatedProducts)
       }
     } catch (error) {
@@ -180,8 +182,8 @@ export default function AdminPromotionsPage() {
         }
 
         if (!res.ok) {
-          const error = await res.json()
-          toast.error(error.error || 'Erreur lors de la mise à jour')
+          const errorData = await res.json()
+          toast.error(errorData.error || 'Erreur lors de la mise à jour')
           return
         }
 
@@ -203,8 +205,8 @@ export default function AdminPromotionsPage() {
         }
 
         if (!res.ok) {
-          const error = await res.json()
-          toast.error(error.error || 'Erreur lors de la création')
+          const errorData = await res.json()
+          toast.error(errorData.error || 'Erreur lors de la création')
           return
         }
 
@@ -537,7 +539,7 @@ export default function AdminPromotionsPage() {
                       {/* Host info */}
                       <div className='mt-3 pt-3 border-t text-xs sm:text-sm text-gray-500'>
                         <span className='font-medium'>Hôte:</span>{' '}
-                        {promotion.product.user[0]?.name || promotion.product.user[0]?.email}
+                        {promotion.product.owner?.name || promotion.product.owner?.email}
                       </div>
                     </div>
 

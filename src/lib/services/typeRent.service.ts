@@ -1,6 +1,7 @@
 'use server'
 import prisma from '@/lib/prisma'
 import { TypeRent, ProductValidation } from '@prisma/client'
+import { staticDataCacheService } from '@/lib/cache/redis-cache.service'
 
 export async function findTypeById(id: string): Promise<TypeRent | null> {
   try {
@@ -49,7 +50,7 @@ export async function createTypeRent(
   coverImage?: string
 ): Promise<TypeRent | null> {
   try {
-    return await prisma.typeRent.create({
+    const newType = await prisma.typeRent.create({
       data: {
         name,
         description,
@@ -57,6 +58,11 @@ export async function createTypeRent(
         coverImage,
       },
     })
+
+    // Invalidate the typeRent cache after creation
+    await staticDataCacheService.invalidateStaticData('typeRent')
+
+    return newType
   } catch (error) {
     console.error("Erreur lors de la création d'un type de location:", error)
     return null
@@ -89,12 +95,17 @@ export async function updateTypeRent(
       updateData.coverImage = coverImage
     }
 
-    return await prisma.typeRent.update({
+    const updatedType = await prisma.typeRent.update({
       where: {
         id,
       },
       data: updateData,
     })
+
+    // Invalidate the typeRent cache after update
+    await staticDataCacheService.invalidateStaticData('typeRent')
+
+    return updatedType
   } catch (error) {
     console.error("Erreur lors de la mise à jour d'un type de location:", error)
     return null
@@ -132,6 +143,10 @@ export async function deleteTypeRent(id: string): Promise<boolean> {
         id,
       },
     })
+
+    // Invalidate the typeRent cache after deletion
+    await staticDataCacheService.invalidateStaticData('typeRent')
+
     return true
   } catch (error) {
     console.error("Erreur lors de la suppression d'un type de location:", error)
@@ -154,6 +169,10 @@ export async function deleteTypeRentWithProducts(id: string): Promise<boolean> {
         id,
       },
     })
+
+    // Invalidate the typeRent cache after deletion
+    await staticDataCacheService.invalidateStaticData('typeRent')
+
     return true
   } catch (error) {
     console.error('Erreur lors de la suppression du type de location et ses produits:', error)

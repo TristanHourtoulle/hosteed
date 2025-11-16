@@ -20,12 +20,13 @@ export async function getReservationDetails(reservationId: string): Promise<Rese
       product: {
         include: {
           img: true,
-          user: {
+          owner: {
             select: {
               id: true,
               name: true,
               email: true,
               image: true,
+              roles: true,
             },
           },
           rules: true,
@@ -53,13 +54,11 @@ export async function getReservationDetails(reservationId: string): Promise<Rese
   }
 
   // Add host information in the reservation
-  const host = await prisma.user.findUnique({
-    where: {
-      id: reservation.product.user[0].id,
-    },
-  })
+  if (!reservation.product.owner) {
+    redirect('/account')
+  }
 
-  return { reservation, host } as unknown as ReservationDetails
+  return { reservation, host: reservation.product.owner } as unknown as ReservationDetails
 }
 
 export async function getPaymentDetailsForReservation(reservationId: string) {

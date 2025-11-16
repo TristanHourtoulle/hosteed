@@ -1,3 +1,5 @@
 export { default as HeroSection } from './HeroSection/HeroSection'
+export { default as SponsoredSection } from './SponsoredSection/SponsoredSection'
+export { default as SpecialOffersSection } from './SpecialOffersSection/SpecialOffersSection'
 export { default as CategorySection } from './CategorySection/CategorySection'
 export { default as HowItWorksSection } from './HowItWorks/HowItWorksSection'

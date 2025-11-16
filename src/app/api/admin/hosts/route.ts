@@ -42,7 +42,7 @@ export async function GET() {
           },
         ],
         // S'assurer qu'ils ont au moins un produit (hébergement)
-        Product: {
+        ownedProducts: {
           some: {},
         },
       },
@@ -54,7 +54,7 @@ export async function GET() {
         createdAt: true,
         _count: {
           select: {
-            Product: true,
+            ownedProducts: true,
           },
         },
       },

@@ -31,7 +31,7 @@ export function useMutationWithCache<TData, TError, TVariables, TContext = unkno
     ...options,
     mutationFn,
     onSuccess: async (...args) => {
-      const [data, variables] = args
+      // const [data, variables] = args
 
       // Invalidation automatique du cache
       if (config.invalidate) {

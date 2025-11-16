@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
  * Récupérer toutes les promotions de l'utilisateur connecté
  * Si ADMIN ou HOST_MANAGER: récupère toutes les promotions
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await auth()
 
@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
                 select: { img: true },
                 take: 1,
               },
-              user: {
+              owner: {
                 select: {
                   id: true,
                   name: true,

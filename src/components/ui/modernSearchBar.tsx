@@ -38,7 +38,14 @@ interface FilterState {
 }
 
 interface ModernSearchBarProps {
-  onSearch?: (data: { location: string; checkIn: string; checkOut: string; guests: number }) => void
+  onSearch?: (data: {
+    location: string
+    checkIn: string
+    checkOut: string
+    guests: number
+    lat?: number
+    lng?: number
+  }) => void
   initialLocation?: string
   initialCheckIn?: string
   initialCheckOut?: string
@@ -68,6 +75,7 @@ export default function ModernSearchBar({
   typeRooms = [],
 }: ModernSearchBarProps) {
   const [location, setLocation] = useState(initialLocation || '')
+  const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null)
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: initialCheckIn ? new Date(initialCheckIn) : new Date(),
     to: initialCheckOut
@@ -98,23 +106,60 @@ export default function ModernSearchBar({
 
   const handleSearch = () => {
     if (onSearch) {
-      onSearch({
+      const searchData: {
+        location: string
+        checkIn: string
+        checkOut: string
+        guests: number
+        lat?: number
+        lng?: number
+      } = {
         location,
         checkIn: dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : '',
         checkOut: dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : '',
         guests,
-      })
+      }
+      // Add coordinates if available (from Google Places selection)
+      if (coordinates) {
+        searchData.lat = coordinates.lat
+        searchData.lng = coordinates.lng
+      }
+      onSearch(searchData)
     }
   }
 
-  // Gérer la sélection d'une ville depuis les suggestions (optionnel)
-  const handleCitySelect = (city: GooglePlacePrediction) => {
+  // Gérer la sélection d'une ville depuis les suggestions (avec coordonnées GPS)
+  const handleCitySelect = (city: GooglePlacePrediction, coords?: { lat: number; lng: number }) => {
     setLocation(city.description)
+    setCoordinates(coords || null)
+
+    // Auto-trigger search immediately with GPS coordinates (if available)
+    // This bypasses the React state update delay
+    if (onSearch && coords) {
+      const searchData: {
+        location: string
+        checkIn: string
+        checkOut: string
+        guests: number
+        lat?: number
+        lng?: number
+      } = {
+        location: city.description,
+        checkIn: dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : '',
+        checkOut: dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : '',
+        guests,
+        lat: coords.lat,
+        lng: coords.lng,
+      }
+      onSearch(searchData)
+    }
   }
 
-  // Gérer la saisie libre de localisation
+  // Gérer la saisie libre de localisation (pas de coordonnées GPS)
   const handleLocationChange = (value: string) => {
     setLocation(value)
+    // Reset coordinates when user types manually (not from Google selection)
+    setCoordinates(null)
   }
 
   return (

@@ -36,7 +36,7 @@ type RentWithRelations = Prisma.RentGetPayload<{
       include: {
         img: true
         type: true
-        user: {
+        owner: {
           select: {
             id: true
             name: true
@@ -56,7 +56,7 @@ type RentWithReviews = Prisma.RentGetPayload<{
       include: {
         img: true
         type: true
-        user: {
+        owner: {
           select: {
             id: true
             name: true
@@ -105,7 +105,7 @@ export async function getRentById(id: string): Promise<RentWithDatesAndReviews |
         product: {
           include: {
             img: true,
-            user: true,
+            owner: true,
             type: true,
           },
         },
@@ -130,12 +130,25 @@ export async function CheckRentIsAvailable(
   leavingDate: Date
 ): Promise<{ available: boolean; message?: string }> {
   try {
-    // Normaliser les dates pour la comparaison
+    console.log('🎯 [AVANT NORMALISATION] Dates reçues:', {
+      arrivalDate: arrivalDate.toISOString(),
+      leavingDate: leavingDate.toISOString(),
+      arrivalDateLocal: arrivalDate.toString(),
+      leavingDateLocal: leavingDate.toString(),
+    })
+
+    // Normaliser les dates pour la comparaison EN UTC pour éviter les problèmes de timezone
     const normalizedArrivalDate = new Date(arrivalDate)
-    normalizedArrivalDate.setHours(0, 0, 0, 0)
+    normalizedArrivalDate.setUTCHours(0, 0, 0, 0)
 
     const normalizedLeavingDate = new Date(leavingDate)
-    normalizedLeavingDate.setHours(0, 0, 0, 0)
+    normalizedLeavingDate.setUTCHours(0, 0, 0, 0)
+
+    console.log('🔍 [CheckRentIsAvailable] Vérification disponibilité', {
+      productId,
+      normalizedArrivalDate: normalizedArrivalDate.toISOString().split('T')[0],
+      normalizedLeavingDate: normalizedLeavingDate.toISOString().split('T')[0],
+    })
 
     // Check cache first for massive performance improvement (90% faster)
     const cachedAvailability = await availabilityCacheService.getCachedAvailability(
@@ -145,6 +158,7 @@ export async function CheckRentIsAvailable(
     )
 
     if (cachedAvailability) {
+      console.log('✅ [CACHE HIT] Réponse depuis le cache:', cachedAvailability)
       return {
         available: cachedAvailability.isAvailable,
         message: cachedAvailability.isAvailable
@@ -152,6 +166,8 @@ export async function CheckRentIsAvailable(
           : 'Property not available for selected dates',
       }
     }
+
+    console.log('❌ [CACHE MISS] Pas de cache, vérification en DB')
 
     // Vérifier d'abord si c'est un produit d'hôtel avec plusieurs chambres
     const productInfo = await prisma.product.findUnique({
@@ -167,6 +183,7 @@ export async function CheckRentIsAvailable(
     // Si c'est un hôtel avec plusieurs chambres, utiliser la logique hôtel
     if (productInfo?.availableRooms && productInfo.availableRooms > 1) {
       // Compter le nombre de réservations confirmées sur cette période
+      // Logique "nuit d'hôtel" : une réservation du 12 au 13 occupe la nuit du 12
       const existingRents = await prisma.rent.findMany({
         where: {
           productId: productId,
@@ -176,23 +193,23 @@ export async function CheckRentIsAvailable(
             {
               arrivingDate: {
                 gte: normalizedArrivalDate,
-                lte: normalizedLeavingDate,
+                lt: normalizedLeavingDate,
               },
             },
             // Réservation qui se termine pendant la période
             {
               leavingDate: {
-                gte: normalizedArrivalDate,
-                lte: normalizedLeavingDate,
+                gt: normalizedArrivalDate,
+                lt: normalizedLeavingDate,
               },
             },
             // Réservation qui englobe la période
             {
               arrivingDate: {
-                lte: normalizedArrivalDate,
+                lt: normalizedArrivalDate,
               },
               leavingDate: {
-                gte: normalizedLeavingDate,
+                gt: normalizedLeavingDate,
               },
             },
           ],
@@ -229,6 +246,7 @@ export async function CheckRentIsAvailable(
       }
     } else {
       // Sinon, utiliser la logique classique (une seule unité)
+      // Logique "nuit d'hôtel" : une réservation du 12 au 13 occupe la nuit du 12
       const existingRent = await prisma.rent.findFirst({
         where: {
           productId: productId,
@@ -238,23 +256,23 @@ export async function CheckRentIsAvailable(
             {
               arrivingDate: {
                 gte: normalizedArrivalDate,
-                lte: normalizedLeavingDate,
+                lt: normalizedLeavingDate,
               },
             },
             // Réservation qui se termine pendant la période demandée
             {
               leavingDate: {
-                gte: normalizedArrivalDate,
-                lte: normalizedLeavingDate,
+                gt: normalizedArrivalDate,
+                lt: normalizedLeavingDate,
               },
             },
             // Réservation qui englobe la période demandée
             {
               arrivingDate: {
-                lte: normalizedArrivalDate,
+                lt: normalizedArrivalDate,
               },
               leavingDate: {
-                gte: normalizedLeavingDate,
+                gt: normalizedLeavingDate,
               },
             },
           ],
@@ -286,6 +304,14 @@ export async function CheckRentIsAvailable(
         }
       }
     }
+    // Vérifier les périodes d'indisponibilité
+    // Logique "nuit d'hôtel" : un blocage du 12 au 13 bloque la nuit du 12, donc le 13 est libre
+    console.log('🔍 [UNAVAILABILITY CHECK] Recherche blocages avec conditions:', {
+      condition1: `startDate >= ${normalizedArrivalDate.toISOString().split('T')[0]} AND < ${normalizedLeavingDate.toISOString().split('T')[0]}`,
+      condition2: `endDate > ${normalizedArrivalDate.toISOString().split('T')[0]} AND < ${normalizedLeavingDate.toISOString().split('T')[0]}`,
+      condition3: `startDate < ${normalizedArrivalDate.toISOString().split('T')[0]} AND endDate > ${normalizedLeavingDate.toISOString().split('T')[0]}`,
+    })
+
     const existingUnavailable = await prisma.unAvailableProduct.findFirst({
       where: {
         productId: productId,
@@ -293,25 +319,37 @@ export async function CheckRentIsAvailable(
           {
             startDate: {
               gte: normalizedArrivalDate,
-              lte: normalizedLeavingDate,
+              lt: normalizedLeavingDate,
             },
           },
           {
             endDate: {
-              gte: normalizedArrivalDate,
-              lte: normalizedLeavingDate,
+              gt: normalizedArrivalDate,
+              lt: normalizedLeavingDate,
             },
           },
           {
             startDate: {
-              lte: normalizedArrivalDate,
+              lt: normalizedArrivalDate,
             },
             endDate: {
-              gte: normalizedLeavingDate,
+              gt: normalizedLeavingDate,
             },
           },
         ],
       },
+    })
+
+    console.log('📊 [UNAVAILABILITY RESULT]', {
+      found: !!existingUnavailable,
+      details: existingUnavailable
+        ? {
+            id: existingUnavailable.id,
+            title: existingUnavailable.title,
+            startDate: existingUnavailable.startDate.toISOString().split('T')[0],
+            endDate: existingUnavailable.endDate.toISOString().split('T')[0],
+          }
+        : null,
     })
 
     const isAvailable = !existingUnavailable
@@ -321,6 +359,8 @@ export async function CheckRentIsAvailable(
           available: false,
           message: 'Le produit est indisponible sur cette période',
         }
+
+    console.log('✨ [FINAL RESULT]', result)
 
     // Cache the availability result for future requests (massive performance boost)
     try {
@@ -360,7 +400,7 @@ export async function findAllRentByProduct(id: string): Promise<RentWithDates | 
           include: {
             img: true,
             type: true,
-            user: {
+            owner: {
               select: {
                 id: true,
                 name: true,
@@ -392,6 +432,7 @@ export async function createRent(params: {
   options: string[]
   stripeId: string
   prices: number
+  selectedExtras?: Array<{ extraId: string; quantity: number }> // NEW: extras sélectionnés
 }): Promise<RentWithRelations | null> {
   try {
     if (
@@ -442,10 +483,21 @@ export async function createRent(params: {
     // Check if the product has autoAccept enabled
     const productSettings = await prisma.product.findUnique({
       where: { id: params.productId },
-      select: { autoAccept: true },
+      select: { autoAccept: true, ownerId: true },
     })
 
     const shouldAutoAccept = productSettings?.autoAccept || false
+
+    // ✨ NEW: Calculer le prix COMPLET avec toutes les composantes
+    const { calculateCompleteBookingPrice } = await import('./booking-pricing.service')
+    const pricingDetails = await calculateCompleteBookingPrice(
+      params.productId,
+      params.arrivingDate,
+      params.leavingDate,
+      params.peopleNumber,
+      params.selectedExtras || [],
+      productSettings?.ownerId
+    )
 
     const createdRent = await prisma.rent.create({
       data: {
@@ -457,18 +509,39 @@ export async function createRent(params: {
         notes: BigInt(0),
         accepted: shouldAutoAccept,
         confirmed: shouldAutoAccept,
-        prices: BigInt(params.prices),
+        prices: BigInt(params.prices), // DEPRECATED: Garder pour compatibilité
         stripeId: params.stripeId || null,
         options: {
           connect: params.options.map(optionId => ({ id: optionId })),
         },
+        // ✨ NEW: Stocker tous les détails de pricing
+        basePricePerNight: pricingDetails.basePricing.averageNightlyPrice,
+        numberOfNights: pricingDetails.basePricing.numberOfNights,
+        subtotal: pricingDetails.basePricing.subtotal,
+        discountAmount: pricingDetails.basePricing.totalSavings,
+        promotionApplied: pricingDetails.basePricing.promotionApplied,
+        specialPriceApplied: pricingDetails.basePricing.specialPriceApplied,
+        totalSavings: pricingDetails.basePricing.totalSavings,
+        extrasTotal: pricingDetails.extrasTotal,
+        clientCommission: pricingDetails.clientCommission,
+        hostCommission: pricingDetails.hostCommission,
+        platformAmount: pricingDetails.platformAmount,
+        hostAmount: pricingDetails.hostAmount,
+        totalAmount: pricingDetails.totalAmount,
+        // Stocker le breakdown complet en JSON pour audit
+        pricingSnapshot: JSON.parse(JSON.stringify({
+          dailyBreakdown: pricingDetails.basePricing.dailyBreakdown,
+          extrasDetails: pricingDetails.extrasDetails,
+          summary: pricingDetails.summary,
+          calculatedAt: new Date().toISOString(),
+        })),
       },
       include: {
         product: {
           include: {
             img: true,
             type: true,
-            user: {
+            owner: {
               select: {
                 id: true,
                 name: true,
@@ -479,13 +552,32 @@ export async function createRent(params: {
         },
         user: true,
         options: true,
+        extras: true, // NEW: Include extras in response
       },
     })
+
+    // ✨ NEW: Créer les entrées RentExtra pour chaque extra sélectionné
+    if (params.selectedExtras && params.selectedExtras.length > 0) {
+      for (const extra of params.selectedExtras) {
+        const extraDetail = pricingDetails.extrasDetails.find(e => e.extraId === extra.extraId)
+        if (extraDetail) {
+          await prisma.rentExtra.create({
+            data: {
+              rentId: createdRent.id,
+              extraId: extra.extraId,
+              quantity: extra.quantity,
+              totalPrice: extraDetail.total,
+            },
+          })
+        }
+      }
+    }
+
     const request = await prisma.product.findUnique({
       where: { id: createdRent.productId },
       select: {
         type: true,
-        user: {
+        owner: {
           select: {
             id: true,
             name: true,
@@ -503,17 +595,15 @@ export async function createRent(params: {
         bookUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
       })
     })
-    if (!createdRent.product.user || !Array.isArray(createdRent.product.user)) {
-      console.error('Les utilisateurs du produit ne sont pas disponibles')
+    if (!createdRent.product.owner) {
+      console.error('Le propriétaire du produit n\'est pas disponible')
       return null
     }
 
-    createdRent.product.user.map(async host => {
-      await sendTemplatedMail(host.email, 'Nouvelle réservation !', 'new-book.html', {
-        bookId: createdRent.id,
-        name: host.name || '',
-        bookUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
-      })
+    await sendTemplatedMail(createdRent.product.owner.email, 'Nouvelle réservation !', 'new-book.html', {
+      bookId: createdRent.id,
+      name: createdRent.product.owner.name || '',
+      bookUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
     })
     if (product.autoAccept) {
       await sendTemplatedMail(
@@ -531,6 +621,12 @@ export async function createRent(params: {
           arriving_date: createdRent.arrivingDate.toDateString(),
           leaving_date: createdRent.leavingDate.toDateString(),
           reservationUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
+          complete_address: createdRent.product.completeAddress || '',
+          proximity_landmarks:
+            createdRent.product.proximityLandmarks &&
+            createdRent.product.proximityLandmarks.length > 0
+              ? createdRent.product.proximityLandmarks.join(', ')
+              : '',
         }
       )
     } else {
@@ -549,6 +645,12 @@ export async function createRent(params: {
           arriving_date: createdRent.arrivingDate.toDateString(),
           leaving_date: createdRent.leavingDate.toDateString(),
           reservationUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
+          complete_address: createdRent.product.completeAddress || '',
+          proximity_landmarks:
+            createdRent.product.proximityLandmarks &&
+            createdRent.product.proximityLandmarks.length > 0
+              ? createdRent.product.proximityLandmarks.join(', ')
+              : '',
         }
       )
     }
@@ -568,7 +670,7 @@ export async function confirmRentByHost(id: string) {
           include: {
             img: true,
             type: true,
-            user: {
+            owner: {
               select: {
                 id: true,
                 name: true,
@@ -597,11 +699,11 @@ export async function confirmRentByHost(id: string) {
     await sendTemplatedMail(
       rent.user.email,
       "Réservation confirmée par l'hôte 🎉",
-      'host-confirmation.html',
+      'confirmation-reservation.html',
       {
         name: rent.user.name || '',
         listing_title: rent.product.name,
-        listing_address: rent.product.address,
+        listing_adress: rent.product.address,
         check_in: rent.product.arriving,
         check_out: rent.product.leaving,
         categories: rent.product.type.name,
@@ -609,6 +711,11 @@ export async function confirmRentByHost(id: string) {
         arriving_date: rent.arrivingDate.toDateString(),
         leaving_date: rent.leavingDate.toDateString(),
         reservationUrl: process.env.NEXTAUTH_URL + '/reservation/' + rent.id,
+        complete_address: rent.product.completeAddress || '',
+        proximity_landmarks:
+          rent.product.proximityLandmarks && rent.product.proximityLandmarks.length > 0
+            ? rent.product.proximityLandmarks.join(', ')
+            : '',
       }
     )
 
@@ -633,7 +740,7 @@ export async function approveRent(id: string) {
         include: {
           img: true,
           type: true,
-          user: {
+          owner: {
             select: {
               id: true,
               name: true,
@@ -681,6 +788,11 @@ export async function approveRent(id: string) {
       arriving_date: createdRent.arrivingDate.toDateString(),
       leaving_date: createdRent.leavingDate.toDateString(),
       reservationUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
+      complete_address: createdRent.product.completeAddress || '',
+      proximity_landmarks:
+        createdRent.product.proximityLandmarks && createdRent.product.proximityLandmarks.length > 0
+          ? createdRent.product.proximityLandmarks.join(', ')
+          : '',
     }
   )
   return {
@@ -699,7 +811,7 @@ export async function findAllRentByUserId(id: string): Promise<RentWithRelations
           include: {
             img: true,
             type: true,
-            user: {
+            owner: {
               select: {
                 id: true,
                 name: true,
@@ -727,11 +839,7 @@ export async function findRentByHostUserId(id: string) {
     const rents = await prisma.rent.findMany({
       where: {
         product: {
-          user: {
-            some: {
-              id: id,
-            },
-          },
+          ownerId: id,
         },
       },
       include: {
@@ -762,11 +870,7 @@ export async function findAllReservationsByHostId(hostId: string): Promise<Forma
     const rents = await prisma.rent.findMany({
       where: {
         product: {
-          user: {
-            some: {
-              id: hostId,
-            },
-          },
+          ownerId: hostId,
         },
       },
       include: {
@@ -918,7 +1022,7 @@ export async function rejectRentRequest(
       where: {
         id: rentId,
         product: {
-          userManager: BigInt(hostId),
+          ownerId: hostId,
         },
         status: RentStatus.WAITING,
       },
@@ -926,7 +1030,7 @@ export async function rejectRentRequest(
         user: true,
         product: {
           include: {
-            user: {
+            owner: {
               select: {
                 id: true,
                 name: true,

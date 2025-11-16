@@ -23,10 +23,11 @@ export async function GET() {
       include: {
         product: {
           include: {
-            user: {
+            owner: {
               select: {
-                email: true,
+                id: true,
                 name: true,
+                email: true,
               },
             },
           },
@@ -43,31 +44,30 @@ export async function GET() {
 
     // Envoyer des rappels aux hôtes (propriétaires du produit)
     for (const unique of rent) {
-      if (unique.product.user && unique.product.user.length > 0) {
-        for (const host of unique.product.user) {
-          console.log(`Envoi de rappel à l'hôte: ${host.email}`)
-          try {
-            await sendTemplatedMail(
-              host.email,
-              'Rappel de réservation !',
-              'cron-reminder-host.html',
-              {
-                bookId: unique.id,
-                establishmentName: unique.product.name,
-                establishmentAddress: unique.product.address,
-                checkInDate: unique.arrivingDate.toDateString(),
-                checkInTime: unique.product.arriving,
-                checkOutDate: unique.leavingDate.toDateString(),
-                checkOutTime: unique.product.leaving,
-                establishmentPhone: unique.product.phone,
-                name: unique.user?.name || '',
-                bookUrl: process.env.NEXTAUTH_URL + '/reservation/' + unique.id,
-              }
-            )
-            console.log(`Email envoyé avec succès à l'hôte: ${host.email}`)
-          } catch (error) {
-            console.error(`Erreur lors de l'envoi à l'hôte ${host.email}:`, error)
-          }
+      if (unique.product.owner) {
+        const host = unique.product.owner
+        console.log(`Envoi de rappel à l'hôte: ${host.email}`)
+        try {
+          await sendTemplatedMail(
+            host.email,
+            'Rappel de réservation !',
+            'cron-reminder-host.html',
+            {
+              bookId: unique.id,
+              establishmentName: unique.product.name,
+              establishmentAddress: unique.product.address,
+              checkInDate: unique.arrivingDate.toDateString(),
+              checkInTime: unique.product.arriving,
+              checkOutDate: unique.leavingDate.toDateString(),
+              checkOutTime: unique.product.leaving,
+              establishmentPhone: unique.product.phone,
+              name: unique.user?.name || '',
+              bookUrl: process.env.NEXTAUTH_URL + '/reservation/' + unique.id,
+            }
+          )
+          console.log(`Email envoyé avec succès à l'hôte: ${host.email}`)
+        } catch (error) {
+          console.error(`Erreur lors de l'envoi à l'hôte ${host.email}:`, error)
         }
       }
     }

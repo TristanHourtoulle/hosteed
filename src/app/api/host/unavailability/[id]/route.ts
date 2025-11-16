@@ -21,7 +21,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           select: {
             id: true,
             name: true,
-            user: { select: { id: true } },
+            owner: { select: { id: true } },
           },
         },
       },
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     // Vérifier que l'utilisateur est propriétaire
-    const isOwner = unavailability.product.user.some(u => u.id === session.user.id)
+    const isOwner = unavailability.product.owner?.id === session.user.id
     if (!isOwner) {
       return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })
     }
@@ -58,7 +58,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       where: { id: resolvedParams.id },
       include: {
         product: {
-          select: { user: { select: { id: true } } },
+          select: { owner: { select: { id: true } } },
         },
       },
     })
@@ -67,7 +67,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Indisponibilité non trouvée' }, { status: 404 })
     }
 
-    const isOwner = existing.product.user.some(u => u.id === session.user.id)
+    const isOwner = existing.product.owner?.id === session.user.id
     if (!isOwner) {
       return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })
     }
@@ -105,7 +105,7 @@ export async function DELETE(
       where: { id: resolvedParams.id },
       include: {
         product: {
-          select: { user: { select: { id: true } } },
+          select: { owner: { select: { id: true } } },
         },
       },
     })
@@ -114,7 +114,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Indisponibilité non trouvée' }, { status: 404 })
     }
 
-    const isOwner = existing.product.user.some(u => u.id === session.user.id)
+    const isOwner = existing.product.owner?.id === session.user.id
     if (!isOwner) {
       return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })
     }
@@ -122,7 +122,7 @@ export async function DELETE(
     await deleteUnavailableRent(resolvedParams.id)
 
     return NextResponse.json({ message: 'Indisponibilité supprimée' })
-  } catch (error) {
+  } catch (_error) { // eslint-disable-line @typescript-eslint/no-unused-vars
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }

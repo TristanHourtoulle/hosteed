@@ -9,6 +9,11 @@ import {
   calculateTotalRentPrice,
   type CommissionCalculation,
 } from '@/lib/services/commission.service'
+import {
+  calculateBookingPrice,
+  validateBooking,
+  type BookingPriceResult,
+} from '@/lib/services/booking-pricing.service'
 import { MapPin, Star, CreditCard, Shield, ArrowLeft, Check } from 'lucide-react'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
@@ -32,22 +37,42 @@ interface Reviews {
   grade: number
 }
 
+interface ProductPromotion {
+  id: string
+  discountPercentage: number
+  startDate: Date
+  endDate: Date
+  isActive: boolean
+}
+
 interface Product {
   id: string
   name: string
   basePrice: string
+  originalBasePrice?: string
+  specialPriceApplied?: boolean
+  specialPriceInfo?: {
+    pricesMga: string
+    pricesEuro: string
+    day: string[]
+    startDate: Date | null
+    endDate: Date | null
+  }
   options: Option[]
   commission: number // LEGACY - Keep for backward compatibility
   arriving: number
   leaving: number
   address?: string
   maxPeople?: bigint | null
+  minPeople?: bigint | null
   reviews?: Reviews[]
   img?: {
     img: string
   }[]
   typeId?: string // Property type ID for commission calculation
   type?: { id: string; name: string } // Property type relation
+  promotions?: ProductPromotion[]
+  owner?: { id: string; name?: string; email?: string } // Product owner
 }
 
 interface FormData {
@@ -76,6 +101,8 @@ export default function ReservationPage() {
   const [error, setError] = useState<string | null>(null)
   const [step, setStep] = useState(2) // 2: extras selection, 3: personal info, 4: payment (étape dates supprimée)
   const [priceCalculation, setPriceCalculation] = useState<CommissionCalculation | null>(null)
+  const [bookingPricing, setBookingPricing] = useState<BookingPriceResult | null>(null)
+  const [validationErrors, setValidationErrors] = useState<string[]>([])
 
   // Get URL parameters
   const checkInParam = searchParams.get('checkIn')
@@ -178,39 +205,76 @@ export default function ReservationPage() {
     return Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24))
   }, [formData.arrivingDate, formData.leavingDate])
 
-  // Effect to calculate commission-based pricing
+  // Effect to calculate booking pricing (jour par jour) and validate
   useEffect(() => {
-    const updatePrices = async () => {
+    const updateBookingPricing = async () => {
       if (!product || !formData.arrivingDate || !formData.leavingDate) {
-        setPriceCalculation(null)
+        setBookingPricing(null)
+        setValidationErrors([])
         return
       }
 
       const nights = calculateNights()
       if (nights <= 0) {
-        setPriceCalculation(null)
+        setBookingPricing(null)
+        setValidationErrors([])
         return
       }
 
       try {
-        // Use typeId from product.type relation, fallback to product.typeId field
-        const typeId = product.type?.id || product.typeId
+        const startDate = new Date(formData.arrivingDate)
+        const endDate = new Date(formData.leavingDate)
 
+        // 1. Valider la réservation (nombre d'invités, etc.)
+        const validation = await validateBooking(
+          product.id,
+          startDate,
+          endDate,
+          formData.peopleNumber
+        )
+
+        if (!validation.isValid) {
+          setValidationErrors(validation.errors)
+          setBookingPricing(null)
+          return
+        } else {
+          setValidationErrors([])
+        }
+
+        // 2. Calculer le prix jour par jour (avec promotions + special prices)
+        const pricing = await calculateBookingPrice(
+          product.id,
+          startDate,
+          endDate,
+          product.owner?.id // Optionnel - si pas de owner, utilise les settings par défaut
+        )
+        setBookingPricing(pricing)
+
+        // 3. Calculer les commissions sur le total
+        const typeId = product.type?.id || product.typeId
         const calculation = await calculateTotalRentPrice(
-          parseFloat(product.basePrice),
+          pricing.subtotal / nights, // Prix moyen par nuit
           nights,
           extrasCost, // Include extras in commission calculation
           typeId // Pass typeId for type-specific commission
         )
         setPriceCalculation(calculation)
       } catch (error) {
-        console.error('Error calculating prices:', error)
+        console.error('Error calculating booking pricing:', error)
+        setBookingPricing(null)
         setPriceCalculation(null)
       }
     }
 
-    updatePrices()
-  }, [product, formData.arrivingDate, formData.leavingDate, extrasCost, calculateNights])
+    updateBookingPricing()
+  }, [
+    product,
+    formData.arrivingDate,
+    formData.leavingDate,
+    formData.peopleNumber,
+    extrasCost,
+    calculateNights,
+  ])
 
   const calculateTotalPrice = () => {
     if (priceCalculation) {
@@ -223,7 +287,23 @@ export default function ReservationPage() {
     const nights = calculateNights()
     if (nights <= 0) return 0
 
-    const basePrice = parseFloat(product.basePrice) * nights
+    // Check for active promotion in fallback
+    const activePromo =
+      product.promotions && product.promotions.length > 0
+        ? product.promotions.find(promo => {
+            const now = new Date()
+            return (
+              promo.isActive && new Date(promo.startDate) <= now && new Date(promo.endDate) >= now
+            )
+          })
+        : null
+
+    const baseNightlyPrice = parseFloat(product.basePrice)
+    const effectivePrice = activePromo
+      ? baseNightlyPrice * (1 - activePromo.discountPercentage / 100)
+      : baseNightlyPrice
+
+    const basePrice = effectivePrice * nights
     const subtotal = basePrice + extrasCost
     const commission = (subtotal * product.commission) / 100
 
@@ -331,8 +411,25 @@ export default function ReservationPage() {
     )
   }
 
-  const nights = calculateNights()
-  const subtotal = parseFloat(product.basePrice) * nights
+  const nights = bookingPricing?.numberOfNights || calculateNights()
+
+  // Use bookingPricing data if available (more accurate with day-by-day calculation)
+  const subtotal = bookingPricing?.subtotal || parseFloat(product.basePrice) * nights
+  const totalSavings = bookingPricing?.totalSavings || 0
+  const hasPromotions = bookingPricing?.promotionApplied || false
+  const hasSpecialPrices = bookingPricing?.specialPriceApplied || false
+
+  // Check for simple active promotion (for display purposes)
+  const activePromotion =
+    product.promotions && product.promotions.length > 0
+      ? product.promotions.find(promo => {
+          const now = new Date()
+          return (
+            promo.isActive && new Date(promo.startDate) <= now && new Date(promo.endDate) >= now
+          )
+        })
+      : null
+
   const serviceFee = priceCalculation ? Math.round(priceCalculation.clientCommission) : 0
   const total = calculateTotalPrice()
 
@@ -585,40 +682,171 @@ export default function ReservationPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className='space-y-4 p-4 sm:p-6 pt-0'>
+                {/* Erreurs de validation */}
+                {validationErrors.length > 0 && (
+                  <div className='bg-red-50 border border-red-200 rounded-lg p-3 space-y-2'>
+                    <div className='flex items-start gap-2'>
+                      <span className='text-red-600 font-medium text-sm'>⚠️ Réservation impossible</span>
+                    </div>
+                    <ul className='space-y-1'>
+                      {validationErrors.map((error, index) => (
+                        <li key={index} className='text-red-700 text-sm'>
+                          • {error}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Détails de la réservation */}
+                {formData.arrivingDate && formData.leavingDate && (
+                  <div className='bg-gray-50 rounded-lg p-3 space-y-2 text-sm'>
+                    <div className='flex justify-between'>
+                      <span className='text-gray-600'>Dates:</span>
+                      <span className='font-medium'>
+                        {format(new Date(formData.arrivingDate), 'dd MMM', { locale: fr })} -{' '}
+                        {format(new Date(formData.leavingDate), 'dd MMM', { locale: fr })}
+                      </span>
+                    </div>
+                    <div className='flex justify-between'>
+                      <span className='text-gray-600'>Durée:</span>
+                      <span className='font-medium'>
+                        {nights} nuit{nights > 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <div className='flex justify-between'>
+                      <span className='text-gray-600'>Voyageurs:</span>
+                      <span className='font-medium'>
+                        {formData.peopleNumber} personne{formData.peopleNumber > 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    {product.type?.name && (
+                      <div className='flex justify-between'>
+                        <span className='text-gray-600'>Type:</span>
+                        <span className='font-medium'>{product.type.name}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {nights > 0 && (
                   <>
-                    <div className='flex justify-between items-start'>
-                      <span className='text-gray-600 text-sm sm:text-base flex-1 pr-2'>
-                        {formatCurrency(parseFloat(product.basePrice), 'EUR')} × {nights} nuit
-                        {nights > 1 ? 's' : ''}
-                      </span>
-                      <span className='font-medium text-sm sm:text-base flex-shrink-0'>
-                        {formatCurrency(subtotal, 'EUR', 0)}
+                    {/* Badge réductions actives (promotions + special prices) */}
+                    {totalSavings > 0 && (hasPromotions || hasSpecialPrices) && (
+                      <div className='bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg px-3 py-2 mb-2'>
+                        <div className='flex items-center justify-between'>
+                          <span className='text-sm text-green-700 font-medium'>
+                            🎉 {hasPromotions && hasSpecialPrices
+                              ? 'Promotions & Prix spéciaux actifs'
+                              : hasPromotions
+                                ? 'Promotion active'
+                                : 'Prix spéciaux actifs'}
+                          </span>
+                        </div>
+                        <div className='text-xs text-green-600 mt-1'>
+                          Vous économisez {formatCurrency(totalSavings, 'EUR', 0)} sur ce séjour
+                        </div>
+                        {bookingPricing?.priority && (
+                          <div className='text-xs text-gray-500 mt-1'>
+                            Stratégie : {bookingPricing.priority === 'MOST_ADVANTAGEOUS'
+                              ? 'Prix le plus avantageux'
+                              : bookingPricing.priority === 'PROMOTION_FIRST'
+                                ? 'Promotion en priorité'
+                                : bookingPricing.priority === 'SPECIAL_PRICE_FIRST'
+                                  ? 'Prix spécial en priorité'
+                                  : 'Réductions cumulées'}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Prix de base */}
+                    <div className='space-y-2'>
+                      <div className='flex justify-between items-start'>
+                        <div className='flex-1 pr-2'>
+                          {totalSavings > 0 ? (
+                            <div className='space-y-1'>
+                              <div className='text-xs text-gray-400 line-through'>
+                                Prix d'origine : {formatCurrency(subtotal + totalSavings, 'EUR', 0)}
+                              </div>
+                              <div className='text-sm sm:text-base text-green-600 font-medium'>
+                                {nights} nuit{nights > 1 ? 's' : ''} (avec réductions)
+                              </div>
+                            </div>
+                          ) : (
+                            <span className='text-gray-600 text-sm sm:text-base'>
+                              {formatCurrency(parseFloat(product.basePrice), 'EUR')} × {nights} nuit
+                              {nights > 1 ? 's' : ''}
+                            </span>
+                          )}
+                        </div>
+                        <span className='font-medium text-sm sm:text-base flex-shrink-0'>
+                          {formatCurrency(subtotal, 'EUR', 0)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Options supplémentaires */}
+                    {extrasCost > 0 && (
+                      <div className='space-y-2'>
+                        <div className='flex justify-between items-start'>
+                          <span className='text-gray-600 text-sm sm:text-base flex-1 pr-2'>
+                            Options supplémentaires
+                          </span>
+                          <span className='font-medium text-sm sm:text-base flex-shrink-0'>
+                            +{formatCurrency(extrasCost, 'EUR')}
+                          </span>
+                        </div>
+                        <div className='text-xs text-gray-500 pl-4'>
+                          Détails affichés dans l&apos;étape précédente
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Frais de service détaillés */}
+                    <div className='bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2'>
+                      <div className='flex justify-between items-start'>
+                        <div className='flex-1 pr-2'>
+                          <span className='text-blue-800 text-sm sm:text-base font-medium'>
+                            Frais de service Hosteed
+                          </span>
+                          {priceCalculation?.breakdown && (
+                            <div className='text-xs text-blue-600 mt-1'>
+                              {priceCalculation.breakdown.clientCommissionRate > 0 && (
+                                <div>
+                                  • {formatNumber(priceCalculation.breakdown.clientCommissionRate * 100, 1)}% du montant
+                                </div>
+                              )}
+                              {priceCalculation.breakdown.clientCommissionFixed > 0 && (
+                                <div>
+                                  • {formatCurrency(priceCalculation.breakdown.clientCommissionFixed, 'EUR')} de frais fixes
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <span className='font-medium text-sm sm:text-base flex-shrink-0 text-blue-800'>
+                          {formatCurrency(serviceFee, 'EUR', 0)}
+                        </span>
+                      </div>
+                      <div className='text-xs text-blue-600'>
+                        Ces frais permettent de faire vivre la plateforme et d&apos;assurer un service de qualité
+                      </div>
+                    </div>
+
+                    {/* Sous-total avant frais */}
+                    <div className='flex justify-between items-center text-sm border-t pt-3'>
+                      <span className='text-gray-600'>Sous-total</span>
+                      <span className='font-medium'>
+                        {formatCurrency(subtotal + extrasCost, 'EUR', 0)}
                       </span>
                     </div>
 
-                    {extrasCost > 0 && (
-                      <div className='flex justify-between items-start'>
-                        <span className='text-gray-600 text-sm sm:text-base flex-1 pr-2'>
-                          Options supplémentaires
-                        </span>
-                        <span className='font-medium text-sm sm:text-base flex-shrink-0'>
-                          +{formatCurrency(extrasCost, 'EUR')}
-                        </span>
-                      </div>
-                    )}
-                    <div className='flex justify-between items-start'>
-                      <span className='text-gray-600 text-sm sm:text-base flex-1 pr-2'>
-                        Frais de service
-                      </span>
-                      <span className='font-medium text-sm sm:text-base flex-shrink-0'>
-                        {formatCurrency(serviceFee, 'EUR', 0)}
-                      </span>
-                    </div>
-                    <div className='border-t pt-4'>
+                    {/* Total final */}
+                    <div className='border-t-2 pt-4'>
                       <div className='flex justify-between text-lg sm:text-xl font-bold'>
-                        <span>Total</span>
-                        <span>{formatCurrency(total, 'EUR', 0)}</span>
+                        <span>Total à payer</span>
+                        <span className='text-green-600'>{formatCurrency(total, 'EUR', 0)}</span>
                       </div>
                     </div>
                   </>
@@ -629,20 +857,22 @@ export default function ReservationPage() {
                     <Button
                       onClick={handleNextStep}
                       disabled={
-                        step === 3 &&
-                        (!formData.firstName ||
-                          !formData.lastName ||
-                          !formData.email ||
-                          !formData.phone)
+                        validationErrors.length > 0 ||
+                        (step === 3 &&
+                          (!formData.firstName ||
+                            !formData.lastName ||
+                            !formData.email ||
+                            !formData.phone))
                       }
-                      className='w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-3 sm:py-4 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base'
+                      className='w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-3 sm:py-4 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none'
                     >
                       {step === 2 ? 'Continuer' : step === 3 ? 'Finaliser' : 'Continuer'}
                     </Button>
                   ) : (
                     <Button
                       onClick={handleSubmit}
-                      className='w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-3 sm:py-4 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base'
+                      disabled={validationErrors.length > 0}
+                      className='w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-3 sm:py-4 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none'
                     >
                       <CreditCard className='w-4 h-4 mr-2' />
                       Procéder au paiement

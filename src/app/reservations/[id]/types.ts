@@ -73,6 +73,28 @@ export interface Reservation {
   status: RentStatus
   confirmed: boolean
   product: Product
+  // New pricing fields
+  numberOfNights: number | null
+  basePricePerNight: number | null
+  subtotal: number | null
+  promotionApplied: boolean
+  specialPriceApplied: boolean
+  discountAmount: number | null
+  totalSavings: number | null
+  extrasTotal: number | null
+  clientCommission: number | null
+  hostCommission: number | null
+  platformAmount: number | null
+  hostAmount: number | null
+  totalAmount: number | null
+  pricingSnapshot: unknown
+  options?: Array<{
+    id: string
+    name: string
+    price: bigint
+    type: bigint
+    productId: string
+  }>
 }
 
 export interface ReservationDetails {

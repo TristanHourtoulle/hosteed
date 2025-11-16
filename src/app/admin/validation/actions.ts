@@ -42,7 +42,7 @@ export async function getValidationStats() {
 export async function getProductForValidation(productId: string) {
   try {
     const productIncludeConfig = {
-      user: {
+      owner: {
         select: {
           id: true,
           name: true,
@@ -138,6 +138,7 @@ export async function getProductForValidation(productId: string) {
       hotel: {
         select: {
           id: true,
+          name: true,
           userId: true,
         },
       },

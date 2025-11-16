@@ -11,18 +11,46 @@ interface ShareButtonProps {
 export function ShareButton({ className }: ShareButtonProps) {
   const handleShare = async () => {
     try {
-      if (typeof window === 'undefined' || !navigator.clipboard) {
-        throw new Error('Clipboard not available')
+      // Check if we're in a browser environment
+      if (typeof window === 'undefined') {
+        throw new Error('Not in browser environment')
       }
-      await navigator.clipboard.writeText(window.location.href)
-      toast.success('Lien copié dans le presse-papier !', {
-        description: 'Vous pouvez maintenant le partager avec vos amis.',
-      })
+
+      const url = window.location.href
+
+      // Try clipboard API first
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(url)
+        toast.success('Lien copié dans le presse-papier !')
+        return
+      }
+
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea')
+      textArea.value = url
+      textArea.style.position = 'fixed'
+      textArea.style.left = '-999999px'
+      textArea.style.top = '-999999px'
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+
+      try {
+        const successful = document.execCommand('copy')
+        textArea.remove()
+
+        if (successful) {
+          toast.success('Lien copié dans le presse-papier !')
+        } else {
+          throw new Error('execCommand failed')
+        }
+      } catch (err) {
+        textArea.remove()
+        throw err
+      }
     } catch (err) {
-      toast.error('Impossible de copier le lien', {
-        description: "Veuillez réessayer ou copier l'URL manuellement.",
-      })
-      console.error(err)
+      console.error('Share error:', err)
+      toast.error('Impossible de copier le lien')
     }
   }
 

@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useQuery, useQueries } from '@tanstack/react-query'
 import { CACHE_TAGS } from '@/lib/cache/query-client'
@@ -97,11 +97,11 @@ interface Product {
   }>
 }
 
-interface Suggestion {
-  display_name: string
-  lat: string
-  lon: string
-}
+// interface Suggestion {
+//   display_name: string
+//   lat: string
+//   lon: string
+// }
 
 interface FilterState {
   selectedSecurities: string[]
@@ -157,7 +157,8 @@ export function useProductSearchPaginated() {
   // Search state
   const [searchTerm, setSearchTerm] = useState(searchQuery)
   const [location, setLocation] = useState(searchQuery)
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [gpsCoordinates, setGpsCoordinates] = useState<{ lat: number; lng: number } | null>(null)
+  // const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [selectedType, setSelectedType] = useState(typeRentId)
   const [guests, setGuests] = useState(1)
@@ -172,7 +173,7 @@ export function useProductSearchPaginated() {
     setLocation(searchQuery)
   }, [searchQuery])
 
-  const searchTimeout = useRef<NodeJS.Timeout | undefined>(undefined)
+  // const searchTimeout = useRef<NodeJS.Timeout | undefined>(undefined)
 
   // Filter state
   const [filters, setFilters] = useState<FilterState>({
@@ -258,6 +259,12 @@ export function useProductSearchPaginated() {
       ...filters,
       // Convert guests to filter format
       ...(guests > 1 && { minPeople: guests.toString() }),
+      // Add GPS coordinates if available
+      ...(gpsCoordinates && {
+        lat: gpsCoordinates.lat,
+        lon: gpsCoordinates.lng,
+        radius: 30,
+      }),
     }),
     [
       currentPage,
@@ -271,6 +278,7 @@ export function useProductSearchPaginated() {
       promo,
       filters,
       guests,
+      gpsCoordinates,
     ]
   )
 
@@ -294,6 +302,18 @@ export function useProductSearchPaginated() {
       if (popular) searchURL.searchParams.set('popular', 'true')
       if (recent) searchURL.searchParams.set('recent', 'true')
       if (promo) searchURL.searchParams.set('promo', 'true')
+
+      // Add GPS coordinates if available (30km radius search from Google Places)
+      console.log('[SEARCH HOOK] GPS Coordinates:', gpsCoordinates)
+      if (gpsCoordinates) {
+        console.log('[SEARCH HOOK] Adding GPS params to URL:', {
+          lat: gpsCoordinates.lat,
+          lng: gpsCoordinates.lng,
+        })
+        searchURL.searchParams.set('lat', gpsCoordinates.lat.toString())
+        searchURL.searchParams.set('lon', gpsCoordinates.lng.toString())
+        searchURL.searchParams.set('radius', '30') // 30km radius
+      }
 
       // Add filter parameters
       if (filters.minPrice) searchURL.searchParams.set('minPrice', filters.minPrice)
@@ -357,30 +377,30 @@ export function useProductSearchPaginated() {
     // Les produits et les filtres se chargent indépendamment
   })
 
-  // Location suggestions with debounce
-  useEffect(() => {
-    if (location.length < 3) {
-      setSuggestions([])
-      return
-    }
+  // Location suggestions with debounce - DISABLED (using Google Places instead)
+  // useEffect(() => {
+  //   if (location.length < 3) {
+  //     setSuggestions([])
+  //     return
+  //   }
 
-    if (searchTimeout.current) {
-      clearTimeout(searchTimeout.current)
-    }
+  //   if (searchTimeout.current) {
+  //     clearTimeout(searchTimeout.current)
+  //   }
 
-    searchTimeout.current = setTimeout(async () => {
-      try {
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=5`
-        )
-        const data = await response.json()
-        setSuggestions(data)
-        setShowSuggestions(true)
-      } catch (error) {
-        console.error('Error fetching suggestions:', error)
-      }
-    }, 300)
-  }, [location])
+  //   searchTimeout.current = setTimeout(async () => {
+  //     try {
+  //       const response = await fetch(
+  //         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=5`
+  //       )
+  //       const data = await response.json()
+  //       setSuggestions(data)
+  //       setShowSuggestions(true)
+  //     } catch (error) {
+  //       console.error('Error fetching suggestions:', error)
+  //     }
+  //   }, 300)
+  // }, [location])
 
   // Search functions
   const handleSearch = useCallback((term: string) => {
@@ -389,9 +409,28 @@ export function useProductSearchPaginated() {
   }, [])
 
   const handleModernSearch = useCallback(
-    (data: { location: string; checkIn: string; checkOut: string; guests: number }) => {
+    (data: {
+      location: string
+      checkIn: string
+      checkOut: string
+      guests: number
+      lat?: number
+      lng?: number
+    }) => {
+      console.log('[HANDLE MODERN SEARCH] Received data:', data)
       setLocation(data.location)
       setSearchTerm(data.location) // Also search by location term
+      // Store GPS coordinates if provided (from Google Places selection)
+      if (data.lat !== undefined && data.lng !== undefined) {
+        console.log('[HANDLE MODERN SEARCH] Setting GPS coordinates:', {
+          lat: data.lat,
+          lng: data.lng,
+        })
+        setGpsCoordinates({ lat: data.lat, lng: data.lng })
+      } else {
+        console.log('[HANDLE MODERN SEARCH] No GPS coordinates, resetting')
+        setGpsCoordinates(null) // Reset if manual search
+      }
       if (data.checkIn) {
         setFilters(prev => ({ ...prev, arrivingDate: data.checkIn }))
       }
@@ -484,7 +523,7 @@ export function useProductSearchPaginated() {
     // Search state
     searchTerm,
     location,
-    suggestions,
+    // suggestions,
     showSuggestions,
     selectedType,
     typeRent,

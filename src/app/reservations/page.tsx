@@ -19,6 +19,7 @@ import {
   Loader,
   HourglassIcon,
   MessageCircle,
+  Receipt,
 } from 'lucide-react'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Card, CardContent } from '@/components/ui/shadcnui/card'
@@ -394,6 +395,12 @@ export default function ReservationsPage() {
 
                     {/* Action buttons */}
                     <div className='space-y-2'>
+                      <Button asChild className='w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700'>
+                        <Link href={`/reservations/${rent.id}`}>
+                          <Receipt className='w-4 h-4 mr-2' />
+                          Voir les détails et le prix
+                        </Link>
+                      </Button>
                       <Button variant='outline' asChild className='w-full'>
                         <Link href={`/host/${rent.productId}`}>
                           <Eye className='w-4 h-4 mr-2' />

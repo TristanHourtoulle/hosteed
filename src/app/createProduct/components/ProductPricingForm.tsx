@@ -3,20 +3,11 @@
 import { useState } from 'react'
 import { motion, Variants } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
+import NumberInput from '@/components/ui/NumberInput'
 import { Euro, Calendar, Plus } from 'lucide-react'
 import CreateSpecialPriceModal from '@/components/ui/CreateSpecialPriceModal'
 import CommissionDisplay from '@/components/ui/CommissionDisplay'
-
-interface SpecialPrice {
-  id: string
-  pricesMga: string
-  pricesEuro: string
-  day: string[]
-  startDate: Date | null
-  endDate: Date | null
-}
+import type { SpecialPrice } from '@/types/product-form'
 
 interface FormData {
   basePrice: string
@@ -29,10 +20,8 @@ interface ProductPricingFormProps {
   onInputChange: (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => void
-  onSpecialPriceCreated: () => void
+  onSpecialPriceCreated: (specialPrice: Omit<SpecialPrice, 'id'>) => void
   onRemoveSpecialPrice: (id: string) => void
-  isSubmitting: boolean
-  onSubmit: (e: React.FormEvent) => void
   itemVariants: Variants
 }
 
@@ -41,8 +30,6 @@ export default function ProductPricingForm({
   onInputChange,
   onSpecialPriceCreated,
   onRemoveSpecialPrice,
-  isSubmitting,
-  onSubmit,
   itemVariants,
 }: ProductPricingFormProps) {
   const [specialPriceModalOpen, setSpecialPriceModalOpen] = useState(false)
@@ -50,6 +37,14 @@ export default function ProductPricingForm({
   // Format day names for display
   const formatDayNames = (days: string[]) => {
     const dayNames: { [key: string]: string } = {
+      Monday: 'Lun',
+      Tuesday: 'Mar',
+      Wednesday: 'Mer',
+      Thursday: 'Jeu',
+      Friday: 'Ven',
+      Saturday: 'Sam',
+      Sunday: 'Dim',
+      // Legacy format support
       MONDAY: 'Lun',
       TUESDAY: 'Mar',
       WEDNESDAY: 'Mer',
@@ -85,16 +80,14 @@ export default function ProductPricingForm({
                 <label htmlFor='basePrice' className='text-sm font-medium text-slate-700'>
                   Prix de base par nuit (EUR) *
                 </label>
-                <Input
+                <NumberInput
                   id='basePrice'
                   name='basePrice'
-                  type='number'
-                  min='1'
-                  step='0.01'
                   placeholder='Ex: 85.00'
                   value={formData.basePrice}
                   onChange={onInputChange}
                   required
+                  allowDecimals={true}
                   className='border-slate-200 focus:border-yellow-300 focus:ring-yellow-200'
                 />
               </div>
@@ -103,15 +96,13 @@ export default function ProductPricingForm({
                 <label htmlFor='basePriceMGA' className='text-sm font-medium text-slate-700'>
                   Prix de base par nuit (MGA)
                 </label>
-                <Input
+                <NumberInput
                   id='basePriceMGA'
                   name='basePriceMGA'
-                  type='number'
-                  min='0'
-                  step='1'
-                  placeholder='Ex: 385000'
+                  placeholder='Ex: 385 000'
                   value={formData.basePriceMGA}
                   onChange={onInputChange}
+                  allowDecimals={false}
                   className='border-slate-200 focus:border-yellow-300 focus:ring-yellow-200'
                 />
               </div>
@@ -182,53 +173,6 @@ export default function ProductPricingForm({
             <div className='mt-6'>
               <CommissionDisplay basePrice={parseFloat(formData.basePrice) || 0} />
             </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Submit Section */}
-      <motion.div variants={itemVariants}>
-        <Card className='border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50'>
-          <CardHeader>
-            <CardTitle className='flex items-center gap-3 text-orange-800'>
-              🏡 Finalisation de votre annonce
-            </CardTitle>
-          </CardHeader>
-          <CardContent className='space-y-6'>
-            <div className='bg-white/60 rounded-lg p-6 border border-orange-200'>
-              <h3 className='font-semibold text-orange-900 mb-3'>Avant de publier</h3>
-              <ul className='text-sm text-orange-800 space-y-2'>
-                <li className='flex items-center gap-2'>
-                  <span className='w-2 h-2 bg-orange-500 rounded-full'></span>
-                  Vérifiez que toutes les informations sont exactes
-                </li>
-                <li className='flex items-center gap-2'>
-                  <span className='w-2 h-2 bg-orange-500 rounded-full'></span>
-                  Assurez-vous d&apos;avoir ajouté des photos de qualité
-                </li>
-                <li className='flex items-center gap-2'>
-                  <span className='w-2 h-2 bg-orange-500 rounded-full'></span>
-                  Votre annonce sera soumise à validation avant publication
-                </li>
-              </ul>
-            </div>
-
-            <Button
-              type='submit'
-              size='lg'
-              disabled={isSubmitting}
-              onClick={onSubmit}
-              className='w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold py-3 text-base shadow-lg'
-            >
-              {isSubmitting ? (
-                <div className='flex items-center gap-2'>
-                  <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white'></div>
-                  Création en cours...
-                </div>
-              ) : (
-                'Créer mon hébergement'
-              )}
-            </Button>
           </CardContent>
         </Card>
       </motion.div>

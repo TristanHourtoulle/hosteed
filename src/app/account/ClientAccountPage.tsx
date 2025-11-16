@@ -11,6 +11,7 @@ import { Favorite, Product, Rent } from '@prisma/client'
 import AccountLoading from './loading'
 import { Calendar, Heart, User, Plus, Star, Home } from 'lucide-react'
 import { motion } from 'framer-motion'
+import Link from 'next/link'
 
 type Tab = 'reservations' | 'favoris' | 'profil'
 
@@ -194,10 +195,13 @@ export default function ClientAccountPage({ initialTab = 'reservations' }: Clien
                         Gérez vos réservations et découvrez vos prochaines aventures
                       </p>
                     </div>
-                    <button className='inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors'>
+                    <Link
+                      href='/host'
+                      className='inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors'
+                    >
                       <Plus className='w-4 h-4' />
                       Nouveau voyage
-                    </button>
+                    </Link>
                   </div>
                   <ReservationsList reservations={user.Rent} />
                 </motion.div>

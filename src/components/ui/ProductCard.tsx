@@ -320,7 +320,11 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
-              className='absolute top-3 left-3 z-10 bg-black/35 backdrop-blur-md rounded-lg px-2.5 py-1.5 flex items-center gap-1'
+              className={`absolute z-10 bg-black/35 backdrop-blur-md rounded-lg px-2.5 py-1.5 flex items-center gap-1 ${
+                hasActivePromotion || isSponsored
+                  ? 'top-3 right-14' // Position à droite mais en laissant de la place pour le coeur
+                  : 'top-3 left-3'
+              }`}
             >
               <div className='flex items-center gap-2'>
                 <div className='flex items-center gap-1'>

@@ -4,7 +4,6 @@ import {
   getExternalCalendar,
   saveEventMapping,
   getCalendarEventMappings,
-  applyEventMappings,
 } from '@/lib/services/centralized-calendar.service'
 
 /**

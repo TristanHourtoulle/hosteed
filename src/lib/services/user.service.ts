@@ -113,7 +113,7 @@ export async function findUserById(id: string) {
             },
           },
         },
-        Product: true,
+        ownedProducts: true,
       },
       omit: {
         password: true,

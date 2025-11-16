@@ -25,6 +25,13 @@ function truncateText(text: string, maxLength: number) {
   return strippedText.substring(0, maxLength) + '...'
 }
 
+function estimateReadingTime(content: string): number {
+  const wordsPerMinute = 200
+  const words = content.split(/\s+/).length
+  const readingTime = Math.ceil(words / wordsPerMinute)
+  return readingTime
+}
+
 type SortOption = 'recent' | 'old' | 'az' | 'za'
 
 export default function PostsPage() {
@@ -33,16 +40,24 @@ export default function PostsPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState<SortOption>('recent')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [hasNext, setHasNext] = useState(false)
+  const [hasPrev, setHasPrev] = useState(false)
   const { data: session } = useSession()
 
   const canCreatePost = session?.user?.roles === 'ADMIN' || session?.user?.roles === 'BLOGWRITER'
 
   useEffect(() => {
     async function fetchPosts() {
-      const res = await getPost()
-      if (Array.isArray(res)) {
-        setPosts(res)
-        setFilteredPosts(res)
+      setLoading(true)
+      const res = await getPost({ page: currentPage, limit: 12 })
+      if (res && res.posts) {
+        setPosts(res.posts)
+        setFilteredPosts(res.posts)
+        setTotalPages(res.pagination.totalPages)
+        setHasNext(res.pagination.hasNext)
+        setHasPrev(res.pagination.hasPrev)
       } else {
         setPosts([])
         setFilteredPosts([])
@@ -50,7 +65,7 @@ export default function PostsPage() {
       setLoading(false)
     }
     fetchPosts()
-  }, [])
+  }, [currentPage])
 
   useEffect(() => {
     let sorted = [...posts]
@@ -187,49 +202,80 @@ export default function PostsPage() {
               )}
             </div>
           ) : (
-            <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-8'>
-              {regularPosts.map(post => (
-                <article
-                  key={post.id}
-                  className='group relative flex flex-col bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100'
-                >
-                  <div className='relative h-64 w-full overflow-hidden rounded-t-2xl'>
-                    <Image
-                      src={post.image || '/placeholder.jpg'}
-                      alt={post.title}
-                      fill
-                      className='object-cover transition-transform duration-300 group-hover:scale-105'
-                    />
-                  </div>
-                  <div className='flex-1 p-6'>
-                    <h3 className='text-xl font-semibold text-gray-900 mb-3 line-clamp-2'>
-                      {post.title}
-                    </h3>
-                    <p className='text-gray-600 mb-4 line-clamp-3'>
-                      {truncateText(post.content, 150)}
-                    </p>
-                    <div className='flex items-center justify-between text-sm text-gray-500'>
-                      <div className='flex items-center'>
-                        <Clock className='h-4 w-4 mr-1' />
-                        <span>5 min de lecture</span>
-                      </div>
-                      <div className='flex items-center'>
-                        <Calendar className='h-4 w-4 mr-1' />
-                        <span>
-                          {format(new Date(post.createdAt), 'dd MMM yyyy', { locale: fr })}
-                        </span>
+            <>
+              <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-8'>
+                {regularPosts.map(post => (
+                  <article
+                    key={post.id}
+                    className='group relative flex flex-col bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100'
+                  >
+                    <div className='relative h-64 w-full overflow-hidden rounded-t-2xl'>
+                      <Image
+                        src={post.image || '/placeholder.jpg'}
+                        alt={post.title}
+                        fill
+                        className='object-cover transition-transform duration-300 group-hover:scale-105'
+                      />
+                    </div>
+                    <div className='flex-1 p-6'>
+                      <h3 className='text-xl font-semibold text-gray-900 mb-3 line-clamp-2'>
+                        {post.title}
+                      </h3>
+                      <p className='text-gray-600 mb-4 line-clamp-3'>
+                        {truncateText(post.content, 150)}
+                      </p>
+                      <div className='flex items-center justify-between text-sm text-gray-500'>
+                        <div className='flex items-center'>
+                          <Clock className='h-4 w-4 mr-1' />
+                          <span>{estimateReadingTime(post.content)} min de lecture</span>
+                        </div>
+                        <div className='flex items-center'>
+                          <Calendar className='h-4 w-4 mr-1' />
+                          <span>
+                            {format(new Date(post.createdAt), 'dd MMM yyyy', { locale: fr })}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <Link
-                    href={`/posts/article/${post.slug || post.id}`}
-                    className='absolute inset-0'
+                    <Link
+                      href={`/posts/article/${post.slug || post.id}`}
+                      className='absolute inset-0'
+                    >
+                      <span className='sr-only'>Lire l&apos;article</span>
+                    </Link>
+                  </article>
+                ))}
+              </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className='mt-12 flex justify-center items-center gap-4'>
+                  <Button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={!hasPrev || loading}
+                    variant='outline'
+                    className='flex items-center gap-2'
                   >
-                    <span className='sr-only'>Lire l&apos;article</span>
-                  </Link>
-                </article>
-              ))}
-            </div>
+                    <ChevronRight className='h-4 w-4 rotate-180' />
+                    Précédent
+                  </Button>
+                  <div className='flex items-center gap-2'>
+                    <span className='text-sm text-gray-600'>
+                      Page {currentPage} sur {totalPages}
+                    </span>
+                  </div>
+                  <Button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={!hasNext || loading}
+                    variant='outline'
+                    className='flex items-center gap-2'
+                  >
+                    Suivant
+                    <ChevronRight className='h-4 w-4' />
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

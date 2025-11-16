@@ -18,13 +18,13 @@ interface Product {
   basePrice: string
   validate: ProductValidation
   img?: { img: string }[]
-  user: {
+  owner: {
     id: string
     name?: string | null
     lastname?: string | null
     email: string
     image?: string | null
-  }[]
+  }
   // Nouvelles métadonnées pour le contexte de validation
   isRecentlyModified?: boolean
   wasRecheckRequested?: boolean
@@ -80,12 +80,12 @@ function ProductValidationCard({ product, currentUserId, onUpdate }: ProductVali
 
   // Memoize user display name to prevent recalculation
   const userDisplayName = useMemo(() => {
-    const user = product.user[0]
+    const user = product.owner
     if (user?.name && user?.lastname) {
       return `${user.name} ${user.lastname}`
     }
     return user?.email || 'Utilisateur inconnu'
-  }, [product.user])
+  }, [product.owner])
 
   // Memoize whether validation actions should be shown
   const showValidationActions = useMemo(() => {
@@ -259,9 +259,9 @@ const arePropsEqual = (
     }
   }
 
-  // Check if user data changed (focus on first user which is displayed)
-  const prevUser = prevProduct.user[0]
-  const nextUser = nextProduct.user[0]
+  // Check if user data changed
+  const prevUser = prevProduct.owner
+  const nextUser = nextProduct.owner
 
   if (
     prevUser?.id !== nextUser?.id ||

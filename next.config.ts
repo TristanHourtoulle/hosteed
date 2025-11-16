@@ -96,11 +96,9 @@ const nextConfig: NextConfig = {
         },
       }
 
-      // Add performance budgets
+      // Disable performance warnings for cleaner build output
       config.performance = {
-        maxAssetSize: 100000, // 100KB
-        maxEntrypointSize: 250000, // 250KB
-        hints: 'warning',
+        hints: false,
       }
     }
 
@@ -109,6 +107,8 @@ const nextConfig: NextConfig = {
 
   // Headers for performance
   async headers() {
+    const isDev = process.env.NODE_ENV === 'development'
+
     return [
       {
         source: '/(.*)',
@@ -121,6 +121,13 @@ const nextConfig: NextConfig = {
             key: 'X-Content-Type-Options',
             value: 'nosniff',
           },
+          // Pas de cache navigateur pour les pages HTML
+          {
+            key: 'Cache-Control',
+            value: isDev
+              ? 'no-store, no-cache, must-revalidate, proxy-revalidate'
+              : 'no-cache, must-revalidate', // Toujours revalider en prod aussi
+          },
         ],
       },
       {
@@ -128,7 +135,10 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, s-maxage=300, stale-while-revalidate=600',
+            // Cache très court (30s) en prod pour les API - permet de réduire la charge tout en gardant les données fraîches
+            value: isDev
+              ? 'no-store, no-cache, must-revalidate'
+              : 'public, max-age=30, stale-while-revalidate=60',
           },
         ],
       },
@@ -137,7 +147,18 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
+            // Les fichiers JS/CSS peuvent être cachés longtemps (ils ont un hash unique)
+            value: isDev ? 'no-cache, must-revalidate' : 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        source: '/uploads/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            // Cache court pour les images uploadées (peuvent changer)
+            value: isDev ? 'no-cache' : 'public, max-age=3600, must-revalidate',
           },
         ],
       },

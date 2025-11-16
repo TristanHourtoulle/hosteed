@@ -9,7 +9,7 @@ import {
 import { MapPin, Loader2 } from 'lucide-react'
 
 interface CityAutocompleteProps {
-  onCitySelect?: (city: GooglePlacePrediction) => void
+  onCitySelect?: (city: GooglePlacePrediction, coordinates?: { lat: number; lng: number }) => void
   onInputChange?: (value: string) => void // Nouvelle prop pour la saisie libre
   placeholder?: string
   className?: string
@@ -17,6 +17,7 @@ interface CityAutocompleteProps {
   defaultValue?: string
   countryFilter?: string
   allowFreeInput?: boolean // Nouvelle prop pour permettre la saisie libre
+  types?: string[] // Types de recherche Google Places (ex: ['(cities)'], ['geocode'], ['address'])
 }
 
 export function CityAutocomplete({
@@ -28,6 +29,7 @@ export function CityAutocomplete({
   defaultValue = '',
   countryFilter,
   allowFreeInput = false,
+  types = ['(cities)'], // Par défaut, recherche de villes
 }: CityAutocompleteProps) {
   const [inputValue, setInputValue] = useState(defaultValue)
   const [suggestions, setSuggestions] = useState<GooglePlacePrediction[]>([])
@@ -57,7 +59,7 @@ export function CityAutocomplete({
       try {
         let results = await getCitySuggestions({
           input,
-          types: ['(cities)'],
+          types,
           language: 'fr',
           country: countryFilter,
           sessionToken: sessionTokenRef.current,
@@ -67,7 +69,7 @@ export function CityAutocomplete({
         if (countryFilter && results.length < 3) {
           const globalResults = await getCitySuggestions({
             input,
-            types: ['(cities)'],
+            types,
             language: 'fr',
             // Pas de filtre pays pour la recherche mondiale
             sessionToken: sessionTokenRef.current,
@@ -94,7 +96,7 @@ export function CityAutocomplete({
         setLoading(false)
       }
     },
-    [countryFilter]
+    [countryFilter, types]
   )
 
   // Debounce la recherche
@@ -120,14 +122,32 @@ export function CityAutocomplete({
 
   // Gérer la sélection d'une ville
   const handleCitySelect = useCallback(
-    (city: GooglePlacePrediction) => {
+    async (city: GooglePlacePrediction) => {
       setInputValue(city.description)
       setShowSuggestions(false)
       setSuggestions([])
       setSelectedIndex(-1)
-      if (onCitySelect) {
-        onCitySelect(city)
+
+      // Récupérer les coordonnées GPS via l'API Google Places Details
+      try {
+        const details = await googleSuggestionService.getPlaceDetails({
+          placeId: city.place_id,
+          fields: ['geometry'],
+          sessionToken: sessionTokenRef.current,
+        })
+
+        const coordinates = details?.geometry?.location
+        if (onCitySelect) {
+          onCitySelect(city, coordinates)
+        }
+      } catch (error) {
+        console.error('Error fetching place details:', error)
+        // Call onCitySelect without coordinates if error
+        if (onCitySelect) {
+          onCitySelect(city)
+        }
       }
+
       // Si on permet la saisie libre, notifier aussi le parent
       if (allowFreeInput && onInputChange) {
         onInputChange(city.description)

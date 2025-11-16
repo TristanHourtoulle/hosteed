@@ -8,6 +8,10 @@ import { Card, CardContent, CardFooter } from '@/components/ui/shadcnui/card'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Bed, MapPin, Euro } from 'lucide-react'
 import { Product } from '@prisma/client'
+import {
+  getValidationStatusLabel,
+  getValidationStatusVariant,
+} from '@/lib/utils/productValidation'
 
 interface ProductCardProps {
   product: Product & {
@@ -36,10 +40,10 @@ export function ProductCard({ product }: ProductCardProps) {
             />
           )}
           <Badge
-            variant={product.validate === 'Approve' ? 'default' : 'secondary'}
+            variant={getValidationStatusVariant(product.validate)}
             className='absolute top-2 right-2 z-10'
           >
-            {product.validate}
+            {getValidationStatusLabel(product.validate)}
           </Badge>
         </div>
 

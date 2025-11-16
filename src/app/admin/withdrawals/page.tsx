@@ -501,7 +501,7 @@ export default function AdminWithdrawalsPage() {
 
             {selectedHost && hostBalance && (
               <div className='bg-blue-50 border border-blue-200 rounded-lg p-4'>
-                <p className='text-sm font-medium text-blue-900 mb-2'>Solde de l'hôte</p>
+                <p className='text-sm font-medium text-blue-900 mb-2'>Solde de l&apos;hôte</p>
                 <div className='grid grid-cols-3 gap-2 text-sm'>
                   <div>
                     <p className='text-blue-600'>Total gagné</p>
@@ -821,7 +821,7 @@ export default function AdminWithdrawalsPage() {
                       <option value='MONEYGRAM'>MoneyGram</option>
                     </select>
                     <p className='text-xs text-gray-500 mt-1'>
-                      Note : Le compte de paiement de l'hôte sera utilisé s'il existe, sinon un
+                      Note : Le compte de paiement de l&apos;hôte sera utilisé s&apos;il existe, sinon un
                       nouveau sera créé.
                     </p>
                   </div>

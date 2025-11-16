@@ -10,6 +10,7 @@ interface PaymentInfoCardProps {
   prices: PayablePrices | null
   updating: boolean
   onPaymentRequest: (type: PaymentStatus) => void
+  showSensitiveInfo?: boolean
 }
 
 export default function PaymentInfoCard({
@@ -17,6 +18,7 @@ export default function PaymentInfoCard({
   prices,
   updating,
   onPaymentRequest,
+  showSensitiveInfo = false,
 }: PaymentInfoCardProps) {
   const paymentAmounts = calculatePaymentAmounts(rent)
 
@@ -44,38 +46,55 @@ export default function PaymentInfoCard({
       </div>
 
       <div className='p-6 space-y-4'>
-        <div className='bg-blue-50 rounded-xl p-4 border border-blue-100'>
-          <p className='text-sm font-medium text-blue-700 mb-2'>Prix total (sans commission)</p>
-          <p className='text-2xl font-bold text-blue-900'>
+        {/* Total dû à l'hôte */}
+        <div className='bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-5 border border-blue-200'>
+          <p className='text-sm font-medium text-blue-700 mb-2 flex items-center gap-2'>
+            <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
+              <path d='M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z' />
+              <path fillRule='evenodd' d='M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z' clipRule='evenodd' />
+            </svg>
+            Total dû à vous
+          </p>
+          <p className='text-3xl font-bold text-blue-900'>
             {prices ? formatCurrency(prices.totalPricesPayable) : '0 €'}
           </p>
+          <p className='text-xs text-blue-600 mt-1'>Commission déduite</p>
         </div>
 
-        <div className='bg-blue-50 rounded-xl p-4 border border-blue-100'>
-          <p className='text-sm font-medium text-blue-700 mb-2'>Prix disponible</p>
-          <p className='text-xl font-bold text-blue-900'>
-            {prices ? formatCurrency(prices.availablePrice) : '0 €'}
-          </p>
+        {/* Statut des paiements */}
+        <div className='grid grid-cols-3 gap-3'>
+          <div className='bg-green-50 rounded-lg p-3 border border-green-200'>
+            <p className='text-xs font-medium text-green-700 mb-1'>Reçu</p>
+            <p className='text-lg font-bold text-green-900'>
+              {prices ? formatCurrency(prices.transferredPrice) : '0 €'}
+            </p>
+          </div>
+
+          <div className='bg-orange-50 rounded-lg p-3 border border-orange-200'>
+            <p className='text-xs font-medium text-orange-700 mb-1'>En attente</p>
+            <p className='text-lg font-bold text-orange-900'>
+              {prices ? formatCurrency(prices.pendingPrice) : '0 €'}
+            </p>
+          </div>
+
+          <div className='bg-blue-50 rounded-lg p-3 border border-blue-200'>
+            <p className='text-xs font-medium text-blue-700 mb-1'>Disponible</p>
+            <p className='text-lg font-bold text-blue-900'>
+              {prices ? formatCurrency(prices.availablePrice) : '0 €'}
+            </p>
+          </div>
         </div>
 
-        <div className='bg-orange-50 rounded-xl p-4 border border-orange-100'>
-          <p className='text-sm font-medium text-orange-700 mb-2'>Prix en attente</p>
-          <p className='text-xl font-bold text-orange-900'>
-            {prices ? formatCurrency(prices.pendingPrice) : '0 €'}
-          </p>
-        </div>
-
-        <div className='bg-green-50 rounded-xl p-4 border border-green-100'>
-          <p className='text-sm font-medium text-green-700 mb-2'>Prix viré à l&apos;hébergeur</p>
-          <p className='text-xl font-bold text-green-900'>
-            {prices ? formatCurrency(prices.transferredPrice) : '0 €'}
-          </p>
-        </div>
-
-        <div className='bg-gray-50 rounded-xl p-4 border border-gray-100'>
-          <p className='text-sm font-medium text-gray-700 mb-2'>Commission</p>
-          <p className='text-xl font-bold text-gray-900'>
-            {formatPercentage((prices?.commission || 0) / 100)}
+        {/* Info message */}
+        <div className='bg-gray-50 rounded-lg p-3 border border-gray-200'>
+          <p className='text-xs text-gray-600 flex items-start gap-2'>
+            <svg className='w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0' fill='currentColor' viewBox='0 0 20 20'>
+              <path fillRule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z' clipRule='evenodd' />
+            </svg>
+            <span>
+              Le prix disponible représente ce que vous pouvez demander maintenant.
+              {rent.product?.contract && ' Avec un contrat, vous pouvez demander le paiement dès la réservation confirmée.'}
+            </span>
           </p>
         </div>
       </div>
@@ -99,14 +118,17 @@ export default function PaymentInfoCard({
           Demandes de paiement
         </h3>
 
-        <DebugSection rent={rent} prices={prices} calculatePaymentAmounts={() => paymentAmounts} />
+        {/* Debug Section - Only visible to admins and host managers */}
+        {showSensitiveInfo && (
+          <DebugSection rent={rent} prices={prices} calculatePaymentAmounts={() => paymentAmounts} />
+        )}
 
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+        <div className='flex flex-col gap-4'>
           {/* Demande de 50% */}
-          {rent?.payment !== PaymentStatus.MID_TRANSFER_REQ &&
-            rent?.payment !== PaymentStatus.MID_TRANSFER_DONE &&
-            rent?.payment !== PaymentStatus.FULL_TRANSFER_REQ &&
-            rent?.payment !== PaymentStatus.FULL_TRANSFER_DONE && (
+          {rent?.payment === PaymentStatus.CLIENT_PAID &&
+            (rent?.status === 'RESERVED' ||
+              rent?.status === 'CHECKIN' ||
+              rent?.product?.contract) && (
               <button
                 onClick={() => onPaymentRequest(PaymentStatus.MID_TRANSFER_REQ)}
                 disabled={updating}
@@ -158,10 +180,10 @@ export default function PaymentInfoCard({
           )}
 
           {/* Demande intégrale */}
-          {rent?.payment !== PaymentStatus.FULL_TRANSFER_REQ &&
-            rent?.payment !== PaymentStatus.FULL_TRANSFER_DONE &&
-            rent?.payment !== PaymentStatus.MID_TRANSFER_REQ &&
-            rent?.payment !== PaymentStatus.MID_TRANSFER_DONE && (
+          {rent?.payment === PaymentStatus.CLIENT_PAID &&
+            (rent?.status === 'RESERVED' ||
+              rent?.status === 'CHECKOUT' ||
+              rent?.product?.contract) && (
               <button
                 onClick={() => onPaymentRequest(PaymentStatus.FULL_TRANSFER_REQ)}
                 disabled={updating}

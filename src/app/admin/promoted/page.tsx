@@ -47,11 +47,11 @@ interface PromotedProduct {
     basePrice: string
     img?: { img: string }[]
     type: { name: string }
-    user: {
+    owner: {
       id: string
       name: string | null
       email: string
-    }[]
+    }
   }
 }
 
@@ -62,11 +62,11 @@ interface Product {
   basePrice: string
   img?: { img: string }[]
   type: { name: string }
-  user: {
+  owner: {
     id: string
     name: string | null
     email: string
-  }[]
+  }
 }
 
 export default function PromotedProductsAdmin() {

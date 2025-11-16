@@ -10,10 +10,13 @@ interface Product {
   basePrice: string
   priceMGA?: string
   availableRooms?: number
-  guest: number
-  bedroom: number
-  bed: number
-  bathroom: number
+  maxPeople?: number // ✅ Correct field name (not 'guest')
+  minPeople?: number
+  room?: number // ✅ Correct field name (not 'bedroom')
+  bathroom?: number
+  surface?: number // Surface en m²
+  phone?: string
+  phoneCountry?: string
   arriving: number
   leaving: number
   type?: { name: string; description: string }
@@ -28,12 +31,12 @@ interface Product {
     selfCheckInType?: string
   }
   propertyInfo?: {
-    hasStairs: boolean
-    hasElevator: boolean
-    hasHandicapAccess: boolean
-    hasPetsOnProperty: boolean
+    hasStairs?: boolean
+    hasElevator?: boolean
+    hasHandicapAccess?: boolean
+    hasPetsOnProperty?: boolean
     additionalNotes?: string
-  }
+  } | null
 }
 
 interface ComparisonViewProps {
@@ -164,24 +167,42 @@ export function ComparisonView({ draft, original }: ComparisonViewProps) {
     })
   }
 
-  if (draft.guest !== original.guest) {
-    const diff = getFieldDiff(draft.guest, original.guest)
-    differences.push({ label: "Nombre d'invités", diff, formatter: numberFormatter })
+  if (draft.maxPeople !== original.maxPeople) {
+    const diff = getFieldDiff(draft.maxPeople, original.maxPeople)
+    differences.push({ label: "Nombre d'invités max", diff, formatter: numberFormatter })
   }
 
-  if (draft.bedroom !== original.bedroom) {
-    const diff = getFieldDiff(draft.bedroom, original.bedroom)
+  if (draft.minPeople !== original.minPeople) {
+    const diff = getFieldDiff(draft.minPeople, original.minPeople)
+    differences.push({ label: "Nombre d'invités min", diff, formatter: numberFormatter })
+  }
+
+  if (draft.room !== original.room) {
+    const diff = getFieldDiff(draft.room, original.room)
     differences.push({ label: 'Nombre de chambres', diff, formatter: numberFormatter })
-  }
-
-  if (draft.bed !== original.bed) {
-    const diff = getFieldDiff(draft.bed, original.bed)
-    differences.push({ label: 'Nombre de lits', diff, formatter: numberFormatter })
   }
 
   if (draft.bathroom !== original.bathroom) {
     const diff = getFieldDiff(draft.bathroom, original.bathroom)
     differences.push({ label: 'Nombre de salles de bain', diff, formatter: numberFormatter })
+  }
+
+  if (draft.surface !== original.surface) {
+    const diff = getFieldDiff(draft.surface, original.surface)
+    differences.push({
+      label: 'Surface',
+      diff,
+      formatter: (v: string | number | boolean | null | undefined) => (v ? `${v}m²` : 'Non défini'),
+    })
+  }
+
+  if (draft.phone !== original.phone || draft.phoneCountry !== original.phoneCountry) {
+    const draftPhone = draft.phoneCountry ? `+${draft.phoneCountry} ${draft.phone}` : draft.phone
+    const originalPhone = original.phoneCountry
+      ? `+${original.phoneCountry} ${original.phone}`
+      : original.phone
+    const diff = getFieldDiff(draftPhone, originalPhone)
+    differences.push({ label: 'Téléphone', diff })
   }
 
   if (draft.arriving !== original.arriving) {

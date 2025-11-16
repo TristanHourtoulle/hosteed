@@ -7,7 +7,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
-import { useRouter } from 'next/navigation'
+
 import { Button } from '@/components/ui/shadcnui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -22,7 +22,7 @@ import { Badge } from '@/components/ui/shadcnui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/shadcnui/tabs'
 import { toast } from 'sonner'
 import { PaymentMethod, WithdrawalStatus } from '@prisma/client'
-import { formatCurrency, formatNumber } from '@/lib/utils/formatNumber'
+import { formatCurrency } from '@/lib/utils/formatNumber'
 import {
   Wallet,
   CreditCard,
@@ -81,9 +81,7 @@ export default function WithdrawalsPage() {
   const {
     session,
     isLoading: isAuthLoading,
-    isAuthenticated,
   } = useAuth({ required: true, redirectTo: '/auth' })
-  const router = useRouter()
 
   // States
   const [balance, setBalance] = useState<BalanceData | null>(null)
@@ -111,11 +109,11 @@ export default function WithdrawalsPage() {
   })
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (session?.user) {
       fetchBalance()
       fetchRequests()
     }
-  }, [isAuthenticated])
+  }, [session])
 
   const fetchBalance = async () => {
     try {

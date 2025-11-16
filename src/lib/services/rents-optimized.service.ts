@@ -10,7 +10,7 @@ export async function findAllRentsByUserIdWithProducts(userId: string) {
         product: {
           include: {
             img: true,
-            user: {
+            owner: {
               select: {
                 id: true,
                 name: true,
@@ -58,7 +58,7 @@ export async function findRentByIdWithFullDetails(rentId: string) {
         product: {
           include: {
             img: true,
-            user: {
+            owner: {
               select: {
                 id: true,
                 name: true,

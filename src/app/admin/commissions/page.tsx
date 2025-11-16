@@ -312,7 +312,7 @@ export default function CommissionsPage() {
           <CardHeader>
             <CardTitle className='text-yellow-800'>Types sans commission</CardTitle>
             <CardDescription>
-              Les types de logement suivants n'ont pas encore de commission configurée
+              Les types de logement suivants n&apos;ont pas encore de commission configurée
             </CardDescription>
           </CardHeader>
           <CardContent>

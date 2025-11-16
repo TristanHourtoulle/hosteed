@@ -59,24 +59,44 @@ export async function createPost(
   }
 }
 
-export async function getPost() {
+export async function getPost(options?: { page?: number; limit?: number }) {
   try {
-    const posts = await prisma.post.findMany({
-      include: {
-        author: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            roles: true,
+    const page = options?.page || 1
+    const limit = options?.limit || 12 // Default 12 posts per page
+    const skip = (page - 1) * limit
+
+    const [posts, total] = await Promise.all([
+      prisma.post.findMany({
+        include: {
+          author: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              roles: true,
+            },
           },
         },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        skip,
+        take: limit,
+      }),
+      prisma.post.count(),
+    ])
+
+    return {
+      posts,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNext: page < Math.ceil(total / limit),
+        hasPrev: page > 1,
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    })
-    return posts
+    }
   } catch (error) {
     console.error('Error getting posts:', error)
     return null

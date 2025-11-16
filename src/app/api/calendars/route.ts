@@ -9,7 +9,7 @@ import {
  * GET /api/calendars
  * Récupérer tous les calendriers externes d'un host
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await auth()
 

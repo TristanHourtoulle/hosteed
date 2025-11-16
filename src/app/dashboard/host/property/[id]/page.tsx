@@ -98,7 +98,6 @@ export default function PropertyDashboard() {
   const {
     session,
     isLoading: isAuthLoading,
-    isAuthenticated,
   } = useAuth({ required: true, redirectTo: '/auth' })
   const params = useParams()
   const productId = params.id as string

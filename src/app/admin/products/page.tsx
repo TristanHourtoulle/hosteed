@@ -5,10 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { isAdmin } from '@/hooks/useAdminAuth'
 import { Input } from '@/components/ui/shadcnui/input'
+import { Search } from 'lucide-react'
 import { motion } from 'framer-motion'
-import { Search, Plus } from 'lucide-react'
-import { Button } from '@/components/ui/shadcnui/button'
-import Link from 'next/link'
 import { ProductCard } from './components/ProductCard'
 import { useAdminProductsPaginated } from '@/hooks/useAdminPaginated'
 import Pagination from '@/components/ui/Pagination'
@@ -59,12 +57,6 @@ export default function ProductsPage() {
             <h1 className='text-2xl font-bold'>Gestion des Hébergements</h1>
             <p className='text-gray-500'>Gérez tous les hébergements de la plateforme</p>
           </div>
-          <Button variant='outline' asChild className='shrink-0'>
-            <Link href='/admin/products/new'>
-              <Plus className='h-4 w-4 mr-2' />
-              Ajouter
-            </Link>
-          </Button>
         </div>
 
         <div className='mb-6'>

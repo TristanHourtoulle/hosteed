@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       const product = await prisma.product.findFirst({
         where: {
           id: productId,
-          user: { some: { id: session.user.id } },
+          owner: { id: session.user.id },
         },
       })
 
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     const product = await prisma.product.findFirst({
       where: {
         id: productId,
-        user: { some: { id: session.user.id } },
+        owner: { id: session.user.id },
       },
     })
 

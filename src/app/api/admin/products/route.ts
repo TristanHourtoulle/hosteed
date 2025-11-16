@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
           type: {
             select: { id: true, name: true },
           },
-          user: {
+          owner: {
             select: { id: true, name: true, email: true },
           },
         },

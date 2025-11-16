@@ -42,7 +42,7 @@ export async function getActualProduct() {
             img: true,
             type: true,
             reviews: true,
-            user: {
+            owner: {
               select: {
                 id: true,
                 name: true,
@@ -68,7 +68,7 @@ export async function getAllPromotedProducts() {
           include: {
             img: true,
             type: true,
-            user: {
+            owner: {
               select: {
                 id: true,
                 name: true,
@@ -140,7 +140,7 @@ export async function getProductsAvailableForPromotion() {
       include: {
         img: true,
         type: true,
-        user: {
+        owner: {
           select: {
             id: true,
             name: true,

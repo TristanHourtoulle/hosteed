@@ -60,7 +60,6 @@ export default function CreatePostPage() {
   const {
     session,
     isLoading: isAuthLoading,
-    isAuthenticated,
   } = useAuth({ required: true, redirectTo: '/auth' })
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')

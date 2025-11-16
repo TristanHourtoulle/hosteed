@@ -18,6 +18,7 @@ import { getCityFromAddress } from '@/lib/utils'
 import { Tag, Power, PowerOff } from 'lucide-react'
 import CreateSpecialPriceModal from '@/components/ui/CreateSpecialPriceModal'
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer'
+import { getValidationStatusLabel } from '@/lib/utils/productValidation'
 
 interface ProductWithRelations extends Product {
   type?: {
@@ -346,12 +347,12 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               <h3 className='font-semibold text-gray-800'>Statut</h3>
               <span
                 className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  product.validate === 'Approve'
+                  product.validate === ProductValidation.Approve
                     ? 'bg-green-100 text-green-800 border border-green-200'
                     : 'bg-yellow-100 text-yellow-800 border border-yellow-200'
                 }`}
               >
-                {product.validate}
+                {getValidationStatusLabel(product.validate)}
               </span>
             </div>
           </div>

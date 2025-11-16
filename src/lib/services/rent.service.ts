@@ -173,32 +173,34 @@ export async function checkRentIsAvailable(
 
     // Sinon, utiliser la logique classique (une seule unité)
     // Vérifier s'il existe des réservations sur cette période
+    // Logique "nuit d'hôtel" : une réservation du 12 au 13 occupe la nuit du 12
+    // donc le 13 est libre pour une nouvelle arrivée
     const existingRents = await prisma.rent.findMany({
       where: {
         productId: productId,
         status: RentStatus.RESERVED,
         OR: [
-          // Réservation qui commence pendant la période
+          // Réservation qui commence pendant la période (arrivingDate < endDate car endDate est exclu)
           {
             arrivingDate: {
               gte: startDate,
-              lte: endDate,
+              lt: endDate,
             },
           },
-          // Réservation qui se termine pendant la période
+          // Réservation qui se termine pendant la période (leavingDate > startDate car on peut arriver le jour du départ)
           {
             leavingDate: {
-              gte: startDate,
-              lte: endDate,
+              gt: startDate,
+              lt: endDate,
             },
           },
           // Réservation qui englobe la période
           {
             arrivingDate: {
-              lte: startDate,
+              lt: startDate,
             },
             leavingDate: {
-              gte: endDate,
+              gt: endDate,
             },
           },
         ],
@@ -213,31 +215,33 @@ export async function checkRentIsAvailable(
     }
 
     // Vérifier s'il existe des périodes d'indisponibilité
+    // Logique "nuit d'hôtel" : un blocage du 12 au 13 bloque la nuit du 12
+    // donc le 13 est libre pour une nouvelle arrivée
     const existingUnavailable = await prisma.unAvailableProduct.findMany({
       where: {
         productId: productId,
         OR: [
-          // Période qui commence pendant la période demandée
+          // Période qui commence pendant la période demandée (startDate < endDate car endDate est exclu)
           {
             startDate: {
               gte: startDate,
-              lte: endDate,
+              lt: endDate,
             },
           },
-          // Période qui se termine pendant la période demandée
+          // Période qui se termine pendant la période demandée (endDate > startDate car on peut arriver le jour de fin)
           {
             endDate: {
-              gte: startDate,
-              lte: endDate,
+              gt: startDate,
+              lt: endDate,
             },
           },
           // Période qui englobe la période demandée
           {
             startDate: {
-              lte: startDate,
+              lt: startDate,
             },
             endDate: {
-              gte: endDate,
+              gt: endDate,
             },
           },
         ],
@@ -264,11 +268,7 @@ export async function findAllReservationsByHostId(hostId: string): Promise<Forma
     const rents = await prisma.rent.findMany({
       where: {
         product: {
-          user: {
-            some: {
-              id: hostId,
-            },
-          },
+          ownerId: hostId,
         },
       },
       include: {

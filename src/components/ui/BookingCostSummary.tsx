@@ -41,7 +41,7 @@ export default function BookingCostSummary({
   className = '',
   showCommissions = false,
 }: BookingCostSummaryProps) {
-  const currencySymbol = currency === 'EUR' ? '€' : 'Ar'
+  // const currencySymbol = currency === 'EUR' ? '€' : 'Ar'
   const [commissionCalc, setCommissionCalc] = useState<CommissionCalculation | null>(null)
 
   const bookingDetails = {
