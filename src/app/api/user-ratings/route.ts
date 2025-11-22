@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     const rent = await prisma.rent.findUnique({
       where: { id: rentId },
       include: {
-        product: { select: { userManager: true } },
+        product: { select: { ownerId: true } },
         user: { select: { id: true } },
       },
     })
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
 
     // Vérifier les droits selon le type de notation
     let canRate = false
-    if (ratingType === 'HOST_TO_GUEST' && rent.product.userManager.toString() === session.user.id) {
+    if (ratingType === 'HOST_TO_GUEST' && rent.product.ownerId === session.user.id) {
       canRate = true // L'hôte peut noter l'invité
     } else if (ratingType === 'GUEST_TO_HOST' && rent.user.id === session.user.id) {
       canRate = true // L'invité peut noter l'hôte

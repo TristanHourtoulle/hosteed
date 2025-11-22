@@ -39,14 +39,14 @@ export async function POST(request: NextRequest) {
       const prisma = (await import('@/lib/prisma')).default
       const product = await prisma.product.findUnique({
         where: { id: productId },
-        select: { userManager: true },
+        select: { ownerId: true },
       })
 
       if (!product) {
         return NextResponse.json({ error: 'Produit non trouvé' }, { status: 404 })
       }
 
-      if (product.userManager.toString() !== session.user.id) {
+      if (product.ownerId !== session.user.id) {
         return NextResponse.json(
           { error: 'Vous ne pouvez créer des promotions que pour vos propres produits' },
           { status: 403 }
