@@ -209,6 +209,7 @@ export default function UsersPage() {
   const getRoleDisplayName = (role: string) => {
     const roleNames: { [key: string]: string } = {
       ADMIN: 'Administrateur',
+      HOST_MANAGER: 'Gestionnaire Hôtes',
       BLOGWRITER: 'Rédacteur Blog',
       HOST: 'Hôte',
       HOST_VERIFIED: 'Hôte Vérifié',
@@ -303,7 +304,7 @@ export default function UsersPage() {
             </Card>
           </motion.div>
 
-          {['ADMIN', 'HOST_VERIFIED', 'HOST', 'USER'].map(role => {
+          {['ADMIN', 'HOST_MANAGER', 'HOST_VERIFIED', 'HOST', 'USER'].map(role => {
             const count = users.filter(user => user.roles === role).length
             return (
               <motion.div key={role} variants={itemVariants}>
@@ -317,11 +318,13 @@ export default function UsersPage() {
                         <p className='text-gray-600 text-sm font-medium'>
                           {role === 'ADMIN'
                             ? 'Administrateurs'
-                            : role === 'HOST_VERIFIED'
-                              ? 'Hôtes Vérifiés'
-                              : role === 'HOST'
-                                ? 'Hôtes'
-                                : 'Utilisateurs'}
+                            : role === 'HOST_MANAGER'
+                              ? 'Gestionnaires Hôtes'
+                              : role === 'HOST_VERIFIED'
+                                ? 'Hôtes Vérifiés'
+                                : role === 'HOST'
+                                  ? 'Hôtes'
+                                  : 'Utilisateurs'}
                           {roleFilter === role && ' (Filtré)'}
                         </p>
                         <p className='text-2xl font-bold text-gray-900'>
@@ -629,6 +632,7 @@ export default function UsersPage() {
                     <SelectItem value='HOST'>🏠 Hôte</SelectItem>
                     <SelectItem value='HOST_VERIFIED'>✅ Hôte Vérifié</SelectItem>
                     <SelectItem value='BLOGWRITER'>✍️ Rédacteur Blog</SelectItem>
+                    <SelectItem value='HOST_MANAGER'>🎯 Gestionnaire Hôtes</SelectItem>
                     <SelectItem value='ADMIN'>👑 Administrateur</SelectItem>
                   </SelectContent>
                 </Select>

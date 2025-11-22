@@ -27,7 +27,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       include: {
         product: {
           select: {
-            userManager: true,
+            ownerId: true,
           },
         },
       },
@@ -40,7 +40,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     // Vérifier les permissions
     if (
       session.user.roles !== 'ADMIN' &&
-      promotion.product.userManager.toString() !== session.user.id
+      promotion.product.ownerId !== session.user.id
     ) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 403 })
     }
@@ -90,7 +90,7 @@ export async function DELETE(
       include: {
         product: {
           select: {
-            userManager: true,
+            ownerId: true,
           },
         },
       },
@@ -103,7 +103,7 @@ export async function DELETE(
     // Vérifier les permissions
     if (
       session.user.roles !== 'ADMIN' &&
-      promotion.product.userManager.toString() !== session.user.id
+      promotion.product.ownerId !== session.user.id
     ) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 403 })
     }

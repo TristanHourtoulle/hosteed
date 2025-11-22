@@ -68,21 +68,26 @@ interface Product {
   name: string
   description: string
   address: string
+  latitude?: number
+  longitude?: number
   basePrice: string
   priceMGA?: string
   availableRooms?: number
-  guest: number
-  bedroom: number
-  bed: number
-  bathroom: number
+  room?: number // ✅ Correct field name (not 'bedroom')
+  bathroom?: number
   arriving: number
   leaving: number
   validate: ProductValidation
   isDraft?: boolean
   originalProductId?: string
   originalProduct?: Product
+  phone?: string
+  phoneCountry?: string
+  surface?: number // Surface en m²
+  minPeople?: number
+  maxPeople?: number
   img?: { img: string }[]
-  user: {
+  owner: {
     id: string
     name?: string | null
     lastname?: string | null
@@ -90,7 +95,7 @@ interface Product {
     image?: string | null
     profilePicture?: string | null
     profilePictureBase64?: string | null
-  }[]
+  }
   type?: { id: string; name: string; description: string }
   equipments?: { id: string; name: string; icon: string }[]
   mealsList?: { id: string; name: string }[]
@@ -114,13 +119,13 @@ interface Product {
   }[]
   transportOptions?: { name: string; description: string }[]
   propertyInfo?: {
-    hasStairs: boolean
-    hasElevator: boolean
-    hasHandicapAccess: boolean
-    hasPetsOnProperty: boolean
+    hasStairs?: boolean
+    hasElevator?: boolean
+    hasHandicapAccess?: boolean
+    hasPetsOnProperty?: boolean
     additionalNotes?: string
-  }
-  hotel?: { id: string; userId: string }
+  } | null
+  hotel?: { id: string; name: string }[] // ✅ Array because it's one-to-many
   includedServices?: { id: string; name: string; description: string | null; icon: string | null }[]
   extras?: {
     id: string

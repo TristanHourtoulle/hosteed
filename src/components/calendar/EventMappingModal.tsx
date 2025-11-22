@@ -269,7 +269,9 @@ export default function EventMappingModal({
                                   <p className='font-medium text-sm text-gray-900 truncate'>
                                     {product.name}
                                   </p>
-                                  <p className='text-xs text-gray-500 truncate'>{product.address}</p>
+                                  <p className='text-xs text-gray-500 truncate'>
+                                    {product.address}
+                                  </p>
                                 </div>
                               </button>
                             )

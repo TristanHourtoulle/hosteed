@@ -4,7 +4,7 @@ import React, { useMemo } from 'react'
 // Temporarily commented out for build compatibility
 // import { FixedSizeGrid, FixedSizeList } from 'react-window'
 import { useIntersectionObserver } from '@/hooks/useIntersectionObserver'
-import ProductCard from '@/components/ui/ProductCard'
+// import ProductCard from '@/components/ui/ProductCard'
 import { ProductGridSkeleton } from '@/components/ui/ProductCardSkeleton'
 
 /**
@@ -80,16 +80,16 @@ interface VirtualizedProductListProps {
 /**
  * Item component pour la virtualisation - optimisé pour ProductCard
  */
-interface GridItemProps {
-  columnIndex: number
-  rowIndex: number
-  style: React.CSSProperties
-  data: {
-    products: Product[]
-    columnCount: number
-    onItemVisible?: (index: number) => void
-  }
-}
+// interface GridItemProps {
+//   columnIndex: number
+//   rowIndex: number
+//   style: React.CSSProperties
+//   data: {
+//     products: Product[]
+//     columnCount: number
+//     onItemVisible?: (index: number) => void
+//   }
+// }
 
 // GridItem is reserved for future virtualization implementation
 /* const GridItemComponent: React.FC<GridItemProps> = ({ columnIndex, rowIndex, style, data }) => {
@@ -154,9 +154,9 @@ const VirtualizedProductGrid: React.FC<VirtualizedProductListProps> = ({
   height = 600, // Configuration Phase 5
   width = '100%',
   columnCount: forcedColumnCount,
-  columnWidth: forcedColumnWidth,
-  rowHeight: _rowHeight = 380, // Hauteur optimisée pour ProductCard (reserved for future virtualization)
-  onItemVisible,
+  // columnWidth: forcedColumnWidth,
+  // rowHeight: _rowHeight = 380, // Hauteur optimisée pour ProductCard (reserved for future virtualization)
+  // onItemVisible,
 }) => {
   const [containerRef, { isIntersecting: isNearEnd }] = useIntersectionObserver<HTMLDivElement>({
     threshold: 0.1,
@@ -167,18 +167,18 @@ const VirtualizedProductGrid: React.FC<VirtualizedProductListProps> = ({
   const dimensions = useResponsiveDimensions(typeof width === 'number' ? width : 1200)
 
   const columnCount = forcedColumnCount || dimensions.columnCount
-  const _columnWidth = forcedColumnWidth || dimensions.columnWidth
+  // const _columnWidth = forcedColumnWidth || dimensions.columnWidth
   const rowCount = Math.ceil(products.length / columnCount)
 
   // Données pour les items de la grille (reserved for future virtualization)
-  const _itemData = useMemo(
-    () => ({
-      products,
-      columnCount,
-      onItemVisible,
-    }),
-    [products, columnCount, onItemVisible]
-  )
+  // const _itemData = useMemo(
+  //   () => ({
+  //     products,
+  //     columnCount,
+  //     onItemVisible,
+  //   }),
+  //   [products, columnCount, onItemVisible]
+  // )
 
   // Charge la page suivante quand on approche de la fin
   React.useEffect(() => {
@@ -230,14 +230,14 @@ const VirtualizedProductGrid: React.FC<VirtualizedProductListProps> = ({
  * VirtualizedProductList - Liste virtualisée simple (1 colonne)
  * Utile pour les vues mobiles ou les listes étroites
  */
-interface ListItemProps {
-  index: number
-  style: React.CSSProperties
-  data: {
-    products: Product[]
-    onItemVisible?: (index: number) => void
-  }
-}
+// interface ListItemProps {
+//   index: number
+//   style: React.CSSProperties
+//   data: {
+//     products: Product[]
+//     onItemVisible?: (index: number) => void
+//   }
+// }
 
 // ListItem is reserved for future virtualization implementation
 /* const ListItemComponent: React.FC<ListItemProps> = ({ index, style, data }) => {
@@ -275,21 +275,21 @@ const VirtualizedProductList: React.FC<VirtualizedProductListProps> = ({
   loadNextPage,
   height = 600,
   width = '100%',
-  rowHeight: _rowHeight2 = 380, // Reserved for future virtualization
-  onItemVisible,
+  // rowHeight: _rowHeight2 = 380, // Reserved for future virtualization
+  // onItemVisible,
 }) => {
   const [containerRef, { isIntersecting: isNearEnd }] = useIntersectionObserver<HTMLDivElement>({
     threshold: 0.1,
     rootMargin: '200px',
   })
 
-  const _itemData2 = useMemo(
-    () => ({
-      products,
-      onItemVisible,
-    }),
-    [products, onItemVisible]
-  )
+  // const _itemData2 = useMemo(
+  //   () => ({
+  //     products,
+  //     onItemVisible,
+  //   }),
+  //   [products, onItemVisible]
+  // )
 
   React.useEffect(() => {
     if (isNearEnd && hasNextPage && loadNextPage && !isLoading) {

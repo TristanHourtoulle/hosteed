@@ -138,14 +138,18 @@ model Product {
   id               String            @id @default(cuid())
   name             String
   description      String
-  address          String
+  address          String // Localisation Google Maps (visible sur l'annonce)
+  completeAddress  String? // Adresse complète manuelle (visible uniquement dans le mail de confirmation)
   basePrice        String
   priceMGA         String
   room             BigInt?
   bathroom         BigInt?
+  surface          BigInt? // Surface en m²
   arriving         Int
   leaving          Int
   autoAccept       Boolean
+  accessibility    Boolean           @default(false) // Accessible aux personnes à mobilité réduite
+  petFriendly      Boolean           @default(false) // Animaux acceptés
   equipement       BigInt?
   meal             BigInt?
   services         BigInt?
@@ -159,7 +163,7 @@ model Product {
   maxPeople        BigInt?
   commission       Int               @default(0)
   validate         ProductValidation @default(NotVerified)
-  userManager      BigInt
+  userManager      BigInt? // Deprecated: use ownerId instead
   typeId           String
   phone            String
   phoneCountry     String            @default("MG")
@@ -170,9 +174,10 @@ model Product {
   contract         Boolean           @default(false)
   sizeRoom         Int?
   availableRooms   Int? // Nombre de chambres disponibles pour les hôtels
+  ownerId          String // ID du propriétaire du produit
   options          Options[]
   type             TypeRent          @relation(fields: [typeId], references: [id])
-  user             User[]
+  owner            User              @relation("OwnedProducts", fields: [ownerId], references: [id], onDelete: Cascade)
   rents            Rent[]
   reviews          Review[]
   specificPrices   SpecificPrices[]
@@ -363,7 +368,7 @@ model Rent {
   numberPeople BigInt
   notes        BigInt
   accepted     Boolean
-  prices       BigInt
+  prices       BigInt // DEPRECATED: Use detailed price fields below
   arrivingDate DateTime
   leavingDate  DateTime
   payment      PaymentStatus @default(NOT_PAID)
@@ -381,6 +386,39 @@ model Rent {
   UserRating    UserRating[] // Nouvelle relation pour les notes bidirectionnelles
   extras        RentExtra[] // Relation avec les extras sélectionnés
 
+  // ============================================
+  // DETAILED PRICING BREAKDOWN
+  // ============================================
+  // Prix de base et nuitées
+  basePricePerNight Float? // Prix de base par nuit (€)
+  numberOfNights    Int? // Nombre de nuits
+  subtotal          Float? // Sous-total = basePricePerNight × numberOfNights (€)
+
+  // Réductions et promotions
+  discountAmount       Float? @default(0) // Montant total des réductions (€)
+  promotionApplied     Boolean @default(false) // Promotion appliquée ?
+  specialPriceApplied  Boolean @default(false) // Prix spécial appliqué ?
+  totalSavings         Float? @default(0) // Économies totales (€)
+
+  // Extras
+  extrasTotal Float? @default(0) // Total des extras sélectionnés (€)
+
+  // Commissions
+  clientCommission Float? @default(0) // Commission payée par le client (€)
+  hostCommission   Float? @default(0) // Commission déduite à l'hôte (€)
+  platformAmount   Float? @default(0) // Montant total pour la plateforme (€)
+  hostAmount       Float? @default(0) // Montant net pour l'hôte (€)
+
+  // Total final
+  totalAmount Float? // Prix total final payé par le client (€)
+
+  // Pricing snapshot for auditing (JSON with full daily breakdown)
+  pricingSnapshot Json? // Stores DailyPriceBreakdown[] for complete transparency
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Performance indexes
   @@index([userId])
   @@index([productId])
@@ -392,6 +430,8 @@ model Rent {
   @@index([productId, arrivingDate, leavingDate])
   @@index([userId, status])
   @@index([confirmed])
+  @@index([totalAmount])
+  @@index([createdAt])
 }
 
 model RentRejection {
@@ -525,7 +565,7 @@ model User {
   Authenticator Authenticator[]
   Rent          Rent[]
   sessions      Session[]
-  Product       Product[]
+  ownedProducts Product[]     @relation("OwnedProducts")
   Chat          Chat[]
   favorites     Favorite[]
 
@@ -801,6 +841,11 @@ model Post {
   author          User     @relation("AuthoredPosts", fields: [authorId], references: [id], onDelete: Cascade)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  // Performance indexes
+  @@index([createdAt(sort: Desc)])
+  @@index([authorId])
+  @@index([slug])
 }
 
 model SpecialPrices {

@@ -187,7 +187,7 @@ export async function findProductById(id: string) {
         discount: {
           take: 5, // ✅ Limite les réductions
         },
-        user: {
+        owner: {
           select: {
             name: true,
             email: true,
@@ -291,7 +291,7 @@ export async function findProductBySlugOrId(slugOrId: string) {
         options: { take: 10 },
         rents: { take: 5, orderBy: { id: 'desc' } },
         discount: { take: 5 },
-        user: { select: { name: true, email: true, image: true } },
+        owner: { select: { id: true, name: true, email: true, image: true } },
         securities: { take: 10 },
         includedServices: { take: 15 },
         extras: { take: 15 },
@@ -349,7 +349,7 @@ export async function findProductBySlugOrId(slugOrId: string) {
           options: { take: 10 },
           rents: { take: 5, orderBy: { id: 'desc' } },
           discount: { take: 5 },
-          user: { select: { name: true, email: true, image: true } },
+          owner: { select: { id: true, name: true, email: true, image: true } },
           securities: { take: 10 },
           includedServices: { take: 15 },
           extras: { take: 15 },
@@ -401,8 +401,17 @@ export async function findProductBySlugOrId(slugOrId: string) {
       const filteredSpecialPrices = filterActiveSpecialPrices(specialPrices)
       const productWithSpecialPrice = applySpecialPriceToProduct(product, filteredSpecialPrices)
 
+      // Convert BigInt fields to Number for JSON serialization
       return {
         ...productWithSpecialPrice,
+        room: 'room' in productWithSpecialPrice && productWithSpecialPrice.room ? Number(productWithSpecialPrice.room) : null,
+        bathroom: 'bathroom' in productWithSpecialPrice && productWithSpecialPrice.bathroom ? Number(productWithSpecialPrice.bathroom) : null,
+        surface: 'surface' in productWithSpecialPrice && productWithSpecialPrice.surface ? Number(productWithSpecialPrice.surface) : null,
+        minPeople: 'minPeople' in productWithSpecialPrice && productWithSpecialPrice.minPeople ? Number(productWithSpecialPrice.minPeople) : null,
+        maxPeople: 'maxPeople' in productWithSpecialPrice && productWithSpecialPrice.maxPeople ? Number(productWithSpecialPrice.maxPeople) : null,
+        categories: 'categories' in productWithSpecialPrice && productWithSpecialPrice.categories ? Number(productWithSpecialPrice.categories) : null,
+        availableRooms: 'availableRooms' in productWithSpecialPrice && productWithSpecialPrice.availableRooms ? Number(productWithSpecialPrice.availableRooms) : null,
+        sizeRoom: 'sizeRoom' in productWithSpecialPrice && productWithSpecialPrice.sizeRoom ? Number(productWithSpecialPrice.sizeRoom) : null,
         specialPrices: filteredSpecialPrices,
       }
     }
@@ -654,7 +663,7 @@ export async function findAllProductByHostIdPaginated(
       type: {
         select: { name: true, id: true },
       },
-      user: {
+      owner: {
         select: {
           id: true,
           name: true,
@@ -685,7 +694,7 @@ export async function findAllProductByHostIdPaginated(
       type: {
         select: { name: true, id: true },
       },
-      user: {
+      owner: {
         select: {
           id: true,
           name: true,
@@ -742,13 +751,7 @@ export async function findAllProductByHostIdPaginated(
     const [products, totalCount] = await Promise.all([
       prisma.product.findMany({
         where: {
-          user: {
-            some: {
-              id: {
-                equals: hostId,
-              },
-            },
-          },
+          ownerId: hostId,
           isDraft: false,
         },
         include:
@@ -763,13 +766,7 @@ export async function findAllProductByHostIdPaginated(
       }),
       prisma.product.count({
         where: {
-          user: {
-            some: {
-              id: {
-                equals: hostId,
-              },
-            },
-          },
+          ownerId: hostId,
           isDraft: false,
         },
       }),
@@ -841,7 +838,24 @@ export async function createProduct(data: CreateProductInput) {
       throw new Error('Prix obligatoires manquants: basePrice ou priceMGA')
     }
 
-    if (isNaN(Number(data.arriving)) || isNaN(Number(data.leaving))) {
+    // Convertir les heures du format HH:MM en nombre (si nécessaire)
+    const parseTimeToHour = (time: string | number | null | undefined, defaultHour: number): number => {
+      // Valeurs par défaut si null/undefined/empty
+      if (time === null || time === undefined || time === '') {
+        return defaultHour
+      }
+      if (typeof time === 'number') return time
+      if (typeof time === 'string' && time.includes(':')) {
+        const [hours] = time.split(':')
+        return parseInt(hours, 10)
+      }
+      return parseInt(String(time), 10)
+    }
+
+    const arrivingHour = parseTimeToHour(data.arriving, 15) // Défaut: 15h
+    const leavingHour = parseTimeToHour(data.leaving, 11) // Défaut: 11h
+
+    if (isNaN(arrivingHour) || isNaN(leavingHour)) {
       throw new Error("Heures d'arrivée et de départ invalides")
     }
 
@@ -914,15 +928,19 @@ export async function createProduct(data: CreateProductInput) {
         name: data.name,
         description: data.description,
         address: data.address,
+        completeAddress: data.completeAddress || null,
         longitude: Number(data.longitude),
         latitude: Number(data.latitude),
         basePrice: data.basePrice,
         priceMGA: data.priceMGA,
         room: data.room ? BigInt(data.room) : null,
         bathroom: data.bathroom ? BigInt(data.bathroom) : null,
-        arriving: Number(data.arriving),
-        leaving: Number(data.leaving),
-        autoAccept: false,
+        surface: data.surface ? BigInt(data.surface) : null,
+        arriving: arrivingHour,
+        leaving: leavingHour,
+        autoAccept: data.autoAccept || false,
+        accessibility: data.accessibility || false,
+        petFriendly: data.petFriendly || false,
         phone: data.phone || '',
         phoneCountry: data.phoneCountry || 'MG',
         proximityLandmarks: data.proximityLandmarks || [],
@@ -930,7 +948,6 @@ export async function createProduct(data: CreateProductInput) {
         maxPeople: data.maxPeople ? BigInt(data.maxPeople) : null,
         categories: BigInt(0),
         validate: ProductValidation.NotVerified,
-        userManager: BigInt(0),
         // Gestion du nombre de chambres disponibles pour les hôtels
         availableRooms: data.hotelInfo ? data.hotelInfo.availableRooms : null,
         // Champs SEO
@@ -939,9 +956,7 @@ export async function createProduct(data: CreateProductInput) {
         keywords: data.seoData?.keywords || null,
         slug: slug,
         type: { connect: { id: data.typeId } },
-        user: {
-          connect: data.userId.map(id => ({ id })),
-        },
+        owner: { connect: { id: Array.isArray(data.userId) ? data.userId[0] : data.userId } },
         equipments: {
           connect: validEquipmentIds.map(equipmentId => ({ id: equipmentId })),
         },
@@ -1157,12 +1172,12 @@ export async function createProduct(data: CreateProductInput) {
       },
     })
 
-    // Envoyer les emails aux administrateurs (non bloquant)
+    // Envoyer les emails aux administrateurs et host managers (non bloquant)
     try {
-      const admin = await findAllUserByRoles('ADMIN')
-      if (admin && admin.length > 0) {
+      const adminUsers = await findAllUserByRoles(['ADMIN', 'HOST_MANAGER'])
+      if (adminUsers && adminUsers.length > 0) {
         // Utiliser Promise.all pour gérer correctement les promesses
-        const emailPromises = admin.map(async user => {
+        const emailPromises = adminUsers.map(async user => {
           try {
             await sendTemplatedMail(
               user.email,
@@ -1175,7 +1190,7 @@ export async function createProduct(data: CreateProductInput) {
               }
             )
           } catch (emailError) {
-            console.error('Erreur envoi email admin:', emailError)
+            console.error('Erreur envoi email admin/host_manager:', emailError)
             // Ne pas faire échouer la création du produit pour un problème d'email
           }
         })
@@ -1186,7 +1201,7 @@ export async function createProduct(data: CreateProductInput) {
         })
       }
     } catch (adminError) {
-      console.error('Erreur lors de la récupération des admins:', adminError)
+      console.error('Erreur lors de la récupération des admins/host_managers:', adminError)
       // Ne pas faire échouer la création du produit
     }
 
@@ -1208,7 +1223,7 @@ export async function findProductByValidation(validationStatus: ProductValidatio
       },
       include: {
         img: true,
-        user: true,
+        owner: true,
       },
     })
     if (!request) return null
@@ -1225,27 +1240,25 @@ export async function validateProduct(id: string) {
       where: { id },
       data: { validate: ProductValidation.Approve },
       include: {
-        user: true,
+        owner: true,
         img: true,
       },
     })
     if (product) {
-      if (!product.user || !Array.isArray(product.user)) {
-        console.error('Les utilisateurs du produit ne sont pas disponibles')
+      if (!product.owner) {
+        console.error('Le propriétaire du produit n\'est pas disponible')
         return null
       }
-      product.user.map(async user => {
-        await sendTemplatedMail(
-          user.email,
-          'Votre annonce a été validée',
-          'annonce-approved.html',
-          {
-            name: user.name || '',
-            productName: product.name,
-            annonceUrl: process.env.NEXTAUTH_URL + '/host/' + product.id,
-          }
-        )
-      })
+      await sendTemplatedMail(
+        product.owner.email,
+        'Votre annonce a été validée',
+        'annonce-approved.html',
+        {
+          name: product.owner.name || '',
+          productName: product.name,
+          annonceUrl: process.env.NEXTAUTH_URL + '/host/' + product.id,
+        }
+      )
     }
 
     // Invalider le cache après validation
@@ -1264,25 +1277,23 @@ export async function rejectProduct(id: string) {
       where: { id },
       data: { validate: ProductValidation.Refused },
       include: {
-        user: true,
+        owner: true,
       },
     })
 
     if (product) {
-      if (!product.user || !Array.isArray(product.user)) {
-        console.error('Les utilisateurs du produit ne sont pas disponibles')
+      if (!product.owner) {
+        console.error('Le propriétaire du produit n\'est pas disponible')
         return null
       }
-      product.user.map(async user => {
-        await sendTemplatedMail(
-          user.email,
-          'Votre annonce a été rejetée',
-          'annonce-rejected.html',
-          {
-            productName: product.name,
-          }
-        )
-      })
+      await sendTemplatedMail(
+        product.owner.email,
+        'Votre annonce a été rejetée',
+        'annonce-rejected.html',
+        {
+          productName: product.name,
+        }
+      )
     }
 
     // Invalider le cache après rejet
@@ -1301,7 +1312,7 @@ export async function deleteRejectedProduct(id: string) {
     const product = await prisma.product.findUnique({
       where: { id },
       include: {
-        user: true,
+        owner: true,
       },
     })
 
@@ -1321,7 +1332,7 @@ export async function deleteRejectedProduct(id: string) {
     // Invalider le cache après suppression
     await invalidateProductCache(id)
 
-    return { success: true, productName: product.name, userEmails: product.user.map(u => u.email) }
+    return { success: true, productName: product.name, userEmails: [product.owner.email] }
   } catch (error) {
     console.error('Erreur lors de la suppression du produit rejeté:', error)
     return { success: false, error: error instanceof Error ? error.message : 'Erreur inconnue' }
@@ -1337,7 +1348,7 @@ export async function deleteMultipleRejectedProducts(ids: string[]) {
         validate: ProductValidation.Refused, // Sécurité supplémentaire
       },
       include: {
-        user: true,
+        owner: true,
       },
     })
 
@@ -1364,7 +1375,7 @@ export async function deleteMultipleRejectedProducts(ids: string[]) {
       success: true,
       deletedCount: deletedCount.count,
       productNames: products.map(p => p.name),
-      userEmails: [...new Set(products.flatMap(p => p.user.map(u => u.email)))], // Emails uniques
+      userEmails: [...new Set(products.map(p => p.owner.email))], // Emails uniques
     }
   } catch (error) {
     console.error('Erreur lors de la suppression en masse:', error)
@@ -1383,8 +1394,8 @@ export async function resubmitProductWithChange(
     basePrice: string
     room: number | null
     bathroom: number | null
-    arriving: number
-    leaving: number
+    arriving: number | string
+    leaving: number | string
     typeId: string
     securities: string[]
     equipments: string[]
@@ -1395,6 +1406,23 @@ export async function resubmitProductWithChange(
   hostId?: string
 ) {
   try {
+    // Convertir les heures du format HH:MM en nombre (si nécessaire)
+    const parseTimeToHour = (time: string | number | null | undefined, defaultHour: number): number => {
+      // Valeurs par défaut si null/undefined/empty
+      if (time === null || time === undefined || time === '') {
+        return defaultHour
+      }
+      if (typeof time === 'number') return time
+      if (typeof time === 'string' && time.includes(':')) {
+        const [hours] = time.split(':')
+        return parseInt(hours, 10)
+      }
+      return parseInt(String(time), 10)
+    }
+
+    const arrivingHour = parseTimeToHour(params.arriving, 15) // Défaut: 15h
+    const leavingHour = parseTimeToHour(params.leaving, 11) // Défaut: 11h
+
     // Récupérer le statut actuel avant la mise à jour
     const currentProduct = await prisma.product.findUnique({
       where: { id },
@@ -1423,8 +1451,8 @@ export async function resubmitProductWithChange(
         basePrice: params.basePrice,
         room: params.room ? BigInt(params.room) : null,
         bathroom: params.bathroom ? BigInt(params.bathroom) : null,
-        arriving: params.arriving,
-        leaving: params.leaving,
+        arriving: arrivingHour,
+        leaving: leavingHour,
         validate: newValidationStatus,
         type: { connect: { id: params.typeId } },
         equipments: {
@@ -1451,7 +1479,7 @@ export async function resubmitProductWithChange(
         servicesList: true,
         mealsList: true,
         options: true,
-        user: true,
+        owner: true,
       },
     })
 
@@ -1479,10 +1507,10 @@ export async function resubmitProductWithChange(
         })
       }
 
-      // Notifier les administrateurs
-      const admin = await findAllUserByRoles('ADMIN')
-      if (admin && admin.length > 0) {
-        const emailPromises = admin.map(async user => {
+      // Notifier les administrateurs et host managers
+      const adminUsers = await findAllUserByRoles(['ADMIN', 'HOST_MANAGER'])
+      if (adminUsers && adminUsers.length > 0) {
+        const emailPromises = adminUsers.map(async user => {
           try {
             await sendTemplatedMail(
               user.email,
@@ -1495,7 +1523,7 @@ export async function resubmitProductWithChange(
               }
             )
           } catch (emailError) {
-            console.error('Erreur envoi email admin modification:', emailError)
+            console.error('Erreur envoi email admin/host_manager modification:', emailError)
           }
         })
 
@@ -1535,7 +1563,7 @@ export async function createDraftProduct(originalProductId: string) {
         propertyInfo: true,
         options: true,
         typeRoom: true,
-        user: true,
+        owner: true,
       },
     })
 
@@ -1570,7 +1598,6 @@ export async function createDraftProduct(originalProductId: string) {
         maxPeople: originalProduct.maxPeople,
         commission: originalProduct.commission,
         validate: ProductValidation.NotVerified,
-        userManager: originalProduct.userManager,
         typeId: originalProduct.typeId,
         phone: originalProduct.phone,
         phoneCountry: originalProduct.phoneCountry,
@@ -1610,9 +1637,7 @@ export async function createDraftProduct(originalProductId: string) {
         highlights: {
           connect: originalProduct.highlights.map(highlight => ({ id: highlight.id })),
         },
-        user: {
-          connect: originalProduct.user.map(u => ({ id: u.id })),
-        },
+        ownerId: originalProduct.owner.id,
         nearbyPlaces: {
           create: originalProduct.nearbyPlaces.map(place => ({
             name: place.name,
@@ -1821,7 +1846,7 @@ export async function rejectDraftChanges(draftId: string, reason: string): Promi
     const draft = await prisma.product.findUnique({
       where: { id: draftId, isDraft: true },
       include: {
-        user: true,
+        owner: true,
       },
     })
 
@@ -1838,15 +1863,14 @@ export async function rejectDraftChanges(draftId: string, reason: string): Promi
     })
 
     // Send rejection email to host
-    if (draft.user && draft.user.length > 0) {
-      const host = draft.user[0]
+    if (draft.owner) {
       try {
         await sendTemplatedMail(
-          host.email,
+          draft.owner.email,
           'Votre demande de modification a été rejetée',
           'modification-rejected.html',
           {
-            name: host.name || 'Hébergeur',
+            name: draft.owner.name || 'Hébergeur',
             productName: draft.name,
             reason: reason,
             supportEmail: process.env.SUPPORT_EMAIL || 'support@hosteed.com',
@@ -1895,6 +1919,7 @@ interface UpdateProductInput {
   name?: string
   description?: string
   address?: string
+  completeAddress?: string | null
   longitude?: number | string
   latitude?: number | string
   basePrice?: string
@@ -2005,6 +2030,8 @@ export async function updateProduct(productId: string, data: UpdateProductInput)
     if (data.name !== undefined) updateData.name = data.name
     if (data.description !== undefined) updateData.description = data.description
     if (data.address !== undefined) updateData.address = data.address
+    if (data.completeAddress !== undefined)
+      updateData.completeAddress = data.completeAddress || null
     if (data.longitude !== undefined) updateData.longitude = Number(data.longitude)
     if (data.latitude !== undefined) updateData.latitude = Number(data.latitude)
     if (data.basePrice !== undefined) updateData.basePrice = data.basePrice

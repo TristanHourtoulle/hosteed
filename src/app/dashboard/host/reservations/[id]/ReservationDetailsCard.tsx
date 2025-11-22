@@ -3,9 +3,13 @@ import { formatDate } from './utils'
 
 interface ReservationDetailsCardProps {
   rent: RentWithDates
+  showSensitiveInfo?: boolean
 }
 
-export default function ReservationDetailsCard({ rent }: ReservationDetailsCardProps) {
+export default function ReservationDetailsCard({
+  rent,
+  showSensitiveInfo = false,
+}: ReservationDetailsCardProps) {
   return (
     <div className='bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden'>
       <div className='bg-gradient-to-r from-blue-50 to-indigo-50 p-6 border-b border-gray-100'>
@@ -76,6 +80,30 @@ export default function ReservationDetailsCard({ rent }: ReservationDetailsCardP
               </p>
               <p className='text-sm text-gray-500 mt-1'>{rent.user?.email || 'Non spécifié'}</p>
             </div>
+
+            <div className='bg-purple-50 rounded-xl p-4'>
+              <div className='flex items-center gap-3 mb-3'>
+                <svg
+                  className='w-5 h-5 text-purple-600'
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'
+                >
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={2}
+                    d='M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z'
+                  />
+                </svg>
+                <p className='text-sm font-medium text-purple-700'>Nombre de voyageurs</p>
+              </div>
+              <p className='text-lg font-semibold text-gray-900'>
+                {rent.numberPeople
+                  ? `${Number(rent.numberPeople)} ${Number(rent.numberPeople) > 1 ? 'personnes' : 'personne'}`
+                  : 'Non spécifié'}
+              </p>
+            </div>
           </div>
 
           <div className='space-y-6'>
@@ -122,8 +150,59 @@ export default function ReservationDetailsCard({ rent }: ReservationDetailsCardP
                 {rent.leavingDate ? formatDate(rent.leavingDate) : 'Non spécifiée'}
               </p>
             </div>
+
+            {rent.numberOfNights && (
+              <div className='bg-blue-50 rounded-xl p-4'>
+                <div className='flex items-center gap-3 mb-3'>
+                  <svg
+                    className='w-5 h-5 text-blue-600'
+                    fill='none'
+                    stroke='currentColor'
+                    viewBox='0 0 24 24'
+                  >
+                    <path
+                      strokeLinecap='round'
+                      strokeLinejoin='round'
+                      strokeWidth={2}
+                      d='M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z'
+                    />
+                  </svg>
+                  <p className='text-sm font-medium text-blue-700'>Durée du séjour</p>
+                </div>
+                <p className='text-lg font-semibold text-gray-900'>
+                  {rent.numberOfNights} {rent.numberOfNights > 1 ? 'nuits' : 'nuit'}
+                </p>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Stripe Payment ID - Only visible to admins and host managers */}
+        {showSensitiveInfo && rent.stripeId && (
+          <div className='mt-6 bg-yellow-50 rounded-xl p-4 border border-yellow-200'>
+            <div className='flex items-center gap-3'>
+              <svg
+                className='w-5 h-5 text-yellow-600'
+                fill='none'
+                stroke='currentColor'
+                viewBox='0 0 24 24'
+              >
+                <path
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                  strokeWidth={2}
+                  d='M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'
+                />
+              </svg>
+              <div className='flex-1'>
+                <p className='text-xs font-semibold text-yellow-700 flex items-center gap-1'>
+                  🔒 ID de paiement Stripe (sensible)
+                </p>
+                <p className='text-sm font-mono text-gray-900 mt-1'>{rent.stripeId}</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

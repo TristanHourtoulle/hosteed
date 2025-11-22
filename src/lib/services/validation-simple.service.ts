@@ -59,7 +59,7 @@ export const validationService = {
     }
 
     const lightweightIncludes = {
-      user: baseUserInclude,
+      owner: baseUserInclude,
       img: {
         take: 1, // CRITICAL: Only 1 image for admin validation lists
         select: {
@@ -70,7 +70,7 @@ export const validationService = {
     }
 
     const fullIncludes = {
-      user: baseUserInclude,
+      owner: baseUserInclude,
       img: {
         take: 5, // Maximum 5 images for validation detail view
         select: {
@@ -192,7 +192,7 @@ export const validationService = {
         product = await tx.product.findUnique({
           where: { id: currentProduct.originalProductId },
           include: {
-            user: {
+            owner: {
               select: {
                 email: true,
                 name: true,
@@ -207,7 +207,7 @@ export const validationService = {
           where: { id: productId },
           data: { validate: ProductValidation.Approve },
           include: {
-            user: {
+            owner: {
               select: {
                 email: true,
                 name: true,
@@ -239,9 +239,9 @@ export const validationService = {
       })
 
       // Envoyer un email de confirmation au hôte
-      if (product?.user[0]?.email) {
+      if (product?.owner?.email) {
         try {
-          const hostName = product.user[0].name || product.user[0].lastname || 'Cher hôte'
+          const hostName = product.owner.name || product.owner.lastname || 'Cher hôte'
           const emailSubject = `Votre annonce "${product.name}" a été approuvée !`
           const emailContent = `
             <h2>Félicitations ${hostName} !</h2>
@@ -251,7 +251,7 @@ export const validationService = {
             <p>Merci de faire confiance à Hosteed !</p>
           `
 
-          await SendMail(product.user[0].email, emailSubject, emailContent, true)
+          await SendMail(product.owner.email, emailSubject, emailContent, true)
         } catch (error) {
           console.error("Erreur lors de l'envoi de l'email d'approbation:", error)
         }
@@ -288,7 +288,7 @@ export const validationService = {
         product = await tx.product.findUnique({
           where: { id: productId },
           include: {
-            user: {
+            owner: {
               select: {
                 email: true,
                 name: true,
@@ -311,7 +311,7 @@ export const validationService = {
           where: { id: productId },
           data: { validate: ProductValidation.Refused },
           include: {
-            user: {
+            owner: {
               select: {
                 email: true,
                 name: true,
@@ -337,9 +337,9 @@ export const validationService = {
       }
 
       // Envoyer un email au hôte (seulement pour les produits non-draft)
-      if (!currentProduct.isDraft && product.user[0]?.email) {
+      if (!currentProduct.isDraft && product.owner?.email) {
         try {
-          const hostName = product.user[0].name || product.user[0].lastname || 'Cher hôte'
+          const hostName = product.owner.name || product.owner.lastname || 'Cher hôte'
           const emailSubject = `Votre annonce "${product.name}" a été refusée`
           const emailContent = `
             <h2>Bonjour ${hostName},</h2>
@@ -350,7 +350,7 @@ export const validationService = {
             <p>L'équipe Hosteed</p>
           `
 
-          await SendMail(product.user[0].email, emailSubject, emailContent, true)
+          await SendMail(product.owner.email, emailSubject, emailContent, true)
         } catch (error) {
           console.error("Erreur lors de l'envoi de l'email de refus:", error)
         }
@@ -378,7 +378,7 @@ export const validationService = {
         where: { id: productId },
         data: { validate: ProductValidation.RecheckRequest },
         include: {
-          user: {
+          owner: {
             select: {
               email: true,
               name: true,
@@ -400,9 +400,9 @@ export const validationService = {
       })
 
       // Envoyer un email au hôte
-      if (product.user[0]?.email) {
+      if (product.owner?.email) {
         try {
-          const hostName = product.user[0].name || product.user[0].lastname || 'Cher hôte'
+          const hostName = product.owner.name || product.owner.lastname || 'Cher hôte'
           const emailSubject = `Modifications requises pour votre annonce "${product.name}"`
           const emailContent = `
             <h2>Bonjour ${hostName},</h2>
@@ -413,7 +413,7 @@ export const validationService = {
             <p>Merci de votre compréhension,<br>L'équipe Hosteed</p>
           `
 
-          await SendMail(product.user[0].email, emailSubject, emailContent, true)
+          await SendMail(product.owner.email, emailSubject, emailContent, true)
         } catch (error) {
           console.error("Erreur lors de l'envoi de l'email de révision:", error)
         }

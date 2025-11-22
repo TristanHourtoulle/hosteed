@@ -25,11 +25,11 @@ interface PromotedProduct {
     img?: { img: string }[]
     type: { name: string }
     reviews?: { grade: number }[]
-    user: {
+    owner: {
       id: string
       name: string | null
       email: string
-    }[]
+    }
   }
 }
 

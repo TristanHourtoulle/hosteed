@@ -28,14 +28,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     // Verify product ownership
     const product = await prisma.product.findUnique({
       where: { id: productId },
-      select: { user: { select: { id: true } } },
+      select: { owner: { select: { id: true } } },
     })
 
     if (!product) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 })
     }
 
-    const isOwner = product.user.some(u => u.id === session.user.id)
+    const isOwner = product.owner?.id === session.user.id
     if (!isOwner) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
@@ -77,14 +77,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Verify product ownership
     const product = await prisma.product.findUnique({
       where: { id: productId },
-      select: { user: { select: { id: true } } },
+      select: { owner: { select: { id: true } } },
     })
 
     if (!product) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 })
     }
 
-    const isOwner = product.user.some(u => u.id === session.user.id)
+    const isOwner = product.owner?.id === session.user.id
     if (!isOwner) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }

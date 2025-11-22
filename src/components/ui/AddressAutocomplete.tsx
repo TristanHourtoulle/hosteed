@@ -63,7 +63,7 @@ export default function AddressAutocomplete({
   className = '',
   countryFilter = 'MG',
   onAddressSelect,
-  allowFreeInput = false,
+  // allowFreeInput = false,
 }: AddressAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<GooglePlacePrediction[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)

@@ -32,7 +32,7 @@ export async function findAllUserPaginated({
       _count: {
         select: {
           Rent: true,
-          Product: true,
+          ownedProducts: true, // Changed from Product to ownedProducts
         },
       },
     }
@@ -47,7 +47,7 @@ export async function findAllUserPaginated({
           leavingDate: true,
         },
       },
-      Product: {
+      ownedProducts: { // Changed from Product to ownedProducts
         select: {
           id: true,
           name: true,
@@ -113,7 +113,7 @@ export async function findUserById(id: string) {
             },
           },
         },
-        Product: true,
+        ownedProducts: true,
       },
       omit: {
         password: true,
@@ -150,11 +150,11 @@ export async function findUserByEmail(email: string) {
   }
 }
 
-export async function findAllUserByRoles(roles: UserRole) {
+export async function findAllUserByRoles(roles: UserRole | UserRole[]) {
   try {
     return await prisma.user.findMany({
       where: {
-        roles: roles,
+        roles: Array.isArray(roles) ? { in: roles } : roles,
       },
     })
   } catch (error) {

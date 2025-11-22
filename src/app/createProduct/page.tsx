@@ -26,10 +26,15 @@ import {
 } from 'lucide-react'
 
 // Import section components
-import { BasicInfoSection, LocationContactSection, ServiceSelectionSection } from './components'
+import {
+  BasicInfoSection,
+  LocationContactSection,
+  ServiceSelectionSection,
+  ProductCharacteristicsForm,
+  ProductPricingForm,
+} from './components'
 
 import { createProduct } from '@/lib/services/product.service'
-import { googleSuggestionService } from '@/lib/services/GoogleSuggestion.service'
 import CreateServiceModal from '@/components/ui/CreateServiceModal'
 import CreateExtraModal from '@/components/ui/CreateExtraModal'
 import CreateHighlightModal from '@/components/ui/CreateHighlightModal'
@@ -306,25 +311,9 @@ export default function CreateProductPage() {
     }
 
     try {
-      // Récupérer les coordonnées géographiques si un placeId est disponible
-      let latitude = 0
-      let longitude = 0
-
-      if (formData.placeId) {
-        try {
-          const placeDetails = await googleSuggestionService.getPlaceDetails({
-            placeId: formData.placeId,
-            fields: ['geometry'],
-          })
-
-          if (placeDetails?.geometry?.location) {
-            latitude = placeDetails.geometry.location.lat
-            longitude = placeDetails.geometry.location.lng
-            console.log('Coordonnées récupérées:', { latitude, longitude })
-          }
-        } catch (error) {
-          console.warn('Impossible de récupérer les coordonnées:', error)
-        }
+      // Les coordonnées sont déjà disponibles dans formData (récupérées lors de la sélection dans CityAutocomplete)
+      if (formData.latitude === 0 || formData.longitude === 0) {
+        console.warn('⚠️ Coordonnées GPS manquantes, le produit sera créé sans localisation précise')
       }
 
       // Déterminer l'utilisateur final (admin peut assigner à un autre utilisateur)
@@ -335,22 +324,28 @@ export default function CreateProductPage() {
       console.log('specialPrices state:', specialPrices)
       console.log('specialPrices length:', specialPrices.length)
 
-      // Étape 1: Créer le produit SANS les images pour obtenir un ID
+      // Étape 1: Créer le produit avec les coordonnées déjà disponibles
       const productData = {
         name: formData.name,
         description: formData.description,
         address: formData.address,
-        longitude: longitude,
-        latitude: latitude,
+        completeAddress: formData.completeAddress || null,
+        longitude: formData.longitude,
+        latitude: formData.latitude,
         basePrice: formData.basePrice,
         priceMGA: formData.priceMGA,
         room: formData.room ? Number(formData.room) : null,
         bathroom: formData.bathroom ? Number(formData.bathroom) : null,
-        arriving: Number(formData.arriving),
-        leaving: Number(formData.leaving),
+        surface: formData.surface ? Number(formData.surface) : null,
+        minPeople: formData.minPeople ? Number(formData.minPeople) : null,
+        maxPeople: formData.maxPeople ? Number(formData.maxPeople) : null,
+        arriving: formData.arriving, // Format HH:MM, sera converti côté serveur
+        leaving: formData.leaving, // Format HH:MM, sera converti côté serveur
+        autoAccept: formData.autoAccept || false,
+        accessibility: formData.accessibility || false,
+        petFriendly: formData.petFriendly || false,
         phone: formData.phone,
         phoneCountry: formData.phoneCountry || 'MG',
-        maxPeople: formData.maxPeople ? Number(formData.maxPeople) : null,
         typeId: formData.typeId,
         userId: [finalUserId],
         equipments: formData.equipmentIds,
@@ -508,92 +503,11 @@ export default function CreateProductPage() {
           />
 
           {/* Caractéristiques - Pleine largeur */}
-          <motion.div variants={itemVariants}>
-            <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm'>
-              <CardHeader className='space-y-2'>
-                <div className='flex items-center gap-2'>
-                  <div className='p-2 bg-purple-50 rounded-lg'>
-                    <Users className='h-5 w-5 text-purple-600' />
-                  </div>
-                  <div>
-                    <CardTitle className='text-xl'>Caractéristiques</CardTitle>
-                    <p className='text-slate-600 text-sm mt-1'>Les détails de votre hébergement</p>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className='space-y-6'>
-                <div className='grid grid-cols-2 gap-6'>
-                  <div className='space-y-2'>
-                    <label htmlFor='room' className='text-sm font-medium text-slate-700'>
-                      Chambres
-                    </label>
-                    <Input
-                      id='room'
-                      name='room'
-                      type='number'
-                      min='1'
-                      placeholder='1'
-                      value={formData.room}
-                      onChange={handleInputChange}
-                      className='border-slate-200 focus:border-purple-300 focus:ring-purple-200'
-                    />
-                  </div>
-
-                  <div className='space-y-2'>
-                    <label htmlFor='bathroom' className='text-sm font-medium text-slate-700'>
-                      Salles de bain
-                    </label>
-                    <Input
-                      id='bathroom'
-                      name='bathroom'
-                      type='number'
-                      min='1'
-                      placeholder='1'
-                      value={formData.bathroom}
-                      onChange={handleInputChange}
-                      className='border-slate-200 focus:border-purple-300 focus:ring-purple-200'
-                    />
-                  </div>
-                </div>
-
-                <div className='grid grid-cols-2 gap-6'>
-                  <div className='space-y-2'>
-                    <label htmlFor='arriving' className='text-sm font-medium text-slate-700'>
-                      Arrivée
-                    </label>
-                    <Input
-                      id='arriving'
-                      name='arriving'
-                      type='number'
-                      min='0'
-                      max='23'
-                      placeholder='14'
-                      value={formData.arriving}
-                      onChange={handleInputChange}
-                      className='border-slate-200 focus:border-purple-300 focus:ring-purple-200'
-                    />
-                  </div>
-
-                  <div className='space-y-2'>
-                    <label htmlFor='leaving' className='text-sm font-medium text-slate-700'>
-                      Départ
-                    </label>
-                    <Input
-                      id='leaving'
-                      name='leaving'
-                      type='number'
-                      min='0'
-                      max='23'
-                      placeholder='12'
-                      value={formData.leaving}
-                      onChange={handleInputChange}
-                      className='border-slate-200 focus:border-purple-300 focus:ring-purple-200'
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+          <ProductCharacteristicsForm
+            formData={formData as never}
+            onInputChange={handleInputChange}
+            itemVariants={itemVariants}
+          />
 
           {/* Configuration Hôtel - Affiché uniquement si c'est un hôtel */}
           {formData.isHotel && (
@@ -679,73 +593,33 @@ export default function CreateProductPage() {
           )}
 
           {/* Tarification - Pleine largeur */}
-          <motion.div variants={itemVariants}>
-            <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm'>
-              <CardHeader className='space-y-2'>
-                <div className='flex items-center gap-2'>
-                  <div className='p-2 bg-orange-50 rounded-lg'>
-                    <Euro className='h-5 w-5 text-orange-600' />
-                  </div>
-                  <div>
-                    <CardTitle className='text-xl'>Tarification</CardTitle>
-                    <p className='text-slate-600 text-sm mt-1'>Définissez vos prix et conditions</p>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className='space-y-6'>
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-                  <div className='space-y-2'>
-                    <label htmlFor='basePrice' className='text-sm font-medium text-slate-700'>
-                      Prix de base (€)
-                    </label>
-                    <Input
-                      id='basePrice'
-                      name='basePrice'
-                      type='number'
-                      min='0'
-                      step='0.01'
-                      placeholder='100.00'
-                      value={formData.basePrice}
-                      onChange={handleInputChange}
-                      required
-                      className='border-slate-200 focus:border-orange-300 focus:ring-orange-200'
-                    />
-                  </div>
-
-                  <div className='space-y-2'>
-                    <label htmlFor='priceMGA' className='text-sm font-medium text-slate-700'>
-                      Prix en MGA
-                    </label>
-                    <Input
-                      id='priceMGA'
-                      name='priceMGA'
-                      type='number'
-                      min='0'
-                      placeholder='400000'
-                      value={formData.priceMGA}
-                      onChange={handleInputChange}
-                      required
-                      className='border-slate-200 focus:border-orange-300 focus:ring-orange-200'
-                    />
-                  </div>
-                </div>
-
-                <div className='flex items-center space-x-2'>
-                  <input
-                    id='autoAccept'
-                    name='autoAccept'
-                    type='checkbox'
-                    checked={formData.autoAccept}
-                    onChange={handleInputChange}
-                    className='w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500'
-                  />
-                  <label htmlFor='autoAccept' className='text-sm font-medium text-slate-700'>
-                    Acceptation automatique des réservations
-                  </label>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+          <ProductPricingForm
+            formData={
+              {
+                basePrice: formData.basePrice,
+                basePriceMGA: formData.priceMGA,
+                specialPrices: specialPrices,
+              } as never
+            }
+            onInputChange={(
+              e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+            ) => {
+              // Map basePriceMGA back to priceMGA for the main formData
+              if (e.target.name === 'basePriceMGA') {
+                handleInputChange({
+                  ...e,
+                  target: { ...e.target, name: 'priceMGA' },
+                } as React.ChangeEvent<HTMLInputElement>)
+              } else {
+                handleInputChange(e)
+              }
+            }}
+            onSpecialPriceCreated={handleSpecialPriceCreated as never}
+            onRemoveSpecialPrice={(id: string) =>
+              setSpecialPrices(prev => prev.filter(sp => sp.id !== id))
+            }
+            itemVariants={itemVariants}
+          />
 
           {/* Équipements - Pleine largeur */}
           <ServiceSelectionSection
@@ -1279,40 +1153,6 @@ export default function CreateProductPage() {
               </CardHeader>
               <CardContent className='space-y-6'>
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-                  <div className='space-y-2'>
-                    <label htmlFor='surface' className='text-sm font-medium text-slate-700'>
-                      Surface (m²)
-                    </label>
-                    <Input
-                      id='surface'
-                      name='surface'
-                      type='number'
-                      min='1'
-                      placeholder='Ex: 85'
-                      value={formData.surface}
-                      onChange={handleInputChange}
-                      className='border-slate-200 focus:border-cyan-300 focus:ring-cyan-200'
-                    />
-                  </div>
-
-                  <div className='space-y-2'>
-                    <label htmlFor='maxPeople' className='text-sm font-medium text-slate-700'>
-                      Nombre max de personnes
-                    </label>
-                    <Input
-                      id='maxPeople'
-                      name='maxPeople'
-                      type='number'
-                      min='1'
-                      placeholder='Ex: 6'
-                      value={formData.maxPeople}
-                      onChange={handleInputChange}
-                      className='border-slate-200 focus:border-cyan-300 focus:ring-cyan-200'
-                    />
-                  </div>
-                </div>
-
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
                   <div className='flex items-center space-x-2'>
                     <input
                       id='accessibility'
@@ -1424,7 +1264,7 @@ export default function CreateProductPage() {
                     id='transportation'
                     name='transportation'
                     type='text'
-                    placeholder='Ex: Métro, Bus, Parking gratuit'
+                    placeholder='Bus, Taxi, Taxi moto, Cyclo pousse, Tuk tuk'
                     value={formData.transportation}
                     onChange={handleInputChange}
                     className='border-slate-200 focus:border-cyan-300 focus:ring-cyan-200'

@@ -5,7 +5,6 @@ import { ClientProviders } from '@/components/providers/ClientProviders'
 import Navbar from '@/components/ui/header/Navbar'
 import Footer from '@/components/ui/Footer'
 import { Toaster } from '@/components/ui/shadcnui/sonner'
-// import { PerformanceMonitor } from '@/components/PerformanceMonitor'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',

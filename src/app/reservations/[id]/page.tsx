@@ -6,7 +6,8 @@ import { getReservationDetails } from './actions'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Card, CardContent } from '@/components/ui/shadcnui/card'
 import { getProfileImageUrl } from '@/lib/utils'
-import PaymentDetailsSection from './PaymentDetailsSection'
+import GuestReservationDetailsCard from './GuestReservationDetailsCard'
+import GuestPricingDetailsCard from './GuestPricingDetailsCard'
 import {
   MapPin,
   Calendar,
@@ -338,8 +339,18 @@ export default async function ReservationDetailsPage({
             </CardContent>
           </Card>
 
-          {/* Payment Details */}
-          <PaymentDetailsSection reservationId={resolvedParams.id} />
+          {/* Reservation Details Cards */}
+          <div className='grid grid-cols-1 xl:grid-cols-3 gap-8'>
+            {/* Guest Reservation Details */}
+            <div className='xl:col-span-2'>
+              <GuestReservationDetailsCard reservation={reservation} />
+            </div>
+
+            {/* Pricing Details */}
+            <div>
+              <GuestPricingDetailsCard rent={reservation} />
+            </div>
+          </div>
         </div>
       </div>
     </div>

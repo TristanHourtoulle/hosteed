@@ -136,7 +136,7 @@ export async function createReview(params: {
     })
 
     const admins = await prisma.user.findMany({
-      where: { roles: 'ADMIN' },
+      where: { roles: { in: ['ADMIN', 'HOST_MANAGER'] } },
     })
 
     for (const admin of admins) {
@@ -162,7 +162,7 @@ export async function approveReview(id: string) {
           include: {
             product: {
               include: {
-                user: true,
+                owner: true,
               },
             },
           },
@@ -170,15 +170,13 @@ export async function approveReview(id: string) {
       },
     })
 
-    if (!review?.rentRelation?.product?.user) {
+    if (!review?.rentRelation?.product?.owner) {
       throw new Error('No review found or impossible to update')
     }
 
-    for (const user of review.rentRelation.product.user) {
-      await sendTemplatedMail(user.email, 'Nouvel avis posté !', 'new-review.html', {
-        reviewUrl: process.env.NEXTAUTH_URL + '/host/' + review.rentRelation.product.id,
-      })
-    }
+    await sendTemplatedMail(review.rentRelation.product.owner.email, 'Nouvel avis posté !', 'new-review.html', {
+      reviewUrl: process.env.NEXTAUTH_URL + '/host/' + review.rentRelation.product.id,
+    })
 
     return review
   } catch (error) {
