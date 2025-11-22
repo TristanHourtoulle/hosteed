@@ -1133,8 +1133,8 @@ async function notifyAdminOfRejection(
   }
 ) {
   try {
-    // Récupérer les administrateurs
-    const admins = await findAllUserByRoles('ADMIN')
+    // Récupérer les administrateurs et host managers
+    const admins = await findAllUserByRoles(['ADMIN', 'HOST_MANAGER'])
 
     if (admins) {
       for (const admin of admins) {

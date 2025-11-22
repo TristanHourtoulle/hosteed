@@ -136,7 +136,7 @@ export async function createReview(params: {
     })
 
     const admins = await prisma.user.findMany({
-      where: { roles: 'ADMIN' },
+      where: { roles: { in: ['ADMIN', 'HOST_MANAGER'] } },
     })
 
     for (const admin of admins) {

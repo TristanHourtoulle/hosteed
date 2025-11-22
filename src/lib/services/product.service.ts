@@ -401,8 +401,17 @@ export async function findProductBySlugOrId(slugOrId: string) {
       const filteredSpecialPrices = filterActiveSpecialPrices(specialPrices)
       const productWithSpecialPrice = applySpecialPriceToProduct(product, filteredSpecialPrices)
 
+      // Convert BigInt fields to Number for JSON serialization
       return {
         ...productWithSpecialPrice,
+        room: 'room' in productWithSpecialPrice && productWithSpecialPrice.room ? Number(productWithSpecialPrice.room) : null,
+        bathroom: 'bathroom' in productWithSpecialPrice && productWithSpecialPrice.bathroom ? Number(productWithSpecialPrice.bathroom) : null,
+        surface: 'surface' in productWithSpecialPrice && productWithSpecialPrice.surface ? Number(productWithSpecialPrice.surface) : null,
+        minPeople: 'minPeople' in productWithSpecialPrice && productWithSpecialPrice.minPeople ? Number(productWithSpecialPrice.minPeople) : null,
+        maxPeople: 'maxPeople' in productWithSpecialPrice && productWithSpecialPrice.maxPeople ? Number(productWithSpecialPrice.maxPeople) : null,
+        categories: 'categories' in productWithSpecialPrice && productWithSpecialPrice.categories ? Number(productWithSpecialPrice.categories) : null,
+        availableRooms: 'availableRooms' in productWithSpecialPrice && productWithSpecialPrice.availableRooms ? Number(productWithSpecialPrice.availableRooms) : null,
+        sizeRoom: 'sizeRoom' in productWithSpecialPrice && productWithSpecialPrice.sizeRoom ? Number(productWithSpecialPrice.sizeRoom) : null,
         specialPrices: filteredSpecialPrices,
       }
     }
@@ -829,7 +838,24 @@ export async function createProduct(data: CreateProductInput) {
       throw new Error('Prix obligatoires manquants: basePrice ou priceMGA')
     }
 
-    if (isNaN(Number(data.arriving)) || isNaN(Number(data.leaving))) {
+    // Convertir les heures du format HH:MM en nombre (si nécessaire)
+    const parseTimeToHour = (time: string | number | null | undefined, defaultHour: number): number => {
+      // Valeurs par défaut si null/undefined/empty
+      if (time === null || time === undefined || time === '') {
+        return defaultHour
+      }
+      if (typeof time === 'number') return time
+      if (typeof time === 'string' && time.includes(':')) {
+        const [hours] = time.split(':')
+        return parseInt(hours, 10)
+      }
+      return parseInt(String(time), 10)
+    }
+
+    const arrivingHour = parseTimeToHour(data.arriving, 15) // Défaut: 15h
+    const leavingHour = parseTimeToHour(data.leaving, 11) // Défaut: 11h
+
+    if (isNaN(arrivingHour) || isNaN(leavingHour)) {
       throw new Error("Heures d'arrivée et de départ invalides")
     }
 
@@ -910,8 +936,8 @@ export async function createProduct(data: CreateProductInput) {
         room: data.room ? BigInt(data.room) : null,
         bathroom: data.bathroom ? BigInt(data.bathroom) : null,
         surface: data.surface ? BigInt(data.surface) : null,
-        arriving: Number(data.arriving),
-        leaving: Number(data.leaving),
+        arriving: arrivingHour,
+        leaving: leavingHour,
         autoAccept: data.autoAccept || false,
         accessibility: data.accessibility || false,
         petFriendly: data.petFriendly || false,
@@ -922,7 +948,6 @@ export async function createProduct(data: CreateProductInput) {
         maxPeople: data.maxPeople ? BigInt(data.maxPeople) : null,
         categories: BigInt(0),
         validate: ProductValidation.NotVerified,
-        userManager: BigInt(0),
         // Gestion du nombre de chambres disponibles pour les hôtels
         availableRooms: data.hotelInfo ? data.hotelInfo.availableRooms : null,
         // Champs SEO
@@ -1147,12 +1172,12 @@ export async function createProduct(data: CreateProductInput) {
       },
     })
 
-    // Envoyer les emails aux administrateurs (non bloquant)
+    // Envoyer les emails aux administrateurs et host managers (non bloquant)
     try {
-      const admin = await findAllUserByRoles('ADMIN')
-      if (admin && admin.length > 0) {
+      const adminUsers = await findAllUserByRoles(['ADMIN', 'HOST_MANAGER'])
+      if (adminUsers && adminUsers.length > 0) {
         // Utiliser Promise.all pour gérer correctement les promesses
-        const emailPromises = admin.map(async user => {
+        const emailPromises = adminUsers.map(async user => {
           try {
             await sendTemplatedMail(
               user.email,
@@ -1165,7 +1190,7 @@ export async function createProduct(data: CreateProductInput) {
               }
             )
           } catch (emailError) {
-            console.error('Erreur envoi email admin:', emailError)
+            console.error('Erreur envoi email admin/host_manager:', emailError)
             // Ne pas faire échouer la création du produit pour un problème d'email
           }
         })
@@ -1176,7 +1201,7 @@ export async function createProduct(data: CreateProductInput) {
         })
       }
     } catch (adminError) {
-      console.error('Erreur lors de la récupération des admins:', adminError)
+      console.error('Erreur lors de la récupération des admins/host_managers:', adminError)
       // Ne pas faire échouer la création du produit
     }
 
@@ -1369,8 +1394,8 @@ export async function resubmitProductWithChange(
     basePrice: string
     room: number | null
     bathroom: number | null
-    arriving: number
-    leaving: number
+    arriving: number | string
+    leaving: number | string
     typeId: string
     securities: string[]
     equipments: string[]
@@ -1381,6 +1406,23 @@ export async function resubmitProductWithChange(
   hostId?: string
 ) {
   try {
+    // Convertir les heures du format HH:MM en nombre (si nécessaire)
+    const parseTimeToHour = (time: string | number | null | undefined, defaultHour: number): number => {
+      // Valeurs par défaut si null/undefined/empty
+      if (time === null || time === undefined || time === '') {
+        return defaultHour
+      }
+      if (typeof time === 'number') return time
+      if (typeof time === 'string' && time.includes(':')) {
+        const [hours] = time.split(':')
+        return parseInt(hours, 10)
+      }
+      return parseInt(String(time), 10)
+    }
+
+    const arrivingHour = parseTimeToHour(params.arriving, 15) // Défaut: 15h
+    const leavingHour = parseTimeToHour(params.leaving, 11) // Défaut: 11h
+
     // Récupérer le statut actuel avant la mise à jour
     const currentProduct = await prisma.product.findUnique({
       where: { id },
@@ -1409,8 +1451,8 @@ export async function resubmitProductWithChange(
         basePrice: params.basePrice,
         room: params.room ? BigInt(params.room) : null,
         bathroom: params.bathroom ? BigInt(params.bathroom) : null,
-        arriving: params.arriving,
-        leaving: params.leaving,
+        arriving: arrivingHour,
+        leaving: leavingHour,
         validate: newValidationStatus,
         type: { connect: { id: params.typeId } },
         equipments: {
@@ -1465,10 +1507,10 @@ export async function resubmitProductWithChange(
         })
       }
 
-      // Notifier les administrateurs
-      const admin = await findAllUserByRoles('ADMIN')
-      if (admin && admin.length > 0) {
-        const emailPromises = admin.map(async user => {
+      // Notifier les administrateurs et host managers
+      const adminUsers = await findAllUserByRoles(['ADMIN', 'HOST_MANAGER'])
+      if (adminUsers && adminUsers.length > 0) {
+        const emailPromises = adminUsers.map(async user => {
           try {
             await sendTemplatedMail(
               user.email,
@@ -1481,7 +1523,7 @@ export async function resubmitProductWithChange(
               }
             )
           } catch (emailError) {
-            console.error('Erreur envoi email admin modification:', emailError)
+            console.error('Erreur envoi email admin/host_manager modification:', emailError)
           }
         })
 
@@ -1556,7 +1598,6 @@ export async function createDraftProduct(originalProductId: string) {
         maxPeople: originalProduct.maxPeople,
         commission: originalProduct.commission,
         validate: ProductValidation.NotVerified,
-        userManager: originalProduct.userManager,
         typeId: originalProduct.typeId,
         phone: originalProduct.phone,
         phoneCountry: originalProduct.phoneCountry,

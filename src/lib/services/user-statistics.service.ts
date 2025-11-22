@@ -133,7 +133,7 @@ export async function canUserRate(
       where: { id: rentId },
       include: {
         product: {
-          select: { userManager: true },
+          select: { ownerId: true },
         },
         user: {
           select: { id: true },
@@ -148,9 +148,9 @@ export async function canUserRate(
     // Vérifier les permissions selon le type
     let isAuthorized = false
     if (type === 'HOST_TO_GUEST') {
-      isAuthorized = rent.product.userManager.toString() === userId && rent.user.id === ratedUserId
+      isAuthorized = rent.product.ownerId === userId && rent.user.id === ratedUserId
     } else if (type === 'GUEST_TO_HOST') {
-      isAuthorized = rent.user.id === userId && rent.product.userManager.toString() === ratedUserId
+      isAuthorized = rent.user.id === userId && rent.product.ownerId === ratedUserId
     }
 
     if (!isAuthorized) {
