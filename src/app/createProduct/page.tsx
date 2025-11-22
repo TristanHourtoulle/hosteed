@@ -339,8 +339,8 @@ export default function CreateProductPage() {
         surface: formData.surface ? Number(formData.surface) : null,
         minPeople: formData.minPeople ? Number(formData.minPeople) : null,
         maxPeople: formData.maxPeople ? Number(formData.maxPeople) : null,
-        arriving: Number(formData.arriving),
-        leaving: Number(formData.leaving),
+        arriving: formData.arriving, // Format HH:MM, sera converti côté serveur
+        leaving: formData.leaving, // Format HH:MM, sera converti côté serveur
         autoAccept: formData.autoAccept || false,
         accessibility: formData.accessibility || false,
         petFriendly: formData.petFriendly || false,

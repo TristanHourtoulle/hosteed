@@ -416,10 +416,10 @@ export async function GET(request: NextRequest) {
       ...product,
       room: product.room ? Number(product.room) : null,
       bathroom: product.bathroom ? Number(product.bathroom) : null,
+      surface: product.surface ? Number(product.surface) : null,
       minPeople: product.minPeople ? Number(product.minPeople) : null,
       maxPeople: product.maxPeople ? Number(product.maxPeople) : null,
       categories: product.categories ? Number(product.categories) : null,
-      userManager: product.userManager ? Number(product.userManager) : null,
     }))
 
     console.log(`[SEARCH API] Converted ${products.length} products for serialization`)
