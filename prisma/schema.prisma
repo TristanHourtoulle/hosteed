@@ -163,7 +163,7 @@ model Product {
   maxPeople        BigInt?
   commission       Int               @default(0)
   validate         ProductValidation @default(NotVerified)
-  userManager      BigInt
+  userManager      BigInt? // Deprecated: use ownerId instead
   typeId           String
   phone            String
   phoneCountry     String            @default("MG")
