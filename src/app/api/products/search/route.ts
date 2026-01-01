@@ -155,6 +155,10 @@ export async function GET(request: NextRequest) {
         { name: { contains: searchTerm, mode: 'insensitive' } },
         { description: { contains: searchTerm, mode: 'insensitive' } },
         { address: { contains: searchTerm, mode: 'insensitive' } },
+        // Recherche sur les nouveaux champs de localisation structurés
+        { neighborhood: { contains: searchTerm, mode: 'insensitive' } },
+        { city: { contains: searchTerm, mode: 'insensitive' } },
+        { region: { contains: searchTerm, mode: 'insensitive' } },
       ]
     }
 
@@ -411,7 +415,7 @@ export async function GET(request: NextRequest) {
       `[SEARCH API] DB query returned ${rawProducts.length} products (total: ${totalCount})`
     )
 
-    // Convert BigInt fields to strings for JSON serialization
+    // Convert BigInt fields to numbers for JSON serialization
     const products = rawProducts.map(product => ({
       ...product,
       room: product.room ? Number(product.room) : null,
@@ -420,6 +424,16 @@ export async function GET(request: NextRequest) {
       minPeople: product.minPeople ? Number(product.minPeople) : null,
       maxPeople: product.maxPeople ? Number(product.maxPeople) : null,
       categories: product.categories ? Number(product.categories) : null,
+      // Additional BigInt fields that need conversion
+      equipement: product.equipement ? Number(product.equipement) : null,
+      meal: product.meal ? Number(product.meal) : null,
+      services: product.services ? Number(product.services) : null,
+      security: product.security ? Number(product.security) : null,
+      minRent: product.minRent ? Number(product.minRent) : null,
+      maxRent: product.maxRent ? Number(product.maxRent) : null,
+      advanceRent: product.advanceRent ? Number(product.advanceRent) : null,
+      delayTime: product.delayTime ? Number(product.delayTime) : null,
+      userManager: product.userManager ? Number(product.userManager) : null,
     }))
 
     console.log(`[SEARCH API] Converted ${products.length} products for serialization`)

@@ -7,9 +7,16 @@ import { MapPin, X } from 'lucide-react'
 import AddressAutocomplete from '@/components/ui/AddressAutocomplete'
 import PhoneInput from '@/components/ui/PhoneInput'
 import ProximityLandmarksField from '@/components/ui/ProximityLandmarksField'
+import { LocationComponents } from '@/lib/services/location.service'
 
 interface FormData {
   address: string
+  // Nouveaux champs de localisation structurés
+  neighborhood: string | null
+  city: string | null
+  region: string | null
+  country: string
+  googlePlaceId: string | null
   latitude: number
   longitude: number
   phoneNumber: string
@@ -87,13 +94,35 @@ export default function ProductLocationForm({
                 } as React.ChangeEvent<HTMLInputElement>
                 onInputChange(event)
               }}
+              onLocationSelect={(components: LocationComponents) => {
+                // Mettre à jour tous les champs de localisation en une fois
+                setFormData(prev => ({
+                  ...prev,
+                  address: components.formattedAddress,
+                  neighborhood: components.neighborhood,
+                  city: components.city,
+                  region: components.region,
+                  country: components.country,
+                  googlePlaceId: components.googlePlaceId,
+                  latitude: components.coordinates?.latitude || prev.latitude,
+                  longitude: components.coordinates?.longitude || prev.longitude,
+                }))
+              }}
               allowFreeInput={true}
               className='border-slate-200 focus:border-green-300 focus:ring-green-200'
             />
-            {formData.latitude && formData.longitude && (
+            {(formData.latitude !== 0 && formData.longitude !== 0) && (
               <p className='text-xs text-green-600 mt-1'>
                 ✓ Coordonnées GPS: {formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}
               </p>
+            )}
+            {/* Affichage des composants de localisation extraits */}
+            {(formData.neighborhood || formData.city) && (
+              <div className='text-xs text-slate-500 mt-1 space-y-0.5'>
+                {formData.neighborhood && <p>Quartier: {formData.neighborhood}</p>}
+                {formData.city && <p>Ville: {formData.city}</p>}
+                {formData.country && <p>Pays: {formData.country}</p>}
+              </div>
             )}
           </div>
 
