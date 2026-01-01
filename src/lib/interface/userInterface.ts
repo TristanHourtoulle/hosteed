@@ -57,6 +57,12 @@ export interface CreateProductInput {
   description: string
   address: string // Localisation Google Maps (visible sur l'annonce)
   completeAddress?: string | null // Adresse complète manuelle (visible dans le mail de confirmation)
+  // Nouveaux champs de localisation structurés
+  neighborhood?: string | null // Quartier (ex: "Ambondrona")
+  city?: string | null // Ville (ex: "Nosy Be")
+  region?: string | null // Région (ex: "Diana")
+  country?: string // Pays (ex: "Madagascar")
+  googlePlaceId?: string | null // ID Google Places pour référence
   longitude: number | string
   latitude: number | string
   basePrice: string

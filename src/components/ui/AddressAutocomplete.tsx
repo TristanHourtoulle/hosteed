@@ -3,6 +3,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { Input } from '@/components/ui/input'
 import { MapPin, Loader2, X } from 'lucide-react'
+import {
+  locationService,
+  LocationComponents,
+} from '@/lib/services/location.service'
 
 interface GooglePlacePrediction {
   place_id: string
@@ -52,8 +56,14 @@ interface AddressAutocompleteProps {
   placeholder?: string
   className?: string
   countryFilter?: string
+  /** Callback simple pour la rétrocompatibilité */
   onAddressSelect?: (address: string, placeId?: string) => void
-  allowFreeInput?: boolean // Allow manual text input as fallback
+  /**
+   * Callback amélioré qui retourne les composants structurés de l'adresse
+   * Utiliser ce callback pour stocker les nouveaux champs (neighborhood, city, etc.)
+   */
+  onLocationSelect?: (components: LocationComponents) => void
+  allowFreeInput?: boolean
 }
 
 export default function AddressAutocomplete({
@@ -63,6 +73,7 @@ export default function AddressAutocomplete({
   className = '',
   countryFilter = 'MG',
   onAddressSelect,
+  onLocationSelect,
   // allowFreeInput = false,
 }: AddressAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<GooglePlacePrediction[]>([])
@@ -161,9 +172,10 @@ export default function AddressAutocomplete({
 
   const handleSuggestionClick = async (suggestion: GooglePlacePrediction) => {
     try {
+      // Demander address_components pour extraire neighborhood, city, etc.
       const params = new URLSearchParams({
         placeId: suggestion.place_id,
-        fields: 'formatted_address,geometry',
+        fields: 'formatted_address,geometry,address_components',
         sessionToken,
       })
 
@@ -180,11 +192,36 @@ export default function AddressAutocomplete({
         onChange(fullAddress)
         setSelectedPlaceId(suggestion.place_id)
 
+        // Extraire les composants de localisation via le service centralisé
+        const locationComponents = locationService.extractComponentsFromPlaceDetails(placeDetails)
+
+        // Callback amélioré avec tous les composants
+        if (onLocationSelect) {
+          onLocationSelect(locationComponents)
+        }
+
+        // Callback de rétrocompatibilité
         if (onAddressSelect) {
           onAddressSelect(fullAddress, suggestion.place_id)
         }
       } else {
+        // Fallback: utiliser la description si pas de détails
         onChange(suggestion.description)
+
+        // Parser l'adresse manuellement si pas de détails Google
+        const parsedComponents = locationService.parseExistingAddress(suggestion.description)
+        if (onLocationSelect) {
+          onLocationSelect({
+            formattedAddress: suggestion.description,
+            neighborhood: parsedComponents.neighborhood || null,
+            city: parsedComponents.city || null,
+            region: parsedComponents.region || null,
+            country: parsedComponents.country || 'Madagascar',
+            googlePlaceId: suggestion.place_id,
+            coordinates: null,
+          })
+        }
+
         if (onAddressSelect) {
           onAddressSelect(suggestion.description, suggestion.place_id)
         }
@@ -195,10 +232,27 @@ export default function AddressAutocomplete({
       setSuggestions([])
     } catch (error) {
       console.error('Erreur lors de la récupération des détails:', error)
+
+      // Fallback en cas d'erreur
       onChange(suggestion.description)
+
+      const parsedComponents = locationService.parseExistingAddress(suggestion.description)
+      if (onLocationSelect) {
+        onLocationSelect({
+          formattedAddress: suggestion.description,
+          neighborhood: parsedComponents.neighborhood || null,
+          city: parsedComponents.city || null,
+          region: parsedComponents.region || null,
+          country: parsedComponents.country || 'Madagascar',
+          googlePlaceId: suggestion.place_id,
+          coordinates: null,
+        })
+      }
+
       if (onAddressSelect) {
         onAddressSelect(suggestion.description, suggestion.place_id)
       }
+
       setShowSuggestions(false)
       setSuggestions([])
     }
@@ -209,6 +263,20 @@ export default function AddressAutocomplete({
     setSelectedPlaceId('')
     setSuggestions([])
     setShowSuggestions(false)
+
+    // Notifier le parent que la localisation a été effacée
+    if (onLocationSelect) {
+      onLocationSelect({
+        formattedAddress: '',
+        neighborhood: null,
+        city: null,
+        region: null,
+        country: 'Madagascar',
+        googlePlaceId: null,
+        coordinates: null,
+      })
+    }
+
     inputRef.current?.focus()
   }
 

@@ -1,11 +1,17 @@
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import { formatProductLocation, ProductLocationData } from '@/lib/services/location.service'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// Extract city and country from address for privacy protection
+/**
+ * @deprecated Utilisez formatProductLocation() à la place pour une meilleure extraction
+ * des composants de localisation (neighborhood, city, country)
+ *
+ * Extract city and country from address for privacy protection
+ */
 export function getCityFromAddress(address: string | null | undefined): string {
   if (!address) return 'Ville non spécifiée'
 
@@ -27,6 +33,23 @@ export function getCityFromAddress(address: string | null | undefined): string {
   // Fallback to first part
   return parts[0] || 'Ville non spécifiée'
 }
+
+/**
+ * Formate la localisation d'un produit pour l'affichage.
+ * Utilise les nouveaux champs structurés (neighborhood, city, country) si disponibles,
+ * sinon parse l'adresse existante.
+ *
+ * Format de sortie: "Quartier, Ville" ou "Ville, Pays" si pas de quartier
+ *
+ * @param product - Données de localisation du produit
+ * @returns Chaîne formatée pour l'affichage
+ */
+export function getLocationDisplay(product: ProductLocationData): string {
+  return formatProductLocation(product)
+}
+
+// Re-export for convenience
+export { formatProductLocation, type ProductLocationData } from '@/lib/services/location.service'
 
 export function calculateAverageRating(
   reviews: {
