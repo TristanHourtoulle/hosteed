@@ -58,6 +58,9 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['lucide-react', 'date-fns', '@radix-ui/react-icons'],
   },
 
+  // Turbopack configuration (default in Next.js 16)
+  turbopack: {},
+
   // External packages for server components
   serverExternalPackages: ['prisma'],
 

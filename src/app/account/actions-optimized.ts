@@ -99,7 +99,7 @@ export const getUserDataOptimized = unstable_cache(
           },
         })
         .then(() => {
-          revalidateTag(`user-${user.id}`)
+          revalidateTag(`user-${user.id}`, 'max')
         })
         .catch(console.error)
     }
@@ -151,9 +151,9 @@ export async function updateUserProfileBatch(data: {
       data: data,
     })
 
-    // Invalidate caches
-    revalidateTag('user-data')
-    revalidateTag(`user-${updatedUser.id}`)
+    // Invalidate caches (Next.js 16 requires cacheLife profile)
+    revalidateTag('user-data', 'max')
+    revalidateTag(`user-${updatedUser.id}`, 'max')
     revalidatePath('/account')
 
     return updatedUser
