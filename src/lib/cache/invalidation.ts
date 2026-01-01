@@ -6,10 +6,10 @@ import { revalidateTag, revalidatePath } from 'next/cache'
  */
 
 export async function invalidateProductCache(productId?: string) {
-  // Invalider le cache serveur Next.js
-  revalidateTag('products')
+  // Invalider le cache serveur Next.js (Next.js 16 requires cacheLife profile)
+  revalidateTag('products', 'max')
   if (productId) {
-    revalidateTag(`product-${productId}`)
+    revalidateTag(`product-${productId}`, 'max')
   }
 
   // Invalider les pages concernées
@@ -25,8 +25,8 @@ export async function invalidateStaticDataCache(
   type: 'equipments' | 'meals' | 'services' | 'security' | 'typeRent'
 ) {
   // Invalider le cache serveur pour les données statiques
-  revalidateTag('static-data')
-  revalidateTag(type)
+  revalidateTag('static-data', 'max')
+  revalidateTag(type, 'max')
 
   // Invalider les pages qui utilisent ces données
   revalidatePath('/search')
@@ -35,29 +35,29 @@ export async function invalidateStaticDataCache(
 }
 
 export async function invalidateUserCache(userId: string) {
-  revalidateTag('user-data')
-  revalidateTag(`user-${userId}`)
+  revalidateTag('user-data', 'max')
+  revalidateTag(`user-${userId}`, 'max')
   revalidatePath('/account')
 }
 
 export async function invalidateReservationCache(userId: string, rentId?: string) {
-  revalidateTag(`reservations-${userId}`)
+  revalidateTag(`reservations-${userId}`, 'max')
   if (rentId) {
-    revalidateTag(`reservation-${rentId}`)
+    revalidateTag(`reservation-${rentId}`, 'max')
   }
   revalidatePath('/reservations')
 }
 
 export async function invalidateFavoriteCache(userId: string, productId?: string) {
-  revalidateTag(`favorites-${userId}`)
+  revalidateTag(`favorites-${userId}`, 'max')
   if (productId) {
-    revalidateTag(`favorite-${userId}-${productId}`)
+    revalidateTag(`favorite-${userId}-${productId}`, 'max')
   }
   revalidatePath('/favorites')
 }
 
 export async function invalidateValidationCache() {
-  revalidateTag('validation-stats')
-  revalidateTag('validation-products')
+  revalidateTag('validation-stats', 'max')
+  revalidateTag('validation-products', 'max')
   revalidatePath('/admin/validation')
 }
