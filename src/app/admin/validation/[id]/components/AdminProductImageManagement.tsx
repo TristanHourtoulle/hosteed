@@ -5,6 +5,7 @@ import { motion, Variants } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Camera, Upload } from 'lucide-react'
 import { compressImages, formatFileSize } from '@/lib/utils/imageCompression'
+import { MAX_IMAGES } from '@/app/createProduct/utils/constants'
 import SortableImageGrid from '@/components/ui/SortableImageGrid'
 import ImageGalleryPreview from '@/components/ui/ImageGalleryPreview'
 import ErrorAlert, { ErrorDetails } from '@/components/ui/ErrorAlert'
@@ -215,7 +216,7 @@ export default function AdminProductImageManagement({
                   PNG, JPG, JPEG, WEBP jusqu&apos;à 50MB chacune (compressées automatiquement)
                   {selectedFiles.length > 0 && (
                     <span className='block mt-1 text-green-600 font-medium'>
-                      ✓ {selectedFiles.length}/35 photos actuelles
+                      ✓ {selectedFiles.length}/{MAX_IMAGES} photos actuelles
                     </span>
                   )}
                   {isUploadingImages && (

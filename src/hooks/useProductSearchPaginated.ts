@@ -480,6 +480,7 @@ export function useProductSearchPaginated() {
     setSelectedType('')
     setLocation('')
     setSearchTerm('')
+    setGpsCoordinates(null) // Reset GPS coordinates from Google Places search
     setGuests(1)
     setCurrentPage(1)
     setFilters({

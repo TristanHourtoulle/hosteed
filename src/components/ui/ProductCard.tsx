@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Heart, Star, ImageIcon, Clock } from 'lucide-react'
-import { getCityFromAddress, calculateAverageRating, isProductSponsored } from '@/lib/utils'
+import { getLocationDisplay, calculateAverageRating, isProductSponsored } from '@/lib/utils'
 import { useFavoritesOptimized } from '@/hooks/useFavoritesOptimized'
 import { motion } from 'framer-motion'
 import PromotionBadge from '@/components/promotions/PromotionBadge'
@@ -32,6 +32,11 @@ interface Product {
   name: string
   description: string
   address: string
+  // Nouveaux champs de localisation structurés
+  neighborhood?: string | null
+  city?: string | null
+  region?: string | null
+  country?: string | null
   slug?: string | null
   img?: { img: string }[] | null
   basePrice: string
@@ -350,7 +355,7 @@ function ProductCard({ product, index = 0 }: { product: Product; index?: number 
           <motion.div className='p-4 space-y-2' {...contentMotionProps}>
             <div className='space-y-1'>
               <h3 className='font-semibold text-gray-900 text-base leading-tight line-clamp-1'>
-                {getCityFromAddress(product.address)}
+                {getLocationDisplay(product)}
               </h3>
               <p className='text-gray-500 text-sm font-light line-clamp-1'>{product.name}</p>
             </div>
@@ -422,6 +427,9 @@ const arePropsEqual = (
   if (
     prev.name !== next.name ||
     prev.address !== next.address ||
+    prev.neighborhood !== next.neighborhood ||
+    prev.city !== next.city ||
+    prev.country !== next.country ||
     prev.basePrice !== next.basePrice ||
     prev.originalBasePrice !== next.originalBasePrice ||
     prev.specialPriceApplied !== next.specialPriceApplied ||

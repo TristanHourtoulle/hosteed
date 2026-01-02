@@ -1,7 +1,7 @@
 'use client'
 
 import { Star, Heart, MapPin } from 'lucide-react'
-import { getCityFromAddress } from '@/lib/utils'
+import { getLocationDisplay } from '@/lib/utils'
 import { useFavoritesOptimized } from '@/hooks/useFavoritesOptimized'
 import { ShareButton } from './ShareButton'
 
@@ -25,6 +25,11 @@ interface PropertyHeaderProps {
   reviews?: Reviews[]
   globalGrade: number
   address?: string
+  // Nouveaux champs de localisation structurés
+  neighborhood?: string | null
+  city?: string | null
+  region?: string | null
+  country?: string | null
   productId: string
 }
 
@@ -33,9 +38,17 @@ export default function PropertyHeader({
   reviews,
   globalGrade,
   address,
+  neighborhood,
+  city,
+  region,
+  country,
   productId,
 }: PropertyHeaderProps) {
   const { isFavorite, isLoading, toggleFavorite } = useFavoritesOptimized(productId)
+
+  // Construire l'objet product pour le formatage de la localisation
+  const locationData = { address, neighborhood, city, region, country }
+
   return (
     <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6'>
       <div className='flex-1'>
@@ -50,7 +63,7 @@ export default function PropertyHeader({
           )}
           <div className='flex items-center gap-1 text-gray-600'>
             <MapPin className='h-4 w-4' />
-            <span className='underline'>{getCityFromAddress(address)}</span>
+            <span className='underline'>{getLocationDisplay(locationData)}</span>
           </div>
         </div>
       </div>

@@ -140,6 +140,14 @@ model Product {
   description      String
   address          String // Localisation Google Maps (visible sur l'annonce)
   completeAddress  String? // Adresse complète manuelle (visible uniquement dans le mail de confirmation)
+
+  // Champs de localisation structurés pour une recherche améliorée
+  neighborhood     String? // Quartier (ex: "Ambondrona")
+  city             String? // Ville (ex: "Nosy Be")
+  region           String? // Région/État (ex: "Diana")
+  country          String  @default("Madagascar") // Pays
+  googlePlaceId    String? // ID Google Places pour référence
+
   basePrice        String
   priceMGA         String
   room             BigInt?
@@ -250,6 +258,13 @@ model Product {
   @@index([name])
   @@index([address])
   @@index([description])
+  // Location search indexes
+  @@index([neighborhood])
+  @@index([city])
+  @@index([region])
+  @@index([country])
+  @@index([city, neighborhood]) // Combined search
+  @@index([country, city]) // Country + city search
 }
 
 // Nouveau modèle pour les commentaires de validation

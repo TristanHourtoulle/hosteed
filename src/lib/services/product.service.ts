@@ -929,6 +929,12 @@ export async function createProduct(data: CreateProductInput) {
         description: data.description,
         address: data.address,
         completeAddress: data.completeAddress || null,
+        // Nouveaux champs de localisation structurés
+        neighborhood: data.neighborhood || null,
+        city: data.city || null,
+        region: data.region || null,
+        country: data.country || 'Madagascar',
+        googlePlaceId: data.googlePlaceId || null,
         longitude: Number(data.longitude),
         latitude: Number(data.latitude),
         basePrice: data.basePrice,

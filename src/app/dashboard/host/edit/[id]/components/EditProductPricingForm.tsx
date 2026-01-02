@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Euro, Calendar, Plus } from 'lucide-react'
 import CreateSpecialPriceModal from '@/components/ui/CreateSpecialPriceModal'
-import CommissionDisplay from '@/components/ui/CommissionDisplay'
 
 interface SpecialPrice {
   id: string
@@ -176,11 +175,6 @@ export default function EditProductPricingForm({
                   ))}
                 </div>
               )}
-            </div>
-
-            {/* Commission display */}
-            <div className='mt-6'>
-              <CommissionDisplay basePrice={parseFloat(formData.basePrice) || 0} />
             </div>
           </CardContent>
         </Card>

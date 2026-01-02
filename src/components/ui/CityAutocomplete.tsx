@@ -6,11 +6,20 @@ import {
   GooglePlacePrediction,
   googleSuggestionService,
 } from '@/lib/services/GoogleSuggestion.service'
+import {
+  locationService,
+  LocationComponents,
+} from '@/lib/services/location.service'
 import { MapPin, Loader2 } from 'lucide-react'
 
 interface CityAutocompleteProps {
   onCitySelect?: (city: GooglePlacePrediction, coordinates?: { lat: number; lng: number }) => void
   onInputChange?: (value: string) => void // Nouvelle prop pour la saisie libre
+  /**
+   * Callback amélioré qui retourne les composants structurés de la localisation
+   * Utiliser ce callback pour avoir accès à neighborhood, city, region, country
+   */
+  onLocationSelect?: (components: LocationComponents) => void
   placeholder?: string
   className?: string
   disabled?: boolean
@@ -23,6 +32,7 @@ interface CityAutocompleteProps {
 export function CityAutocomplete({
   onCitySelect,
   onInputChange,
+  onLocationSelect,
   placeholder = 'Rechercher une ville...',
   className = '',
   disabled = false,
@@ -45,6 +55,11 @@ export function CityAutocomplete({
   useEffect(() => {
     sessionTokenRef.current = googleSuggestionService.generateSessionToken()
   }, [])
+
+  // Sync inputValue with defaultValue when it changes (e.g., on filter reset)
+  useEffect(() => {
+    setInputValue(defaultValue)
+  }, [defaultValue])
 
   // Gérer la recherche avec debounce
   const searchCities = useCallback(
@@ -128,23 +143,57 @@ export function CityAutocomplete({
       setSuggestions([])
       setSelectedIndex(-1)
 
-      // Récupérer les coordonnées GPS via l'API Google Places Details
+      // Récupérer les coordonnées GPS et address_components via l'API Google Places Details
       try {
         const details = await googleSuggestionService.getPlaceDetails({
           placeId: city.place_id,
-          fields: ['geometry'],
+          fields: ['geometry', 'address_components', 'formatted_address'],
           sessionToken: sessionTokenRef.current,
         })
 
         const coordinates = details?.geometry?.location
+
+        // Callback classique avec coordonnées
         if (onCitySelect) {
           onCitySelect(city, coordinates)
+        }
+
+        // Callback amélioré avec tous les composants de localisation
+        if (onLocationSelect && details) {
+          const locationComponents = locationService.extractComponentsFromPlaceDetails(details)
+          onLocationSelect(locationComponents)
+        } else if (onLocationSelect) {
+          // Fallback: parser la description
+          const parsed = locationService.parseExistingAddress(city.description)
+          onLocationSelect({
+            formattedAddress: city.description,
+            neighborhood: parsed.neighborhood || null,
+            city: parsed.city || null,
+            region: parsed.region || null,
+            country: parsed.country || 'Madagascar',
+            googlePlaceId: city.place_id,
+            coordinates: coordinates ? { latitude: coordinates.lat, longitude: coordinates.lng } : null,
+          })
         }
       } catch (error) {
         console.error('Error fetching place details:', error)
         // Call onCitySelect without coordinates if error
         if (onCitySelect) {
           onCitySelect(city)
+        }
+
+        // Fallback pour onLocationSelect
+        if (onLocationSelect) {
+          const parsed = locationService.parseExistingAddress(city.description)
+          onLocationSelect({
+            formattedAddress: city.description,
+            neighborhood: parsed.neighborhood || null,
+            city: parsed.city || null,
+            region: parsed.region || null,
+            country: parsed.country || 'Madagascar',
+            googlePlaceId: city.place_id,
+            coordinates: null,
+          })
         }
       }
 
@@ -155,7 +204,7 @@ export function CityAutocomplete({
       // Générer un nouveau token de session pour la prochaine recherche
       sessionTokenRef.current = googleSuggestionService.generateSessionToken()
     },
-    [onCitySelect, allowFreeInput, onInputChange]
+    [onCitySelect, onLocationSelect, allowFreeInput, onInputChange]
   )
 
   // Gérer la navigation au clavier

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -130,12 +131,13 @@ export default function CreateSpecialPriceModal({
 
   const isFormValid = formData.pricesMga && formData.pricesEuro && formData.day.length > 0
 
-  return (
+  if (!isOpen) return null
+
+  const modalContent = (
     <AnimatePresence>
-      {isOpen && (
-        <div className='fixed inset-0 z-50 flex items-center justify-center'>
-          {/* Backdrop */}
-          <motion.div
+      <div className='fixed inset-0 z-50 flex items-center justify-center'>
+        {/* Backdrop */}
+        <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -350,7 +352,8 @@ export default function CreateSpecialPriceModal({
             </Card>
           </motion.div>
         </div>
-      )}
     </AnimatePresence>
   )
+
+  return createPortal(modalContent, document.body)
 }

@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 
 // Import section components
+import { MAX_IMAGES } from './utils/constants'
 import {
   BasicInfoSection,
   LocationContactSection,
@@ -594,13 +595,10 @@ export default function CreateProductPage() {
 
           {/* Tarification - Pleine largeur */}
           <ProductPricingForm
-            formData={
-              {
-                basePrice: formData.basePrice,
-                basePriceMGA: formData.priceMGA,
-                specialPrices: specialPrices,
-              } as never
-            }
+            formData={{
+              basePrice: formData.basePrice,
+              basePriceMGA: formData.priceMGA,
+            }}
             onInputChange={(
               e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
             ) => {
@@ -614,10 +612,6 @@ export default function CreateProductPage() {
                 handleInputChange(e)
               }
             }}
-            onSpecialPriceCreated={handleSpecialPriceCreated as never}
-            onRemoveSpecialPrice={(id: string) =>
-              setSpecialPrices(prev => prev.filter(sp => sp.id !== id))
-            }
             itemVariants={itemVariants}
           />
 
@@ -1106,7 +1100,7 @@ export default function CreateProductPage() {
                         PNG, JPG, JPEG, WEBP jusqu&apos;à 50MB chacune (compressées automatiquement)
                         {imageUpload.selectedFiles.length > 0 && (
                           <span className='block mt-1 text-green-600 font-medium'>
-                            ✓ {imageUpload.selectedFiles.length}/35 photos sélectionnées
+                            ✓ {imageUpload.selectedFiles.length}/{MAX_IMAGES} photos sélectionnées
                           </span>
                         )}
                         {imageUpload.isUploadingImages && (

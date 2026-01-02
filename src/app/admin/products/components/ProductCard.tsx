@@ -12,6 +12,7 @@ import {
   getValidationStatusLabel,
   getValidationStatusVariant,
 } from '@/lib/utils/productValidation'
+import { getLocationDisplay } from '@/lib/utils'
 
 interface ProductCardProps {
   product: Product & {
@@ -20,6 +21,15 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
+  // Construire l'objet de localisation pour l'affichage
+  const locationDisplay = getLocationDisplay({
+    address: product.address,
+    neighborhood: product.neighborhood,
+    city: product.city,
+    region: product.region,
+    country: product.country,
+  })
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -56,11 +66,11 @@ export function ProductCard({ product }: ProductCardProps) {
           <div className='flex flex-wrap gap-3 text-sm text-gray-600'>
             <div className='flex items-center gap-1'>
               <MapPin className='h-4 w-4' />
-              <span>{product.address}</span>
+              <span>{locationDisplay}</span>
             </div>
             <div className='flex items-center gap-1'>
               <Bed className='h-4 w-4' />
-              <span>{product.room} chambres</span>
+              <span>{product.room ? Number(product.room) : 0} chambres</span>
             </div>
             <div className='flex items-center gap-1'>
               <Euro className='h-4 w-4' />

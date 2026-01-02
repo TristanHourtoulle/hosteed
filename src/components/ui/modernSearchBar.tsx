@@ -183,6 +183,7 @@ export default function ModernSearchBar({
                 defaultValue={location}
                 className='w-full'
                 allowFreeInput={true} // Permet la saisie libre
+                types={['geocode']} // Inclut villes, quartiers, adresses
                 // Pas de countryFilter pour permettre toutes les suggestions
               />
             </div>

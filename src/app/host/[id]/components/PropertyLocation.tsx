@@ -1,5 +1,5 @@
 import { MapPin, Clock, Car } from 'lucide-react'
-import { getCityFromAddress } from '@/lib/utils'
+import { getLocationDisplay, formatProductLocation } from '@/lib/utils'
 
 interface NearbyPlace {
   name: string
@@ -15,16 +15,30 @@ interface TransportOption {
 
 interface PropertyLocationProps {
   address?: string
+  // Nouveaux champs de localisation structurés
+  neighborhood?: string | null
+  city?: string | null
+  region?: string | null
+  country?: string | null
   nearbyPlaces?: NearbyPlace[]
   transportOptions?: TransportOption[]
 }
 
 export default function PropertyLocation({
   address,
+  neighborhood,
+  city,
+  region,
+  country,
   nearbyPlaces,
   transportOptions,
 }: PropertyLocationProps) {
-  if (!address) return null
+  if (!address && !city) return null
+
+  // Construire l'objet de localisation
+  const locationData = { address, neighborhood, city, region, country }
+  const displayLocation = getLocationDisplay(locationData)
+  const displayCountry = country || 'Madagascar'
 
   return (
     <div className='border-b border-gray-200 pb-8'>
@@ -33,8 +47,10 @@ export default function PropertyLocation({
         <div className='flex items-start gap-3'>
           <MapPin className='h-5 w-5 text-gray-400 mt-0.5' />
           <div>
-            <p className='text-gray-900 font-medium'>{getCityFromAddress(address)}</p>
-            <p className='text-sm text-gray-600'>Madagascar</p>
+            <p className='text-gray-900 font-medium'>{displayLocation}</p>
+            {!displayLocation.includes(displayCountry) && (
+              <p className='text-sm text-gray-600'>{displayCountry}</p>
+            )}
           </div>
         </div>
 
@@ -43,7 +59,7 @@ export default function PropertyLocation({
           {/* Dynamic Google Maps Embed based on address */}
           <iframe
             src={`https://www.google.com/maps?q=${encodeURIComponent(
-              getCityFromAddress(address) + ', Madagascar'
+              displayLocation + ', ' + displayCountry
             )}&output=embed&z=10`}
             width='100%'
             height='100%'
@@ -51,7 +67,7 @@ export default function PropertyLocation({
             allowFullScreen
             loading='lazy'
             referrerPolicy='no-referrer-when-downgrade'
-            title={`Carte de ${getCityFromAddress(address)}, Madagascar`}
+            title={`Carte de ${displayLocation}, ${displayCountry}`}
           ></iframe>
 
           {/* Map attribution */}
@@ -69,7 +85,7 @@ export default function PropertyLocation({
               <p className='text-sm text-blue-800'>
                 Pour votre sécurité et celle de l&apos;hôte, l&apos;emplacement exact sera
                 communiqué après confirmation de votre réservation. La carte montre la zone générale
-                de {getCityFromAddress(address)}.
+                de {displayLocation}.
               </p>
             </div>
           </div>
