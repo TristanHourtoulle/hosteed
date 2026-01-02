@@ -363,7 +363,9 @@ export default function ReservationPage() {
             lastName: String(formData.lastName),
             phone: String(formData.phone),
             specialRequests: String(formData.specialRequests),
-            selectedExtras: JSON.stringify(selectedExtraIds),
+            selectedExtras: JSON.stringify(
+              selectedExtraIds.map(id => ({ extraId: id, quantity: 1 }))
+            ),
             prices: String(total),
           },
         }),

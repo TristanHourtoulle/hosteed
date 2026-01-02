@@ -134,6 +134,9 @@ export async function POST(req: Request): Promise<Response> {
                 options: session.metadata.options ? JSON.parse(session.metadata.options) : [],
                 stripeId: paymentIntent.id,
                 prices: Number(session.metadata.prices),
+                selectedExtras: session.metadata.selectedExtras
+                  ? JSON.parse(session.metadata.selectedExtras)
+                  : [],
               })
 
               if (newRent) {
@@ -246,6 +249,9 @@ export async function POST(req: Request): Promise<Response> {
           options: session.metadata.options ? JSON.parse(session.metadata.options) : [],
           stripeId: session.payment_intent.toString(),
           prices: Number(session.metadata.prices),
+          selectedExtras: session.metadata.selectedExtras
+            ? JSON.parse(session.metadata.selectedExtras)
+            : [],
         })
 
         if (!rent) {
