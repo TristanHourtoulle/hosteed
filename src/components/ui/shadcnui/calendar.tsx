@@ -4,6 +4,7 @@ import * as React from 'react'
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
 import { DayButton, getDefaultClassNames } from 'react-day-picker'
 import { LazyDayPicker } from '@/components/dynamic/LazyComponents'
+import { fr } from 'date-fns/locale'
 
 import { cn } from '@/lib/utils'
 import { Button, buttonVariants } from '@/components/ui/shadcnui/button'
@@ -24,6 +25,8 @@ function Calendar({
 
   return (
     <LazyDayPicker
+      locale={props.locale || fr}
+      weekStartsOn={props.weekStartsOn ?? 1}
       showOutsideDays={showOutsideDays}
       className={cn(
         'bg-background group/calendar p-3 [--cell-size:--spacing(8)] [[data-slot=card-content]_&]:bg-transparent [[data-slot=popover-content]_&]:bg-transparent',
@@ -33,7 +36,7 @@ function Calendar({
       )}
       captionLayout={captionLayout}
       formatters={{
-        formatMonthDropdown: date => date.toLocaleString('default', { month: 'short' }),
+        formatMonthDropdown: date => date.toLocaleString('fr-FR', { month: 'short' }),
         ...formatters,
       }}
       classNames={{
