@@ -317,10 +317,11 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
 
             {/* Reuse ProductPricingForm from createProduct */}
             <ProductPricingForm
-              formData={formData}
+              formData={{
+                basePrice: formData.basePrice,
+                basePriceMGA: formData.basePriceMGA,
+              }}
               onInputChange={handleInputChange}
-              onSpecialPriceCreated={handleSpecialPriceCreated}
-              onRemoveSpecialPrice={handleRemoveSpecialPrice}
               itemVariants={itemVariants}
             />
 

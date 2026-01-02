@@ -571,10 +571,21 @@ export default function EditProductPage() {
 
           {/* Product Pricing Form */}
           <ProductPricingForm
-            formData={formData}
-            onInputChange={handleInputChange}
-            onSpecialPriceCreated={handleSpecialPriceCreated}
-            onRemoveSpecialPrice={handleRemoveSpecialPrice}
+            formData={{
+              basePrice: formData.basePrice,
+              basePriceMGA: formData.priceMGA,
+            }}
+            onInputChange={(e) => {
+              // Map basePriceMGA back to priceMGA for the main formData
+              if (e.target.name === 'basePriceMGA') {
+                handleInputChange({
+                  ...e,
+                  target: { ...e.target, name: 'priceMGA' },
+                } as React.ChangeEvent<HTMLInputElement>)
+              } else {
+                handleInputChange(e)
+              }
+            }}
             itemVariants={itemVariants}
           />
 

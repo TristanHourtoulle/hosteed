@@ -595,13 +595,10 @@ export default function CreateProductPage() {
 
           {/* Tarification - Pleine largeur */}
           <ProductPricingForm
-            formData={
-              {
-                basePrice: formData.basePrice,
-                basePriceMGA: formData.priceMGA,
-                specialPrices: specialPrices,
-              } as never
-            }
+            formData={{
+              basePrice: formData.basePrice,
+              basePriceMGA: formData.priceMGA,
+            }}
             onInputChange={(
               e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
             ) => {
@@ -615,10 +612,6 @@ export default function CreateProductPage() {
                 handleInputChange(e)
               }
             }}
-            onSpecialPriceCreated={handleSpecialPriceCreated as never}
-            onRemoveSpecialPrice={(id: string) =>
-              setSpecialPrices(prev => prev.filter(sp => sp.id !== id))
-            }
             itemVariants={itemVariants}
           />
 
