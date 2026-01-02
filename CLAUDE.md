@@ -2,6 +2,38 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## CRITICAL: Documentation First (Context7)
+
+**BEFORE starting ANY task or making ANY implementation decision**, you MUST:
+
+1. **Fetch the latest documentation** via Context7 MCP for all relevant technologies
+2. Use `resolve-library-id` to get the correct library ID, then `query-docs` to fetch up-to-date docs
+3. This applies to: Next.js, React, Prisma, NextAuth, Stripe, Tailwind CSS, React Query, Zod, and any other library used
+
+**Why this is mandatory:**
+- Documentation changes frequently - never rely on cached knowledge
+- Always use the latest APIs, patterns, and best practices
+- Avoid deprecated methods and breaking changes
+
+**Example workflow:**
+```
+1. User asks to implement a feature using React Query
+2. FIRST: resolve-library-id for "tanstack-query" or "react-query"
+3. THEN: query-docs with specific question about the feature
+4. FINALLY: Implement using the latest documentation
+```
+
+**Key libraries to always check:**
+| Library | Context7 ID |
+|---------|-------------|
+| Next.js App Router | `/websites/nextjs_app` |
+| Next.js (general) | `/vercel/next.js` |
+| Prisma | Resolve first |
+| NextAuth/Auth.js | Resolve first |
+| Stripe | Resolve first |
+| React Query | Resolve first |
+| Tailwind CSS | Resolve first |
+
 ## Commands
 
 ### Development
