@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 
 // Import section components
+import { MAX_IMAGES } from './utils/constants'
 import {
   BasicInfoSection,
   LocationContactSection,
@@ -1106,7 +1107,7 @@ export default function CreateProductPage() {
                         PNG, JPG, JPEG, WEBP jusqu&apos;à 50MB chacune (compressées automatiquement)
                         {imageUpload.selectedFiles.length > 0 && (
                           <span className='block mt-1 text-green-600 font-medium'>
-                            ✓ {imageUpload.selectedFiles.length}/35 photos sélectionnées
+                            ✓ {imageUpload.selectedFiles.length}/{MAX_IMAGES} photos sélectionnées
                           </span>
                         )}
                         {imageUpload.isUploadingImages && (
