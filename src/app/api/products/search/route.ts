@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma'
 import { ProductValidation } from '@prisma/client'
 import { productCacheService } from '@/lib/cache/redis-cache.service'
 import { filterProductsByRadius } from '@/lib/utils/geoDistance'
+import { cityAliasesService } from '@/lib/services/city-aliases.service'
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
@@ -147,19 +148,43 @@ export async function GET(request: NextRequest) {
       isDraft: false,
     }
 
-    // Add search filter
-    // If GPS coordinates are provided, skip text-based location search (use GPS radius filter instead)
-    if ((search || location) && !(lat !== null && lon !== null)) {
+    // Add search filter with city aliases support
+    // IMPORTANT: Text search is now ALWAYS applied alongside GPS filtering (not exclusive)
+    // This ensures "Antananarivo" finds products tagged as "Tananarive" and vice versa
+    if (search || location) {
       const searchTerm = search || location
-      whereClause.OR = [
+
+      // Extract potential city name from the search term (e.g., "Antananarivo, Madagascar" -> "Antananarivo")
+      const cityName = cityAliasesService.extractCityFromLocation(searchTerm)
+
+      // Get all aliases for this city (e.g., ["antananarivo", "tananarive", "tana"])
+      const cityAliases = cityAliasesService.getAliases(cityName)
+
+      console.log(
+        `[SEARCH API] City aliases for "${cityName}":`,
+        cityAliases.length > 1 ? cityAliases : 'no aliases found'
+      )
+
+      // Build OR conditions for all aliases across all location fields
+      const locationConditions: Array<Record<string, unknown>> = []
+
+      // For each alias, search in location-related fields
+      for (const alias of cityAliases) {
+        locationConditions.push(
+          { address: { contains: alias, mode: 'insensitive' } },
+          { neighborhood: { contains: alias, mode: 'insensitive' } },
+          { city: { contains: alias, mode: 'insensitive' } },
+          { region: { contains: alias, mode: 'insensitive' } }
+        )
+      }
+
+      // Also search the original term in name and description (for non-location searches)
+      locationConditions.push(
         { name: { contains: searchTerm, mode: 'insensitive' } },
-        { description: { contains: searchTerm, mode: 'insensitive' } },
-        { address: { contains: searchTerm, mode: 'insensitive' } },
-        // Recherche sur les nouveaux champs de localisation structurés
-        { neighborhood: { contains: searchTerm, mode: 'insensitive' } },
-        { city: { contains: searchTerm, mode: 'insensitive' } },
-        { region: { contains: searchTerm, mode: 'insensitive' } },
-      ]
+        { description: { contains: searchTerm, mode: 'insensitive' } }
+      )
+
+      whereClause.OR = locationConditions
     }
 
     // Add type filter
@@ -464,10 +489,55 @@ export async function GET(request: NextRequest) {
     }
 
     // Apply GPS radius filtering (if lat/lon provided from Google Places)
+    // IMPORTANT: GPS filtering is now INCLUSIVE - products are included if they:
+    // 1. Are within the GPS radius, OR
+    // 2. Have invalid/missing GPS coords but matched the text search (city aliases)
+    // This ensures products tagged as "Tananarive" are found when searching "Antananarivo"
     if (lat !== null && lon !== null) {
       console.log(`[SEARCH API] Applying GPS filter: center (${lat}, ${lon}), radius ${radius}km`)
-      filteredProducts = filterProductsByRadius(filteredProducts, lat, lon, radius)
-      console.log(`[SEARCH API] GPS filter returned ${filteredProducts.length} products`)
+
+      const productsWithinRadius = filterProductsByRadius(filteredProducts, lat, lon, radius)
+      const productsWithinRadiusIds = new Set(productsWithinRadius.map(p => p.id))
+
+      // Include products that:
+      // - Are within the radius, OR
+      // - Have missing/invalid GPS coords (0, 0) but matched text search
+      const inclusiveFilteredProducts = filteredProducts.filter(product => {
+        // Already in radius
+        if (productsWithinRadiusIds.has(product.id)) {
+          return true
+        }
+
+        // Has invalid coords but matched text search - include anyway
+        // This covers the case where "Tananarive" products don't have GPS coords
+        if (product.latitude === 0 && product.longitude === 0) {
+          console.log(
+            `[SEARCH API] Including product "${product.name}" (id: ${product.id}) - matched text search but missing GPS coords`
+          )
+          return true
+        }
+
+        // Has valid coords but outside radius - exclude
+        return false
+      })
+
+      // Sort: products with valid GPS coords first (by distance), then products without coords
+      filteredProducts = inclusiveFilteredProducts.sort((a, b) => {
+        const aInRadius = productsWithinRadiusIds.has(a.id)
+        const bInRadius = productsWithinRadiusIds.has(b.id)
+
+        // Products within radius come first
+        if (aInRadius && !bInRadius) return -1
+        if (!aInRadius && bInRadius) return 1
+
+        // Both within radius: sort by distance (already done by filterProductsByRadius)
+        // Both outside: keep original order
+        return 0
+      })
+
+      console.log(
+        `[SEARCH API] GPS filter returned ${filteredProducts.length} products (${productsWithinRadius.length} within radius, ${filteredProducts.length - productsWithinRadius.length} matched text only)`
+      )
     }
 
     // Promo filtering is now handled at database level
