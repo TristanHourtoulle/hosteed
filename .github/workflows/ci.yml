@@ -51,6 +51,8 @@ jobs:
           BREVO_API_KEY: "xkeysib-fake-key-for-ci"
           BREVO_SENDER_EMAIL: "test@test.com"
           BREVO_SENDER_NAME: "Test"
+          STRIPE_SECRET_KEY: "sk_test_fake_key_for_ci"
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: "pk_test_fake_key_for_ci"
 
   # Optional: Run tests if you have them
   # test:

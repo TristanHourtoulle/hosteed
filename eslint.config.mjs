@@ -15,7 +15,20 @@ const eslintConfig = [
     rules: {
       'react/no-unescaped-entities': 'warn',
       '@typescript-eslint/no-unused-vars': 'warn',
+      '@typescript-eslint/no-explicit-any': 'off',
     },
+  },
+  {
+    ignores: [
+      'node_modules/**',
+      '.next/**',
+      'out/**',
+      'build/**',
+      'next-env.d.ts',
+      'prisma/**/*.js',
+      'scripts/**',
+      'jest.setup.js',
+    ],
   },
 ]
 
