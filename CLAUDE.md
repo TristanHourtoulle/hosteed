@@ -2,6 +2,68 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## CRITICAL: Git Workflow Rules
+
+**NEVER push or work directly on `main` or `staging` branches.**
+
+### Branch Structure
+```
+main (production) ← staging (pre-production) ← feature branches
+```
+
+### Branch Naming Convention
+Always create feature branches from `staging` using this format:
+```
+type(scope)/description
+```
+
+**Types:**
+- `feat` - New feature
+- `fix` - Bug fix
+- `refactor` - Code refactoring
+- `docs` - Documentation
+- `test` - Tests
+- `chore` - Maintenance
+
+**Examples:**
+```bash
+feat(auth)/google-login
+fix(booking)/price-calculation
+refactor(email)/brevo-migration
+docs(api)/endpoint-documentation
+chore(deps)/update-dependencies
+```
+
+**DO NOT use:**
+- `feature/...` (use `feat/...`)
+- Generic names like `dev`, `test`, `wip`
+- Names without scope like `fix/bug`
+
+### Workflow
+```bash
+# 1. Always start from staging
+git checkout staging
+git pull origin staging
+
+# 2. Create a feature branch
+git checkout -b feat(scope)/description
+
+# 3. Work, commit, push to your branch
+git add .
+git commit -m "feat(scope): description"
+git push origin feat(scope)/description
+
+# 4. Create a PR: feature-branch → staging
+# 5. After review/CI pass: merge to staging
+# 6. Create a PR: staging → main (for production release)
+```
+
+### Protected Branches
+- `main` - Production, requires PR with CI checks passing
+- `staging` - Pre-production, requires CI checks passing
+
+---
+
 ## CRITICAL: Documentation First (Context7)
 
 **BEFORE starting ANY task or making ANY implementation decision**, you MUST:
@@ -79,7 +141,7 @@ docker-compose down -v   # Stop and remove volumes
 - **Styling**: Tailwind CSS v4 + shadcn/ui components
 - **State**: React Query (TanStack Query)
 - **Forms**: React Hook Form + Zod validation
-- **Email**: Nodemailer
+- **Email**: Brevo (formerly Sendinblue) API
 - **TypeScript**: Strict mode enabled
 
 ### Directory Structure
@@ -95,7 +157,7 @@ docker-compose down -v   # Stop and remove volumes
 - `product.service.ts` - Product CRUD operations
 - `rents.service.ts` - Booking/rental management
 - `stripe.ts` - Payment processing
-- `email.service.ts` - Email notifications
+- `email/` - Email service (Brevo API)
 - `validation.service.ts` - Product validation workflow
 
 **`/src/components`** - Reusable React components
@@ -154,7 +216,10 @@ Required in `.env`:
 - `STRIPE_SECRET_KEY` - Stripe API key
 - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` - Stripe public key
 - `STRIPE_WEBHOOK_SECRET` - Stripe webhook signing secret
-- `EMAIL_LOGIN` / `EMAIL_PASSWORD` - SMTP credentials
+- `BREVO_API_KEY` - Brevo API key
+- `BREVO_SENDER_EMAIL` - Sender email address
+- `BREVO_SENDER_NAME` - Sender display name
+- `NEXT_PUBLIC_SEND_MAIL` - Enable/disable email sending
 
 ### Test Credentials
 
