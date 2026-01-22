@@ -1,0 +1,58 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          command_timeout: 12m
+          script: |
+            set -e
+            cd /var/www/hosteedv2.com
+
+            echo "=== 0. Check system resources ==="
+            free -h
+
+            echo "=== 1. Pull latest changes ==="
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "=== 2. Install dependencies ==="
+            pnpm install --frozen-lockfile
+
+            echo "=== 3. Generate Prisma client ==="
+            pnpm prisma generate
+
+            echo "=== 4. Build Next.js (with extended memory) ==="
+            NODE_OPTIONS='--max-old-space-size=4096' pnpm build
+
+            echo "=== 5. Copy static files (without overwriting) ==="
+            cp -rn .next/static/* .next/standalone/.next/static/ 2>/dev/null || cp -r .next/static .next/standalone/.next/
+
+            echo "=== 6. Sync public files (new files only) ==="
+            rsync -a --ignore-existing public/ .next/standalone/public/
+
+            echo "=== 7. Ensure uploads symlink ==="
+            ln -sfn /var/www/hosteedv2.com/public/uploads .next/standalone/public/uploads
+
+            echo "=== 8. Restart PM2 ==="
+            pm2 restart hosteedv2 --update-env
+
+            echo "=== 9. Health check ==="
+            sleep 5
+            curl -sf http://localhost:3101 > /dev/null && echo "Health check OK" || echo "Warning: Health check failed"
+
+            echo "=== Deployment complete! ==="
