@@ -1,5 +1,5 @@
 import prisma from '@/lib/prisma'
-import { SendMail } from '@/lib/services/email.service'
+import { emailService } from '@/lib/services/email'
 import { ProductValidation } from '@prisma/client'
 import { applyDraftChanges, rejectDraftChanges } from '@/lib/services/product.service'
 
@@ -242,16 +242,14 @@ export const validationService = {
       if (product?.owner?.email) {
         try {
           const hostName = product.owner.name || product.owner.lastname || 'Cher hôte'
-          const emailSubject = `Votre annonce "${product.name}" a été approuvée !`
-          const emailContent = `
-            <h2>Félicitations ${hostName} !</h2>
-            <p>Votre annonce <strong>"${product.name}"</strong> a été approuvée par notre équipe.</p>
-            <p>Elle est maintenant visible par tous les visiteurs de Hosteed.</p>
-            <p><a href="${process.env.NEXT_PUBLIC_URL}/host/${finalProductId}" style="background-color: #3b82f6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Voir votre annonce</a></p>
-            <p>Merci de faire confiance à Hosteed !</p>
-          `
-
-          await SendMail(product.owner.email, emailSubject, emailContent, true)
+          await emailService.sendListingApproved(
+            product.owner.email,
+            hostName,
+            {
+              listingTitle: product.name,
+              listingUrl: `${process.env.NEXT_PUBLIC_URL}/host/${finalProductId}`,
+            }
+          )
         } catch (error) {
           console.error("Erreur lors de l'envoi de l'email d'approbation:", error)
         }
@@ -340,17 +338,15 @@ export const validationService = {
       if (!currentProduct.isDraft && product.owner?.email) {
         try {
           const hostName = product.owner.name || product.owner.lastname || 'Cher hôte'
-          const emailSubject = `Votre annonce "${product.name}" a été refusée`
-          const emailContent = `
-            <h2>Bonjour ${hostName},</h2>
-            <p>Malheureusement, votre annonce <strong>"${product.name}"</strong> a été refusée.</p>
-            <p><strong>Raison du refus:</strong> ${reason}</p>
-            <p>Vous pouvez contacter notre support pour plus d'informations ou pour soumettre une nouvelle annonce.</p>
-            <p><a href="${process.env.NEXT_PUBLIC_URL}/contact" style="background-color: #ef4444; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Contacter le support</a></p>
-            <p>L'équipe Hosteed</p>
-          `
-
-          await SendMail(product.owner.email, emailSubject, emailContent, true)
+          await emailService.sendListingRejected(
+            product.owner.email,
+            hostName,
+            {
+              listingTitle: product.name,
+              rejectionReason: reason,
+              contactUrl: `${process.env.NEXT_PUBLIC_URL}/contact`,
+            }
+          )
         } catch (error) {
           console.error("Erreur lors de l'envoi de l'email de refus:", error)
         }
@@ -403,17 +399,17 @@ export const validationService = {
       if (product.owner?.email) {
         try {
           const hostName = product.owner.name || product.owner.lastname || 'Cher hôte'
-          const emailSubject = `Modifications requises pour votre annonce "${product.name}"`
-          const emailContent = `
-            <h2>Bonjour ${hostName},</h2>
-            <p>Votre annonce <strong>"${product.name}"</strong> nécessite quelques modifications avant d'être approuvée.</p>
-            <p><strong>Modifications demandées:</strong> ${reason}</p>
-            <p>Veuillez apporter les modifications nécessaires et resoumettre votre annonce.</p>
-            <p><a href="${process.env.NEXT_PUBLIC_URL}/dashboard/host?productId=${productId}" style="background-color: #f59e0b; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Modifier mon annonce</a></p>
-            <p>Merci de votre compréhension,<br>L'équipe Hosteed</p>
-          `
-
-          await SendMail(product.owner.email, emailSubject, emailContent, true)
+          await emailService.sendFromTemplate(
+            'annonce-modifiee',
+            product.owner.email,
+            `Modifications requises pour votre annonce "${product.name}"`,
+            {
+              userName: hostName,
+              listingTitle: product.name,
+              modificationsRequested: reason,
+              editUrl: `${process.env.NEXT_PUBLIC_URL}/dashboard/host?productId=${productId}`,
+            }
+          )
         } catch (error) {
           console.error("Erreur lors de l'envoi de l'email de révision:", error)
         }

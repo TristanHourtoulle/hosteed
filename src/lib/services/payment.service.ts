@@ -1,7 +1,7 @@
 'use server'
 import prisma from '@/lib/prisma'
 import { Product, PaymentStatus, RentStatus, PaymentMethod, PaymentReqStatus } from '@prisma/client'
-import { sendEmailFromTemplate } from '@/lib/services/email.service'
+import { emailService } from '@/lib/services/email'
 
 interface PayablePrices {
   totalPricesPayable: number
@@ -318,7 +318,7 @@ export async function createPayRequest(
     // Envoi d'emails en parallèle (sans bloquer en cas d'erreur)
     try {
       // Email à l'hôte (confirmation)
-      await sendEmailFromTemplate(
+      await emailService.sendFromTemplate(
         'payment-request-host',
         host.email,
         `Demande de paiement envoyée - ${rent.product.name}`,
@@ -326,7 +326,7 @@ export async function createPayRequest(
       )
 
       // Email au locataire (information)
-      await sendEmailFromTemplate(
+      await emailService.sendFromTemplate(
         'payment-request-guest',
         rent.user.email,
         `Information - Demande de paiement en cours - ${rent.product.name}`,
@@ -335,7 +335,7 @@ export async function createPayRequest(
 
       // Email aux administrateurs
       if (process.env.ADMIN_EMAIL) {
-        await sendEmailFromTemplate(
+        await emailService.sendFromTemplate(
           'payment-request-admin',
           process.env.ADMIN_EMAIL,
           `[ADMIN] Nouvelle demande de paiement - ${rent.product.name}`,
@@ -545,7 +545,7 @@ export async function rejectPaymentRequest(id: string, reason: string) {
       }
 
       // Envoyer l'email de refus
-      await sendEmailFromTemplate(
+      await emailService.sendFromTemplate(
         'payment-request-rejected',
         payRequest.user.email,
         `Demande de paiement refusée - ${payRequest.rent.product.name}`,
@@ -612,7 +612,7 @@ export async function requestPaymentInfo(id: string, infoRequest: string) {
       }
 
       // Envoyer l'email de demande d'informations
-      await sendEmailFromTemplate(
+      await emailService.sendFromTemplate(
         'payment-request-info-needed',
         payRequest.user.email,
         `Informations supplémentaires requises - ${payRequest.rent.product.name}`,

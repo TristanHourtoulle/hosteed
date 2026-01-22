@@ -1,27 +1,36 @@
-import { SendMail } from './email.service'
-import fs from 'fs/promises'
-import path from 'path'
+import { sendTemplateEmail } from '@/lib/services/email'
 
 /**
- * Envoie un email basé sur un template HTML avec variables dynamiques
- * @param to Destinataire
- * @param subject Sujet de l'email
- * @param templateName Nom du fichier template (ex: 'annulation.html')
- * @param variables Variables à injecter dans le template
+ * Send an email based on an HTML template with dynamic variables
+ * This is a backward-compatible wrapper that now uses Brevo instead of SMTP
+ *
+ * @param to Recipient email address
+ * @param subject Email subject
+ * @param templateName Template filename (e.g., 'annulation.html')
+ * @param variables Variables to inject into the template
+ * @param _forceScend Deprecated - kept for backward compatibility
  */
 export async function sendTemplatedMail(
   to: string,
   subject: string,
   templateName: string,
   variables: Record<string, string | number>,
-  forceScend: boolean = false
+  _forceScend: boolean = false
 ) {
-  const templatePath = path.join(process.cwd(), 'public/templates/emails', templateName)
-  let html = await fs.readFile(templatePath, 'utf-8')
-  for (const [key, value] of Object.entries(variables)) {
-    const regex = new RegExp(`{{\s*${key}\s*}}`, 'g')
-    html = html.replace(regex, String(value))
+  // Remove .html extension if present (new service handles it)
+  const template = templateName.replace(/\.html$/, '')
+
+  const result = await sendTemplateEmail(
+    template,
+    { email: to },
+    subject,
+    variables
+  )
+
+  if (!result.success) {
+    console.error(`[sendTemplatedMail] Failed to send "${templateName}" to ${to}:`, result.error)
+    throw new Error(result.error ?? 'Email sending failed')
   }
-  // Envoi du mail avec le HTML généré
-  return SendMail(to, subject, html, true, forceScend)
+
+  return result
 }

@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { createRent } from '@/lib/services/rents.service'
 import Stripe from 'stripe'
-import { SendMail } from '@/lib/services/email.service'
+import { emailService } from '@/lib/services/email'
 import { RentStatus } from '@prisma/client'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -56,12 +56,13 @@ export async function POST(req: Request): Promise<Response> {
           const user = await prisma.user.findUnique({
             where: { id: rent.userId },
           })
-          if (user?.email) {
-            await SendMail(
-              user.email,
-              'Paiement contesté',
-              "Votre paiement a été contesté. Nous vous contacterons pour plus d'informations."
-            )
+          if (user?.email && !user.emailOptOut && !user.emailBounced) {
+            await emailService.sendDisputeNotification(user.email, {
+              bookingId: rent.id,
+              amount: String(rent.prices),
+              reason: 'Paiement contesté',
+              adminUrl: `${process.env.NEXTAUTH_URL}/admin/reservations/${rent.id}`,
+            })
           }
         }
       }
@@ -178,12 +179,13 @@ export async function POST(req: Request): Promise<Response> {
           const user = await prisma.user.findUnique({
             where: { id: rent.userId },
           })
-          if (user?.email) {
-            await SendMail(
-              user.email,
-              'Paiement échoué',
-              "Votre paiement n'a pas pu être traité. Veuillez réessayer ou contacter notre service client."
-            )
+          if (user?.email && !user.emailOptOut && !user.emailBounced) {
+            await emailService.sendPaymentError(user.email, user.name ?? 'Client', {
+              amount: String(rent.prices),
+              listingTitle: 'Votre réservation',
+              errorMessage: "Votre paiement n'a pas pu être traité.",
+              retryUrl: `${process.env.NEXTAUTH_URL}/reservation/${rent.id}`,
+            })
           }
         }
       }
@@ -210,11 +212,15 @@ export async function POST(req: Request): Promise<Response> {
           const user = await prisma.user.findUnique({
             where: { id: rent.userId },
           })
-          if (user?.email) {
-            await SendMail(
+          if (user?.email && !user.emailOptOut && !user.emailBounced) {
+            await emailService.sendFromTemplate(
+              'annulation',
               user.email,
-              'Remboursement effectué',
-              'Votre remboursement a été effectué avec succès.'
+              'Remboursement effectué - Hosteed',
+              {
+                userName: user.name ?? 'Client',
+                message: 'Votre remboursement a été effectué avec succès.',
+              }
             )
           }
         }

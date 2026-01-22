@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { updateUserRole } from '@/lib/services/user.service'
-import { sendRoleUpdateNotification } from '@/lib/services/email.service'
+import { emailService } from '@/lib/services/email'
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -39,10 +39,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     // Envoyer un email de notification à l'utilisateur
     try {
-      const emailResult = await sendRoleUpdateNotification(
+      const roleInfo = getRoleInfo(role)
+      const emailResult = await emailService.sendRoleUpdate(
         updatedUser.email,
         updatedUser.name || updatedUser.lastname || 'Utilisateur',
-        role
+        roleInfo
       )
 
       if (!emailResult.success) {
@@ -63,5 +64,42 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   } catch (error) {
     console.error('Erreur lors de la mise à jour du rôle:', error)
     return NextResponse.json({ error: 'Erreur interne du serveur' }, { status: 500 })
+  }
+}
+
+function getRoleInfo(role: string) {
+  switch (role) {
+    case 'ADMIN':
+      return {
+        class: 'admin',
+        emoji: '👑',
+        label: 'Administrateur',
+        description:
+          "Vous avez maintenant accès à toutes les fonctionnalités d'administration de la plateforme.",
+      }
+    case 'HOST':
+    case 'HOST_VERIFIED':
+      return {
+        class: 'host',
+        emoji: '🏠',
+        label: role === 'HOST_VERIFIED' ? 'Hôte Vérifié' : 'Hôte',
+        description:
+          'Vous pouvez maintenant publier et gérer vos propres annonces de logement.',
+      }
+    case 'BLOGWRITER':
+      return {
+        class: 'blogwriter',
+        emoji: '✍️',
+        label: 'Rédacteur',
+        description: 'Vous pouvez maintenant créer et gérer des articles de blog.',
+      }
+    case 'USER':
+    default:
+      return {
+        class: 'guest',
+        emoji: '👤',
+        label: 'Utilisateur',
+        description: 'Vous pouvez rechercher et réserver des logements.',
+      }
   }
 }

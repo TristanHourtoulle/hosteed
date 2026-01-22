@@ -1,7 +1,7 @@
 'use server'
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { sendTemplatedMail } from '@/lib/services/sendTemplatedMail'
+import { emailService } from '@/lib/services/email'
 
 export async function GET() {
   try {
@@ -12,7 +12,7 @@ export async function GET() {
     const dayAfterTomorrow = new Date(tomorrow)
     dayAfterTomorrow.setUTCDate(dayAfterTomorrow.getUTCDate() + 1)
 
-    const rent = await prisma.rent.findMany({
+    const rents = await prisma.rent.findMany({
       where: {
         arrivingDate: {
           gte: tomorrow,
@@ -28,6 +28,8 @@ export async function GET() {
                 id: true,
                 name: true,
                 email: true,
+                emailBounced: true,
+                emailOptOut: true,
               },
             },
           },
@@ -36,74 +38,110 @@ export async function GET() {
           select: {
             email: true,
             name: true,
+            emailBounced: true,
+            emailOptOut: true,
           },
         },
       },
     })
-    console.log('Résultats trouvés:', rent)
 
-    // Envoyer des rappels aux hôtes (propriétaires du produit)
-    for (const unique of rent) {
-      if (unique.product.owner) {
-        const host = unique.product.owner
-        console.log(`Envoi de rappel à l'hôte: ${host.email}`)
-        try {
-          await sendTemplatedMail(
-            host.email,
-            'Rappel de réservation !',
-            'cron-reminder-host.html',
-            {
-              bookId: unique.id,
-              establishmentName: unique.product.name,
-              establishmentAddress: unique.product.address,
-              checkInDate: unique.arrivingDate.toDateString(),
-              checkInTime: unique.product.arriving,
-              checkOutDate: unique.leavingDate.toDateString(),
-              checkOutTime: unique.product.leaving,
-              establishmentPhone: unique.product.phone,
-              name: unique.user?.name || '',
-              bookUrl: process.env.NEXTAUTH_URL + '/reservation/' + unique.id,
-            }
-          )
-          console.log(`Email envoyé avec succès à l'hôte: ${host.email}`)
-        } catch (error) {
-          console.error(`Erreur lors de l'envoi à l'hôte ${host.email}:`, error)
+    console.log(`[Cron] Found ${rents.length} reservations arriving tomorrow`)
+
+    let hostEmailsSent = 0
+    let clientEmailsSent = 0
+
+    // Send reminders to hosts
+    for (const rent of rents) {
+      const host = rent.product.owner
+      if (!host) continue
+
+      // Skip if host has opted out or email bounced
+      if (host.emailOptOut || host.emailBounced) {
+        console.log(`[Cron] Skipping host ${host.email} - opted out or bounced`)
+        continue
+      }
+
+      try {
+        const result = await emailService.sendBookingReminder(
+          host.email,
+          host.name ?? 'Hôte',
+          true, // isHost
+          {
+            bookId: rent.id,
+            establishmentName: rent.product.name,
+            establishmentAddress: rent.product.address,
+            checkInDate: rent.arrivingDate.toDateString(),
+            checkInTime: rent.product.arriving,
+            checkOutDate: rent.leavingDate.toDateString(),
+            checkOutTime: rent.product.leaving,
+            establishmentPhone: rent.product.phone,
+            guestName: rent.user?.name ?? '',
+            bookUrl: `${process.env.NEXTAUTH_URL}/reservation/${rent.id}`,
+          }
+        )
+
+        if (result.success) {
+          hostEmailsSent++
+          console.log(`[Cron] Reminder sent to host: ${host.email}`)
+        } else {
+          console.error(`[Cron] Failed to send to host ${host.email}:`, result.error)
         }
+      } catch (error) {
+        console.error(`[Cron] Error sending to host ${host.email}:`, error)
       }
     }
 
-    // Envoyer des rappels aux clients (utilisateurs qui ont réservé)
-    for (const unique of rent) {
-      if (unique.user) {
-        console.log(`Envoi de rappel au client: ${unique.user.email}`)
-        try {
-          await sendTemplatedMail(
-            unique.user.email,
-            'Rappel de réservation !',
-            'cron-reminder-client.html',
-            {
-              bookId: unique.id,
-              establishmentName: unique.product.name,
-              establishmentAddress: unique.product.address,
-              checkInDate: unique.arrivingDate.toDateString(),
-              checkInTime: unique.product.arriving,
-              checkOutDate: unique.leavingDate.toDateString(),
-              checkOutTime: unique.product.leaving,
-              establishmentPhone: unique.product.phone,
-              name: unique.user.name || '',
-              bookUrl: process.env.NEXTAUTH_URL + '/reservation/' + unique.id,
-            }
-          )
-          console.log(`Email envoyé avec succès au client: ${unique.user.email}`)
-        } catch (error) {
-          console.error(`Erreur lors de l'envoi au client ${unique.user.email}:`, error)
+    // Send reminders to guests
+    for (const rent of rents) {
+      const guest = rent.user
+      if (!guest) continue
+
+      // Skip if guest has opted out or email bounced
+      if (guest.emailOptOut || guest.emailBounced) {
+        console.log(`[Cron] Skipping guest ${guest.email} - opted out or bounced`)
+        continue
+      }
+
+      try {
+        const result = await emailService.sendBookingReminder(
+          guest.email,
+          guest.name ?? 'Client',
+          false, // isHost
+          {
+            bookId: rent.id,
+            establishmentName: rent.product.name,
+            establishmentAddress: rent.product.address,
+            checkInDate: rent.arrivingDate.toDateString(),
+            checkInTime: rent.product.arriving,
+            checkOutDate: rent.leavingDate.toDateString(),
+            checkOutTime: rent.product.leaving,
+            establishmentPhone: rent.product.phone,
+            hostName: rent.product.owner?.name ?? '',
+            bookUrl: `${process.env.NEXTAUTH_URL}/reservation/${rent.id}`,
+          }
+        )
+
+        if (result.success) {
+          clientEmailsSent++
+          console.log(`[Cron] Reminder sent to guest: ${guest.email}`)
+        } else {
+          console.error(`[Cron] Failed to send to guest ${guest.email}:`, result.error)
         }
+      } catch (error) {
+        console.error(`[Cron] Error sending to guest ${guest.email}:`, error)
       }
     }
 
-    return NextResponse.json('200')
+    console.log(`[Cron] Complete: ${hostEmailsSent} host emails, ${clientEmailsSent} guest emails`)
+
+    return NextResponse.json({
+      success: true,
+      reservationsFound: rents.length,
+      hostEmailsSent,
+      clientEmailsSent,
+    })
   } catch (error) {
-    console.error('Error fetching upcoming rents:', error)
-    return NextResponse.json({ error: 'Failed to fetch upcoming rents' }, { status: 500 })
+    console.error('[Cron] Error:', error)
+    return NextResponse.json({ error: 'Failed to process reminders' }, { status: 500 })
   }
 }

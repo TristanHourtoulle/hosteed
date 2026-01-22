@@ -4,7 +4,7 @@ import { hash, compare } from 'bcryptjs'
 import prisma from '@/lib/prisma'
 import { UserRole } from '@prisma/client'
 import jwt from 'jsonwebtoken'
-import { sendTemplatedMail } from '@/lib/services/sendTemplatedMail'
+import { emailService } from '@/lib/services/email'
 // Legacy function - use findAllUserPaginated instead
 export async function findAllUser() {
   const result = await findAllUserPaginated({ page: 1, limit: 100 })
@@ -240,46 +240,48 @@ export async function updateUser(
 
 export async function sendEmailVerification(userId: string) {
   try {
-    console.log('=== DEBUG EMAIL VERIFICATION START ===')
-    console.log('userId:', userId)
+    console.log('[Email Verification] Starting for userId:', userId)
 
     const user = await prisma.user.findUnique({
-      where: {
-        id: userId,
-      },
+      where: { id: userId },
     })
-    console.log('user found:', user ? 'YES' : 'NO')
-    if (!user) throw new Error('User not found')
 
-    console.log('Creating JWT token...')
-    const token = jwt.sign({ email: user.email }, process.env.EMAIL_VERIF_TOKEN || '', {
-      expiresIn: '4h',
-    })
-    console.log('Token created:', token ? 'YES' : 'NO')
+    if (!user) {
+      throw new Error('User not found')
+    }
 
-    console.log('Updating user with emailToken...')
+    // Check if user has opted out or has bounced email
+    if (user.emailOptOut || user.emailBounced) {
+      console.log('[Email Verification] Skipped - user opted out or email bounced')
+      return
+    }
+
+    const token = jwt.sign(
+      { email: user.email },
+      process.env.EMAIL_VERIF_TOKEN ?? '',
+      { expiresIn: '4h' }
+    )
+
     await prisma.user.update({
       where: { id: userId },
-      data: {
-        emailToken: token,
-      },
+      data: { emailToken: token },
     })
-    await sendTemplatedMail(
+
+    const verificationUrl = `${process.env.NEXTAUTH_URL}/checkEmail/${token}`
+
+    const result = await emailService.sendVerificationEmail(
       user.email,
-      'Verifier votre email !',
-      'checkEmail.html',
-      {
-        verificationUrl: process.env.NEXTAUTH_URL + '/checkEmail/' + token,
-      },
-      true
+      user.name ?? 'Utilisateur',
+      verificationUrl
     )
+
+    if (!result.success) {
+      console.error('[Email Verification] Failed to send:', result.error)
+    } else {
+      console.log('[Email Verification] Sent successfully:', result.messageId)
+    }
   } catch (e) {
-    console.error('=== ERROR IN EMAIL VERIFICATION ===')
-    console.error('Error:', e)
-    console.error('Error message:', e instanceof Error ? e.message : 'Unknown error')
-    console.error('Error stack:', e instanceof Error ? e.stack : 'No stack')
-    console.error('=== END ERROR ===')
-    return
+    console.error('[Email Verification] Error:', e instanceof Error ? e.message : 'Unknown error')
   }
 }
 
@@ -323,32 +325,43 @@ export async function validateEmail(token: string) {
 export async function sendResetEmail(userEmail: string) {
   try {
     const user = await prisma.user.findUnique({
-      where: {
-        email: userEmail,
-      },
+      where: { email: userEmail },
     })
-    if (!user) throw new Error('User not found')
-    const token = jwt.sign({ id: user.id }, process.env.RESET_PASSWORD_SECRET || '', {
-      expiresIn: '24h',
-    })
+
+    if (!user) {
+      throw new Error('User not found')
+    }
+
+    // Check if user has opted out or has bounced email
+    if (user.emailOptOut || user.emailBounced) {
+      console.log('[Password Reset] Skipped - user opted out or email bounced')
+      return
+    }
+
+    const token = jwt.sign(
+      { id: user.id },
+      process.env.RESET_PASSWORD_SECRET ?? '',
+      { expiresIn: '24h' }
+    )
+
     await prisma.user.update({
       where: { id: user.id },
-      data: {
-        resetToken: token,
-      },
+      data: { resetToken: token },
     })
-    await sendTemplatedMail(
+
+    const resetUrl = `${process.env.NEXTAUTH_URL}/forgetPassword/${token}`
+
+    const result = await emailService.sendPasswordReset(
       user.email,
-      'Reinitialisation du mot de passe !',
-      'resetPassword.html',
-      {
-        resetUrl: process.env.NEXTAUTH_URL + '/forgetPassword/' + token,
-      },
-      true
+      user.name ?? 'Utilisateur',
+      resetUrl
     )
+
+    if (!result.success) {
+      console.error('[Password Reset] Failed to send:', result.error)
+    }
   } catch (e) {
-    console.error(e)
-    return
+    console.error('[Password Reset] Error:', e instanceof Error ? e.message : 'Unknown error')
   }
 }
 

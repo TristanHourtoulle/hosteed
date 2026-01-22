@@ -571,6 +571,10 @@ model User {
   isVerifiedTraveler Boolean @default(false) // Voyageur vérifié
   isAccountConfirmed Boolean @default(false) // Compte confirmé
 
+  // Email deliverability tracking (Brevo webhooks)
+  emailBounced Boolean @default(false) // Email has bounced (hard bounce or invalid)
+  emailOptOut  Boolean @default(false) // User has opted out (complaint or unsubscribe)
+
   // Nouveaux champs pour les statistiques
   averageRating Float? // Note moyenne reçue en tant que locataire/hôte
   totalRatings  Int    @default(0) // Nombre total de notes reçues
@@ -1167,4 +1171,30 @@ model CalendarEventMapping {
   @@index([externalCalendarId])
   @@index([startDate, endDate])
   @@map("calendar_event_mappings")
+}
+
+// ============================================
+// EMAIL TRACKING SYSTEM (Brevo Webhooks)
+// ============================================
+
+// Tracks email delivery events from Brevo webhooks
+model EmailEvent {
+  id        String   @id @default(cuid())
+  messageId String   // Brevo message ID
+  email     String   // Recipient email address
+  event     String   // Event type: sent, delivered, opened, click, soft_bounce, hard_bounce, etc.
+  timestamp DateTime // When the event occurred
+  subject   String?  // Email subject (if available)
+  tags      String[] // Email tags for categorization
+  metadata  Json?    // Additional event data (link clicked, bounce reason, etc.)
+  createdAt DateTime @default(now())
+
+  // Performance indexes for analytics queries
+  @@index([email])
+  @@index([messageId])
+  @@index([event])
+  @@index([timestamp])
+  @@index([email, event])
+  @@index([createdAt])
+  @@map("email_events")
 }
