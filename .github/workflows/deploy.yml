@@ -48,10 +48,13 @@ jobs:
             echo "=== 7. Ensure uploads symlink ==="
             ln -sfn /var/www/hosteedv2.com/public/uploads .next/standalone/public/uploads
 
-            echo "=== 8. Restart PM2 ==="
+            echo "=== 8. Link .env file to standalone ==="
+            ln -sfn /var/www/hosteedv2.com/.env .next/standalone/.env
+
+            echo "=== 9. Restart PM2 ==="
             pm2 restart hosteedv2 --update-env
 
-            echo "=== 9. Health check ==="
+            echo "=== 10. Health check ==="
             sleep 5
             curl -sf http://localhost:3101 > /dev/null && echo "Health check OK" || echo "Warning: Health check failed"
 

@@ -87,7 +87,7 @@ export default function HeroSection() {
           <h1 className='text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-2'>
             Le meilleur de Madagascar,
           </h1>
-          <h1 className='text-4xl md:text-6xl lg:text-7xl font-bold bg-gradient-to-r from-[#00FF88] to-[#00CC66] bg-clip-text text-transparent'>
+          <h1 className='text-4xl md:text-6xl lg:text-7xl font-bold bg-gradient-to-r from-[#FFB800] to-[#FF8C00] bg-clip-text text-transparent'>
             rien que pour vous
           </h1>
         </motion.div>
