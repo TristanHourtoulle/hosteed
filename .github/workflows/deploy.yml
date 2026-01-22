@@ -36,25 +36,28 @@ jobs:
             echo "=== 3. Generate Prisma client ==="
             pnpm prisma generate
 
-            echo "=== 4. Build Next.js (with extended memory) ==="
+            echo "=== 4. Sync database schema ==="
+            pnpm prisma db push --skip-generate
+
+            echo "=== 5. Build Next.js (with extended memory) ==="
             NODE_OPTIONS='--max-old-space-size=4096' pnpm build
 
-            echo "=== 5. Copy static files (without overwriting) ==="
+            echo "=== 6. Copy static files (without overwriting) ==="
             cp -rn .next/static/* .next/standalone/.next/static/ 2>/dev/null || cp -r .next/static .next/standalone/.next/
 
-            echo "=== 6. Sync public files (new files only) ==="
+            echo "=== 7. Sync public files (new files only) ==="
             rsync -a --ignore-existing public/ .next/standalone/public/
 
-            echo "=== 7. Ensure uploads symlink ==="
+            echo "=== 8. Ensure uploads symlink ==="
             ln -sfn /var/www/hosteedv2.com/public/uploads .next/standalone/public/uploads
 
-            echo "=== 8. Link .env file to standalone ==="
+            echo "=== 9. Link .env file to standalone ==="
             ln -sfn /var/www/hosteedv2.com/.env .next/standalone/.env
 
-            echo "=== 9. Restart PM2 ==="
+            echo "=== 10. Restart PM2 ==="
             pm2 restart hosteedv2 --update-env
 
-            echo "=== 10. Health check ==="
+            echo "=== 11. Health check ==="
             sleep 5
             curl -sf http://localhost:3101 > /dev/null && echo "Health check OK" || echo "Warning: Health check failed"
 
