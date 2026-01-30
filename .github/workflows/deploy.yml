@@ -61,4 +61,7 @@ jobs:
             sleep 5
             curl -sf http://localhost:3101 > /dev/null && echo "Health check OK" || echo "Warning: Health check failed"
 
+            echo "=== 12. Save PM2 process list ==="
+            pm2 save
+
             echo "=== Deployment complete! ==="
