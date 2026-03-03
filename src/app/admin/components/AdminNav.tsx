@@ -9,6 +9,7 @@ import { useSession } from 'next-auth/react'
 import { UserRole } from '@prisma/client'
 import {
   BarChart2,
+  CalendarDays,
   ClipboardCheck,
   Home,
   Users,
@@ -150,6 +151,12 @@ const navGroups: NavGroup[] = [
         title: 'Paiements',
         href: '/admin/payment',
         icon: CreditCard,
+        requiredRoles: ['ADMIN'],
+      },
+      {
+        title: 'Reservations',
+        href: '/admin/reservations',
+        icon: CalendarDays,
         requiredRoles: ['ADMIN'],
       },
       {
