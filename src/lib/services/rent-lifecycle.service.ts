@@ -131,7 +131,9 @@ export async function approveRent(id: string) {
       options: true,
     },
   })
-  if (!createdRent || !createdRent.stripeId || !createdRent.user) throw Error()
+  if (!createdRent || !createdRent.stripeId || !createdRent.user) {
+    throw new Error(`Rent ${id} not found, missing stripeId, or missing user association`)
+  }
   const stripeResult = await StripeService.capturePaymentIntent(createdRent.stripeId)
   logger.info({ rentId: id, stripeSuccess: stripeResult?.success }, 'Stripe payment captured')
 
@@ -148,13 +150,21 @@ export async function approveRent(id: string) {
   await invalidateAvailabilityCaches(createdRent.productId, 'rent approval')
 
   const admin = await findAllUserByRoles('ADMIN')
-  admin?.map(async user => {
-    await sendTemplatedMail(user.email, 'Nouvelle réservation !', 'new-book.html', {
-      bookId: createdRent.id,
-      name: user.name || '',
-      bookUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
-    })
-  })
+  if (admin && admin.length > 0) {
+    const emailResults = await Promise.allSettled(
+      admin.map(user =>
+        sendTemplatedMail(user.email, 'Nouvelle réservation !', 'new-book.html', {
+          bookId: createdRent.id,
+          name: user.name || '',
+          bookUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
+        })
+      )
+    )
+    const failedEmails = emailResults.filter(r => r.status === 'rejected')
+    if (failedEmails.length > 0) {
+      logger.warn({ count: failedEmails.length }, 'Some admin notification emails failed to send')
+    }
+  }
   await sendTemplatedMail(
     createdRent.user.email,
     'Réservation confirmée 🏨',

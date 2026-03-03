@@ -192,10 +192,9 @@ export async function checkRentIsAvailable(
 
     return result
   } catch (error) {
-    logger.error({ productId, error }, 'Error checking rent availability')
-    return {
-      available: false,
-      message: 'Une erreur est survenue lors de la vérification de la disponibilité',
-    }
+    // Re-throw unexpected errors (DB outage, Prisma failures) so callers can
+    // distinguish infrastructure failures from genuine "unavailable" results.
+    logger.error({ productId, error }, 'Unexpected error checking rent availability')
+    throw error
   }
 }

@@ -444,7 +444,12 @@ export async function calculateBookingPrice(
   // 2. Récupérer les paramètres de tarification de l'hôte
   const settings = await getHostPricingSettings(ownerId)
 
-  // 3. Calculer le prix pour chaque jour
+  // 3. Validate date range
+  if (startDate >= endDate) {
+    throw new Error('End date must be after start date')
+  }
+
+  // 4. Calculer le prix pour chaque jour
   const dailyBreakdown: DailyPriceBreakdown[] = []
   const currentDate = new Date(startDate)
   currentDate.setHours(12, 0, 0, 0) // Midi pour éviter les problèmes de timezone

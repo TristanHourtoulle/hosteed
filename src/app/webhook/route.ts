@@ -7,7 +7,16 @@ import { emailService } from '@/lib/services/email'
 import { RentStatus } from '@prisma/client'
 import { logger } from '@/lib/logger'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+function getRequiredEnv(name: string): string {
+  const value = process.env[name]
+  if (!value) throw new Error(`Missing required environment variable: ${name}`)
+  return value
+}
+
+const stripeSecretKey = getRequiredEnv('STRIPE_SECRET_KEY')
+const stripeWebhookSecret = getRequiredEnv('STRIPE_WEBHOOK_SECRET')
+
+const stripe = new Stripe(stripeSecretKey, {
   apiVersion: '2025-10-29.clover',
 })
 
@@ -30,7 +39,7 @@ export async function POST(req: Request): Promise<Response> {
     const event = stripe.webhooks.constructEvent(
       body,
       signature,
-      process.env.STRIPE_WEBHOOK_SECRET!
+      stripeWebhookSecret
     ) as StripeWebhookEvent
 
     // Handle disputes

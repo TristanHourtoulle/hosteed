@@ -398,13 +398,21 @@ export async function createRent(params: {
   }
 
   const admin = await findAllUserByRoles('ADMIN')
-  admin?.map(async user => {
-    await sendTemplatedMail(user.email, 'Nouvelle réservation !', 'new-book.html', {
-      bookId: createdRent.id,
-      name: user.name || '',
-      bookUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
-    })
-  })
+  if (admin && admin.length > 0) {
+    const emailResults = await Promise.allSettled(
+      admin.map(user =>
+        sendTemplatedMail(user.email, 'Nouvelle réservation !', 'new-book.html', {
+          bookId: createdRent.id,
+          name: user.name || '',
+          bookUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
+        })
+      )
+    )
+    const failedEmails = emailResults.filter(r => r.status === 'rejected')
+    if (failedEmails.length > 0) {
+      logger.warn({ count: failedEmails.length }, 'Some admin notification emails failed to send')
+    }
+  }
 
   if (!createdRent.product.owner) {
     logger.error({ rentId: createdRent.id }, 'Product owner not available for notification')
