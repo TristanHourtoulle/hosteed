@@ -6,6 +6,7 @@ import { StripeService } from '@/lib/services/stripe'
 import { sendTemplatedMail } from '@/lib/services/sendTemplatedMail'
 import { findAllUserByRoles } from '@/lib/services/user.service'
 import { availabilityCacheService } from '@/lib/cache/redis-cache.service'
+import { invalidateProductCache } from '@/lib/cache/invalidation'
 export interface FormattedRent {
   id: string
   title: string
@@ -144,6 +145,12 @@ export async function CheckRentIsAvailable(
     const normalizedLeavingDate = new Date(leavingDate)
     normalizedLeavingDate.setUTCHours(0, 0, 0, 0)
 
+    // Hotel night semantics: checkout day is free. Since stored dates may include
+    // check-in/out hours (e.g. 14:00/11:00), we need dayAfterArrival to avoid
+    // false positives when an existing checkout time (11:00) > normalized midnight.
+    const dayAfterArrival = new Date(normalizedArrivalDate)
+    dayAfterArrival.setUTCDate(dayAfterArrival.getUTCDate() + 1)
+
     console.log('🔍 [CheckRentIsAvailable] Vérification disponibilité', {
       productId,
       normalizedArrivalDate: normalizedArrivalDate.toISOString().split('T')[0],
@@ -187,7 +194,7 @@ export async function CheckRentIsAvailable(
       const existingRents = await prisma.rent.findMany({
         where: {
           productId: productId,
-          status: RentStatus.RESERVED,
+          status: { in: [RentStatus.RESERVED, RentStatus.WAITING] },
           OR: [
             // Réservation qui commence pendant la période
             {
@@ -196,10 +203,10 @@ export async function CheckRentIsAvailable(
                 lt: normalizedLeavingDate,
               },
             },
-            // Réservation qui se termine pendant la période
+            // Réservation qui se termine pendant la période (dayAfterArrival: checkout day is free)
             {
               leavingDate: {
-                gt: normalizedArrivalDate,
+                gte: dayAfterArrival,
                 lt: normalizedLeavingDate,
               },
             },
@@ -250,7 +257,7 @@ export async function CheckRentIsAvailable(
       const existingRent = await prisma.rent.findFirst({
         where: {
           productId: productId,
-          status: RentStatus.RESERVED,
+          status: { in: [RentStatus.RESERVED, RentStatus.WAITING] },
           OR: [
             // Réservation qui commence pendant la période demandée
             {
@@ -259,10 +266,10 @@ export async function CheckRentIsAvailable(
                 lt: normalizedLeavingDate,
               },
             },
-            // Réservation qui se termine pendant la période demandée
+            // Réservation qui se termine pendant la période demandée (dayAfterArrival: checkout day is free)
             {
               leavingDate: {
-                gt: normalizedArrivalDate,
+                gte: dayAfterArrival,
                 lt: normalizedLeavingDate,
               },
             },
@@ -499,78 +506,134 @@ export async function createRent(params: {
       productSettings?.ownerId
     )
 
-    const createdRent = await prisma.rent.create({
-      data: {
+    // Atomic check-then-create: prevents race condition double bookings
+    const createdRent = await prisma.$transaction(async (tx) => {
+      // Re-check availability inside transaction (definitive check with row-level isolation)
+      const normalizedArrival = new Date(params.arrivingDate)
+      normalizedArrival.setUTCHours(0, 0, 0, 0)
+      const normalizedLeaving = new Date(params.leavingDate)
+      normalizedLeaving.setUTCHours(0, 0, 0, 0)
+
+      // Hotel night semantics: checkout day is free
+      const dayAfterArrival = new Date(normalizedArrival)
+      dayAfterArrival.setUTCDate(dayAfterArrival.getUTCDate() + 1)
+
+      const productInfo = await tx.product.findUnique({
+        where: { id: params.productId },
+        select: { availableRooms: true },
+      })
+
+      const overlapWhere = {
         productId: params.productId,
-        userId: params.userId,
-        arrivingDate: params.arrivingDate,
-        leavingDate: params.leavingDate,
-        numberPeople: BigInt(params.peopleNumber),
-        notes: BigInt(0),
-        accepted: shouldAutoAccept,
-        confirmed: shouldAutoAccept,
-        prices: BigInt(params.prices), // DEPRECATED: Garder pour compatibilité
-        stripeId: params.stripeId || null,
-        options: {
-          connect: params.options.map(optionId => ({ id: optionId })),
+        status: { in: [RentStatus.RESERVED, RentStatus.WAITING] as RentStatus[] },
+        OR: [
+          {
+            arrivingDate: { gte: normalizedArrival, lt: normalizedLeaving },
+          },
+          {
+            leavingDate: { gte: dayAfterArrival, lt: normalizedLeaving },
+          },
+          {
+            arrivingDate: { lt: normalizedArrival },
+            leavingDate: { gt: normalizedLeaving },
+          },
+        ],
+      }
+
+      if (productInfo?.availableRooms && productInfo.availableRooms > 1) {
+        const conflictCount = await tx.rent.count({ where: overlapWhere })
+        if (conflictCount >= productInfo.availableRooms) {
+          throw new Error('Aucune chambre disponible pour cette période')
+        }
+      } else {
+        const conflict = await tx.rent.findFirst({ where: overlapWhere })
+        if (conflict) {
+          throw new Error('Il existe déjà une réservation sur cette période')
+        }
+      }
+
+      // Create rent inside the transaction
+      const rent = await tx.rent.create({
+        data: {
+          productId: params.productId,
+          userId: params.userId,
+          arrivingDate: params.arrivingDate,
+          leavingDate: params.leavingDate,
+          numberPeople: BigInt(params.peopleNumber),
+          notes: BigInt(0),
+          accepted: shouldAutoAccept,
+          confirmed: shouldAutoAccept,
+          prices: BigInt(params.prices), // DEPRECATED: Garder pour compatibilité
+          stripeId: params.stripeId || null,
+          options: {
+            connect: params.options.map(optionId => ({ id: optionId })),
+          },
+          basePricePerNight: pricingDetails.basePricing.averageNightlyPrice,
+          numberOfNights: pricingDetails.basePricing.numberOfNights,
+          subtotal: pricingDetails.basePricing.subtotal,
+          discountAmount: pricingDetails.basePricing.totalSavings,
+          promotionApplied: pricingDetails.basePricing.promotionApplied,
+          specialPriceApplied: pricingDetails.basePricing.specialPriceApplied,
+          totalSavings: pricingDetails.basePricing.totalSavings,
+          extrasTotal: pricingDetails.extrasTotal,
+          clientCommission: pricingDetails.clientCommission,
+          hostCommission: pricingDetails.hostCommission,
+          platformAmount: pricingDetails.platformAmount,
+          hostAmount: pricingDetails.hostAmount,
+          totalAmount: pricingDetails.totalAmount,
+          pricingSnapshot: JSON.parse(JSON.stringify({
+            dailyBreakdown: pricingDetails.basePricing.dailyBreakdown,
+            extrasDetails: pricingDetails.extrasDetails,
+            summary: pricingDetails.summary,
+            calculatedAt: new Date().toISOString(),
+          })),
         },
-        // ✨ NEW: Stocker tous les détails de pricing
-        basePricePerNight: pricingDetails.basePricing.averageNightlyPrice,
-        numberOfNights: pricingDetails.basePricing.numberOfNights,
-        subtotal: pricingDetails.basePricing.subtotal,
-        discountAmount: pricingDetails.basePricing.totalSavings,
-        promotionApplied: pricingDetails.basePricing.promotionApplied,
-        specialPriceApplied: pricingDetails.basePricing.specialPriceApplied,
-        totalSavings: pricingDetails.basePricing.totalSavings,
-        extrasTotal: pricingDetails.extrasTotal,
-        clientCommission: pricingDetails.clientCommission,
-        hostCommission: pricingDetails.hostCommission,
-        platformAmount: pricingDetails.platformAmount,
-        hostAmount: pricingDetails.hostAmount,
-        totalAmount: pricingDetails.totalAmount,
-        // Stocker le breakdown complet en JSON pour audit
-        pricingSnapshot: JSON.parse(JSON.stringify({
-          dailyBreakdown: pricingDetails.basePricing.dailyBreakdown,
-          extrasDetails: pricingDetails.extrasDetails,
-          summary: pricingDetails.summary,
-          calculatedAt: new Date().toISOString(),
-        })),
-      },
-      include: {
-        product: {
-          include: {
-            img: true,
-            type: true,
-            owner: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
+        include: {
+          product: {
+            include: {
+              img: true,
+              type: true,
+              owner: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
               },
             },
           },
+          user: true,
+          options: true,
+          extras: true,
         },
-        user: true,
-        options: true,
-        extras: true, // NEW: Include extras in response
-      },
-    })
+      })
 
-    // ✨ NEW: Créer les entrées RentExtra pour chaque extra sélectionné
-    if (params.selectedExtras && params.selectedExtras.length > 0) {
-      for (const extra of params.selectedExtras) {
-        const extraDetail = pricingDetails.extrasDetails.find(e => e.extraId === extra.extraId)
-        if (extraDetail) {
-          await prisma.rentExtra.create({
-            data: {
-              rentId: createdRent.id,
-              extraId: extra.extraId,
-              quantity: extra.quantity,
-              totalPrice: extraDetail.total,
-            },
-          })
+      // Create RentExtra entries inside the same transaction
+      if (params.selectedExtras && params.selectedExtras.length > 0) {
+        for (const extra of params.selectedExtras) {
+          const extraDetail = pricingDetails.extrasDetails.find(e => e.extraId === extra.extraId)
+          if (extraDetail) {
+            await tx.rentExtra.create({
+              data: {
+                rentId: rent.id,
+                extraId: extra.extraId,
+                quantity: extra.quantity,
+                totalPrice: extraDetail.total,
+              },
+            })
+          }
         }
       }
+
+      return rent
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
+
+    // Invalidate availability cache after booking creation
+    try {
+      await availabilityCacheService.invalidateAvailability(params.productId)
+      await invalidateProductCache(params.productId)
+    } catch (cacheError) {
+      console.warn('Failed to invalidate availability cache after booking creation:', cacheError)
     }
 
     const request = await prisma.product.findUnique({
@@ -765,6 +828,15 @@ export async function approveRent(id: string) {
       confirmed: true,
     },
   })
+
+  // Invalidate availability cache after rent approval
+  try {
+    await availabilityCacheService.invalidateAvailability(createdRent.productId)
+    await invalidateProductCache(createdRent.productId)
+  } catch (cacheError) {
+    console.warn('Failed to invalidate availability cache after rent approval:', cacheError)
+  }
+
   const admin = await findAllUserByRoles('ADMIN')
   admin?.map(async user => {
     await sendTemplatedMail(user.email, 'Nouvelle réservation !', 'new-book.html', {
@@ -924,6 +996,14 @@ export async function cancelRent(id: string) {
           status: 'CANCEL',
         },
       })
+
+      // Invalidate availability cache after rent cancellation
+      try {
+        await availabilityCacheService.invalidateAvailability(rents.productId)
+        await invalidateProductCache(rents.productId)
+      } catch (cacheError) {
+        console.warn('Failed to invalidate availability cache after rent cancellation:', cacheError)
+      }
     }
     await sendTemplatedMail(
       rents.user.email,
@@ -962,6 +1042,15 @@ export async function changeRentStatus(id: string, status: RentStatus) {
         status: status,
       },
     })
+
+    // Invalidate availability cache after status change
+    try {
+      await availabilityCacheService.invalidateAvailability(rent.productId)
+      await invalidateProductCache(rent.productId)
+    } catch (cacheError) {
+      console.warn('Failed to invalidate availability cache after status change:', cacheError)
+    }
+
     if (status == RentStatus.CHECKOUT) {
       await sendTemplatedMail(
         rent.user.email,
@@ -1054,6 +1143,14 @@ export async function rejectRentRequest(
       where: { id: rentId },
       data: { status: RentStatus.CANCEL },
     })
+
+    // Invalidate availability cache after rent rejection
+    try {
+      await availabilityCacheService.invalidateAvailability(rent.productId)
+      await invalidateProductCache(rent.productId)
+    } catch (cacheError) {
+      console.warn('Failed to invalidate availability cache after rent rejection:', cacheError)
+    }
 
     // Créer l'enregistrement de refus
     const rejection = await prisma.rentRejection.create({
