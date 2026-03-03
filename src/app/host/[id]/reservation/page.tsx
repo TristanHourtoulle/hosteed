@@ -5,7 +5,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@/hooks/useAuth'
 import { useBookingProduct, useBookingUser, useBookingPricing } from '@/hooks/useBookingData'
-import { checkRentIsAvailable } from '@/lib/services/rent-availability.service'
 import { reservationFormSchema, type ReservationFormData } from '@/lib/zod/booking.schema'
 import { MapPin, Star, CreditCard, Shield, ArrowLeft, Check } from 'lucide-react'
 import { Button } from '@/components/ui/shadcnui/button'
@@ -79,14 +78,17 @@ export default function ReservationPage() {
     },
   })
 
-  const watchedArrivingDate = form.watch('arrivingDate')
-  const watchedLeavingDate = form.watch('leavingDate')
-  const watchedPeopleNumber = form.watch('peopleNumber')
-  const watchedFirstName = form.watch('firstName')
-  const watchedLastName = form.watch('lastName')
-  const watchedEmail = form.watch('email')
-  const watchedPhone = form.watch('phone')
-  const watchedSpecialRequests = form.watch('specialRequests')
+  const watchedValues = form.watch()
+  const {
+    arrivingDate: watchedArrivingDate,
+    leavingDate: watchedLeavingDate,
+    peopleNumber: watchedPeopleNumber,
+    firstName: watchedFirstName,
+    lastName: watchedLastName,
+    email: watchedEmail,
+    phone: watchedPhone,
+    specialRequests: watchedSpecialRequests,
+  } = watchedValues
 
   // React Query: product data
   const {
@@ -126,7 +128,7 @@ export default function ReservationPage() {
     }
   }, [userData, isAuthenticated, session, form])
 
-  // Availability check (kept as useEffect since it's a live server check)
+  // Availability check via API route (not a server action)
   useEffect(() => {
     const checkAvailability = async () => {
       if (!watchedArrivingDate || !watchedLeavingDate || !product?.id) {
@@ -142,7 +144,18 @@ export default function ReservationPage() {
       leavingDate.setHours(Number(product.leaving) || 11, 0, 0, 0)
 
       try {
-        const result = await checkRentIsAvailable(product.id, arrivingDate, leavingDate)
+        const params = new URLSearchParams({
+          productId: product.id,
+          arrival: arrivingDate.toISOString(),
+          leaving: leavingDate.toISOString(),
+        })
+        const response = await fetch(`/api/check-availability?${params}`)
+        const result = await response.json()
+
+        if (!response.ok) {
+          throw new Error(result.error?.message || 'Availability check failed')
+        }
+
         setIsAvailable(result.available)
         if (!result.available) {
           toast.error(RESERVATION_MESSAGES.DATES_UNAVAILABLE_TOAST)

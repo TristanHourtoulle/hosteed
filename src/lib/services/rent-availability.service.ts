@@ -1,5 +1,3 @@
-'use server'
-
 import prisma from '@/lib/prisma'
 import { availabilityCacheService } from '@/lib/cache/redis-cache.service'
 import { buildOverlapWhereClause, normalizeDates } from './rent-overlap.utils'

@@ -130,6 +130,15 @@ export async function POST(req: Request): Promise<Response> {
           const session = sessions.data[0]
 
           if (session.metadata?.productId && session.metadata?.userId) {
+            // Idempotency: skip if rent already exists for this payment
+            const existingRentForPI = await prisma.rent.findFirst({
+              where: { stripeId: paymentIntent.id },
+            })
+            if (existingRentForPI) {
+              logger.info({ rentId: existingRentForPI.id, stripeId: paymentIntent.id }, 'Rent already exists for payment intent, skipping creation (idempotent)')
+              return NextResponse.json({ received: true })
+            }
+
             logger.info({ sessionId: session.id }, 'Creating rent from session')
             try {
               const newRent = await createRent({
@@ -253,6 +262,15 @@ export async function POST(req: Request): Promise<Response> {
       ) {
         logger.error({ metadata: session.metadata }, 'Missing metadata in Stripe session')
         return NextResponse.json({ error: 'Métadonnées manquantes' }, { status: 400 })
+      }
+
+      // Idempotency: skip if rent already exists for this payment
+      const existingRent = await prisma.rent.findFirst({
+        where: { stripeId: session.payment_intent.toString() },
+      })
+      if (existingRent) {
+        logger.info({ rentId: existingRent.id, stripeId: session.payment_intent }, 'Rent already exists, skipping creation (idempotent)')
+        return NextResponse.json({ received: true })
       }
 
       try {
