@@ -8,19 +8,21 @@ import { RentStatus } from '@prisma/client'
 import { logger } from '@/lib/logger'
 import { auth } from '@/lib/auth'
 
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY
-if (!stripeSecretKey) {
-  throw new Error('Missing required environment variable: STRIPE_SECRET_KEY')
-}
+let stripeInstance: Stripe | null = null
 
-const stripe = new Stripe(stripeSecretKey, {
-  apiVersion: '2025-10-29.clover',
-})
+function getStripe(): Stripe {
+  if (!stripeInstance) {
+    const secretKey = process.env.STRIPE_SECRET_KEY
+    if (!secretKey) throw new Error('Missing required environment variable: STRIPE_SECRET_KEY')
+    stripeInstance = new Stripe(secretKey, { apiVersion: '2025-10-29.clover' })
+  }
+  return stripeInstance
+}
 
 export async function POST(req: Request) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const authSession = await auth()
+    if (!authSession?.user?.id) {
       return NextResponse.json(
         { error: { code: 'AUTH_001', message: 'Authentication required' } },
         { status: 401 }
@@ -45,9 +47,9 @@ export async function POST(req: Request) {
     // Try to get session first
     if (sessionId) {
       try {
-        session = await stripe.checkout.sessions.retrieve(sessionId)
+        session = await getStripe().checkout.sessions.retrieve(sessionId)
         if (session.payment_intent) {
-          paymentIntentObj = await stripe.paymentIntents.retrieve(session.payment_intent as string)
+          paymentIntentObj = await getStripe().paymentIntents.retrieve(session.payment_intent as string)
         }
       } catch (error) {
         logger.error({ sessionId, error }, 'Failed to retrieve Stripe session')
@@ -57,9 +59,9 @@ export async function POST(req: Request) {
     // If no session, try to get payment intent directly
     if (!session && paymentIntent) {
       try {
-        paymentIntentObj = await stripe.paymentIntents.retrieve(paymentIntent)
+        paymentIntentObj = await getStripe().paymentIntents.retrieve(paymentIntent)
         // Try to find associated session
-        const sessions = await stripe.checkout.sessions.list({
+        const sessions = await getStripe().checkout.sessions.list({
           payment_intent: paymentIntent,
           limit: 1,
         })
@@ -175,7 +177,7 @@ export async function POST(req: Request) {
       )
     }
 
-    if (existingRent.userId !== session.user.id) {
+    if (existingRent.userId !== authSession.user.id) {
       return NextResponse.json(
         { error: { code: 'AUTH_002', message: 'Unauthorized access to this reservation' } },
         { status: 403 }
