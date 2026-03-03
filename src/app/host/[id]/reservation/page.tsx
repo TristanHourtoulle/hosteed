@@ -103,6 +103,7 @@ export default function ReservationPage() {
   const [priceCalculation, setPriceCalculation] = useState<CommissionCalculation | null>(null)
   const [bookingPricing, setBookingPricing] = useState<BookingPriceResult | null>(null)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
+  const [isAvailable, setIsAvailable] = useState<boolean | null>(null)
 
   // Get URL parameters
   const checkInParam = searchParams.get('checkIn')
@@ -180,13 +181,21 @@ export default function ReservationPage() {
   useEffect(() => {
     const checkAvailability = async () => {
       if (formData.arrivingDate && formData.leavingDate) {
+        setIsAvailable(null)
         const arrivingDate = new Date(formData.arrivingDate)
         const leavingDate = new Date(formData.leavingDate)
 
         arrivingDate.setHours(Number(product?.arriving) || 14, 0, 0, 0)
         leavingDate.setHours(Number(product?.leaving) || 11, 0, 0, 0)
 
-        await CheckRentIsAvailable(id as string, arrivingDate, leavingDate)
+        const result = await CheckRentIsAvailable(id as string, arrivingDate, leavingDate)
+        setIsAvailable(result.available)
+
+        if (!result.available) {
+          toast.error('Ces dates ne sont plus disponibles. Veuillez sélectionner d\'autres dates.')
+        }
+      } else {
+        setIsAvailable(null)
       }
     }
 
@@ -684,6 +693,15 @@ export default function ReservationPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className='space-y-4 p-4 sm:p-6 pt-0'>
+                {/* Dates unavailable warning */}
+                {isAvailable === false && (
+                  <div className='bg-red-50 border border-red-200 rounded-lg p-3'>
+                    <span className='text-red-700 text-sm font-medium'>
+                      Ces dates ne sont plus disponibles. Veuillez retourner en arrière et choisir d&apos;autres dates.
+                    </span>
+                  </div>
+                )}
+
                 {/* Erreurs de validation */}
                 {validationErrors.length > 0 && (
                   <div className='bg-red-50 border border-red-200 rounded-lg p-3 space-y-2'>
@@ -860,6 +878,7 @@ export default function ReservationPage() {
                       onClick={handleNextStep}
                       disabled={
                         validationErrors.length > 0 ||
+                        isAvailable === false ||
                         (step === 3 &&
                           (!formData.firstName ||
                             !formData.lastName ||
@@ -873,7 +892,7 @@ export default function ReservationPage() {
                   ) : (
                     <Button
                       onClick={handleSubmit}
-                      disabled={validationErrors.length > 0}
+                      disabled={validationErrors.length > 0 || isAvailable === false}
                       className='w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-3 sm:py-4 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none'
                     >
                       <CreditCard className='w-4 h-4 mr-2' />
