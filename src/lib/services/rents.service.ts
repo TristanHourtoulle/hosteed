@@ -9,6 +9,7 @@ import { invalidateProductCache } from '@/lib/cache/invalidation'
 import { BookingConflictError, BookingValidationError } from '@/lib/errors/booking.errors'
 import { checkRentIsAvailable } from './rent-availability.service'
 import { buildOverlapWhereClause } from './rent-overlap.utils'
+import { calculateCompleteBookingPrice } from './booking-pricing.service'
 import { logger } from '@/lib/logger'
 
 
@@ -249,7 +250,6 @@ export async function createRent(params: {
   const shouldAutoAccept = productSettings?.autoAccept || false
 
   // Calculate complete pricing
-  const { calculateCompleteBookingPrice } = await import('./booking-pricing.service')
   const pricingDetails = await calculateCompleteBookingPrice(
     params.productId,
     params.arrivingDate,
