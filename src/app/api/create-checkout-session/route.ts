@@ -1,31 +1,109 @@
 import { NextResponse } from 'next/server'
+import { auth } from '@/lib/auth'
 import { StripeService } from '@/lib/services/stripe'
+import { calculateCompleteBookingPrice } from '@/lib/services/booking-pricing.service'
+import { createCheckoutSessionSchema } from '@/lib/zod/payment.schema'
+import { logger } from '@/lib/logger'
+import prisma from '@/lib/prisma'
 
 export async function POST(req: Request) {
   try {
-    const { amount, productName, metadata } = await req.json()
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: { code: 'AUTH_001', message: 'Authentication required' } },
+        { status: 401 }
+      )
+    }
+
+    const rawBody = await req.json()
+    const parseResult = createCheckoutSessionSchema.safeParse(rawBody)
+
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: { code: 'VAL_001', message: parseResult.error.errors[0].message } },
+        { status: 400 }
+      )
+    }
+
+    const { productName, metadata } = parseResult.data
+
+    if (metadata.userId !== session.user.id) {
+      return NextResponse.json(
+        { error: { code: 'AUTH_002', message: 'User ID mismatch' } },
+        { status: 403 }
+      )
+    }
+
+    const startDate = new Date(metadata.arrivingDate)
+    const endDate = new Date(metadata.leavingDate)
+    const guestCount = parseInt(metadata.peopleNumber, 10)
+
+    if (startDate >= endDate) {
+      return NextResponse.json(
+        { error: { code: 'VAL_002', message: 'Leaving date must be after arriving date' } },
+        { status: 400 }
+      )
+    }
+
+    let selectedExtras: Array<{ extraId: string; quantity: number }> = []
+    try {
+      selectedExtras = JSON.parse(metadata.selectedExtras)
+    } catch {
+      selectedExtras = []
+    }
+
+    const product = await prisma.product.findUnique({
+      where: { id: metadata.productId },
+      select: { ownerId: true },
+    })
+    if (!product) {
+      return NextResponse.json(
+        { error: { code: 'VAL_003', message: 'Product not found' } },
+        { status: 404 }
+      )
+    }
+
+    // Server-side price calculation — never trust client-supplied amounts
+    const pricing = await calculateCompleteBookingPrice(
+      metadata.productId,
+      startDate,
+      endDate,
+      guestCount,
+      selectedExtras,
+      product.ownerId
+    )
+
+    const serverCalculatedAmount = Math.round(pricing.totalAmount)
+
+    // Store server-calculated price in metadata for verify-payment/webhook to use
+    const enrichedMetadata = {
+      ...metadata,
+      prices: String(serverCalculatedAmount),
+    }
 
     const result = await StripeService.createCheckoutSession({
       mode: 'payment',
       payment_intent_data: {
         capture_method: 'manual',
       },
-      amount,
+      amount: serverCalculatedAmount,
       productName,
       successUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
       cancelUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/host/${metadata.productId}/reservation`,
-      metadata,
+      metadata: enrichedMetadata,
     })
 
     if (!result.success) {
+      logger.error({ error: result.error }, 'Failed to create Stripe checkout session')
       return NextResponse.json({ error: result.error }, { status: 500 })
     }
 
     return NextResponse.json({ url: result.url })
   } catch (error) {
-    console.error('Erreur lors de la création de la session de paiement:', error)
+    logger.error({ error }, 'Error creating checkout session')
     return NextResponse.json(
-      { error: 'Erreur lors de la création de la session de paiement' },
+      { error: 'Error creating payment session' },
       { status: 500 }
     )
   }

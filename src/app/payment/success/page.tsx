@@ -49,7 +49,11 @@ function PaymentSuccessContent() {
         const result = await response.json()
 
         if (!response.ok) {
-          throw new Error(result.error || 'Erreur lors de la vérification du paiement')
+          const errorMsg =
+            typeof result.error === 'string'
+              ? result.error
+              : result.error?.message || 'Erreur lors de la vérification du paiement'
+          throw new Error(errorMsg)
         }
 
         if (result.success && result.reservation) {

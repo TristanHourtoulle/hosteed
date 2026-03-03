@@ -6,7 +6,7 @@ import {
   findRentByIdWithFullDetails,
   getUserRentStatistics,
 } from '@/lib/services/rents-optimized.service'
-import { cancelRent } from '@/lib/services/rents.service'
+import { cancelRent } from '@/lib/services/rent-lifecycle.service'
 import { toast } from 'sonner'
 
 export function useUserReservations() {

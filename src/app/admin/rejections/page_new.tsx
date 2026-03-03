@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { getAllRentRejections, resolveRentRejection } from '@/lib/services/rents.service'
+import { getAllRentRejections, resolveRentRejection } from '@/lib/services/rent-lifecycle.service'
 import { motion } from 'framer-motion'
 import {
   AlertTriangle,

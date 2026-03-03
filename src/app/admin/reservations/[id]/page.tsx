@@ -3,7 +3,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getRentById, cancelRent } from '@/lib/services/rents.service'
+import { getRentById } from '@/lib/services/rents.service'
+import { cancelRent } from '@/lib/services/rent-lifecycle.service'
 import { getPayablePricesPerRent } from '@/lib/services/payment.service'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'

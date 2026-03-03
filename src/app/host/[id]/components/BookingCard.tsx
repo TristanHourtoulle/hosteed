@@ -140,7 +140,7 @@ export default function BookingCard({
   }
 
   const nights = calculateNights()
-  const hasValidDates = dateRange?.from && dateRange?.to
+  const hasValidDates = dateRange?.from && dateRange?.to && nights > 0
 
   // ✨ NEW: Calculate booking price jour par jour (promotions + special prices)
   useEffect(() => {

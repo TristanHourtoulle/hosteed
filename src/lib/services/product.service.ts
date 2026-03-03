@@ -64,22 +64,12 @@ interface SpecialPrice {
   productId: string
 }
 
-interface ProductWithSpecialPrice {
+interface ProductBaseFields {
   id: string
   name: string
   description: string
   address: string
   basePrice: string
-  originalBasePrice?: string
-  specialPriceApplied?: boolean
-  specialPriceInfo?: {
-    id: string
-    pricesEuro: string
-    day: string[]
-    startDate: Date | null
-    endDate: Date | null
-  }
-  [key: string]: unknown // Pour les autres propriétés du produit
 }
 
 // Fonction utilitaire pour filtrer les prix spéciaux par dates et jour
@@ -128,8 +118,8 @@ async function getSpecialPricesForProduct(productId: string) {
 }
 
 // Fonction pour appliquer le prix spécial au produit
-function applySpecialPriceToProduct(
-  product: ProductWithSpecialPrice,
+function applySpecialPriceToProduct<T extends ProductBaseFields>(
+  product: T,
   specialPrices: SpecialPrice[]
 ) {
   if (!specialPrices || specialPrices.length === 0) {
@@ -278,120 +268,71 @@ export async function findProductById(id: string) {
  * This allows accessing products via SEO-friendly URLs while maintaining backward compatibility
  */
 export async function findProductBySlugOrId(slugOrId: string) {
+  const productDetailInclude = {
+    img: { take: 10 },
+    type: true,
+    equipments: { take: 20 },
+    servicesList: { take: 20 },
+    mealsList: { take: 10 },
+    options: { take: 10 },
+    rents: { take: 5, orderBy: { id: 'desc' as const } },
+    discount: { take: 5 },
+    owner: { select: { id: true, name: true, email: true, image: true } },
+    securities: { take: 10 },
+    includedServices: { take: 15 },
+    extras: { take: 15 },
+    highlights: { take: 10 },
+    hotel: true,
+    rules: true,
+    nearbyPlaces: { take: 10 },
+    transportOptions: { take: 10 },
+    propertyInfo: true,
+    promotions: {
+      where: {
+        isActive: true,
+        startDate: { lte: new Date() },
+        endDate: { gte: new Date() },
+      },
+      select: {
+        id: true,
+        discountPercentage: true,
+        startDate: true,
+        endDate: true,
+        isActive: true,
+      },
+    },
+    reviews: {
+      where: { approved: true },
+      take: 10,
+      select: {
+        id: true,
+        title: true,
+        text: true,
+        grade: true,
+        welcomeGrade: true,
+        staff: true,
+        comfort: true,
+        equipment: true,
+        cleaning: true,
+        visitDate: true,
+        publishDate: true,
+        approved: true,
+      },
+    },
+  }
+
   try {
     // First, try to find by slug
     let product = await prisma.product.findUnique({
       where: { slug: slugOrId },
-      include: {
-        img: { take: 10 },
-        type: true,
-        equipments: { take: 20 },
-        servicesList: { take: 20 },
-        mealsList: { take: 10 },
-        options: { take: 10 },
-        rents: { take: 5, orderBy: { id: 'desc' } },
-        discount: { take: 5 },
-        owner: { select: { id: true, name: true, email: true, image: true } },
-        securities: { take: 10 },
-        includedServices: { take: 15 },
-        extras: { take: 15 },
-        highlights: { take: 10 },
-        hotel: true,
-        rules: true,
-        nearbyPlaces: { take: 10 },
-        transportOptions: { take: 10 },
-        propertyInfo: true,
-        promotions: {
-          where: {
-            isActive: true,
-            startDate: { lte: new Date() },
-            endDate: { gte: new Date() },
-          },
-          select: {
-            id: true,
-            discountPercentage: true,
-            startDate: true,
-            endDate: true,
-            isActive: true,
-          },
-        },
-        reviews: {
-          where: { approved: true },
-          take: 10,
-          select: {
-            id: true,
-            title: true,
-            text: true,
-            grade: true,
-            welcomeGrade: true,
-            staff: true,
-            comfort: true,
-            equipment: true,
-            cleaning: true,
-            visitDate: true,
-            publishDate: true,
-            approved: true,
-          },
-        },
-      },
+      include: productDetailInclude,
     })
 
     // If not found by slug, try by ID (fallback for old URLs)
     if (!product) {
       product = await prisma.product.findUnique({
         where: { id: slugOrId },
-        include: {
-          img: { take: 10 },
-          type: true,
-          equipments: { take: 20 },
-          servicesList: { take: 20 },
-          mealsList: { take: 10 },
-          options: { take: 10 },
-          rents: { take: 5, orderBy: { id: 'desc' } },
-          discount: { take: 5 },
-          owner: { select: { id: true, name: true, email: true, image: true } },
-          securities: { take: 10 },
-          includedServices: { take: 15 },
-          extras: { take: 15 },
-          highlights: { take: 10 },
-          hotel: true,
-          rules: true,
-          nearbyPlaces: { take: 10 },
-          transportOptions: { take: 10 },
-          propertyInfo: true,
-          promotions: {
-            where: {
-              isActive: true,
-              startDate: { lte: new Date() },
-              endDate: { gte: new Date() },
-            },
-            select: {
-              id: true,
-              discountPercentage: true,
-              startDate: true,
-              endDate: true,
-              isActive: true,
-            },
-          },
-          reviews: {
-            where: { approved: true },
-            take: 10,
-            select: {
-              id: true,
-              title: true,
-              text: true,
-              grade: true,
-              welcomeGrade: true,
-              staff: true,
-              comfort: true,
-              equipment: true,
-              cleaning: true,
-              visitDate: true,
-              publishDate: true,
-              approved: true,
-            },
-          },
-        },
+        include: productDetailInclude,
       })
     }
 

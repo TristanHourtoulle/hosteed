@@ -1,22 +1,22 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@/hooks/useAuth'
-import { CheckRentIsAvailable } from '@/lib/services/rents.service'
-import { findProductBySlugOrId } from '@/lib/services/product.service'
-import { findUserById } from '@/lib/services/user.service'
-import {
-  calculateTotalRentPrice,
-  type CommissionCalculation,
-} from '@/lib/services/commission.service'
-import {
-  calculateBookingPrice,
-  validateBooking,
-  type BookingPriceResult,
-} from '@/lib/services/booking-pricing.service'
+import { useBookingProduct, useBookingUser, useBookingPricing } from '@/hooks/useBookingData'
+import { reservationFormSchema, type ReservationFormData } from '@/lib/zod/booking.schema'
 import { MapPin, Star, CreditCard, Shield, ArrowLeft, Check } from 'lucide-react'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/shadcnui/form'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { toast } from 'sonner'
@@ -25,67 +25,21 @@ import ExtraSelectionStep from '@/components/booking/ExtraSelectionStep'
 import PhoneInput from '@/components/ui/PhoneInput'
 import { formatCurrency, formatNumber } from '@/lib/utils/formatNumber'
 
-interface Option {
-  id: string
-  name: string
-  price: bigint
-  type: bigint
-}
+const RESERVATION_MESSAGES = {
+  DATES_UNAVAILABLE_TOAST:
+    "Ces dates ne sont plus disponibles. Veuillez sélectionner d'autres dates.",
+  DATES_UNAVAILABLE_BANNER:
+    "Ces dates ne sont plus disponibles. Veuillez retourner en arrière et choisir d'autres dates.",
+  FILL_REQUIRED_FIELDS: 'Veuillez remplir tous les champs obligatoires',
+  LOGIN_REQUIRED: 'Vous devez être connecté pour effectuer une réservation',
+  PRODUCT_NOT_FOUND: 'Impossible de trouver les informations du produit',
+  PAYMENT_SESSION_ERROR: 'Erreur lors de la création de la session de paiement',
+  GENERIC_ERROR: 'Une erreur est survenue lors de la création de la réservation',
+  AVAILABILITY_CHECK_ERROR: 'Impossible de vérifier la disponibilité. Veuillez réessayer.',
+} as const
 
-interface Reviews {
-  id: string
-  grade: number
-}
-
-interface ProductPromotion {
-  id: string
-  discountPercentage: number
-  startDate: Date
-  endDate: Date
-  isActive: boolean
-}
-
-interface Product {
-  id: string
-  name: string
-  basePrice: string
-  originalBasePrice?: string
-  specialPriceApplied?: boolean
-  specialPriceInfo?: {
-    pricesMga: string
-    pricesEuro: string
-    day: string[]
-    startDate: Date | null
-    endDate: Date | null
-  }
-  options: Option[]
-  commission: number // LEGACY - Keep for backward compatibility
-  arriving: number
-  leaving: number
-  address?: string
-  maxPeople?: bigint | null
-  minPeople?: bigint | null
-  reviews?: Reviews[]
-  img?: {
-    img: string
-  }[]
-  typeId?: string // Property type ID for commission calculation
-  type?: { id: string; name: string } // Property type relation
-  promotions?: ProductPromotion[]
-  owner?: { id: string; name?: string; email?: string } // Product owner
-}
-
-interface FormData {
-  peopleNumber: number
-  arrivingDate: string
-  leavingDate: string
-  firstName: string
-  lastName: string
-  email: string
-  phone: string
-  phoneCountry: string
-  specialRequests: string
-}
+const INPUT_CLASSES =
+  'w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base'
 
 export default function ReservationPage() {
   const { id } = useParams()
@@ -96,185 +50,136 @@ export default function ReservationPage() {
     isLoading: isAuthLoading,
     isAuthenticated,
   } = useAuth({ required: true, redirectTo: '/auth' })
-  const [product, setProduct] = useState<Product | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [step, setStep] = useState(2) // 2: extras selection, 3: personal info, 4: payment (étape dates supprimée)
-  const [priceCalculation, setPriceCalculation] = useState<CommissionCalculation | null>(null)
-  const [bookingPricing, setBookingPricing] = useState<BookingPriceResult | null>(null)
-  const [validationErrors, setValidationErrors] = useState<string[]>([])
 
-  // Get URL parameters
+  // URL parameters
   const checkInParam = searchParams.get('checkIn')
   const checkOutParam = searchParams.get('checkOut')
   const guestsParam = searchParams.get('guests')
 
-  const [formData, setFormData] = useState<FormData>({
-    peopleNumber: guestsParam ? parseInt(guestsParam) : 1,
-    arrivingDate: checkInParam || '',
-    leavingDate: checkOutParam || '',
-    firstName: '',
-    lastName: '',
-    email: session?.user?.email || '',
-    phone: '',
-    phoneCountry: 'MG',
-    specialRequests: '',
-  })
-
-  // États pour les extras
+  // Step management and extras state
+  const [step, setStep] = useState(2)
   const [selectedExtraIds, setSelectedExtraIds] = useState<string[]>([])
   const [extrasCost, setExtrasCost] = useState(0)
+  const [isAvailable, setIsAvailable] = useState<boolean | null>(null)
 
+  // React Hook Form with Zod validation
+  const form = useForm<ReservationFormData>({
+    resolver: zodResolver(reservationFormSchema),
+    defaultValues: {
+      peopleNumber: guestsParam ? parseInt(guestsParam) : 1,
+      arrivingDate: checkInParam || '',
+      leavingDate: checkOutParam || '',
+      firstName: '',
+      lastName: '',
+      email: session?.user?.email || '',
+      phone: '',
+      phoneCountry: 'MG',
+      specialRequests: '',
+    },
+  })
+
+  const watchedValues = form.watch()
+  const {
+    arrivingDate: watchedArrivingDate,
+    leavingDate: watchedLeavingDate,
+    peopleNumber: watchedPeopleNumber,
+    firstName: watchedFirstName,
+    lastName: watchedLastName,
+    email: watchedEmail,
+    phone: watchedPhone,
+    specialRequests: watchedSpecialRequests,
+  } = watchedValues
+
+  // React Query: product data
+  const {
+    data: product,
+    isLoading: isProductLoading,
+    error: productError,
+  } = useBookingProduct(id as string)
+
+  // React Query: user data for form pre-fill
+  const { data: userData } = useBookingUser(
+    isAuthenticated ? session?.user?.id : undefined
+  )
+
+  // React Query: booking pricing
+  const { data: pricingData } = useBookingPricing({
+    productId: product?.id ?? '',
+    startDate: watchedArrivingDate ? new Date(watchedArrivingDate) : null,
+    endDate: watchedLeavingDate ? new Date(watchedLeavingDate) : null,
+    guestCount: watchedPeopleNumber,
+    extrasCost,
+    ownerId: product?.owner?.id,
+    typeId: product?.type?.id ?? product?.typeId,
+  })
+
+  // Pre-fill form from user data
   useEffect(() => {
-    const fetchProduct = async () => {
-      try {
-        const productData = await findProductBySlugOrId(id as string)
-        if (productData) {
-          setProduct(productData as unknown as Product)
-        } else {
-          setError('Produit non trouvé')
-        }
-      } catch (error) {
-        setError('Erreur lors de la récupération du produit' + error)
-      } finally {
-        setLoading(false)
-      }
+    if (userData) {
+      form.setValue('email', userData.email || '')
+      form.setValue('firstName', userData.name || '')
+      form.setValue('lastName', userData.lastname || '')
+    } else if (isAuthenticated && session?.user) {
+      // Fallback to session data
+      const nameParts = session.user.name?.split(' ') || []
+      form.setValue('email', session.user.email || '')
+      form.setValue('firstName', nameParts[0] || '')
+      form.setValue('lastName', nameParts.slice(1).join(' ') || '')
     }
+  }, [userData, isAuthenticated, session, form])
 
-    fetchProduct()
-  }, [id])
-
-  useEffect(() => {
-    if (isAuthenticated && session?.user?.id) {
-      const fetchUserData = async () => {
-        try {
-          const userData = await findUserById(session.user.id)
-          if (userData) {
-            setFormData(prev => ({
-              ...prev,
-              email: userData.email || '',
-              firstName: userData.name || '',
-              lastName: userData.lastname || '',
-            }))
-          }
-        } catch (error) {
-          console.error('Erreur lors de la récupération des données utilisateur:', error)
-          // Fallback sur les données de session
-          const nameParts = session.user.name?.split(' ') || []
-          const firstName = nameParts[0] || ''
-          const lastName = nameParts.slice(1).join(' ') || ''
-
-          setFormData(prev => ({
-            ...prev,
-            email: session.user.email || '',
-            firstName: firstName,
-            lastName: lastName,
-          }))
-        }
-      }
-
-      fetchUserData()
-    }
-  }, [isAuthenticated, session])
-
+  // Availability check via API route (not a server action)
   useEffect(() => {
     const checkAvailability = async () => {
-      if (formData.arrivingDate && formData.leavingDate) {
-        const arrivingDate = new Date(formData.arrivingDate)
-        const leavingDate = new Date(formData.leavingDate)
+      if (!watchedArrivingDate || !watchedLeavingDate || !product?.id) {
+        setIsAvailable(null)
+        return
+      }
 
-        arrivingDate.setHours(Number(product?.arriving) || 14, 0, 0, 0)
-        leavingDate.setHours(Number(product?.leaving) || 11, 0, 0, 0)
+      setIsAvailable(null)
+      const arrivingDate = new Date(watchedArrivingDate)
+      const leavingDate = new Date(watchedLeavingDate)
 
-        await CheckRentIsAvailable(id as string, arrivingDate, leavingDate)
+      arrivingDate.setHours(Number(product.arriving) || 14, 0, 0, 0)
+      leavingDate.setHours(Number(product.leaving) || 11, 0, 0, 0)
+
+      try {
+        const params = new URLSearchParams({
+          productId: product.id,
+          arrival: arrivingDate.toISOString(),
+          leaving: leavingDate.toISOString(),
+        })
+        const response = await fetch(`/api/check-availability?${params}`)
+        const result = await response.json()
+
+        if (!response.ok) {
+          throw new Error(result.error?.message || 'Availability check failed')
+        }
+
+        setIsAvailable(result.available)
+        if (!result.available) {
+          toast.error(RESERVATION_MESSAGES.DATES_UNAVAILABLE_TOAST)
+        }
+      } catch {
+        toast.error(RESERVATION_MESSAGES.AVAILABILITY_CHECK_ERROR)
+        setIsAvailable(null)
       }
     }
 
     checkAvailability()
-  }, [formData.arrivingDate, formData.leavingDate, id, product?.arriving, product?.leaving])
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
-  }
+  }, [watchedArrivingDate, watchedLeavingDate, product?.id, product?.arriving, product?.leaving])
 
   const calculateNights = useCallback(() => {
-    if (!formData.arrivingDate || !formData.leavingDate) return 0
-    const from = new Date(formData.arrivingDate)
-    const to = new Date(formData.leavingDate)
+    if (!watchedArrivingDate || !watchedLeavingDate) return 0
+    const from = new Date(watchedArrivingDate)
+    const to = new Date(watchedLeavingDate)
     return Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24))
-  }, [formData.arrivingDate, formData.leavingDate])
+  }, [watchedArrivingDate, watchedLeavingDate])
 
-  // Effect to calculate booking pricing (jour par jour) and validate
-  useEffect(() => {
-    const updateBookingPricing = async () => {
-      if (!product || !formData.arrivingDate || !formData.leavingDate) {
-        setBookingPricing(null)
-        setValidationErrors([])
-        return
-      }
-
-      const nights = calculateNights()
-      if (nights <= 0) {
-        setBookingPricing(null)
-        setValidationErrors([])
-        return
-      }
-
-      try {
-        const startDate = new Date(formData.arrivingDate)
-        const endDate = new Date(formData.leavingDate)
-
-        // 1. Valider la réservation (nombre d'invités, etc.)
-        const validation = await validateBooking(
-          product.id,
-          startDate,
-          endDate,
-          formData.peopleNumber
-        )
-
-        if (!validation.isValid) {
-          setValidationErrors(validation.errors)
-          setBookingPricing(null)
-          return
-        } else {
-          setValidationErrors([])
-        }
-
-        // 2. Calculer le prix jour par jour (avec promotions + special prices)
-        const pricing = await calculateBookingPrice(
-          product.id,
-          startDate,
-          endDate,
-          product.owner?.id // Optionnel - si pas de owner, utilise les settings par défaut
-        )
-        setBookingPricing(pricing)
-
-        // 3. Calculer les commissions sur le total
-        const typeId = product.type?.id || product.typeId
-        const calculation = await calculateTotalRentPrice(
-          pricing.subtotal / nights, // Prix moyen par nuit
-          nights,
-          extrasCost, // Include extras in commission calculation
-          typeId // Pass typeId for type-specific commission
-        )
-        setPriceCalculation(calculation)
-      } catch (error) {
-        console.error('Error calculating booking pricing:', error)
-        setBookingPricing(null)
-        setPriceCalculation(null)
-      }
-    }
-
-    updateBookingPricing()
-  }, [
-    product,
-    formData.arrivingDate,
-    formData.leavingDate,
-    formData.peopleNumber,
-    extrasCost,
-    calculateNights,
-  ])
+  // Derived pricing state from React Query
+  const bookingPricing = pricingData?.pricing ?? null
+  const priceCalculation = pricingData?.priceCalculation ?? null
+  const validationErrors = pricingData?.validationErrors ?? []
 
   const calculateTotalPrice = () => {
     if (priceCalculation) {
@@ -282,12 +187,11 @@ export default function ReservationPage() {
     }
 
     // Fallback to legacy calculation if commission service fails
-    if (!product || !formData.arrivingDate || !formData.leavingDate) return 0
+    if (!product || !watchedArrivingDate || !watchedLeavingDate) return 0
 
     const nights = calculateNights()
     if (nights <= 0) return 0
 
-    // Check for active promotion in fallback
     const activePromo =
       product.promotions && product.promotions.length > 0
         ? product.promotions.find(promo => {
@@ -305,7 +209,7 @@ export default function ReservationPage() {
 
     const basePrice = effectivePrice * nights
     const subtotal = basePrice + extrasCost
-    const commission = (subtotal * product.commission) / 100
+    const commission = (subtotal * (product.commission ?? 0)) / 100
 
     return Math.round(subtotal + commission)
   }
@@ -316,13 +220,13 @@ export default function ReservationPage() {
     return total / product.reviews.length
   }
 
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     if (step === 2) {
-      // Étape des extras - pas de validation particulière, on peut continuer
       setStep(3)
     } else if (step === 3) {
-      if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone) {
-        toast.error('Veuillez remplir tous les champs obligatoires')
+      const isValid = await form.trigger(['firstName', 'lastName', 'email', 'phone'])
+      if (!isValid) {
+        toast.error(RESERVATION_MESSAGES.FILL_REQUIRED_FIELDS)
         return
       }
       setStep(4)
@@ -331,42 +235,42 @@ export default function ReservationPage() {
 
   const handleSubmit = async () => {
     if (!session?.user?.id) {
-      toast.error('Vous devez être connecté pour effectuer une réservation')
+      toast.error(RESERVATION_MESSAGES.LOGIN_REQUIRED)
       return
     }
 
     if (!product) {
-      toast.error('Impossible de trouver les informations du produit')
+      toast.error(RESERVATION_MESSAGES.PRODUCT_NOT_FOUND)
+      return
+    }
+
+    if (calculateNights() <= 0) {
+      toast.error('La date de départ doit être après la date d\'arrivée')
       return
     }
 
     try {
-      const total = calculateTotalPrice()
-
+      // Amount is calculated server-side — only send booking parameters
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: total,
           productName: product.name,
           metadata: {
-            productId: String(id),
+            productId: product.id,
             userId: String(session.user.id),
-            userEmail: String(formData.email),
+            userEmail: String(watchedEmail),
             productName: String(product.name),
-            arrivingDate: String(formData.arrivingDate),
-            leavingDate: String(formData.leavingDate),
-            peopleNumber: String(formData.peopleNumber),
-            firstName: String(formData.firstName),
-            lastName: String(formData.lastName),
-            phone: String(formData.phone),
-            specialRequests: String(formData.specialRequests),
+            arrivingDate: String(watchedArrivingDate),
+            leavingDate: String(watchedLeavingDate),
+            peopleNumber: String(watchedPeopleNumber),
+            firstName: String(watchedFirstName),
+            lastName: String(watchedLastName),
+            phone: String(watchedPhone),
+            specialRequests: String(watchedSpecialRequests),
             selectedExtras: JSON.stringify(
-              selectedExtraIds.map(id => ({ extraId: id, quantity: 1 }))
+              selectedExtraIds.map(extraId => ({ extraId, quantity: 1 }))
             ),
-            prices: String(total),
           },
         }),
       })
@@ -377,14 +281,14 @@ export default function ReservationPage() {
           window.location.href = data.url
         }
       } else {
-        toast.error('Erreur lors de la création de la session de paiement')
+        toast.error(RESERVATION_MESSAGES.PAYMENT_SESSION_ERROR)
       }
     } catch {
-      toast.error('Une erreur est survenue lors de la création de la réservation')
+      toast.error(RESERVATION_MESSAGES.GENERIC_ERROR)
     }
   }
 
-  if (isAuthLoading || loading) {
+  if (isAuthLoading || isProductLoading) {
     return (
       <div className='min-h-screen flex items-center justify-center'>
         <div className='flex flex-col items-center gap-4'>
@@ -399,11 +303,13 @@ export default function ReservationPage() {
     return null
   }
 
-  if (error || !product) {
+  if (productError || !product) {
     return (
       <div className='min-h-screen bg-gray-50 flex items-center justify-center'>
         <div className='text-center'>
-          <p className='text-red-600 text-lg'>{error || 'Hébergement non trouvé'}</p>
+          <p className='text-red-600 text-lg'>
+            {productError ? 'Erreur lors de la récupération du produit' : 'Hébergement non trouvé'}
+          </p>
           <Button onClick={() => router.back()} className='mt-4'>
             <ArrowLeft className='w-4 h-4 mr-2' />
             Retour
@@ -414,24 +320,10 @@ export default function ReservationPage() {
   }
 
   const nights = bookingPricing?.numberOfNights || calculateNights()
-
-  // Use bookingPricing data if available (more accurate with day-by-day calculation)
   const subtotal = bookingPricing?.subtotal || parseFloat(product.basePrice) * nights
   const totalSavings = bookingPricing?.totalSavings || 0
   const hasPromotions = bookingPricing?.promotionApplied || false
   const hasSpecialPrices = bookingPricing?.specialPriceApplied || false
-
-  // Check for simple active promotion (for display purposes)
-  const activePromotion =
-    product.promotions && product.promotions.length > 0
-      ? product.promotions.find(promo => {
-          const now = new Date()
-          return (
-            promo.isActive && new Date(promo.startDate) <= now && new Date(promo.endDate) >= now
-          )
-        })
-      : null
-
   const serviceFee = priceCalculation ? Math.round(priceCalculation.clientCommission) : 0
   const total = calculateTotalPrice()
 
@@ -446,7 +338,9 @@ export default function ReservationPage() {
               className='flex items-center text-gray-600 hover:text-gray-900 transition-colors'
             >
               <ArrowLeft className='w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2' />
-              <span className='hidden sm:inline'>{step > 2 ? 'Étape précédente' : 'Retour'}</span>
+              <span className='hidden sm:inline'>
+                {step > 2 ? 'Étape précédente' : 'Retour'}
+              </span>
               <span className='sm:hidden'>{step > 2 ? 'Précédent' : 'Retour'}</span>
             </button>
 
@@ -463,7 +357,11 @@ export default function ReservationPage() {
                           : 'bg-gray-200 text-gray-600'
                     }`}
                   >
-                    {stepNum < step - 1 ? <Check className='w-3 h-3 sm:w-4 sm:h-4' /> : stepNum}
+                    {stepNum < step - 1 ? (
+                      <Check className='w-3 h-3 sm:w-4 sm:h-4' />
+                    ) : (
+                      stepNum
+                    )}
                   </div>
                   {stepNum < 3 && (
                     <div
@@ -530,9 +428,9 @@ export default function ReservationPage() {
             {/* Step Content */}
             {step === 2 && (
               <ExtraSelectionStep
-                productId={id as string}
+                productId={product?.id ?? ''}
                 numberOfDays={calculateNights()}
-                guestCount={formData.peopleNumber}
+                guestCount={watchedPeopleNumber}
                 currency='EUR'
                 selectedExtraIds={selectedExtraIds}
                 onSelectionChange={setSelectedExtraIds}
@@ -546,81 +444,96 @@ export default function ReservationPage() {
                   <CardTitle className='text-lg sm:text-xl'>Informations personnelles</CardTitle>
                 </CardHeader>
                 <CardContent className='p-4 sm:p-6'>
-                  <div className='grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6'>
-                    <div>
-                      <label className='block text-sm font-medium text-gray-700 mb-2'>
-                        Prénom *
-                      </label>
-                      <input
-                        type='text'
+                  <Form {...form}>
+                    <div className='grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6'>
+                      <FormField
+                        control={form.control}
                         name='firstName'
-                        value={formData.firstName}
-                        onChange={handleInputChange}
-                        className='w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base'
-                        required
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Prénom *</FormLabel>
+                            <FormControl>
+                              <input type='text' {...field} className={INPUT_CLASSES} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
-                    </div>
 
-                    <div>
-                      <label className='block text-sm font-medium text-gray-700 mb-2'>Nom *</label>
-                      <input
-                        type='text'
+                      <FormField
+                        control={form.control}
                         name='lastName'
-                        value={formData.lastName}
-                        onChange={handleInputChange}
-                        className='w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base'
-                        required
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Nom *</FormLabel>
+                            <FormControl>
+                              <input type='text' {...field} className={INPUT_CLASSES} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
-                    </div>
 
-                    <div>
-                      <label className='block text-sm font-medium text-gray-700 mb-2'>
-                        Email *
-                      </label>
-                      <input
-                        type='email'
+                      <FormField
+                        control={form.control}
                         name='email'
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        className='w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base'
-                        required
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email *</FormLabel>
+                            <FormControl>
+                              <input type='email' {...field} className={INPUT_CLASSES} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name='phone'
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Téléphone *</FormLabel>
+                            <FormControl>
+                              <PhoneInput
+                                value={field.value}
+                                defaultCountry={form.watch('phoneCountry')}
+                                onChange={(phoneNumber, countryCode) => {
+                                  form.setValue('phone', phoneNumber)
+                                  form.setValue('phoneCountry', countryCode)
+                                }}
+                                placeholder='XX XX XX XX'
+                                required
+                                className='w-full'
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
                     </div>
 
-                    <div>
-                      <label className='block text-sm font-medium text-gray-700 mb-2'>
-                        Téléphone *
-                      </label>
-                      <PhoneInput
-                        value={formData.phone}
-                        defaultCountry={formData.phoneCountry}
-                        onChange={(phoneNumber, countryCode) => {
-                          setFormData(prev => ({
-                            ...prev,
-                            phone: phoneNumber,
-                            phoneCountry: countryCode,
-                          }))
-                        }}
-                        placeholder='XX XX XX XX'
-                        required
-                        className='w-full'
+                    <div className='mt-6'>
+                      <FormField
+                        control={form.control}
+                        name='specialRequests'
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Demandes spéciales (optionnel)</FormLabel>
+                            <FormControl>
+                              <textarea
+                                {...field}
+                                rows={4}
+                                className={`${INPUT_CLASSES} resize-none`}
+                                placeholder='Toute demande particulière pour votre séjour...'
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
                     </div>
-                  </div>
-
-                  <div className='mt-6'>
-                    <label className='block text-sm font-medium text-gray-700 mb-2'>
-                      Demandes spéciales (optionnel)
-                    </label>
-                    <textarea
-                      name='specialRequests'
-                      value={formData.specialRequests}
-                      onChange={handleInputChange}
-                      rows={4}
-                      className='w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base resize-none'
-                      placeholder='Toute demande particulière pour votre séjour...'
-                    />
-                  </div>
+                  </Form>
                 </CardContent>
               </Card>
             )}
@@ -651,22 +564,22 @@ export default function ReservationPage() {
                     <div className='flex justify-between py-2'>
                       <span className='text-gray-600'>Dates:</span>
                       <span className='font-medium'>
-                        {formData.arrivingDate && formData.leavingDate && (
+                        {watchedArrivingDate && watchedLeavingDate && (
                           <>
-                            {format(new Date(formData.arrivingDate), 'dd MMM', { locale: fr })} -{' '}
-                            {format(new Date(formData.leavingDate), 'dd MMM', { locale: fr })}
+                            {format(new Date(watchedArrivingDate), 'dd MMM', { locale: fr })} -{' '}
+                            {format(new Date(watchedLeavingDate), 'dd MMM', { locale: fr })}
                           </>
                         )}
                       </span>
                     </div>
                     <div className='flex justify-between py-2'>
                       <span className='text-gray-600'>Voyageurs:</span>
-                      <span className='font-medium'>{formData.peopleNumber}</span>
+                      <span className='font-medium'>{watchedPeopleNumber}</span>
                     </div>
                     <div className='flex justify-between py-2'>
                       <span className='text-gray-600'>Contact:</span>
                       <span className='font-medium'>
-                        {formData.firstName} {formData.lastName}
+                        {watchedFirstName} {watchedLastName}
                       </span>
                     </div>
                   </div>
@@ -684,30 +597,41 @@ export default function ReservationPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className='space-y-4 p-4 sm:p-6 pt-0'>
-                {/* Erreurs de validation */}
+                {/* Dates unavailable warning */}
+                {isAvailable === false && (
+                  <div className='bg-red-50 border border-red-200 rounded-lg p-3'>
+                    <span className='text-red-700 text-sm font-medium'>
+                      {RESERVATION_MESSAGES.DATES_UNAVAILABLE_BANNER}
+                    </span>
+                  </div>
+                )}
+
+                {/* Validation errors */}
                 {validationErrors.length > 0 && (
                   <div className='bg-red-50 border border-red-200 rounded-lg p-3 space-y-2'>
                     <div className='flex items-start gap-2'>
-                      <span className='text-red-600 font-medium text-sm'>⚠️ Réservation impossible</span>
+                      <span className='text-red-600 font-medium text-sm'>
+                        Réservation impossible
+                      </span>
                     </div>
                     <ul className='space-y-1'>
-                      {validationErrors.map((error, index) => (
+                      {validationErrors.map((validationError, index) => (
                         <li key={index} className='text-red-700 text-sm'>
-                          • {error}
+                          {validationError}
                         </li>
                       ))}
                     </ul>
                   </div>
                 )}
 
-                {/* Détails de la réservation */}
-                {formData.arrivingDate && formData.leavingDate && (
+                {/* Booking details */}
+                {watchedArrivingDate && watchedLeavingDate && (
                   <div className='bg-gray-50 rounded-lg p-3 space-y-2 text-sm'>
                     <div className='flex justify-between'>
                       <span className='text-gray-600'>Dates:</span>
                       <span className='font-medium'>
-                        {format(new Date(formData.arrivingDate), 'dd MMM', { locale: fr })} -{' '}
-                        {format(new Date(formData.leavingDate), 'dd MMM', { locale: fr })}
+                        {format(new Date(watchedArrivingDate), 'dd MMM', { locale: fr })} -{' '}
+                        {format(new Date(watchedLeavingDate), 'dd MMM', { locale: fr })}
                       </span>
                     </div>
                     <div className='flex justify-between'>
@@ -719,7 +643,7 @@ export default function ReservationPage() {
                     <div className='flex justify-between'>
                       <span className='text-gray-600'>Voyageurs:</span>
                       <span className='font-medium'>
-                        {formData.peopleNumber} personne{formData.peopleNumber > 1 ? 's' : ''}
+                        {watchedPeopleNumber} personne{watchedPeopleNumber > 1 ? 's' : ''}
                       </span>
                     </div>
                     {product.type?.name && (
@@ -733,12 +657,12 @@ export default function ReservationPage() {
 
                 {nights > 0 && (
                   <>
-                    {/* Badge réductions actives (promotions + special prices) */}
+                    {/* Active discount badges */}
                     {totalSavings > 0 && (hasPromotions || hasSpecialPrices) && (
                       <div className='bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg px-3 py-2 mb-2'>
                         <div className='flex items-center justify-between'>
                           <span className='text-sm text-green-700 font-medium'>
-                            🎉 {hasPromotions && hasSpecialPrices
+                            {hasPromotions && hasSpecialPrices
                               ? 'Promotions & Prix spéciaux actifs'
                               : hasPromotions
                                 ? 'Promotion active'
@@ -750,7 +674,8 @@ export default function ReservationPage() {
                         </div>
                         {bookingPricing?.priority && (
                           <div className='text-xs text-gray-500 mt-1'>
-                            Stratégie : {bookingPricing.priority === 'MOST_ADVANTAGEOUS'
+                            Stratégie :{' '}
+                            {bookingPricing.priority === 'MOST_ADVANTAGEOUS'
                               ? 'Prix le plus avantageux'
                               : bookingPricing.priority === 'PROMOTION_FIRST'
                                 ? 'Promotion en priorité'
@@ -762,14 +687,15 @@ export default function ReservationPage() {
                       </div>
                     )}
 
-                    {/* Prix de base */}
+                    {/* Base price */}
                     <div className='space-y-2'>
                       <div className='flex justify-between items-start'>
                         <div className='flex-1 pr-2'>
                           {totalSavings > 0 ? (
                             <div className='space-y-1'>
                               <div className='text-xs text-gray-400 line-through'>
-                                Prix d'origine : {formatCurrency(subtotal + totalSavings, 'EUR', 0)}
+                                Prix d&apos;origine :{' '}
+                                {formatCurrency(subtotal + totalSavings, 'EUR', 0)}
                               </div>
                               <div className='text-sm sm:text-base text-green-600 font-medium'>
                                 {nights} nuit{nights > 1 ? 's' : ''} (avec réductions)
@@ -777,7 +703,8 @@ export default function ReservationPage() {
                             </div>
                           ) : (
                             <span className='text-gray-600 text-sm sm:text-base'>
-                              {formatCurrency(parseFloat(product.basePrice), 'EUR')} × {nights} nuit
+                              {formatCurrency(parseFloat(product.basePrice), 'EUR')} x {nights}{' '}
+                              nuit
                               {nights > 1 ? 's' : ''}
                             </span>
                           )}
@@ -788,7 +715,7 @@ export default function ReservationPage() {
                       </div>
                     </div>
 
-                    {/* Options supplémentaires */}
+                    {/* Extra options */}
                     {extrasCost > 0 && (
                       <div className='space-y-2'>
                         <div className='flex justify-between items-start'>
@@ -805,7 +732,7 @@ export default function ReservationPage() {
                       </div>
                     )}
 
-                    {/* Frais de service détaillés */}
+                    {/* Service fees */}
                     <div className='bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2'>
                       <div className='flex justify-between items-start'>
                         <div className='flex-1 pr-2'>
@@ -816,12 +743,20 @@ export default function ReservationPage() {
                             <div className='text-xs text-blue-600 mt-1'>
                               {priceCalculation.breakdown.clientCommissionRate > 0 && (
                                 <div>
-                                  • {formatNumber(priceCalculation.breakdown.clientCommissionRate * 100, 1)}% du montant
+                                  {formatNumber(
+                                    priceCalculation.breakdown.clientCommissionRate * 100,
+                                    1
+                                  )}
+                                  % du montant
                                 </div>
                               )}
                               {priceCalculation.breakdown.clientCommissionFixed > 0 && (
                                 <div>
-                                  • {formatCurrency(priceCalculation.breakdown.clientCommissionFixed, 'EUR')} de frais fixes
+                                  {formatCurrency(
+                                    priceCalculation.breakdown.clientCommissionFixed,
+                                    'EUR'
+                                  )}{' '}
+                                  de frais fixes
                                 </div>
                               )}
                             </div>
@@ -832,11 +767,12 @@ export default function ReservationPage() {
                         </span>
                       </div>
                       <div className='text-xs text-blue-600'>
-                        Ces frais permettent de faire vivre la plateforme et d&apos;assurer un service de qualité
+                        Ces frais permettent de faire vivre la plateforme et d&apos;assurer un
+                        service de qualité
                       </div>
                     </div>
 
-                    {/* Sous-total avant frais */}
+                    {/* Subtotal */}
                     <div className='flex justify-between items-center text-sm border-t pt-3'>
                       <span className='text-gray-600'>Sous-total</span>
                       <span className='font-medium'>
@@ -844,7 +780,7 @@ export default function ReservationPage() {
                       </span>
                     </div>
 
-                    {/* Total final */}
+                    {/* Total */}
                     <div className='border-t-2 pt-4'>
                       <div className='flex justify-between text-lg sm:text-xl font-bold'>
                         <span>Total à payer</span>
@@ -860,11 +796,12 @@ export default function ReservationPage() {
                       onClick={handleNextStep}
                       disabled={
                         validationErrors.length > 0 ||
+                        isAvailable === false ||
                         (step === 3 &&
-                          (!formData.firstName ||
-                            !formData.lastName ||
-                            !formData.email ||
-                            !formData.phone))
+                          (!watchedFirstName ||
+                            !watchedLastName ||
+                            !watchedEmail ||
+                            !watchedPhone))
                       }
                       className='w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-3 sm:py-4 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none'
                     >
@@ -873,7 +810,7 @@ export default function ReservationPage() {
                   ) : (
                     <Button
                       onClick={handleSubmit}
-                      disabled={validationErrors.length > 0}
+                      disabled={validationErrors.length > 0 || isAvailable === false}
                       className='w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-3 sm:py-4 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none'
                     >
                       <CreditCard className='w-4 h-4 mr-2' />

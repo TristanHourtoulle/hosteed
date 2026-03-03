@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
-import { findRentByHostUserId, approveRent } from '@/lib/services/rents.service'
+import { findRentByHostUserId } from '@/lib/services/rents.service'
+import { approveRent } from '@/lib/services/rent-lifecycle.service'
 import { PaymentStatus, RentStatus } from '@prisma/client'
 import HostNavbar from '../components/HostNavbar'
 import {

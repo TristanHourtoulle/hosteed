@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { findProductBySlugOrId } from '@/lib/services/product.service'
-import { CheckRentIsAvailable } from '@/lib/services/rents.service'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Equipment, Meals, Services, User } from '@prisma/client'
@@ -211,12 +210,20 @@ export default function ProductDetails() {
   useEffect(() => {
     const checkAvailability = async () => {
       if (formData.arrivingDate && formData.leavingDate) {
-        const available = await CheckRentIsAvailable(
-          id as string,
-          new Date(formData.arrivingDate),
-          new Date(formData.leavingDate)
-        )
-        setIsAvailable(available.available)
+        const params = new URLSearchParams({
+          productId: id as string,
+          arrival: new Date(formData.arrivingDate).toISOString(),
+          leaving: new Date(formData.leavingDate).toISOString(),
+        })
+        try {
+          const response = await fetch(`/api/check-availability?${params}`)
+          const result = await response.json()
+          if (response.ok) {
+            setIsAvailable(result.available)
+          }
+        } catch {
+          setIsAvailable(false)
+        }
       }
     }
     checkAvailability()

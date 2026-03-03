@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { isAdmin } from '@/hooks/useAdminAuth'
-import { getAllRentRejections, resolveRentRejection } from '@/lib/services/rents.service'
+import { getAllRentRejections, resolveRentRejection } from '@/lib/services/rent-lifecycle.service'
 import { motion } from 'framer-motion'
 import {
   AlertTriangle,
