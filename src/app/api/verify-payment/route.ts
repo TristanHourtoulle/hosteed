@@ -2,17 +2,33 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { createRent } from '@/lib/services/rents.service'
 import { BookingConflictError, BookingValidationError } from '@/lib/errors/booking.errors'
+import { verifyPaymentSchema } from '@/lib/zod/payment.schema'
 import Stripe from 'stripe'
 import { RentStatus } from '@prisma/client'
 import { logger } from '@/lib/logger'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY
+if (!stripeSecretKey) {
+  throw new Error('Missing required environment variable: STRIPE_SECRET_KEY')
+}
+
+const stripe = new Stripe(stripeSecretKey, {
   apiVersion: '2025-10-29.clover',
 })
 
 export async function POST(req: Request) {
   try {
-    const { sessionId, paymentIntent } = await req.json()
+    const rawBody = await req.json()
+    const parseResult = verifyPaymentSchema.safeParse(rawBody)
+
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: { code: 'VAL_001', message: parseResult.error.errors[0].message } },
+        { status: 400 }
+      )
+    }
+
+    const { sessionId, paymentIntent } = parseResult.data
 
     let session: Stripe.Checkout.Session | null = null
     let paymentIntentObj: Stripe.PaymentIntent | null = null
