@@ -1,5 +1,17 @@
+'use client'
+
 import { RentStatus } from '@prisma/client'
 import { RentWithDates } from '@/lib/services/rents.service'
+import { Card, CardContent } from '@/components/ui/shadcnui/card'
+import { Button } from '@/components/ui/shadcnui/button'
+import {
+  CheckCircle,
+  XCircle,
+  LogIn,
+  LogOut,
+  ArrowRight,
+  Loader2,
+} from 'lucide-react'
 
 interface ActionButtonsProps {
   rent: RentWithDates
@@ -9,6 +21,16 @@ interface ActionButtonsProps {
   onShowRejectModal: () => void
 }
 
+interface ActionConfig {
+  key: string
+  label: string
+  description: string
+  consequence: string
+  icon: React.ComponentType<{ className?: string }>
+  color: string
+  onClick: () => void
+}
+
 export default function ActionButtons({
   rent,
   updating,
@@ -16,149 +38,106 @@ export default function ActionButtons({
   onApproveReservation,
   onShowRejectModal,
 }: ActionButtonsProps) {
-  const renderButtons = () => {
-    switch (rent.status) {
-      case RentStatus.WAITING:
-        return (
-          <>
-            <button
-              onClick={onApproveReservation}
-              disabled={updating}
-              className='inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white font-medium rounded-xl hover:from-green-700 hover:to-green-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl'
-            >
-              {updating ? (
-                <>
-                  <svg
-                    className='w-4 h-4 animate-spin'
-                    fill='none'
-                    stroke='currentColor'
-                    viewBox='0 0 24 24'
-                  >
-                    <path
-                      strokeLinecap='round'
-                      strokeLinejoin='round'
-                      strokeWidth={2}
-                      d='M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15'
-                    />
-                  </svg>
-                  Approbation...
-                </>
-              ) : (
-                <>
-                  <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                    <path
-                      strokeLinecap='round'
-                      strokeLinejoin='round'
-                      strokeWidth={2}
-                      d='M5 13l4 4L19 7'
-                    />
-                  </svg>
-                  Accepter la réservation
-                </>
-              )}
-            </button>
-            <button
-              onClick={onShowRejectModal}
-              disabled={updating}
-              className='inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white font-medium rounded-xl hover:from-red-700 hover:to-red-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl'
-            >
-              <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                  strokeWidth={2}
-                  d='M6 18L18 6M6 6l12 12'
-                />
-              </svg>
-              Refuser la réservation
-            </button>
-          </>
-        )
+  const isTerminal = rent.status === RentStatus.CHECKOUT || rent.status === RentStatus.CANCEL
 
-      case RentStatus.RESERVED:
-        return (
-          <button
-            onClick={() => onStatusChange(RentStatus.CHECKIN)}
-            disabled={updating}
-            className='inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white font-medium rounded-xl hover:from-green-700 hover:to-green-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl'
-          >
-            {updating ? (
-              <>
-                <svg
-                  className='w-4 h-4 animate-spin'
-                  fill='none'
-                  stroke='currentColor'
-                  viewBox='0 0 24 24'
-                >
-                  <path
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth={2}
-                    d='M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15'
-                  />
-                </svg>
-                Mise à jour...
-              </>
-            ) : (
-              <>
-                <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                  <path
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth={2}
-                    d='M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1'
-                  />
-                </svg>
-                Marquer comme arrivé
-              </>
-            )}
-          </button>
-        )
-
-      case RentStatus.CHECKIN:
-        return (
-          <button
-            onClick={() => onStatusChange(RentStatus.CHECKOUT)}
-            disabled={updating}
-            className='inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl'
-          >
-            {updating ? (
-              <>
-                <svg
-                  className='w-4 h-4 animate-spin'
-                  fill='none'
-                  stroke='currentColor'
-                  viewBox='0 0 24 24'
-                >
-                  <path
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth={2}
-                    d='M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15'
-                  />
-                </svg>
-                Mise à jour...
-              </>
-            ) : (
-              <>
-                <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                  <path
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth={2}
-                    d='M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1'
-                  />
-                </svg>
-                Marquer comme terminé
-              </>
-            )}
-          </button>
-        )
-
-      default:
-        return null
-    }
+  if (isTerminal) {
+    return (
+      <div className='rounded-xl bg-gray-50 border border-gray-200 px-4 py-3 text-sm text-gray-500 text-center'>
+        {rent.status === RentStatus.CHECKOUT
+          ? 'Séjour terminé — aucune action disponible.'
+          : 'Réservation annulée — aucune action disponible.'}
+      </div>
+    )
   }
 
-  return <div className='mt-6 flex flex-wrap gap-3'>{renderButtons()}</div>
+  const actions: ActionConfig[] = []
+
+  switch (rent.status) {
+    case RentStatus.WAITING:
+      actions.push({
+        key: 'approve',
+        label: 'Accepter la réservation',
+        description: 'Confirme la réservation auprès du voyageur.',
+        consequence: 'Le paiement sera capturé et le voyageur sera notifié.',
+        icon: CheckCircle,
+        color: 'bg-green-600',
+        onClick: onApproveReservation,
+      })
+      actions.push({
+        key: 'reject',
+        label: 'Refuser la réservation',
+        description: 'Refuse la demande de réservation.',
+        consequence: "L'autorisation de paiement sera relâchée. Les administrateurs seront notifiés.",
+        icon: XCircle,
+        color: 'bg-red-100 text-red-600',
+        onClick: onShowRejectModal,
+      })
+      break
+
+    case RentStatus.RESERVED:
+      actions.push({
+        key: 'checkin',
+        label: 'Enregistrer le check-in',
+        description: "Le voyageur est arrivé sur le lieu d'hébergement.",
+        consequence: 'Le séjour est officiellement en cours.',
+        icon: LogIn,
+        color: 'bg-blue-600',
+        onClick: () => onStatusChange(RentStatus.CHECKIN),
+      })
+      break
+
+    case RentStatus.CHECKIN:
+      actions.push({
+        key: 'checkout',
+        label: 'Enregistrer le check-out',
+        description: "Le voyageur a quitté le lieu d'hébergement.",
+        consequence: "Le séjour est terminé. Les fonds seront libérés vers l'hôte.",
+        icon: LogOut,
+        color: 'bg-gray-600',
+        onClick: () => onStatusChange(RentStatus.CHECKOUT),
+      })
+      break
+  }
+
+  return (
+    <div className='space-y-3'>
+      {actions.map(action => {
+        const Icon = action.icon
+        const isReject = action.key === 'reject'
+
+        return (
+          <Card
+            key={action.key}
+            className={`border ${isReject ? 'border-red-200' : 'border-gray-200'} rounded-xl overflow-hidden cursor-pointer hover:shadow-md transition-shadow`}
+            onClick={updating ? undefined : action.onClick}
+          >
+            <CardContent className='p-4 flex items-center gap-4'>
+              <div
+                className={`rounded-xl p-3 flex-shrink-0 ${
+                  isReject ? 'bg-red-100 text-red-600' : `${action.color} text-white`
+                }`}
+              >
+                {updating ? (
+                  <Loader2 className='h-5 w-5 animate-spin' />
+                ) : (
+                  <Icon className='h-5 w-5' />
+                )}
+              </div>
+              <div className='flex-1 min-w-0'>
+                <p className={`font-semibold ${isReject ? 'text-red-700' : 'text-gray-900'}`}>
+                  {action.label}
+                </p>
+                <p className={`text-sm ${isReject ? 'text-red-500' : 'text-gray-500'}`}>
+                  {action.description}
+                </p>
+              </div>
+              <ArrowRight
+                className={`h-5 w-5 flex-shrink-0 ${isReject ? 'text-red-300' : 'text-gray-300'}`}
+              />
+            </CardContent>
+          </Card>
+        )
+      })}
+    </div>
+  )
 }
