@@ -212,7 +212,7 @@ export async function cancelRent(id: string) {
     if (!rents || !rents.user) throw Error('No Rents find')
     if (rents.stripeId) {
       const stripeRequest = await StripeService.RefundPaymentIntent(rents.stripeId)
-      if (!stripeRequest) throw Error(stripeRequest)
+      if (!stripeRequest) throw new Error(`Stripe refund failed for rent ${id}`)
       await prisma.rent.update({
         where: { id },
         data: {

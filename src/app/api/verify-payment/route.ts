@@ -6,6 +6,7 @@ import { verifyPaymentSchema } from '@/lib/zod/payment.schema'
 import Stripe from 'stripe'
 import { RentStatus } from '@prisma/client'
 import { logger } from '@/lib/logger'
+import { auth } from '@/lib/auth'
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY
 if (!stripeSecretKey) {
@@ -18,6 +19,14 @@ const stripe = new Stripe(stripeSecretKey, {
 
 export async function POST(req: Request) {
   try {
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: { code: 'AUTH_001', message: 'Authentication required' } },
+        { status: 401 }
+      )
+    }
+
     const rawBody = await req.json()
     const parseResult = verifyPaymentSchema.safeParse(rawBody)
 
@@ -101,11 +110,7 @@ export async function POST(req: Request) {
           let selectedExtras: Array<{ extraId: string; quantity: number }> = []
           if (metadata.selectedExtras) {
             try {
-              const extraIds = JSON.parse(metadata.selectedExtras)
-              selectedExtras = extraIds.map((id: string) => ({
-                extraId: id,
-                quantity: 1,
-              }))
+              selectedExtras = JSON.parse(metadata.selectedExtras)
             } catch (error) {
               logger.error({ error }, 'Failed to parse selectedExtras')
             }
@@ -167,6 +172,13 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: 'Réservation non trouvée. Veuillez contacter le support.' },
         { status: 404 }
+      )
+    }
+
+    if (existingRent.userId !== session.user.id) {
+      return NextResponse.json(
+        { error: { code: 'AUTH_002', message: 'Unauthorized access to this reservation' } },
+        { status: 403 }
       )
     }
 

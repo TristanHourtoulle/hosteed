@@ -7,24 +7,22 @@ import { emailService } from '@/lib/services/email'
 import { RentStatus } from '@prisma/client'
 import { logger } from '@/lib/logger'
 
-function getRequiredEnv(name: string): string {
-  const value = process.env[name]
-  if (!value) throw new Error(`Missing required environment variable: ${name}`)
-  return value
-}
-
-const stripeSecretKey = getRequiredEnv('STRIPE_SECRET_KEY')
-const stripeWebhookSecret = getRequiredEnv('STRIPE_WEBHOOK_SECRET')
-
-const stripe = new Stripe(stripeSecretKey, {
-  apiVersion: '2025-10-29.clover',
-})
-
 type StripeWebhookEvent = {
   type: string
   data: {
     object: Stripe.PaymentIntent | Stripe.Dispute | Stripe.Charge | Stripe.Checkout.Session
   }
+}
+
+let stripeInstance: Stripe | null = null
+
+function getStripe(): Stripe {
+  if (!stripeInstance) {
+    const secretKey = process.env.STRIPE_SECRET_KEY
+    if (!secretKey) throw new Error('Missing required environment variable: STRIPE_SECRET_KEY')
+    stripeInstance = new Stripe(secretKey, { apiVersion: '2025-10-29.clover' })
+  }
+  return stripeInstance
 }
 
 export async function POST(req: Request): Promise<Response> {
@@ -35,11 +33,19 @@ export async function POST(req: Request): Promise<Response> {
     return NextResponse.json({ error: 'Signature manquante' }, { status: 400 })
   }
 
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+  if (!webhookSecret) {
+    logger.error('Missing required environment variable: STRIPE_WEBHOOK_SECRET')
+    return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+  }
+
+  const stripe = getStripe()
+
   try {
     const event = stripe.webhooks.constructEvent(
       body,
       signature,
-      stripeWebhookSecret
+      webhookSecret
     ) as StripeWebhookEvent
 
     // Handle disputes

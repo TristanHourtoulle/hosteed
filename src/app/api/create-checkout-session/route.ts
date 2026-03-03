@@ -4,6 +4,7 @@ import { StripeService } from '@/lib/services/stripe'
 import { calculateCompleteBookingPrice } from '@/lib/services/booking-pricing.service'
 import { createCheckoutSessionSchema } from '@/lib/zod/payment.schema'
 import { logger } from '@/lib/logger'
+import prisma from '@/lib/prisma'
 
 export async function POST(req: Request) {
   try {
@@ -52,13 +53,25 @@ export async function POST(req: Request) {
       selectedExtras = []
     }
 
+    const product = await prisma.product.findUnique({
+      where: { id: metadata.productId },
+      select: { ownerId: true },
+    })
+    if (!product) {
+      return NextResponse.json(
+        { error: { code: 'VAL_003', message: 'Product not found' } },
+        { status: 404 }
+      )
+    }
+
     // Server-side price calculation — never trust client-supplied amounts
     const pricing = await calculateCompleteBookingPrice(
       metadata.productId,
       startDate,
       endDate,
       guestCount,
-      selectedExtras
+      selectedExtras,
+      product.ownerId
     )
 
     const serverCalculatedAmount = Math.round(pricing.totalAmount)

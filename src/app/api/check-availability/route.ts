@@ -15,11 +15,28 @@ export async function GET(req: Request) {
     )
   }
 
+  const arrivalDate = new Date(arrival)
+  const leavingDate = new Date(leaving)
+
+  if (isNaN(arrivalDate.getTime()) || isNaN(leavingDate.getTime())) {
+    return NextResponse.json(
+      { error: { code: 'VAL_002', message: 'Invalid date format for arrival or leaving' } },
+      { status: 400 }
+    )
+  }
+
+  if (arrivalDate >= leavingDate) {
+    return NextResponse.json(
+      { error: { code: 'VAL_003', message: 'Leaving date must be after arrival date' } },
+      { status: 400 }
+    )
+  }
+
   try {
     const result = await checkRentIsAvailable(
       productId,
-      new Date(arrival),
-      new Date(leaving)
+      arrivalDate,
+      leavingDate
     )
     return NextResponse.json(result)
   } catch (error) {
