@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { auth } from '@/lib/auth'
 import { StripeService } from '@/lib/services/stripe'
 import { calculateCompleteBookingPrice } from '@/lib/services/booking-pricing.service'
 import { createCheckoutSessionSchema } from '@/lib/zod/payment.schema'
@@ -6,6 +7,14 @@ import { logger } from '@/lib/logger'
 
 export async function POST(req: Request) {
   try {
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: { code: 'AUTH_001', message: 'Authentication required' } },
+        { status: 401 }
+      )
+    }
+
     const rawBody = await req.json()
     const parseResult = createCheckoutSessionSchema.safeParse(rawBody)
 
@@ -17,6 +26,13 @@ export async function POST(req: Request) {
     }
 
     const { productName, metadata } = parseResult.data
+
+    if (metadata.userId !== session.user.id) {
+      return NextResponse.json(
+        { error: { code: 'AUTH_002', message: 'User ID mismatch' } },
+        { status: 403 }
+      )
+    }
 
     const startDate = new Date(metadata.arrivingDate)
     const endDate = new Date(metadata.leavingDate)
