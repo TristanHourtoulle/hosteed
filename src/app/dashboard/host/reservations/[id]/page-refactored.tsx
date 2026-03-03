@@ -4,11 +4,13 @@ import { useEffect, useState, use } from 'react'
 import { useSession } from 'next-auth/react'
 import {
   getRentById,
+  RentWithDates,
+} from '@/lib/services/rents.service'
+import {
   changeRentStatus,
   approveRent,
   rejectRentRequest,
-  RentWithDates,
-} from '@/lib/services/rents.service'
+} from '@/lib/services/rent-lifecycle.service'
 import { getPayablePricesPerRent, createPayRequest } from '@/lib/services/payment.service'
 import { RentStatus, PaymentStatus, PaymentMethod } from '@prisma/client'
 import HostNavbar from '../../components/HostNavbar'

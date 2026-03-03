@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
-import { CheckRentIsAvailable } from '@/lib/services/rents.service'
+import { checkRentIsAvailable } from '@/lib/services/rent-availability.service'
 import { findProductBySlugOrId } from '@/lib/services/product.service'
 import { findUserById } from '@/lib/services/user.service'
 import {
@@ -24,6 +24,16 @@ import Image from 'next/image'
 import ExtraSelectionStep from '@/components/booking/ExtraSelectionStep'
 import PhoneInput from '@/components/ui/PhoneInput'
 import { formatCurrency, formatNumber } from '@/lib/utils/formatNumber'
+
+const RESERVATION_MESSAGES = {
+  DATES_UNAVAILABLE_TOAST: 'Ces dates ne sont plus disponibles. Veuillez sélectionner d\'autres dates.',
+  DATES_UNAVAILABLE_BANNER: 'Ces dates ne sont plus disponibles. Veuillez retourner en arrière et choisir d\'autres dates.',
+  FILL_REQUIRED_FIELDS: 'Veuillez remplir tous les champs obligatoires',
+  LOGIN_REQUIRED: 'Vous devez être connecté pour effectuer une réservation',
+  PRODUCT_NOT_FOUND: 'Impossible de trouver les informations du produit',
+  PAYMENT_SESSION_ERROR: 'Erreur lors de la création de la session de paiement',
+  GENERIC_ERROR: 'Une erreur est survenue lors de la création de la réservation',
+} as const
 
 interface Option {
   id: string
@@ -188,11 +198,11 @@ export default function ReservationPage() {
         arrivingDate.setHours(Number(product?.arriving) || 14, 0, 0, 0)
         leavingDate.setHours(Number(product?.leaving) || 11, 0, 0, 0)
 
-        const result = await CheckRentIsAvailable(id as string, arrivingDate, leavingDate)
+        const result = await checkRentIsAvailable(id as string, arrivingDate, leavingDate)
         setIsAvailable(result.available)
 
         if (!result.available) {
-          toast.error('Ces dates ne sont plus disponibles. Veuillez sélectionner d\'autres dates.')
+          toast.error(RESERVATION_MESSAGES.DATES_UNAVAILABLE_TOAST)
         }
       } else {
         setIsAvailable(null)
@@ -331,7 +341,7 @@ export default function ReservationPage() {
       setStep(3)
     } else if (step === 3) {
       if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone) {
-        toast.error('Veuillez remplir tous les champs obligatoires')
+        toast.error(RESERVATION_MESSAGES.FILL_REQUIRED_FIELDS)
         return
       }
       setStep(4)
@@ -340,12 +350,12 @@ export default function ReservationPage() {
 
   const handleSubmit = async () => {
     if (!session?.user?.id) {
-      toast.error('Vous devez être connecté pour effectuer une réservation')
+      toast.error(RESERVATION_MESSAGES.LOGIN_REQUIRED)
       return
     }
 
     if (!product) {
-      toast.error('Impossible de trouver les informations du produit')
+      toast.error(RESERVATION_MESSAGES.PRODUCT_NOT_FOUND)
       return
     }
 
@@ -386,10 +396,10 @@ export default function ReservationPage() {
           window.location.href = data.url
         }
       } else {
-        toast.error('Erreur lors de la création de la session de paiement')
+        toast.error(RESERVATION_MESSAGES.PAYMENT_SESSION_ERROR)
       }
     } catch {
-      toast.error('Une erreur est survenue lors de la création de la réservation')
+      toast.error(RESERVATION_MESSAGES.GENERIC_ERROR)
     }
   }
 
@@ -697,7 +707,7 @@ export default function ReservationPage() {
                 {isAvailable === false && (
                   <div className='bg-red-50 border border-red-200 rounded-lg p-3'>
                     <span className='text-red-700 text-sm font-medium'>
-                      Ces dates ne sont plus disponibles. Veuillez retourner en arrière et choisir d&apos;autres dates.
+                      {RESERVATION_MESSAGES.DATES_UNAVAILABLE_BANNER}
                     </span>
                   </div>
                 )}

@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { findProductBySlugOrId } from '@/lib/services/product.service'
-import { CheckRentIsAvailable } from '@/lib/services/rents.service'
+import { checkRentIsAvailable } from '@/lib/services/rent-availability.service'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Equipment, Meals, Services, User } from '@prisma/client'
@@ -211,7 +211,7 @@ export default function ProductDetails() {
   useEffect(() => {
     const checkAvailability = async () => {
       if (formData.arrivingDate && formData.leavingDate) {
-        const available = await CheckRentIsAvailable(
+        const available = await checkRentIsAvailable(
           id as string,
           new Date(formData.arrivingDate),
           new Date(formData.leavingDate)

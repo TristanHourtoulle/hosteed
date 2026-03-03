@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { createRent } from '@/lib/services/rents.service'
+import { BookingConflictError, BookingValidationError } from '@/lib/errors/booking.errors'
 import Stripe from 'stripe'
 import { RentStatus } from '@prisma/client'
+import { logger } from '@/lib/logger'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-10-29.clover',
@@ -23,7 +25,7 @@ export async function POST(req: Request) {
           paymentIntentObj = await stripe.paymentIntents.retrieve(session.payment_intent as string)
         }
       } catch (error) {
-        console.error('Error retrieving session:', error)
+        logger.error({ sessionId, error }, 'Failed to retrieve Stripe session')
       }
     }
 
@@ -40,7 +42,7 @@ export async function POST(req: Request) {
           session = sessions.data[0]
         }
       } catch (error) {
-        console.error('Error retrieving payment intent:', error)
+        logger.error({ paymentIntent, error }, 'Failed to retrieve payment intent')
       }
     }
 
@@ -78,20 +80,18 @@ export async function POST(req: Request) {
         metadata.prices
       ) {
         try {
-          console.log('Creating reservation from session metadata...')
+          logger.info({ sessionId }, 'Creating reservation from session metadata')
 
-          // ✨ NEW: Parser les extras depuis les métadonnées
           let selectedExtras: Array<{ extraId: string; quantity: number }> = []
           if (metadata.selectedExtras) {
             try {
               const extraIds = JSON.parse(metadata.selectedExtras)
-              // Convertir les IDs en objets avec quantity = 1 par défaut
               selectedExtras = extraIds.map((id: string) => ({
                 extraId: id,
-                quantity: 1, // TODO: Si besoin de quantités différentes, les passer dans metadata
+                quantity: 1,
               }))
             } catch (error) {
-              console.error('Error parsing selectedExtras:', error)
+              logger.error({ error }, 'Failed to parse selectedExtras')
             }
           }
 
@@ -104,35 +104,45 @@ export async function POST(req: Request) {
             options: metadata.options ? JSON.parse(metadata.options) : [],
             stripeId: paymentIntentObj.id,
             prices: Number(metadata.prices),
-            selectedExtras, // ✨ NEW: Passer les extras
+            selectedExtras,
           })
 
-          if (newRent) {
-            // Update payment status - RESERVED seulement si le paiement est capturé
-            await prisma.rent.update({
-              where: { id: newRent.id },
-              data: {
-                status:
-                  paymentIntentObj.status === 'succeeded'
-                    ? ('RESERVED' as RentStatus)
-                    : ('WAITING' as RentStatus),
-                payment: paymentIntentObj.status === 'succeeded' ? 'CLIENT_PAID' : 'NOT_PAID',
-              },
-            })
+          // Update payment status
+          await prisma.rent.update({
+            where: { id: newRent.id },
+            data: {
+              status:
+                paymentIntentObj.status === 'succeeded'
+                  ? ('RESERVED' as RentStatus)
+                  : ('WAITING' as RentStatus),
+              payment: paymentIntentObj.status === 'succeeded' ? 'CLIENT_PAID' : 'NOT_PAID',
+            },
+          })
 
-            existingRent = await prisma.rent.findFirst({
-              where: { id: newRent.id },
-              include: {
-                product: {
-                  select: {
-                    name: true,
-                  },
+          existingRent = await prisma.rent.findFirst({
+            where: { id: newRent.id },
+            include: {
+              product: {
+                select: {
+                  name: true,
                 },
               },
-            })
-          }
+            },
+          })
         } catch (error) {
-          console.error('Error creating rent from session:', error)
+          if (error instanceof BookingConflictError) {
+            return NextResponse.json(
+              { error: 'Ces dates ne sont plus disponibles' },
+              { status: 409 }
+            )
+          }
+          if (error instanceof BookingValidationError) {
+            return NextResponse.json(
+              { error: error.message },
+              { status: 400 }
+            )
+          }
+          logger.error({ error }, 'Failed to create rent from session')
         }
       }
     }
@@ -156,7 +166,7 @@ export async function POST(req: Request) {
       },
     })
   } catch (error) {
-    console.error('Error verifying payment:', error)
+    logger.error({ error }, 'Failed to verify payment')
     return NextResponse.json(
       { error: 'Erreur lors de la vérification du paiement' },
       { status: 500 }

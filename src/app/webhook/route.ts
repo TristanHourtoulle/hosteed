@@ -1,10 +1,11 @@
-// TODO: refactor this file because it's larger than 200 lines
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { createRent } from '@/lib/services/rents.service'
+import { BookingConflictError, BookingValidationError } from '@/lib/errors/booking.errors'
 import Stripe from 'stripe'
 import { emailService } from '@/lib/services/email'
 import { RentStatus } from '@prisma/client'
+import { logger } from '@/lib/logger'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-10-29.clover',
@@ -32,7 +33,7 @@ export async function POST(req: Request): Promise<Response> {
       process.env.STRIPE_WEBHOOK_SECRET!
     ) as StripeWebhookEvent
 
-    // Gestion des litiges
+    // Handle disputes
     if (event.type === 'charge.dispute.created') {
       const dispute = event.data.object as Stripe.Dispute
       const paymentIntent = dispute.payment_intent as string
@@ -42,16 +43,15 @@ export async function POST(req: Request): Promise<Response> {
         where: { stripeId: paymentIntent },
       })
 
-      console.log('Charge DISPUTE CREATED', paymentIntent, rent)
+      logger.info({ paymentIntent, rentId: rent.id }, 'Charge dispute created')
       if (rent) {
-        const updatRequest = await prisma.rent.update({
+        await prisma.rent.update({
           where: { id: rent.id },
           data: {
             status: 'CANCEL' as RentStatus,
             payment: 'DISPUTE',
           },
         })
-        console.log(updatRequest)
         if (rent.userId) {
           const user = await prisma.user.findUnique({
             where: { id: rent.userId },
@@ -68,7 +68,7 @@ export async function POST(req: Request): Promise<Response> {
       }
     }
 
-    // Gestion des litiges résolus
+    // Handle resolved disputes
     if (event.type === 'charge.dispute.closed') {
       const dispute = event.data.object as Stripe.Dispute
       const paymentIntent = dispute.payment_intent as string
@@ -87,14 +87,13 @@ export async function POST(req: Request): Promise<Response> {
       }
     }
 
-    // Gestion des paiements réussis
+    // Handle successful payments
     if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data.object as Stripe.PaymentIntent
       await new Promise(resolve => setTimeout(resolve, 2000))
 
-      // Vérifier si le paiement a été capturé
       if (paymentIntent.status !== 'succeeded') {
-        console.log('Paiement non capturé, en attente de capture manuelle')
+        logger.info({ paymentIntentId: paymentIntent.id }, 'Payment not captured, awaiting manual capture')
         return NextResponse.json({ received: true })
       }
 
@@ -110,21 +109,19 @@ export async function POST(req: Request): Promise<Response> {
             payment: 'CLIENT_PAID',
           },
         })
-        console.log('Location mise à jour avec succès')
+        logger.info({ rentId: rent.id }, 'Rent updated to RESERVED after payment success')
       } else {
-        console.log('Aucune location trouvée pour ce payment_intent, vérification de la session...')
+        logger.info({ paymentIntentId: paymentIntent.id }, 'No rent found for payment intent, checking session')
 
-        // Vérifier si une session existe pour ce payment_intent
         const sessions = await stripe.checkout.sessions.list({
           payment_intent: paymentIntent.id,
         })
 
         if (sessions.data.length > 0) {
           const session = sessions.data[0]
-          console.log('Session trouvée:', session)
 
           if (session.metadata?.productId && session.metadata?.userId) {
-            console.log('Création de la location à partir de la session...')
+            logger.info({ sessionId: session.id }, 'Creating rent from session')
             try {
               const newRent = await createRent({
                 productId: session.metadata.productId,
@@ -140,25 +137,29 @@ export async function POST(req: Request): Promise<Response> {
                   : [],
               })
 
-              if (newRent) {
-                console.log('Location créée avec succès:', newRent)
-                await prisma.rent.update({
-                  where: { id: newRent.id },
-                  data: {
-                    status: 'RESERVED' as RentStatus,
-                    payment: 'CLIENT_PAID',
-                  },
-                })
-              }
+              logger.info({ rentId: newRent.id }, 'Rent created successfully from session')
+              await prisma.rent.update({
+                where: { id: newRent.id },
+                data: {
+                  status: 'RESERVED' as RentStatus,
+                  payment: 'CLIENT_PAID',
+                },
+              })
             } catch (error) {
-              console.error('Erreur lors de la création de la location:', error)
+              if (error instanceof BookingConflictError) {
+                logger.warn({ paymentIntentId: paymentIntent.id, error: error.message }, 'Booking conflict during webhook rent creation')
+              } else if (error instanceof BookingValidationError) {
+                logger.error({ paymentIntentId: paymentIntent.id, error: error.message }, 'Booking validation error during webhook rent creation')
+              } else {
+                logger.error({ error }, 'Failed to create rent from session')
+              }
             }
           }
         }
       }
     }
 
-    // Gestion des paiements échoués
+    // Handle failed payments
     if (event.type === 'payment_intent.payment_failed') {
       const paymentIntent = event.data.object as Stripe.PaymentIntent
 
@@ -191,7 +192,7 @@ export async function POST(req: Request): Promise<Response> {
       }
     }
 
-    // Gestion des remboursements
+    // Handle refunds
     if (event.type === 'charge.refunded') {
       const charge = event.data.object as Stripe.Charge
 
@@ -227,7 +228,7 @@ export async function POST(req: Request): Promise<Response> {
       }
     }
 
-    // Gestion des sessions de paiement complétées
+    // Handle completed checkout sessions
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session
 
@@ -241,7 +242,7 @@ export async function POST(req: Request): Promise<Response> {
         session.status !== 'complete' ||
         !session.metadata.prices
       ) {
-        console.error('Métadonnées manquantes dans la session Stripe:', session.metadata)
+        logger.error({ metadata: session.metadata }, 'Missing metadata in Stripe session')
         return NextResponse.json({ error: 'Métadonnées manquantes' }, { status: 400 })
       }
 
@@ -260,15 +261,7 @@ export async function POST(req: Request): Promise<Response> {
             : [],
         })
 
-        if (!rent) {
-          console.error('Échec de la création de la réservation')
-          return NextResponse.json(
-            { error: 'Échec de la création de la réservation' },
-            { status: 500 }
-          )
-        }
-
-        // Mettre à jour le statut de la location
+        // Update rent status
         await prisma.rent.update({
           where: { id: rent.id },
           data: {
@@ -277,7 +270,21 @@ export async function POST(req: Request): Promise<Response> {
           },
         })
       } catch (error) {
-        console.error('Erreur lors de la création de la réservation:', error)
+        if (error instanceof BookingConflictError) {
+          logger.warn({ sessionId: session.id, error: error.message }, 'Booking conflict during checkout completion')
+          return NextResponse.json(
+            { error: 'Ces dates ne sont plus disponibles' },
+            { status: 409 }
+          )
+        }
+        if (error instanceof BookingValidationError) {
+          logger.error({ sessionId: session.id, error: error.message }, 'Booking validation error during checkout')
+          return NextResponse.json(
+            { error: error.message },
+            { status: 400 }
+          )
+        }
+        logger.error({ error }, 'Failed to create reservation from checkout session')
         return NextResponse.json(
           { error: 'Erreur lors de la création de la réservation' },
           { status: 500 }
@@ -285,32 +292,30 @@ export async function POST(req: Request): Promise<Response> {
       }
     }
 
-    // Gestion de la création d'un paiement
+    // Handle payment intent creation
     if (event.type === 'payment_intent.created') {
       const paymentIntent = event.data.object as Stripe.PaymentIntent
-      console.log('Nouveau paiement créé avec capture manuelle:', paymentIntent.id)
+      logger.info({ paymentIntentId: paymentIntent.id }, 'New payment intent created with manual capture')
 
-      // Ne pas changer le statut ici, attendre la capture ou le succès
       const rent = await prisma.rent.findFirst({
         where: { stripeId: paymentIntent.id },
       })
 
       if (rent) {
-        console.log('Paiement créé, en attente de capture pour passer en RESERVED')
+        logger.info({ rentId: rent.id }, 'Payment created, awaiting capture to move to RESERVED')
       }
     }
 
-    // Gestion de la capture du paiement
+    // Handle payment capture
     if (event.type === 'payment_intent.captured') {
       const paymentIntent = event.data.object as Stripe.PaymentIntent
-      console.log('Paiement capturé:', paymentIntent.id)
+      logger.info({ paymentIntentId: paymentIntent.id }, 'Payment captured')
 
       const rent = await prisma.rent.findFirst({
         where: { stripeId: paymentIntent.id },
       })
 
       if (rent) {
-        // Mettre à jour directement le statut en RESERVED car le paiement est capturé
         await prisma.rent.update({
           where: { id: rent.id },
           data: {
@@ -319,13 +324,13 @@ export async function POST(req: Request): Promise<Response> {
             payment: 'CLIENT_PAID',
           },
         })
-        console.log('Location mise à jour en RESERVED après capture du paiement')
+        logger.info({ rentId: rent.id }, 'Rent updated to RESERVED after payment capture')
       }
     }
 
     return NextResponse.json({ received: true })
   } catch (err) {
-    console.error('Erreur webhook:', err)
+    logger.error({ error: err }, 'Webhook processing error')
     return NextResponse.json({ error: 'Erreur webhook' }, { status: 400 })
   }
 }
