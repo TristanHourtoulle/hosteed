@@ -53,32 +53,34 @@ export async function POST(req: Request): Promise<Response> {
       const dispute = event.data.object as Stripe.Dispute
       const paymentIntent = dispute.payment_intent as string
 
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      const rent = await prisma.rent.findFirstOrThrow({
+      const rent = await prisma.rent.findFirst({
         where: { stripeId: paymentIntent },
       })
 
+      if (!rent) {
+        logger.warn({ paymentIntent }, 'No rent found for disputed payment intent')
+        return NextResponse.json({ received: true })
+      }
+
       logger.info({ paymentIntent, rentId: rent.id }, 'Charge dispute created')
-      if (rent) {
-        await prisma.rent.update({
-          where: { id: rent.id },
-          data: {
-            status: 'CANCEL' as RentStatus,
-            payment: 'DISPUTE',
-          },
+      await prisma.rent.update({
+        where: { id: rent.id },
+        data: {
+          status: 'CANCEL' as RentStatus,
+          payment: 'DISPUTE',
+        },
+      })
+      if (rent.userId) {
+        const user = await prisma.user.findUnique({
+          where: { id: rent.userId },
         })
-        if (rent.userId) {
-          const user = await prisma.user.findUnique({
-            where: { id: rent.userId },
+        if (user?.email && !user.emailOptOut && !user.emailBounced) {
+          await emailService.sendDisputeNotification(user.email, {
+            bookingId: rent.id,
+            amount: String(rent.prices),
+            reason: 'Paiement contesté',
+            adminUrl: `${process.env.NEXTAUTH_URL}/admin/reservations/${rent.id}`,
           })
-          if (user?.email && !user.emailOptOut && !user.emailBounced) {
-            await emailService.sendDisputeNotification(user.email, {
-              bookingId: rent.id,
-              amount: String(rent.prices),
-              reason: 'Paiement contesté',
-              adminUrl: `${process.env.NEXTAUTH_URL}/admin/reservations/${rent.id}`,
-            })
-          }
         }
       }
     }
@@ -88,29 +90,27 @@ export async function POST(req: Request): Promise<Response> {
       const dispute = event.data.object as Stripe.Dispute
       const paymentIntent = dispute.payment_intent as string
 
-      const rent = await prisma.rent.findFirstOrThrow({
+      const rent = await prisma.rent.findFirst({
         where: { stripeId: paymentIntent },
       })
-      if (rent) {
-        await prisma.rent.update({
-          where: { id: rent.id },
-          data: {
-            status: dispute.status === 'won' ? 'RESERVED' : 'CANCEL',
-            payment: dispute.status === 'won' ? 'CLIENT_PAID' : 'NOT_PAID',
-          },
-        })
+
+      if (!rent) {
+        logger.warn({ paymentIntent }, 'No rent found for closed dispute')
+        return NextResponse.json({ received: true })
       }
+
+      await prisma.rent.update({
+        where: { id: rent.id },
+        data: {
+          status: dispute.status === 'won' ? 'RESERVED' : 'CANCEL',
+          payment: dispute.status === 'won' ? 'CLIENT_PAID' : 'NOT_PAID',
+        },
+      })
     }
 
     // Handle successful payments
     if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data.object as Stripe.PaymentIntent
-      await new Promise(resolve => setTimeout(resolve, 2000))
-
-      if (paymentIntent.status !== 'succeeded') {
-        logger.info({ paymentIntentId: paymentIntent.id }, 'Payment not captured, awaiting manual capture')
-        return NextResponse.json({ received: true })
-      }
 
       const rent = await prisma.rent.findFirst({
         where: { stripeId: paymentIntent.id },
@@ -187,31 +187,34 @@ export async function POST(req: Request): Promise<Response> {
     if (event.type === 'payment_intent.payment_failed') {
       const paymentIntent = event.data.object as Stripe.PaymentIntent
 
-      const rent = await prisma.rent.findFirstOrThrow({
+      const rent = await prisma.rent.findFirst({
         where: { stripeId: paymentIntent.id },
       })
 
-      if (rent) {
-        await prisma.rent.update({
-          where: { id: rent.id },
-          data: {
-            status: 'CANCEL' as RentStatus,
-            payment: 'NOT_PAID',
-          },
-        })
+      if (!rent) {
+        logger.warn({ paymentIntentId: paymentIntent.id }, 'No rent found for failed payment intent')
+        return NextResponse.json({ received: true })
+      }
 
-        if (rent.userId) {
-          const user = await prisma.user.findUnique({
-            where: { id: rent.userId },
+      await prisma.rent.update({
+        where: { id: rent.id },
+        data: {
+          status: 'CANCEL' as RentStatus,
+          payment: 'NOT_PAID',
+        },
+      })
+
+      if (rent.userId) {
+        const user = await prisma.user.findUnique({
+          where: { id: rent.userId },
+        })
+        if (user?.email && !user.emailOptOut && !user.emailBounced) {
+          await emailService.sendPaymentError(user.email, user.name ?? 'Client', {
+            amount: String(rent.prices),
+            listingTitle: 'Votre réservation',
+            errorMessage: "Votre paiement n'a pas pu être traité.",
+            retryUrl: `${process.env.NEXTAUTH_URL}/reservation/${rent.id}`,
           })
-          if (user?.email && !user.emailOptOut && !user.emailBounced) {
-            await emailService.sendPaymentError(user.email, user.name ?? 'Client', {
-              amount: String(rent.prices),
-              listingTitle: 'Votre réservation',
-              errorMessage: "Votre paiement n'a pas pu être traité.",
-              retryUrl: `${process.env.NEXTAUTH_URL}/reservation/${rent.id}`,
-            })
-          }
         }
       }
     }
@@ -220,34 +223,37 @@ export async function POST(req: Request): Promise<Response> {
     if (event.type === 'charge.refunded') {
       const charge = event.data.object as Stripe.Charge
 
-      const rent = await prisma.rent.findFirstOrThrow({
+      const rent = await prisma.rent.findFirst({
         where: { stripeId: charge.payment_intent as string },
       })
 
-      if (rent) {
-        await prisma.rent.update({
-          where: { id: rent.id },
-          data: {
-            status: 'CANCEL' as RentStatus,
-            payment: 'REFUNDED',
-          },
-        })
+      if (!rent) {
+        logger.warn({ paymentIntent: charge.payment_intent }, 'No rent found for refunded charge')
+        return NextResponse.json({ received: true })
+      }
 
-        if (rent.userId) {
-          const user = await prisma.user.findUnique({
-            where: { id: rent.userId },
-          })
-          if (user?.email && !user.emailOptOut && !user.emailBounced) {
-            await emailService.sendFromTemplate(
-              'annulation',
-              user.email,
-              'Remboursement effectué - Hosteed',
-              {
-                userName: user.name ?? 'Client',
-                message: 'Votre remboursement a été effectué avec succès.',
-              }
-            )
-          }
+      await prisma.rent.update({
+        where: { id: rent.id },
+        data: {
+          status: 'CANCEL' as RentStatus,
+          payment: 'REFUNDED',
+        },
+      })
+
+      if (rent.userId) {
+        const user = await prisma.user.findUnique({
+          where: { id: rent.userId },
+        })
+        if (user?.email && !user.emailOptOut && !user.emailBounced) {
+          await emailService.sendFromTemplate(
+            'annulation',
+            user.email,
+            'Remboursement effectué - Hosteed',
+            {
+              userName: user.name ?? 'Client',
+              message: 'Votre remboursement a été effectué avec succès.',
+            }
+          )
         }
       }
     }

@@ -8,7 +8,7 @@ import { availabilityCacheService } from '@/lib/cache/redis-cache.service'
 import { invalidateProductCache } from '@/lib/cache/invalidation'
 import { BookingConflictError, BookingValidationError } from '@/lib/errors/booking.errors'
 import { checkRentIsAvailable } from './rent-availability.service'
-import { buildOverlapWhereClause } from './rent-overlap.utils'
+import { buildOverlapWhereClause, normalizeDates } from './rent-overlap.utils'
 import { calculateCompleteBookingPrice } from './booking-pricing.service'
 import { logger } from '@/lib/logger'
 
@@ -262,13 +262,10 @@ export async function createRent(params: {
   // Atomic check-then-create: prevents race condition double bookings
   const createdRent = await prisma.$transaction(async (tx) => {
     // Re-check availability inside transaction (definitive check with row-level isolation)
-    const normalizedArrival = new Date(params.arrivingDate)
-    normalizedArrival.setUTCHours(0, 0, 0, 0)
-    const normalizedLeaving = new Date(params.leavingDate)
-    normalizedLeaving.setUTCHours(0, 0, 0, 0)
-
-    const dayAfterArrival = new Date(normalizedArrival)
-    dayAfterArrival.setUTCDate(dayAfterArrival.getUTCDate() + 1)
+    const { normalizedArrival, normalizedLeaving, dayAfterArrival } = normalizeDates(
+      params.arrivingDate,
+      params.leavingDate
+    )
 
     const productInfo = await tx.product.findUnique({
       where: { id: params.productId },

@@ -1,5 +1,3 @@
-'use server'
-
 import { RentStatus } from '@prisma/client'
 import prisma from '@/lib/prisma'
 import { StripeService } from '@/lib/services/stripe'
@@ -268,7 +266,7 @@ export async function changeRentStatus(id: string, status: RentStatus) {
 
   await invalidateAvailabilityCaches(rent.productId, 'status change')
 
-  if (status == RentStatus.CHECKOUT) {
+  if (status === RentStatus.CHECKOUT) {
     await sendTemplatedMail(
       rent.user.email,
       'Votre avis compte pour nous !',

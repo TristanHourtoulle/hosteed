@@ -130,8 +130,7 @@ export async function POST(req: Request) {
             selectedExtras,
           })
 
-          // Update payment status
-          await prisma.rent.update({
+          existingRent = await prisma.rent.update({
             where: { id: newRent.id },
             data: {
               status:
@@ -140,10 +139,6 @@ export async function POST(req: Request) {
                   : ('WAITING' as RentStatus),
               payment: paymentIntentObj.status === 'succeeded' ? 'CLIENT_PAID' : 'NOT_PAID',
             },
-          })
-
-          existingRent = await prisma.rent.findFirst({
-            where: { id: newRent.id },
             include: {
               product: {
                 select: {
