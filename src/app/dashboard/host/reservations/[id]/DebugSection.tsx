@@ -1,11 +1,7 @@
 import { DebugSectionProps } from './types'
+import { formatCurrencySafe } from '@/lib/utils/formatNumber'
 
-function formatCurrency(amount: number | null | undefined) {
-  if (amount === null || amount === undefined) return '-'
-  return amount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
-}
-
-export default function DebugSection({ rent, prices, calculatePaymentAmounts }: DebugSectionProps) {
+export function DebugSection({ rent, prices, calculatePaymentAmounts }: DebugSectionProps) {
   const hasNewPricing = rent?.hostAmount !== null && rent?.hostAmount !== undefined
 
   return (
@@ -28,19 +24,19 @@ export default function DebugSection({ rent, prices, calculatePaymentAmounts }: 
           <>
             <li className='text-green-700 font-semibold'>Nouveau système de pricing</li>
             <li>
-              Prix total client: <strong>{formatCurrency(Number(rent?.totalAmount || 0))}</strong>
+              Prix total client: <strong>{formatCurrencySafe(Number(rent?.totalAmount || 0))}</strong>
             </li>
             <li>
               Montant hôte (après commission):{' '}
-              <strong>{formatCurrency(Number(rent?.hostAmount || 0))}</strong>
+              <strong>{formatCurrencySafe(Number(rent?.hostAmount || 0))}</strong>
             </li>
             <li>
               Commission hôte:{' '}
-              <strong>{formatCurrency(Number(rent?.hostCommission || 0))}</strong>
+              <strong>{formatCurrencySafe(Number(rent?.hostCommission || 0))}</strong>
             </li>
             <li>
               Commission client:{' '}
-              <strong>{formatCurrency(Number(rent?.clientCommission || 0))}</strong>
+              <strong>{formatCurrencySafe(Number(rent?.clientCommission || 0))}</strong>
             </li>
           </>
         ) : (
@@ -55,11 +51,11 @@ export default function DebugSection({ rent, prices, calculatePaymentAmounts }: 
           </>
         )}
         <li>
-          Montant 50%: <strong>{formatCurrency(calculatePaymentAmounts().halfAmount)}</strong>
+          Montant 50%: <strong>{formatCurrencySafe(calculatePaymentAmounts().halfAmount)}</strong>
         </li>
         <li>
           Montant total dû à l&apos;hôte:{' '}
-          <strong>{formatCurrency(calculatePaymentAmounts().fullAmount)}</strong>
+          <strong>{formatCurrencySafe(calculatePaymentAmounts().fullAmount)}</strong>
         </li>
       </ul>
     </div>

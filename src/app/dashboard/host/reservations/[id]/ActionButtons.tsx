@@ -31,7 +31,7 @@ interface ActionConfig {
   onClick: () => void
 }
 
-export default function ActionButtons({
+export function ActionButtons({
   rent,
   updating,
   onStatusChange,

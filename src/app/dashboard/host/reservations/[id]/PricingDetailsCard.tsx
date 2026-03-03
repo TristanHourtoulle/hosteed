@@ -2,6 +2,8 @@ import { RentWithDates } from '@/lib/services/rents.service'
 import { Card, CardContent } from '@/components/ui/shadcnui/card'
 import { Separator } from '@/components/ui/shadcnui/separator'
 import { Wallet, CalendarDays, Package, Tag } from 'lucide-react'
+import { PricingRow } from '@/components/reservations/PricingRow'
+import { formatCurrencySafe } from '@/lib/utils/formatNumber'
 
 interface PricingDetailsCardProps {
   rent: RentWithDates
@@ -43,39 +45,7 @@ interface PricingSnapshot {
   calculatedAt: string
 }
 
-function formatCurrency(amount: number | null | undefined) {
-  if (amount === null || amount === undefined) return '-'
-  return amount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
-}
-
-function PricingRow({
-  label,
-  value,
-  bold,
-  color,
-  indent,
-}: {
-  label: string
-  value: string
-  bold?: boolean
-  color?: string
-  indent?: boolean
-}) {
-  return (
-    <div className={`flex items-center justify-between py-1.5 ${indent ? 'pl-4' : ''}`}>
-      <span className={`text-sm ${bold ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>
-        {label}
-      </span>
-      <span
-        className={`text-sm font-medium ${color || (bold ? 'text-gray-900' : 'text-gray-800')}`}
-      >
-        {value}
-      </span>
-    </div>
-  )
-}
-
-export default function PricingDetailsCard({ rent }: PricingDetailsCardProps) {
+export function PricingDetailsCard({ rent }: PricingDetailsCardProps) {
   const hasNewPricing =
     rent.numberOfNights !== null &&
     rent.numberOfNights !== undefined &&
@@ -101,7 +71,7 @@ export default function PricingDetailsCard({ rent }: PricingDetailsCardProps) {
                 détails complets ne sont pas disponibles.
               </p>
               <p className='text-yellow-900 font-semibold mt-2'>
-                Prix total: {formatCurrency(Number(rent.prices || 0))}
+                Prix total: {formatCurrencySafe(Number(rent.prices || 0))}
               </p>
             </div>
           </div>
@@ -135,8 +105,8 @@ export default function PricingDetailsCard({ rent }: PricingDetailsCardProps) {
           {/* Summary */}
           <div className='space-y-1'>
             <PricingRow
-              label={`${formatCurrency(rent.basePricePerNight)} × ${rent.numberOfNights || '-'} nuit${(rent.numberOfNights || 0) > 1 ? 's' : ''}`}
-              value={formatCurrency(rent.subtotal)}
+              label={`${formatCurrencySafe(rent.basePricePerNight)} × ${rent.numberOfNights || '-'} nuit${(rent.numberOfNights || 0) > 1 ? 's' : ''}`}
+              value={formatCurrencySafe(rent.subtotal)}
             />
 
             {rent.discountAmount !== null &&
@@ -144,7 +114,7 @@ export default function PricingDetailsCard({ rent }: PricingDetailsCardProps) {
               rent.discountAmount > 0 && (
                 <PricingRow
                   label={`Réduction${rent.promotionApplied ? ' (promotion)' : ''}${rent.specialPriceApplied ? ' (prix spécial)' : ''}`}
-                  value={`-${formatCurrency(rent.discountAmount)}`}
+                  value={`-${formatCurrencySafe(rent.discountAmount)}`}
                   color='text-green-600'
                   indent
                 />
@@ -156,7 +126,7 @@ export default function PricingDetailsCard({ rent }: PricingDetailsCardProps) {
               rent.totalSavings !== rent.discountAmount && (
                 <PricingRow
                   label='Économies totales'
-                  value={formatCurrency(rent.totalSavings)}
+                  value={formatCurrencySafe(rent.totalSavings)}
                   color='text-green-600'
                   indent
                 />
@@ -165,19 +135,19 @@ export default function PricingDetailsCard({ rent }: PricingDetailsCardProps) {
             {rent.extrasTotal !== null &&
               rent.extrasTotal !== undefined &&
               rent.extrasTotal > 0 && (
-                <PricingRow label='Extras' value={formatCurrency(rent.extrasTotal)} indent />
+                <PricingRow label='Extras' value={formatCurrencySafe(rent.extrasTotal)} indent />
               )}
 
             <Separator className='my-2' />
 
             <PricingRow
               label='Commission client'
-              value={formatCurrency(rent.clientCommission)}
+              value={formatCurrencySafe(rent.clientCommission)}
               indent
             />
             <PricingRow
               label='Commission hôte'
-              value={formatCurrency(rent.hostCommission)}
+              value={formatCurrencySafe(rent.hostCommission)}
               indent
             />
 
@@ -185,13 +155,13 @@ export default function PricingDetailsCard({ rent }: PricingDetailsCardProps) {
 
             <PricingRow
               label='Montant total client'
-              value={formatCurrency(rent.totalAmount)}
+              value={formatCurrencySafe(rent.totalAmount)}
               bold
             />
             <div className='flex items-center justify-between pt-1'>
               <span className='text-sm text-gray-600'>Dont part plateforme</span>
               <span className='text-sm font-medium text-indigo-600'>
-                {formatCurrency(rent.platformAmount)}
+                {formatCurrencySafe(rent.platformAmount)}
               </span>
             </div>
 
@@ -200,7 +170,7 @@ export default function PricingDetailsCard({ rent }: PricingDetailsCardProps) {
               <div className='flex items-center justify-between'>
                 <span className='font-semibold text-emerald-700'>Vous recevez</span>
                 <span className='text-xl font-bold text-emerald-900'>
-                  {formatCurrency(rent.hostAmount)}
+                  {formatCurrencySafe(rent.hostAmount)}
                 </span>
               </div>
             </div>
@@ -237,12 +207,12 @@ export default function PricingDetailsCard({ rent }: PricingDetailsCardProps) {
                             </span>
                           )}
                           <span className='text-xs text-gray-400 line-through'>
-                            {formatCurrency(day.basePrice)}
+                            {formatCurrencySafe(day.basePrice)}
                           </span>
                         </div>
                       )}
                       <span className='text-sm font-semibold text-gray-900'>
-                        {formatCurrency(day.finalPrice)}
+                        {formatCurrencySafe(day.finalPrice)}
                       </span>
                     </div>
                   </div>
@@ -268,11 +238,11 @@ export default function PricingDetailsCard({ rent }: PricingDetailsCardProps) {
                     <div>
                       <span className='text-sm font-medium text-gray-800'>{extra.name}</span>
                       <p className='text-xs text-gray-500'>
-                        {formatCurrency(extra.pricePerUnit)} × {extra.quantity}
+                        {formatCurrencySafe(extra.pricePerUnit)} &times; {extra.quantity}
                       </p>
                     </div>
                     <span className='text-sm font-semibold text-gray-900'>
-                      {formatCurrency(extra.total)}
+                      {formatCurrencySafe(extra.total)}
                     </span>
                   </div>
                 ))}

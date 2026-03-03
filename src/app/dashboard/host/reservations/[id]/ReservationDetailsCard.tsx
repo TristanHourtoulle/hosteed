@@ -8,22 +8,14 @@ import {
   Users,
   Lock,
 } from 'lucide-react'
+import { formatDateLong } from '@/lib/utils/format'
 
 interface ReservationDetailsCardProps {
   rent: RentWithDates
   showSensitiveInfo?: boolean
 }
 
-function formatDate(date: Date | string | null | undefined) {
-  if (!date) return '-'
-  return new Date(date).toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
-}
-
-export default function ReservationDetailsCard({
+export function ReservationDetailsCard({
   rent,
   showSensitiveInfo = false,
 }: ReservationDetailsCardProps) {
@@ -66,13 +58,13 @@ export default function ReservationDetailsCard({
                 <CalendarDays className='h-4 w-4 text-gray-400' />
                 <div>
                   <p className='text-xs text-gray-500'>Arrivée</p>
-                  <p className='font-medium text-gray-800'>{formatDate(rent.arrivingDate)}</p>
+                  <p className='font-medium text-gray-800'>{formatDateLong(rent.arrivingDate)}</p>
                 </div>
               </div>
               <span className='text-gray-300'>&rarr;</span>
               <div>
                 <p className='text-xs text-gray-500'>Départ</p>
-                <p className='font-medium text-gray-800'>{formatDate(rent.leavingDate)}</p>
+                <p className='font-medium text-gray-800'>{formatDateLong(rent.leavingDate)}</p>
               </div>
             </div>
             <div className='flex items-center gap-6'>

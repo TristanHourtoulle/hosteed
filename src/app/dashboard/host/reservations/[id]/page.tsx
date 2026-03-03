@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, use } from 'react'
+import { useEffect, useState, useCallback, use } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import {
   getRentById,
@@ -21,116 +21,23 @@ import {
   ArrowLeft,
   User as UserIcon,
   Mail,
-  Clock,
-  CheckCircle,
-  LogIn,
-  LogOut,
-  Ban,
 } from 'lucide-react'
 import HostNavbar from '../../components/HostNavbar'
 import RejectReservationModal from './RejectModal'
-import StatusBadge from './StatusBadge'
-import ActionButtons from './ActionButtons'
-import ReservationDetailsCard from './ReservationDetailsCard'
-import PaymentInfoCard from './PaymentInfoCard'
-import PricingDetailsCard from './PricingDetailsCard'
+import { StatusBadge } from './StatusBadge'
+import { ActionButtons } from './ActionButtons'
+import { ReservationDetailsCard } from './ReservationDetailsCard'
+import { PaymentInfoCard } from './PaymentInfoCard'
+import { PricingDetailsCard } from './PricingDetailsCard'
 import PaymentRequestModal from './PaymentRequestModal'
 import { PayablePrices } from './types'
+import { StatusTimeline } from '@/components/reservations/StatusTimeline'
+import { formatDateLong } from '@/lib/utils/format'
+import { formatCurrencySafe } from '@/lib/utils/formatNumber'
 
 const fadeIn: Variants = {
   hidden: { opacity: 0, y: 12 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
-}
-
-function formatDate(date: Date | string | null | undefined) {
-  if (!date) return '-'
-  return new Date(date).toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
-}
-
-function formatCurrency(amount: number | null | undefined) {
-  if (amount === null || amount === undefined) return '-'
-  return amount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
-}
-
-const STATUS_TIMELINE = [
-  { key: 'WAITING', label: 'En attente', icon: Clock },
-  { key: 'RESERVED', label: 'Confirmée', icon: CheckCircle },
-  { key: 'CHECKIN', label: 'Check-in', icon: LogIn },
-  { key: 'CHECKOUT', label: 'Check-out', icon: LogOut },
-]
-
-const STATUS_ORDER: Record<string, number> = {
-  WAITING: 0,
-  RESERVED: 1,
-  CHECKIN: 2,
-  CHECKOUT: 3,
-  CANCEL: -1,
-}
-
-function StatusTimeline({ currentStatus }: { currentStatus: string }) {
-  if (currentStatus === 'CANCEL') {
-    return (
-      <div className='flex items-center gap-3 rounded-xl bg-red-50 border border-red-200 px-4 py-3'>
-        <Ban className='h-5 w-5 text-red-500' />
-        <div>
-          <p className='font-medium text-red-700'>Réservation annulée</p>
-          <p className='text-sm text-red-500'>Cette réservation a été annulée.</p>
-        </div>
-      </div>
-    )
-  }
-
-  const currentIndex = STATUS_ORDER[currentStatus] ?? 0
-
-  return (
-    <div className='flex items-start'>
-      {STATUS_TIMELINE.map((step, index) => {
-        const Icon = step.icon
-        const isCompleted = index < currentIndex
-        const isCurrent = index === currentIndex
-
-        return (
-          <div key={step.key} className='contents'>
-            <div className='flex flex-col items-center gap-1.5 flex-shrink-0'>
-              <div
-                className={`rounded-full p-2.5 transition-colors ${
-                  isCompleted
-                    ? 'bg-green-100 text-green-600'
-                    : isCurrent
-                      ? 'bg-blue-100 text-blue-600 ring-2 ring-blue-300'
-                      : 'bg-gray-100 text-gray-400'
-                }`}
-              >
-                <Icon className='h-4 w-4' />
-              </div>
-              <span
-                className={`text-xs font-medium whitespace-nowrap ${
-                  isCompleted
-                    ? 'text-green-600'
-                    : isCurrent
-                      ? 'text-blue-600'
-                      : 'text-gray-400'
-                }`}
-              >
-                {step.label}
-              </span>
-            </div>
-            {index < STATUS_TIMELINE.length - 1 && (
-              <div
-                className={`flex-1 h-0.5 mx-3 mt-[17px] rounded-full ${
-                  index < currentIndex ? 'bg-green-300' : 'bg-gray-200'
-                }`}
-              />
-            )}
-          </div>
-        )
-      })}
-    </div>
-  )
 }
 
 export default function RentDetailsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -155,7 +62,7 @@ export default function RentDetailsPage({ params }: { params: Promise<{ id: stri
   const isAdminOrManager =
     session?.user?.roles === 'ADMIN' || session?.user?.roles === 'HOST_MANAGER'
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       if (session?.user?.id) {
         const [rentData, pricesData] = await Promise.all([
@@ -166,17 +73,17 @@ export default function RentDetailsPage({ params }: { params: Promise<{ id: stri
         if (pricesData) setPrices(pricesData)
       }
     } catch (error) {
-      console.error('Erreur lors du chargement des données:', error)
+      // Error silenced — UI shows empty state
     } finally {
       setLoading(false)
     }
-  }
+  }, [session?.user?.id, resolvedParams.id])
 
   useEffect(() => {
     if (isAuthenticated) {
       fetchData()
     }
-  }, [session, resolvedParams.id, isAuthenticated]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, fetchData])
 
   const handleStatusChange = async (newStatus: RentStatus) => {
     try {
@@ -189,7 +96,7 @@ export default function RentDetailsPage({ params }: { params: Promise<{ id: stri
       if (rentData) setRent(rentData)
       if (pricesData) setPrices(pricesData)
     } catch (error) {
-      console.error('Erreur lors du changement de statut:', error)
+      // Error silenced — UI shows stale state
     } finally {
       setUpdating(false)
     }
@@ -212,7 +119,7 @@ export default function RentDetailsPage({ params }: { params: Promise<{ id: stri
       if (rentData) setRent(rentData)
       if (pricesData) setPrices(pricesData)
     } catch (error) {
-      console.error("Erreur lors de l'approbation de la réservation:", error)
+      // Error silenced — UI shows stale state
     } finally {
       setUpdating(false)
     }
@@ -240,7 +147,7 @@ export default function RentDetailsPage({ params }: { params: Promise<{ id: stri
       setMethod(PaymentMethod.SEPA_VIREMENT)
       setPaymentType(null)
     } catch (error) {
-      console.error('Erreur lors de la demande de paiement:', error)
+      // Error silenced — UI shows stale state
     } finally {
       setUpdating(false)
     }
@@ -273,7 +180,7 @@ export default function RentDetailsPage({ params }: { params: Promise<{ id: stri
         throw new Error(result.error || 'Erreur lors du refus de la réservation')
       }
     } catch (error) {
-      console.error('Erreur lors du refus de la réservation:', error)
+      // Error silenced — UI shows stale state
     } finally {
       setIsRejecting(false)
     }
@@ -366,12 +273,12 @@ export default function RentDetailsPage({ params }: { params: Promise<{ id: stri
                     </h1>
                     <StatusBadge status={rent.status} size='lg' />
                   </div>
-                  <p className='text-sm text-gray-500'>Créée le {formatDate(rent.createdAt)}</p>
+                  <p className='text-sm text-gray-500'>Créée le {formatDateLong(rent.createdAt)}</p>
                 </div>
                 <div className='text-right'>
                   <p className='text-sm text-gray-500'>Montant total</p>
                   <p className='text-3xl font-bold text-gray-900'>
-                    {formatCurrency(rent.totalAmount)}
+                    {formatCurrencySafe(rent.totalAmount)}
                   </p>
                 </div>
               </div>

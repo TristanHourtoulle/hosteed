@@ -12,7 +12,7 @@ import {
   Loader2,
 } from 'lucide-react'
 import { calculatePaymentAmounts } from './utils'
-import DebugSection from './DebugSection'
+import { DebugSection } from './DebugSection'
 
 interface PaymentInfoCardProps {
   rent: RentWithDates
@@ -22,25 +22,10 @@ interface PaymentInfoCardProps {
   showSensitiveInfo?: boolean
 }
 
-const PAYMENT_LABELS: Record<string, { label: string; color: string }> = {
-  NOT_PAID: { label: 'Non payé', color: 'text-gray-600' },
-  CLIENT_PAID: { label: 'Payé par le client', color: 'text-green-600' },
-  MID_TRANSFER_REQ: { label: 'Transfert partiel demandé', color: 'text-orange-600' },
-  MID_TRANSFER_DONE: { label: 'Transfert partiel effectué', color: 'text-blue-600' },
-  REST_TRANSFER_REQ: { label: 'Transfert final demandé', color: 'text-orange-600' },
-  REST_TRANSFER_DONE: { label: 'Transfert final effectué', color: 'text-blue-600' },
-  FULL_TRANSFER_REQ: { label: 'Transfert total demandé', color: 'text-orange-600' },
-  FULL_TRANSFER_DONE: { label: 'Transfert total effectué', color: 'text-emerald-600' },
-  REFUNDED: { label: 'Remboursé', color: 'text-purple-600' },
-  DISPUTE: { label: 'Litige', color: 'text-red-600' },
-}
+import { PAYMENT_LABELS } from '@/lib/constants/reservation'
+import { formatCurrencySafe } from '@/lib/utils/formatNumber'
 
-function formatCurrency(amount: number | null | undefined) {
-  if (amount === null || amount === undefined) return '-'
-  return amount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
-}
-
-export default function PaymentInfoCard({
+export function PaymentInfoCard({
   rent,
   prices,
   updating,
@@ -102,19 +87,19 @@ export default function PaymentInfoCard({
                 <div className='rounded-xl bg-blue-50 border border-blue-100 p-3 text-center'>
                   <p className='text-xs text-blue-500 mb-1'>Disponible</p>
                   <p className='text-lg font-bold text-blue-700'>
-                    {formatCurrency(prices.availablePrice)}
+                    {formatCurrencySafe(prices.availablePrice)}
                   </p>
                 </div>
                 <div className='rounded-xl bg-orange-50 border border-orange-100 p-3 text-center'>
                   <p className='text-xs text-orange-500 mb-1'>En attente</p>
                   <p className='text-lg font-bold text-orange-700'>
-                    {formatCurrency(prices.pendingPrice)}
+                    {formatCurrencySafe(prices.pendingPrice)}
                   </p>
                 </div>
                 <div className='rounded-xl bg-emerald-50 border border-emerald-100 p-3 text-center'>
                   <p className='text-xs text-emerald-500 mb-1'>Reçu</p>
                   <p className='text-lg font-bold text-emerald-700'>
-                    {formatCurrency(prices.transferredPrice)}
+                    {formatCurrencySafe(prices.transferredPrice)}
                   </p>
                 </div>
                 <div className='rounded-xl bg-gray-50 border border-gray-200 p-3 text-center'>
@@ -158,7 +143,7 @@ export default function PaymentInfoCard({
                       </div>
                     </div>
                     <span className='font-bold text-blue-700'>
-                      {formatCurrency(paymentAmounts.halfAmount)}
+                      {formatCurrencySafe(paymentAmounts.halfAmount)}
                     </span>
                   </Button>
                 )}
@@ -178,7 +163,7 @@ export default function PaymentInfoCard({
                       </div>
                     </div>
                     <span className='font-bold text-orange-700'>
-                      {formatCurrency(paymentAmounts.halfAmount)}
+                      {formatCurrencySafe(paymentAmounts.halfAmount)}
                     </span>
                   </Button>
                 )}
@@ -198,7 +183,7 @@ export default function PaymentInfoCard({
                       </div>
                     </div>
                     <span className='font-bold text-emerald-700'>
-                      {formatCurrency(paymentAmounts.fullAmount)}
+                      {formatCurrencySafe(paymentAmounts.fullAmount)}
                     </span>
                   </Button>
                 )}

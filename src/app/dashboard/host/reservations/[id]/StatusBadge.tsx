@@ -1,29 +1,14 @@
 'use client'
 
-import { Clock, CheckCircle, LogIn, LogOut, Ban } from 'lucide-react'
-
-const STATUS_CONFIG: Record<
-  string,
-  {
-    label: string
-    color: string
-    bg: string
-    icon: React.ComponentType<{ className?: string }>
-  }
-> = {
-  WAITING: { label: 'En attente', color: 'text-yellow-800', bg: 'bg-yellow-100', icon: Clock },
-  RESERVED: { label: 'Confirmée', color: 'text-blue-800', bg: 'bg-blue-100', icon: CheckCircle },
-  CHECKIN: { label: 'Check-in', color: 'text-green-800', bg: 'bg-green-100', icon: LogIn },
-  CHECKOUT: { label: 'Check-out', color: 'text-gray-800', bg: 'bg-gray-100', icon: LogOut },
-  CANCEL: { label: 'Annulée', color: 'text-red-800', bg: 'bg-red-100', icon: Ban },
-}
+import { Clock } from 'lucide-react'
+import { STATUS_CONFIG } from '@/lib/constants/reservation'
 
 interface StatusBadgeProps {
   status: string
   size?: 'sm' | 'md' | 'lg'
 }
 
-export default function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
+export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
   const config = STATUS_CONFIG[status] || {
     label: status,
     color: 'text-gray-800',
