@@ -1,3 +1,5 @@
+'use server'
+
 import { RentStatus } from '@prisma/client'
 import prisma from '@/lib/prisma'
 import { StripeService } from '@/lib/services/stripe'
