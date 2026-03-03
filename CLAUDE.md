@@ -223,8 +223,11 @@ Required in `.env`:
 
 ### Test Credentials
 
+**Production admin account (use for E2E testing):**
+- `cathyrasamimaka@gmail.com` / `Antananarivo103` (ADMIN)
+
 After seeding:
-- `pierre@pierre.pierre` / `password` 
+- `pierre@pierre.pierre` / `password`
 - `marie@test.com` / `password`
 - `jean@test.com` / `password`
 

@@ -112,3 +112,17 @@ export function formatCompactNumber(value: number): string {
     compactDisplay: 'short',
   })
 }
+
+/**
+ * Null-safe wrapper around formatCurrency for display purposes
+ * @param amount - The amount to format (may be null or undefined)
+ * @param currency - Currency code ('EUR' or 'MGA')
+ * @returns Formatted currency string, or '-' if amount is null/undefined
+ */
+export function formatCurrencySafe(
+  amount: number | null | undefined,
+  currency: 'EUR' | 'MGA' = 'EUR'
+): string {
+  if (amount === null || amount === undefined) return '-'
+  return formatCurrency(amount, currency)
+}

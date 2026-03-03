@@ -9,12 +9,7 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
-  const config = STATUS_CONFIG[status] || {
-    label: status,
-    color: 'text-gray-800',
-    bg: 'bg-gray-100',
-    icon: Clock,
-  }
+  const config = STATUS_CONFIG[status] || { label: status, color: 'text-gray-800', bg: 'bg-gray-100', icon: Clock }
   const Icon = config.icon
 
   const sizeClasses = {
@@ -24,9 +19,7 @@ export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
   }
 
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full font-medium ${config.bg} ${config.color} ${sizeClasses[size]}`}
-    >
+    <span className={`inline-flex items-center gap-1.5 rounded-full font-medium ${config.bg} ${config.color} ${sizeClasses[size]}`}>
       <Icon className={size === 'sm' ? 'h-3 w-3' : size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'} />
       {config.label}
     </span>

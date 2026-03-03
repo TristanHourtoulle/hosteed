@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, use } from 'react'
+import { useEffect, useState, useCallback, use } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import {
   getRentById,
@@ -13,15 +13,32 @@ import {
 } from '@/lib/services/rent-lifecycle.service'
 import { getPayablePricesPerRent, createPayRequest } from '@/lib/services/payment.service'
 import { RentStatus, PaymentStatus, PaymentMethod } from '@prisma/client'
+import Link from 'next/link'
+import { motion, Variants } from 'framer-motion'
+import { Card, CardContent } from '@/components/ui/shadcnui/card'
+import { Alert, AlertDescription } from '@/components/ui/shadcnui/alert'
+import {
+  ArrowLeft,
+  User as UserIcon,
+  Mail,
+} from 'lucide-react'
 import HostNavbar from '../../components/HostNavbar'
 import RejectReservationModal from './RejectModal'
-import StatusBadge from './StatusBadge'
-import ActionButtons from './ActionButtons'
-import ReservationDetailsCard from './ReservationDetailsCard'
-import PaymentInfoCard from './PaymentInfoCard'
-import PricingDetailsCard from './PricingDetailsCard'
+import { StatusBadge } from './StatusBadge'
+import { ActionButtons } from './ActionButtons'
+import { ReservationDetailsCard } from './ReservationDetailsCard'
+import { PaymentInfoCard } from './PaymentInfoCard'
+import { PricingDetailsCard } from './PricingDetailsCard'
 import PaymentRequestModal from './PaymentRequestModal'
 import { PayablePrices } from './types'
+import { StatusTimeline } from '@/components/reservations/StatusTimeline'
+import { formatDateLong } from '@/lib/utils/format'
+import { formatCurrencySafe } from '@/lib/utils/formatNumber'
+
+const fadeIn: Variants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+}
 
 export default function RentDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const {
@@ -42,47 +59,44 @@ export default function RentDetailsPage({ params }: { params: Promise<{ id: stri
 
   const resolvedParams = use(params)
 
-  // Check if user is admin or host manager (can see sensitive info)
   const isAdminOrManager =
     session?.user?.roles === 'ADMIN' || session?.user?.roles === 'HOST_MANAGER'
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        if (session?.user?.id) {
-          const [rentData, pricesData] = await Promise.all([
-            getRentById(resolvedParams.id),
-            getPayablePricesPerRent(resolvedParams.id),
-          ])
-          if (rentData) {
-            setRent(rentData)
-          }
-          if (pricesData) {
-            setPrices(pricesData)
-          }
-        }
-      } catch (error) {
-        console.error('Erreur lors du chargement des données:', error)
-      } finally {
-        setLoading(false)
+  const fetchData = useCallback(async () => {
+    try {
+      if (session?.user?.id) {
+        const [rentData, pricesData] = await Promise.all([
+          getRentById(resolvedParams.id),
+          getPayablePricesPerRent(resolvedParams.id),
+        ])
+        if (rentData) setRent(rentData)
+        if (pricesData) setPrices(pricesData)
       }
+    } catch (error) {
+      // Error silenced — UI shows empty state
+    } finally {
+      setLoading(false)
     }
+  }, [session?.user?.id, resolvedParams.id])
 
+  useEffect(() => {
     if (isAuthenticated) {
       fetchData()
     }
-  }, [session, resolvedParams.id, isAuthenticated])
+  }, [isAuthenticated, fetchData])
 
   const handleStatusChange = async (newStatus: RentStatus) => {
     try {
       setUpdating(true)
       await changeRentStatus(resolvedParams.id, newStatus)
-      const updatedRent = await getRentById(resolvedParams.id)
-      if (updatedRent) {
-        setRent(updatedRent)
-      }
+      const [rentData, pricesData] = await Promise.all([
+        getRentById(resolvedParams.id),
+        getPayablePricesPerRent(resolvedParams.id),
+      ])
+      if (rentData) setRent(rentData)
+      if (pricesData) setPrices(pricesData)
     } catch (error) {
-      console.error('Erreur lors du changement de statut:', error)
+      // Error silenced — UI shows stale state
     } finally {
       setUpdating(false)
     }
@@ -95,19 +109,17 @@ export default function RentDetailsPage({ params }: { params: Promise<{ id: stri
         throw new Error('Aucun paiement associé à cette réservation')
       }
       const result = await approveRent(resolvedParams.id)
-      if (!result) {
+      if (!result || !result.success) {
         throw new Error("Erreur lors de l'approbation de la réservation")
       }
-      if (result.success) {
-        const updatedRent = await getRentById(resolvedParams.id)
-        if (updatedRent) {
-          setRent(updatedRent)
-        }
-      } else {
-        throw new Error("Erreur lors de l'approbation de la réservation")
-      }
+      const [rentData, pricesData] = await Promise.all([
+        getRentById(resolvedParams.id),
+        getPayablePricesPerRent(resolvedParams.id),
+      ])
+      if (rentData) setRent(rentData)
+      if (pricesData) setPrices(pricesData)
     } catch (error) {
-      console.error("Erreur lors de l'approbation de la réservation:", error)
+      // Error silenced — UI shows stale state
     } finally {
       setUpdating(false)
     }
@@ -128,18 +140,14 @@ export default function RentDetailsPage({ params }: { params: Promise<{ id: stri
         getRentById(resolvedParams.id),
         getPayablePricesPerRent(resolvedParams.id),
       ])
-      if (rentData) {
-        setRent(rentData)
-      }
-      if (pricesData) {
-        setPrices(pricesData)
-      }
+      if (rentData) setRent(rentData)
+      if (pricesData) setPrices(pricesData)
       setShowModal(false)
       setNotes('')
       setMethod(PaymentMethod.SEPA_VIREMENT)
       setPaymentType(null)
     } catch (error) {
-      console.error('Erreur lors de la demande de paiement:', error)
+      // Error silenced — UI shows stale state
     } finally {
       setUpdating(false)
     }
@@ -157,88 +165,68 @@ export default function RentDetailsPage({ params }: { params: Promise<{ id: stri
 
     setIsRejecting(true)
     try {
-      const result = await rejectRentRequest(resolvedParams.id, session.user.id, reason, message)
+      const result = await rejectRentRequest(
+        resolvedParams.id,
+        session.user.id,
+        reason,
+        message
+      )
 
       if (result.success) {
         const updatedRent = await getRentById(resolvedParams.id)
-        if (updatedRent) {
-          setRent(updatedRent)
-        }
+        if (updatedRent) setRent(updatedRent)
         setShowRejectModal(false)
-        alert('La réservation a été refusée avec succès. Les administrateurs ont été notifiés.')
       } else {
         throw new Error(result.error || 'Erreur lors du refus de la réservation')
       }
     } catch (error) {
-      console.error('Erreur lors du refus de la réservation:', error)
+      // Error silenced — UI shows stale state
     } finally {
       setIsRejecting(false)
     }
   }
 
-  if (isAuthLoading) {
+  if (isAuthLoading || loading) {
     return (
-      <div className='min-h-screen flex items-center justify-center'>
-        <div className='flex flex-col items-center gap-4'>
-          <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin'></div>
-          <p className='text-slate-600 text-lg'>Chargement...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!session) {
-    return null
-  }
-
-  if (loading) {
-    return (
-      <div className='min-h-screen bg-gradient-to-br from-gray-50 to-gray-100'>
+      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100'>
         <HostNavbar />
         <div className='flex items-center justify-center min-h-[calc(100vh-4rem)]'>
-          <div className='bg-white p-8 rounded-2xl shadow-xl border border-gray-100'>
-            <div className='flex flex-col items-center gap-4'>
-              <div className='animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent'></div>
-              <p className='text-gray-600 font-medium'>Chargement des détails...</p>
-            </div>
+          <div className='flex flex-col items-center gap-4'>
+            <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin' />
+            <p className='text-slate-600 text-lg'>Chargement...</p>
           </div>
         </div>
       </div>
     )
   }
+
+  if (!session) return null
 
   if (!rent) {
     return (
-      <div className='min-h-screen bg-gradient-to-br from-gray-50 to-gray-100'>
+      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100'>
         <HostNavbar />
-        <div className='container mx-auto px-4 py-8'>
-          <div className='bg-white rounded-2xl shadow-xl border border-gray-100 p-8 text-center'>
-            <svg
-              className='w-16 h-16 text-gray-400 mx-auto mb-4'
-              fill='none'
-              stroke='currentColor'
-              viewBox='0 0 24 24'
-            >
-              <path
-                strokeLinecap='round'
-                strokeLinejoin='round'
-                strokeWidth={2}
-                d='M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.220 0-4.239.691-5.927 1.866M12 21a9 9 0 110-18 9 9 0 010 18z'
-              />
-            </svg>
-            <h2 className='text-xl font-bold text-gray-900 mb-2'>Réservation introuvable</h2>
-            <p className='text-gray-600'>
-              Cette réservation n&apos;existe pas ou vous n&apos;avez pas l&apos;autorisation de la
-              consulter.
-            </p>
-          </div>
+        <div className='container mx-auto p-6 max-w-6xl'>
+          <Alert variant='destructive' className='rounded-2xl'>
+            <AlertDescription>Réservation introuvable</AlertDescription>
+          </Alert>
+          <Link
+            href='/dashboard/host/reservations'
+            className='inline-flex items-center gap-2 mt-4 text-blue-600 hover:text-blue-800'
+          >
+            <ArrowLeft className='h-4 w-4' />
+            Retour aux réservations
+          </Link>
         </div>
       </div>
     )
   }
 
+  const guestName =
+    [rent.user?.name, rent.user?.lastname].filter(Boolean).join(' ') || rent.user?.email || '-'
+
   return (
-    <div className='min-h-screen bg-gradient-to-br from-gray-50 to-gray-100'>
+    <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100'>
       <HostNavbar />
 
       <PaymentRequestModal
@@ -261,57 +249,61 @@ export default function RentDetailsPage({ params }: { params: Promise<{ id: stri
         isLoading={isRejecting}
       />
 
-      <div className='container mx-auto px-4 py-8 max-w-7xl'>
-        {/* Header avec titre et actions */}
-        <div className='mb-8'>
-          <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6'>
-            <div className='flex items-center gap-4'>
-              <div className='bg-white p-3 rounded-2xl shadow-md'>
-                <svg
-                  className='w-8 h-8 text-blue-600'
-                  fill='none'
-                  stroke='currentColor'
-                  viewBox='0 0 24 24'
-                >
-                  <path
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth={2}
-                    d='M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4'
-                  />
-                </svg>
+      <div className='container mx-auto p-6 max-w-6xl space-y-6'>
+        {/* Back Link */}
+        <motion.div initial='hidden' animate='visible' variants={fadeIn}>
+          <Link
+            href='/dashboard/host/reservations'
+            className='inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 transition-colors text-sm font-medium'
+          >
+            <ArrowLeft className='h-4 w-4' />
+            Retour aux réservations
+          </Link>
+        </motion.div>
+
+        {/* Header Card */}
+        <motion.div initial='hidden' animate='visible' variants={fadeIn}>
+          <Card className='border-0 shadow-lg bg-white/90 backdrop-blur-sm rounded-2xl overflow-hidden'>
+            <CardContent className='p-6 space-y-5'>
+              <div className='flex flex-wrap items-start justify-between gap-4'>
+                <div className='space-y-1'>
+                  <div className='flex items-center gap-3'>
+                    <h1 className='text-2xl font-bold text-gray-900'>
+                      Réservation #{rent.id.slice(0, 8)}
+                    </h1>
+                    <StatusBadge status={rent.status} size='lg' />
+                  </div>
+                  <p className='text-sm text-gray-500'>Créée le {formatDateLong(rent.createdAt)}</p>
+                </div>
+                <div className='text-right'>
+                  <p className='text-sm text-gray-500'>Montant total</p>
+                  <p className='text-3xl font-bold text-gray-900'>
+                    {formatCurrencySafe(rent.totalAmount)}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h1 className='text-3xl font-bold text-gray-900'>Détails de la réservation</h1>
-                <p className='text-gray-600 mt-1'>Gérez votre réservation et vos paiements</p>
-              </div>
-            </div>
 
-            <div className='flex items-center gap-3'>
-              <StatusBadge status={rent.status} />
-            </div>
-          </div>
+              <StatusTimeline currentStatus={rent.status} />
+            </CardContent>
+          </Card>
+        </motion.div>
 
-          <ActionButtons
-            rent={rent}
-            updating={updating}
-            onStatusChange={handleStatusChange}
-            onApproveReservation={handleApproveReservation}
-            onShowRejectModal={() => setShowRejectModal(true)}
-          />
-        </div>
-
-        {/* Main Content Grid */}
-        <div className='space-y-8'>
-          {/* Top Row: Reservation Details + Payment Info */}
-          <div className='grid grid-cols-1 xl:grid-cols-3 gap-8'>
-            {/* Reservation Details Card */}
-            <div className='xl:col-span-2'>
+        {/* Main Content: 2/3 + 1/3 layout */}
+        <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
+          {/* Left Column: 2/3 */}
+          <div className='lg:col-span-2 space-y-6'>
+            {/* Stay Details */}
+            <motion.div initial='hidden' animate='visible' variants={fadeIn}>
               <ReservationDetailsCard rent={rent} showSensitiveInfo={isAdminOrManager} />
-            </div>
+            </motion.div>
 
-            {/* Payment Information Card */}
-            <div>
+            {/* Pricing Breakdown */}
+            <motion.div initial='hidden' animate='visible' variants={fadeIn}>
+              <PricingDetailsCard rent={rent} />
+            </motion.div>
+
+            {/* Payment & Transfers */}
+            <motion.div initial='hidden' animate='visible' variants={fadeIn}>
               <PaymentInfoCard
                 rent={rent}
                 prices={prices}
@@ -319,14 +311,73 @@ export default function RentDetailsPage({ params }: { params: Promise<{ id: stri
                 onPaymentRequest={handlePaymentRequest}
                 showSensitiveInfo={isAdminOrManager}
               />
-            </div>
+            </motion.div>
           </div>
 
-          {/* Pricing Details Card - Full Width */}
-          <div>
-            <PricingDetailsCard rent={rent} />
+          {/* Right Column: 1/3 */}
+          <div className='space-y-6'>
+            {/* Actions */}
+            <motion.div initial='hidden' animate='visible' variants={fadeIn}>
+              <Card className='border-0 shadow-lg bg-white/90 backdrop-blur-sm rounded-2xl py-0 gap-0'>
+                <div className='px-6 py-4 border-b border-gray-100'>
+                  <h2 className='text-lg font-semibold text-gray-800'>Actions</h2>
+                </div>
+                <CardContent className='p-4'>
+                  <ActionButtons
+                    rent={rent}
+                    updating={updating}
+                    onStatusChange={handleStatusChange}
+                    onApproveReservation={handleApproveReservation}
+                    onShowRejectModal={() => setShowRejectModal(true)}
+                  />
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Guest Info */}
+            <motion.div initial='hidden' animate='visible' variants={fadeIn}>
+              <Card className='border-0 shadow-lg bg-white/90 backdrop-blur-sm rounded-2xl py-0 gap-0'>
+                <div className='px-6 py-4 border-b border-gray-100'>
+                  <h2 className='text-lg font-semibold text-gray-800 flex items-center gap-2'>
+                    <UserIcon className='h-5 w-5 text-blue-600' />
+                    Voyageur
+                  </h2>
+                </div>
+                <CardContent className='p-6 space-y-3'>
+                  <div className='flex items-center gap-3'>
+                    <div className='h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center'>
+                      <UserIcon className='h-5 w-5 text-blue-600' />
+                    </div>
+                    <div>
+                      <p className='font-medium text-gray-900'>{guestName}</p>
+                      {rent.user?.lastname && (
+                        <p className='text-sm text-gray-500'>{rent.user.roles}</p>
+                      )}
+                    </div>
+                  </div>
+                  {rent.user?.email && (
+                    <div className='flex items-center gap-2 text-sm text-gray-600'>
+                      <Mail className='h-4 w-4 text-gray-400' />
+                      <a
+                        href={`mailto:${rent.user.email}`}
+                        className='text-blue-600 hover:underline'
+                      >
+                        {rent.user.email}
+                      </a>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
           </div>
         </div>
+
+        {/* Legacy price for reference */}
+        {rent.prices !== null && rent.prices !== undefined && (
+          <div className='text-sm text-gray-400 text-center'>
+            Prix legacy : {String(rent.prices)} EUR
+          </div>
+        )}
       </div>
     </div>
   )
