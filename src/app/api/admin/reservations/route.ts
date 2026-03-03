@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { RentStatus } from '@prisma/client'
 import { z } from 'zod'
+import { logger } from '@/lib/logger'
 
 const querySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
@@ -141,7 +142,7 @@ export async function GET(request: NextRequest) {
       { headers }
     )
   } catch (error) {
-    console.error('Error in admin reservations API:', error)
+    logger.error({ error }, 'Error in admin reservations API')
     return NextResponse.json(
       { error: { code: 'BOOKING_500', message: 'Erreur interne du serveur' } },
       { status: 500 }

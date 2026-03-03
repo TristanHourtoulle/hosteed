@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma'
 import { RentStatus } from '@prisma/client'
 import { z } from 'zod'
 import { approveRent, cancelRent, changeRentStatus } from '@/lib/services/rent-lifecycle.service'
+import { logger } from '@/lib/logger'
 
 const statusChangeSchema = z.object({
   status: z.enum(['RESERVED', 'CHECKIN', 'CHECKOUT', 'CANCEL']),
@@ -25,6 +26,7 @@ export async function PUT(
   try {
     const session = await auth()
 
+    // Intentionally ADMIN-only. HOST_MANAGER has read access via the list route but cannot change status.
     if (!session?.user?.roles || session.user.roles !== 'ADMIN') {
       return NextResponse.json(
         { error: { code: 'AUTH_001', message: 'Accès réservé aux administrateurs' } },
@@ -98,7 +100,7 @@ export async function PUT(
 
     return NextResponse.json({ success: true, rent: updatedRent })
   } catch (error) {
-    console.error('Error changing reservation status:', error)
+    logger.error({ error }, 'Error changing reservation status')
     return NextResponse.json(
       { error: { code: 'BOOKING_500', message: 'Erreur interne du serveur' } },
       { status: 500 }
