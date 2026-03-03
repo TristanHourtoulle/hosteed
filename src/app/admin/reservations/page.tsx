@@ -7,30 +7,12 @@ import { isFullAdmin } from '@/hooks/useAdminAuth'
 import { useAdminReservationsPaginated } from '@/hooks/useAdminPaginated'
 import { useAdminReservationStatusChange } from '@/hooks/useAdminReservationMutations'
 import Pagination from '@/components/ui/Pagination'
-import Link from 'next/link'
 import { motion, Variants } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/shadcnui/card'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Input } from '@/components/ui/shadcnui/input'
 import { Alert, AlertDescription } from '@/components/ui/shadcnui/alert'
-import {
-  Loader2,
-  Search,
-  CalendarDays,
-  Mail,
-  Eye,
-  MoreVertical,
-  MapPin,
-  Users,
-  Moon,
-  CheckCircle,
-  XCircle,
-  LogIn,
-  LogOut,
-  Clock,
-  Ban,
-  CreditCard,
-} from 'lucide-react'
+import { Loader2, Search, CalendarDays, XCircle } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -40,15 +22,8 @@ import {
   DialogTitle,
   Label,
 } from '@/shadcnui'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/shadcnui/dropdown-menu'
 import { Textarea } from '@/components/ui/shadcnui/textarea'
+import { ReservationCard } from '@/components/reservations/ReservationCard'
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -71,28 +46,6 @@ const itemVariants: Variants = {
   },
 }
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: React.ComponentType<{ className?: string }> }> = {
-  WAITING: { label: 'En attente', color: 'text-yellow-800', bg: 'bg-yellow-100', icon: Clock },
-  RESERVED: { label: 'Confirmée', color: 'text-blue-800', bg: 'bg-blue-100', icon: CheckCircle },
-  CHECKIN: { label: 'Check-in', color: 'text-green-800', bg: 'bg-green-100', icon: LogIn },
-  CHECKOUT: { label: 'Check-out', color: 'text-gray-800', bg: 'bg-gray-100', icon: LogOut },
-  CANCEL: { label: 'Annulée', color: 'text-red-800', bg: 'bg-red-100', icon: Ban },
-}
-
-const PAYMENT_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  NOT_PAID: { label: 'Non payé', color: 'text-gray-700', bg: 'bg-gray-100' },
-  AUTHORIZED: { label: 'Autorisé', color: 'text-amber-700', bg: 'bg-amber-100' },
-  CLIENT_PAID: { label: 'Payé', color: 'text-green-700', bg: 'bg-green-100' },
-  MID_TRANSFER_REQ: { label: 'Transfert partiel demandé', color: 'text-orange-700', bg: 'bg-orange-100' },
-  MID_TRANSFER_DONE: { label: 'Transfert partiel effectué', color: 'text-blue-700', bg: 'bg-blue-100' },
-  REST_TRANSFER_REQ: { label: 'Transfert final demandé', color: 'text-orange-700', bg: 'bg-orange-100' },
-  REST_TRANSFER_DONE: { label: 'Transfert final effectué', color: 'text-blue-700', bg: 'bg-blue-100' },
-  FULL_TRANSFER_REQ: { label: 'Transfert total demandé', color: 'text-orange-700', bg: 'bg-orange-100' },
-  FULL_TRANSFER_DONE: { label: 'Transfert total effectué', color: 'text-emerald-700', bg: 'bg-emerald-100' },
-  REFUNDED: { label: 'Remboursé', color: 'text-purple-700', bg: 'bg-purple-100' },
-  DISPUTE: { label: 'Litige', color: 'text-red-700', bg: 'bg-red-100' },
-}
-
 const STATS_CARDS = [
   { key: 'total', label: 'Total', gradient: 'from-blue-500 to-blue-600', textMuted: 'text-blue-100', iconColor: 'text-blue-200' },
   { key: 'WAITING', label: 'En attente', gradient: 'from-yellow-400 to-yellow-500', textMuted: 'text-yellow-100', iconColor: 'text-yellow-200' },
@@ -101,41 +54,6 @@ const STATS_CARDS = [
   { key: 'CHECKOUT', label: 'Check-out', gradient: 'from-gray-400 to-gray-500', textMuted: 'text-gray-100', iconColor: 'text-gray-200' },
   { key: 'CANCEL', label: 'Annulées', gradient: 'from-red-400 to-red-500', textMuted: 'text-red-100', iconColor: 'text-red-200' },
 ]
-
-function StatusBadge({ status }: { status: string }) {
-  const config = STATUS_CONFIG[status] || { label: status, color: 'text-gray-800', bg: 'bg-gray-100', icon: Clock }
-  const Icon = config.icon
-  return (
-    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${config.bg} ${config.color}`}>
-      <Icon className='h-3 w-3' />
-      {config.label}
-    </span>
-  )
-}
-
-function PaymentBadge({ payment, status }: { payment: string; status: string }) {
-  const effectivePayment = payment === 'NOT_PAID' && status === 'WAITING' ? 'AUTHORIZED' : payment
-  const config = PAYMENT_CONFIG[effectivePayment] || { label: payment, color: 'text-gray-700', bg: 'bg-gray-100' }
-  return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${config.bg} ${config.color}`}>
-      <CreditCard className='h-3 w-3' />
-      {config.label}
-    </span>
-  )
-}
-
-function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  })
-}
-
-function formatCurrency(amount: number | null) {
-  if (amount === null || amount === undefined) return '-'
-  return amount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
-}
 
 export default function AdminReservationsPage() {
   const {
@@ -314,140 +232,12 @@ export default function AdminReservationsPage() {
         {/* Reservation Cards Grid */}
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
           {reservations.map((reservation, index) => (
-            <motion.div
+            <ReservationCard
               key={reservation.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: index * 0.05 }}
-            >
-              <Card className='group hover:shadow-2xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm rounded-2xl overflow-hidden'>
-                <CardContent className='p-5 space-y-4'>
-                  {/* Header: Product + Actions */}
-                  <div className='flex items-start justify-between'>
-                    <div className='flex-1 min-w-0'>
-                      <Link
-                        href={`/admin/reservations/${reservation.id}`}
-                        className='font-semibold text-lg text-gray-900 group-hover:text-blue-600 transition-colors truncate block'
-                      >
-                        {reservation.product.name}
-                      </Link>
-                      {reservation.product.address && (
-                        <p className='text-gray-500 text-sm flex items-center gap-1 mt-0.5'>
-                          <MapPin className='h-3 w-3 flex-shrink-0' />
-                          <span className='truncate'>{reservation.product.address}</span>
-                        </p>
-                      )}
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant='ghost'
-                          size='sm'
-                          className='h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity'
-                        >
-                          <MoreVertical className='h-4 w-4' />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align='end' className='rounded-xl'>
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild>
-                          <Link href={`/admin/reservations/${reservation.id}`} className='flex items-center gap-2'>
-                            <Eye className='h-4 w-4' />
-                            Voir les détails
-                          </Link>
-                        </DropdownMenuItem>
-                        {reservation.status === 'WAITING' && (
-                          <DropdownMenuItem
-                            onClick={() => handleStatusAction(reservation.id, 'RESERVED')}
-                            className='flex items-center gap-2 text-green-600'
-                          >
-                            <CheckCircle className='h-4 w-4' />
-                            Approuver
-                          </DropdownMenuItem>
-                        )}
-                        {reservation.status === 'RESERVED' && (
-                          <DropdownMenuItem
-                            onClick={() => handleStatusAction(reservation.id, 'CHECKIN')}
-                            className='flex items-center gap-2 text-blue-600'
-                          >
-                            <LogIn className='h-4 w-4' />
-                            Check-in
-                          </DropdownMenuItem>
-                        )}
-                        {reservation.status === 'CHECKIN' && (
-                          <DropdownMenuItem
-                            onClick={() => handleStatusAction(reservation.id, 'CHECKOUT')}
-                            className='flex items-center gap-2 text-gray-600'
-                          >
-                            <LogOut className='h-4 w-4' />
-                            Check-out
-                          </DropdownMenuItem>
-                        )}
-                        {!['CHECKOUT', 'CANCEL'].includes(reservation.status) && (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => handleStatusAction(reservation.id, 'CANCEL')}
-                              className='flex items-center gap-2 text-red-600'
-                            >
-                              <XCircle className='h-4 w-4' />
-                              Annuler
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-
-                  {/* Status + Payment */}
-                  <div className='flex flex-wrap items-center gap-2'>
-                    <StatusBadge status={reservation.status} />
-                    <PaymentBadge payment={reservation.payment} status={reservation.status} />
-                  </div>
-
-                  {/* Guest & Host */}
-                  <div className='space-y-2 text-sm'>
-                    <div className='flex items-center gap-2 text-gray-700'>
-                      <Users className='h-4 w-4 text-gray-400 flex-shrink-0' />
-                      <span className='font-medium'>Voyageur :</span>
-                      <span className='truncate'>
-                        {[reservation.user.name, reservation.user.lastname].filter(Boolean).join(' ') || reservation.user.email}
-                      </span>
-                    </div>
-                    <div className='flex items-center gap-2 text-gray-700'>
-                      <Mail className='h-4 w-4 text-gray-400 flex-shrink-0' />
-                      <span className='font-medium'>Hôte :</span>
-                      <span className='truncate'>
-                        {reservation.product.owner.name || reservation.product.owner.email}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Dates */}
-                  <div className='flex items-center gap-2 text-sm text-gray-600 bg-gray-50 rounded-xl px-3 py-2'>
-                    <CalendarDays className='h-4 w-4 text-gray-400' />
-                    <span>{formatDate(reservation.arrivingDate)}</span>
-                    <span className='text-gray-400'>→</span>
-                    <span>{formatDate(reservation.leavingDate)}</span>
-                    {reservation.numberOfNights && (
-                      <span className='ml-auto flex items-center gap-1 text-gray-500'>
-                        <Moon className='h-3 w-3' />
-                        {reservation.numberOfNights}n
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Amount */}
-                  <div className='flex items-center justify-between pt-2 border-t border-gray-100'>
-                    <span className='text-sm text-gray-500'>Montant total</span>
-                    <span className='text-lg font-bold text-gray-900'>
-                      {formatCurrency(reservation.totalAmount)}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+              reservation={reservation}
+              index={index}
+              onStatusAction={handleStatusAction}
+            />
           ))}
         </div>
 
