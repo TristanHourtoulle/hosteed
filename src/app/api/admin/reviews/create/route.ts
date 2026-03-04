@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { createAdminReview, createAdvancedAdminReview } from '@/lib/services/admin-reviews.service'
+import { serializeBigInt } from '@/lib/utils/bigint'
 
 export async function POST(request: NextRequest) {
   try {
@@ -77,11 +78,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (result.success) {
-      return NextResponse.json({
+      return NextResponse.json(serializeBigInt({
         success: true,
         review: result.review,
         message: 'Avis administratif créé avec succès',
-      })
+      }))
     } else {
       return NextResponse.json(
         { error: result.error || "Erreur lors de la création de l'avis" },
