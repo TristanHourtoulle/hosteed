@@ -1,14 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { DailyBreakdownList, type DailyBreakdownItem } from '@/components/booking/DailyBreakdownList'
 import { ExtraPriceType } from '@prisma/client'
 import { calculateTotalBookingCost, getExtraCostPreview } from '@/lib/utils/costCalculation'
 import {
   calculateTotalRentPrice,
   type CommissionCalculation,
 } from '@/lib/services/commission.service'
-import { formatCurrency, formatCurrencySafe } from '@/lib/utils/formatNumber'
-import { CalendarDays, ChevronDown, ChevronUp } from 'lucide-react'
+import { formatCurrency } from '@/lib/utils/formatNumber'
 
 interface ExtraWithPricing {
   id: string
@@ -17,17 +17,6 @@ interface ExtraWithPricing {
   priceEUR: number
   priceMGA: number
   type: ExtraPriceType
-}
-
-interface DailyBreakdownItem {
-  date: Date | string
-  basePrice: number
-  finalPrice: number
-  promotionApplied: boolean
-  promotionDiscount?: number
-  specialPriceApplied: boolean
-  specialPriceValue?: number
-  savings: number
 }
 
 interface BookingCostSummaryProps {
@@ -45,7 +34,7 @@ interface BookingCostSummaryProps {
   totalSavings?: number
 }
 
-export default function BookingCostSummary({
+export function BookingCostSummary({
   basePrice,
   numberOfDays,
   guestCount,
@@ -60,7 +49,6 @@ export default function BookingCostSummary({
   totalSavings = 0,
 }: BookingCostSummaryProps) {
   const [commissionCalc, setCommissionCalc] = useState<CommissionCalculation | null>(null)
-  const [showBreakdown, setShowBreakdown] = useState(false)
 
   const bookingDetails = {
     startDate,
@@ -115,68 +103,8 @@ export default function BookingCostSummary({
       )}
 
       {/* Per-day breakdown (collapsible) */}
-      {hasMixedRates && (
-        <div className='space-y-2'>
-          <button
-            type='button'
-            onClick={() => setShowBreakdown(prev => !prev)}
-            className='flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 transition-colors w-full'
-          >
-            <CalendarDays className='h-4 w-4' />
-            <span className='font-medium'>Détail par nuit</span>
-            {showBreakdown ? (
-              <ChevronUp className='h-4 w-4 ml-auto' />
-            ) : (
-              <ChevronDown className='h-4 w-4 ml-auto' />
-            )}
-          </button>
-
-          {showBreakdown && (
-            <div className='space-y-1.5 max-h-48 overflow-y-auto'>
-              {dailyBreakdown.map((day, index) => (
-                <div
-                  key={index}
-                  className='flex items-center justify-between py-1.5 px-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors text-xs sm:text-sm'
-                >
-                  <span className='font-medium text-gray-800'>
-                    {new Date(day.date).toLocaleDateString('fr-FR', {
-                      weekday: 'short',
-                      day: 'numeric',
-                      month: 'short',
-                    })}
-                  </span>
-                  <div className='flex items-center gap-2'>
-                    {day.savings > 0 && (
-                      <>
-                        {day.promotionApplied && (
-                          <span className='text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium'>
-                            Promo{day.promotionDiscount ? ` -${day.promotionDiscount}%` : ''}
-                          </span>
-                        )}
-                        {day.specialPriceApplied && (
-                          <span className='text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium'>
-                            Prix spécial
-                          </span>
-                        )}
-                        <span className='text-xs text-gray-400 line-through'>
-                          {formatCurrencySafe(day.basePrice)}
-                        </span>
-                      </>
-                    )}
-                    {day.savings < 0 && day.specialPriceApplied && (
-                      <span className='text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-medium'>
-                        Tarif spécial
-                      </span>
-                    )}
-                    <span className='font-semibold text-gray-900'>
-                      {formatCurrencySafe(day.finalPrice)}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+      {hasMixedRates && dailyBreakdown && (
+        <DailyBreakdownList dailyBreakdown={dailyBreakdown} />
       )}
 
       {/* Extras */}

@@ -5,18 +5,9 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@/hooks/useAuth'
 import { useBookingProduct, useBookingUser, useBookingPricing } from '@/hooks/useBookingData'
+import { useAvailability } from '@/hooks/useAvailability'
 import { reservationFormSchema, type ReservationFormData } from '@/lib/zod/booking.schema'
-import {
-  MapPin,
-  Star,
-  CreditCard,
-  Shield,
-  ArrowLeft,
-  Check,
-  CalendarDays,
-  ChevronDown,
-  ChevronUp,
-} from 'lucide-react'
+import { MapPin, Star, CreditCard, Shield, ArrowLeft, Check } from 'lucide-react'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
 import {
@@ -33,7 +24,8 @@ import { toast } from 'sonner'
 import Image from 'next/image'
 import ExtraSelectionStep from '@/components/booking/ExtraSelectionStep'
 import PhoneInput from '@/components/ui/PhoneInput'
-import { formatCurrency, formatCurrencySafe, formatNumber } from '@/lib/utils/formatNumber'
+import { formatCurrency, formatNumber } from '@/lib/utils/formatNumber'
+import { DailyBreakdownList } from '@/components/booking/DailyBreakdownList'
 
 const RESERVATION_MESSAGES = {
   DATES_UNAVAILABLE_TOAST:
@@ -70,8 +62,6 @@ export default function ReservationPage() {
   const [step, setStep] = useState(2)
   const [selectedExtraIds, setSelectedExtraIds] = useState<string[]>([])
   const [extrasCost, setExtrasCost] = useState(0)
-  const [isAvailable, setIsAvailable] = useState<boolean | null>(null)
-  const [showDailyBreakdown, setShowDailyBreakdown] = useState(false)
 
   // React Hook Form with Zod validation
   const form = useForm<ReservationFormData>({
@@ -139,46 +129,28 @@ export default function ReservationPage() {
     }
   }, [userData, isAuthenticated, session, form])
 
-  // Availability check via API route (not a server action)
+  // Availability check via TanStack Query
+  const { data: availabilityData, error: availabilityError } = useAvailability({
+    productId: product?.id,
+    arrivalDate: watchedArrivingDate ? new Date(watchedArrivingDate) : null,
+    leavingDate: watchedLeavingDate ? new Date(watchedLeavingDate) : null,
+    arrivingHour: Number(product?.arriving) || 14,
+    leavingHour: Number(product?.leaving) || 11,
+  })
+
+  const isAvailable = availabilityData?.available ?? null
+
   useEffect(() => {
-    const checkAvailability = async () => {
-      if (!watchedArrivingDate || !watchedLeavingDate || !product?.id) {
-        setIsAvailable(null)
-        return
-      }
-
-      setIsAvailable(null)
-      const arrivingDate = new Date(watchedArrivingDate)
-      const leavingDate = new Date(watchedLeavingDate)
-
-      arrivingDate.setHours(Number(product.arriving) || 14, 0, 0, 0)
-      leavingDate.setHours(Number(product.leaving) || 11, 0, 0, 0)
-
-      try {
-        const params = new URLSearchParams({
-          productId: product.id,
-          arrival: arrivingDate.toISOString(),
-          leaving: leavingDate.toISOString(),
-        })
-        const response = await fetch(`/api/check-availability?${params}`)
-        const result = await response.json()
-
-        if (!response.ok) {
-          throw new Error(result.error?.message || 'Availability check failed')
-        }
-
-        setIsAvailable(result.available)
-        if (!result.available) {
-          toast.error(RESERVATION_MESSAGES.DATES_UNAVAILABLE_TOAST)
-        }
-      } catch {
-        toast.error(RESERVATION_MESSAGES.AVAILABILITY_CHECK_ERROR)
-        setIsAvailable(null)
-      }
+    if (availabilityData && !availabilityData.available) {
+      toast.error(RESERVATION_MESSAGES.DATES_UNAVAILABLE_TOAST)
     }
+  }, [availabilityData])
 
-    checkAvailability()
-  }, [watchedArrivingDate, watchedLeavingDate, product?.id, product?.arriving, product?.leaving])
+  useEffect(() => {
+    if (availabilityError) {
+      toast.error(RESERVATION_MESSAGES.AVAILABILITY_CHECK_ERROR)
+    }
+  }, [availabilityError])
 
   const calculateNights = useCallback(() => {
     if (!watchedArrivingDate || !watchedLeavingDate) return 0
@@ -690,70 +662,7 @@ export default function ReservationPage() {
                     {bookingPricing?.dailyBreakdown &&
                       bookingPricing.dailyBreakdown.length > 0 &&
                       (hasPromotions || hasSpecialPrices) && (
-                        <div className='space-y-2'>
-                          <button
-                            type='button'
-                            onClick={() => setShowDailyBreakdown(prev => !prev)}
-                            className='flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 transition-colors w-full'
-                          >
-                            <CalendarDays className='h-4 w-4' />
-                            <span className='font-medium'>Détail par nuit</span>
-                            {showDailyBreakdown ? (
-                              <ChevronUp className='h-4 w-4 ml-auto' />
-                            ) : (
-                              <ChevronDown className='h-4 w-4 ml-auto' />
-                            )}
-                          </button>
-
-                          {showDailyBreakdown && (
-                            <div className='space-y-1.5 max-h-48 overflow-y-auto'>
-                              {bookingPricing.dailyBreakdown.map((day, index) => (
-                                <div
-                                  key={index}
-                                  className='flex items-center justify-between py-1.5 px-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors text-xs sm:text-sm'
-                                >
-                                  <span className='font-medium text-gray-800'>
-                                    {new Date(day.date).toLocaleDateString('fr-FR', {
-                                      weekday: 'short',
-                                      day: 'numeric',
-                                      month: 'short',
-                                    })}
-                                  </span>
-                                  <div className='flex items-center gap-2'>
-                                    {day.savings > 0 && (
-                                      <>
-                                        {day.promotionApplied && (
-                                          <span className='text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium'>
-                                            Promo
-                                            {day.promotionDiscount
-                                              ? ` -${day.promotionDiscount}%`
-                                              : ''}
-                                          </span>
-                                        )}
-                                        {day.specialPriceApplied && (
-                                          <span className='text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium'>
-                                            Prix spécial
-                                          </span>
-                                        )}
-                                        <span className='text-xs text-gray-400 line-through'>
-                                          {formatCurrencySafe(day.basePrice)}
-                                        </span>
-                                      </>
-                                    )}
-                                    {day.savings < 0 && day.specialPriceApplied && (
-                                      <span className='text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-medium'>
-                                        Tarif spécial
-                                      </span>
-                                    )}
-                                    <span className='font-semibold text-gray-900'>
-                                      {formatCurrencySafe(day.finalPrice)}
-                                    </span>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                        <DailyBreakdownList dailyBreakdown={bookingPricing.dailyBreakdown} />
                       )}
 
                     {/* Base price */}
