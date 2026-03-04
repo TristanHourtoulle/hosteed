@@ -158,13 +158,6 @@ export default function BookingCard({
           product.owner?.id
         )
         setBookingPricing(pricing)
-        console.log('💰 [BookingCard] Pricing calculated:', {
-          subtotal: pricing.subtotal,
-          totalSavings: pricing.totalSavings,
-          promotionApplied: pricing.promotionApplied,
-          specialPriceApplied: pricing.specialPriceApplied,
-          averageNightlyPrice: pricing.averageNightlyPrice,
-        })
       } catch (error) {
         console.error('Error calculating booking price:', error)
         setBookingPricing(null)
