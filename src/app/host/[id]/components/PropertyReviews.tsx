@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Star, Calendar, ChevronDown, ChevronUp, Grid3X3 } from 'lucide-react'
+import { Star, Calendar, ChevronDown, ChevronUp, Grid3X3, User } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ReviewStatistics from './ReviewStatistics'
 import ReviewsModal from './ReviewsModal'
@@ -19,6 +19,14 @@ interface Reviews {
   visitDate: Date
   publishDate: Date
   approved: boolean
+  rentRelation?: {
+    user: {
+      name: string | null
+      image: string | null
+      profilePicture: string | null
+      profilePictureBase64: string | null
+    }
+  }
 }
 
 interface PropertyReviewsProps {
@@ -55,29 +63,17 @@ function ReviewCard({ review, index }: { review: Reviews; index: number }) {
   const [isExpanded, setIsExpanded] = useState(false)
   const shouldTruncate = review.text.length > 200
 
-  // Génération d'un avatar coloré basé sur l'ID
-  const getAvatarColor = (id: string) => {
-    const colors = [
-      'bg-gradient-to-br from-blue-400 to-blue-600',
-      'bg-gradient-to-br from-green-400 to-green-600',
-      'bg-gradient-to-br from-purple-400 to-purple-600',
-      'bg-gradient-to-br from-orange-400 to-orange-600',
-      'bg-gradient-to-br from-pink-400 to-pink-600',
-      'bg-gradient-to-br from-indigo-400 to-indigo-600',
-      'bg-gradient-to-br from-red-400 to-red-600',
-      'bg-gradient-to-br from-teal-400 to-teal-600',
-    ]
-    return colors[parseInt(id.slice(-1), 16) % colors.length]
-  }
-
-  const getInitials = (title: string) => {
-    return title
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase()
-  }
+  const avatarGradients = [
+    'bg-gradient-to-br from-blue-400 to-blue-600',
+    'bg-gradient-to-br from-green-400 to-green-600',
+    'bg-gradient-to-br from-purple-400 to-purple-600',
+    'bg-gradient-to-br from-orange-400 to-orange-600',
+    'bg-gradient-to-br from-pink-400 to-pink-600',
+    'bg-gradient-to-br from-indigo-400 to-indigo-600',
+  ]
+  const gradientIndex = parseInt(review.id.slice(-1), 16) % avatarGradients.length
+  const user = review.rentRelation?.user
+  const avatarSrc = user?.profilePicture || user?.profilePictureBase64 || user?.image
 
   return (
     <motion.div
@@ -87,17 +83,30 @@ function ReviewCard({ review, index }: { review: Reviews; index: number }) {
       className='bg-white rounded-xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-all duration-300 hover:border-gray-200'
     >
       <div className='flex items-start gap-4'>
-        {/* Avatar amélioré */}
-        <div
-          className={`w-12 h-12 rounded-full ${getAvatarColor(review.id)} flex items-center justify-center text-white font-bold text-sm shadow-md`}
-        >
-          {getInitials(review.title)}
-        </div>
+        {/* Avatar */}
+        {avatarSrc ? (
+          <img
+            src={avatarSrc}
+            alt={user?.name || 'Avatar'}
+            width={48}
+            height={48}
+            className='w-12 h-12 rounded-full object-cover shadow-md'
+          />
+        ) : (
+          <div
+            className={`w-12 h-12 rounded-full ${avatarGradients[gradientIndex]} flex items-center justify-center shadow-md`}
+          >
+            <User className='h-6 w-6 text-white' />
+          </div>
+        )}
 
         <div className='flex-1 space-y-3'>
           {/* En-tête de l'avis */}
           <div className='flex items-start justify-between'>
             <div>
+              {user?.name && (
+                <p className='text-sm font-medium text-gray-500'>{user.name}</p>
+              )}
               <h4 className='font-semibold text-gray-900 text-lg leading-tight'>{review.title}</h4>
               <div className='flex items-center gap-2 mt-1'>
                 <StarRating rating={review.grade} />
