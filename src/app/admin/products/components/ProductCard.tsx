@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/shadcnui/badge'
 import { Card, CardContent, CardFooter } from '@/components/ui/shadcnui/card'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Bed, MapPin, Euro, Trash2 } from 'lucide-react'
+import { Bed, MapPin, Euro, Trash2, Pencil } from 'lucide-react'
 import { Product } from '@prisma/client'
 import {
   getValidationStatusLabel,
@@ -98,6 +98,16 @@ export function ProductCard({ product, selected, onToggleSelect, onDelete }: Pro
         <CardFooter className='p-4 pt-0 gap-2'>
           <Button asChild className='flex-1' variant='outline'>
             <Link href={`/admin/products/${product.id}`}>Voir détails</Link>
+          </Button>
+          <Button
+            asChild
+            variant='outline'
+            size='icon'
+            title='Modifier cet hébergement'
+          >
+            <Link href={`/admin/validation/${product.id}?tab=edit`}>
+              <Pencil className='h-4 w-4' />
+            </Link>
           </Button>
           {onDelete && (
             <Button

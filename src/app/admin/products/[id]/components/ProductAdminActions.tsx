@@ -15,8 +15,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/shadcnui/alert-dialog'
-import { ShieldCheck, ShieldX, Trash2, Settings } from 'lucide-react'
+import { ShieldCheck, ShieldX, Trash2, Settings, Pencil } from 'lucide-react'
 import { ProductValidation } from '../types'
+import Link from 'next/link'
 
 const fadeIn: Variants = {
   hidden: { opacity: 0, y: 12 },
@@ -34,6 +35,7 @@ interface ProductAdminActionsProps {
 
 /** Admin sidebar actions: validate, reject, delete based on current validation status. */
 export function ProductAdminActions({
+  productId,
   productName,
   validationStatus,
   onValidate,
@@ -69,6 +71,16 @@ export function ProductAdminActions({
           </h2>
         </div>
         <CardContent className='p-6 space-y-3'>
+          <Button
+            asChild
+            className='w-full bg-blue-600 hover:bg-blue-700 text-white'
+          >
+            <Link href={`/admin/validation/${productId}?tab=edit`}>
+              <Pencil className='h-4 w-4 mr-2' />
+              Modifier
+            </Link>
+          </Button>
+
           {showValidate && (
             <AlertDialog>
               <AlertDialogTrigger asChild>

@@ -7,7 +7,7 @@ import { motion } from 'framer-motion'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Loader2, XCircle, Tag, Power, PowerOff } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   findSpecialsPricesByProduct,
   createSpecialPrices,
@@ -147,6 +147,7 @@ interface ValidationDetailPageProps {
 export default function ValidationDetailPage({ params }: ValidationDetailPageProps) {
   const { data: session } = useSession()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
@@ -154,7 +155,10 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
   const [reason, setReason] = useState('')
   const [productId, setProductId] = useState<string | null>(null)
   const [validationHistory, setValidationHistory] = useState<ValidationHistoryEntry[]>([])
-  const [activeTab, setActiveTab] = useState<'details' | 'comparison' | 'edit'>('details')
+  const tabParam = searchParams.get('tab')
+  const [activeTab, setActiveTab] = useState<'details' | 'comparison' | 'edit'>(
+    tabParam === 'edit' ? 'edit' : 'details'
+  )
   const [specialPrices, setSpecialPrices] = useState<SpecialPrice[]>([])
   const [specialPriceModalOpen, setSpecialPriceModalOpen] = useState(false)
   const [editingSpecialPrice, setEditingSpecialPrice] = useState<SpecialPrice | null>(null)
