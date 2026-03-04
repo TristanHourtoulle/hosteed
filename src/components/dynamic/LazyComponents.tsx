@@ -89,6 +89,14 @@ export const LazyMarkdownEditor = dynamic(
   }
 )
 
+export const LazyMarkdownViewer = dynamic(
+  () => import('@uiw/react-md-editor').then(mod => ({ default: mod.default.Markdown })),
+  {
+    ssr: false,
+    loading: () => <div className='bg-gray-100 rounded p-4 animate-pulse h-40' />,
+  }
+)
+
 // Syntax Highlighter - Only loaded when needed for code display
 export const LazySyntaxHighlighter = dynamic(
   () =>

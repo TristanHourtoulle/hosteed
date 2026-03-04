@@ -56,7 +56,7 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '10mb',
     },
-    optimizePackageImports: ['lucide-react', 'date-fns', '@radix-ui/react-icons'],
+    optimizePackageImports: ['lucide-react', 'date-fns', '@radix-ui/react-icons', 'framer-motion'],
   },
 
   // Turbopack configuration (default in Next.js 16)
@@ -64,50 +64,6 @@ const nextConfig: NextConfig = {
 
   // External packages for server components
   serverExternalPackages: ['prisma'],
-
-  // Webpack optimization for production
-  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
-    if (!dev && !isServer) {
-      // Optimize chunk splitting
-      config.optimization.splitChunks = {
-        chunks: 'all',
-        cacheGroups: {
-          vendor: {
-            test: /[\\/]node_modules[\\/]/,
-            name: 'vendors',
-            priority: 10,
-            reuseExistingChunk: true,
-          },
-          common: {
-            name: 'common',
-            minChunks: 2,
-            priority: 5,
-            reuseExistingChunk: true,
-          },
-          // Separate heavy libraries
-          editor: {
-            test: /[\\/]node_modules[\\/](@uiw|react-md-editor)/,
-            name: 'editor',
-            priority: 20,
-            reuseExistingChunk: true,
-          },
-          icons: {
-            test: /[\\/]node_modules[\\/]lucide-react/,
-            name: 'icons',
-            priority: 15,
-            reuseExistingChunk: true,
-          },
-        },
-      }
-
-      // Disable performance warnings for cleaner build output
-      config.performance = {
-        hints: false,
-      }
-    }
-
-    return config
-  },
 
   // Headers for performance
   async headers() {
