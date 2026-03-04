@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { DailyBreakdownList, type DailyBreakdownItem } from '@/components/booking/DailyBreakdownList'
 import { ExtraPriceType } from '@prisma/client'
 import { calculateTotalBookingCost, getExtraCostPreview } from '@/lib/utils/costCalculation'
 import {
@@ -28,9 +29,12 @@ interface BookingCostSummaryProps {
   endDate: Date
   className?: string
   showCommissions?: boolean
+  dailyBreakdown?: DailyBreakdownItem[]
+  subtotalOverride?: number
+  totalSavings?: number
 }
 
-export default function BookingCostSummary({
+export function BookingCostSummary({
   basePrice,
   numberOfDays,
   guestCount,
@@ -40,8 +44,10 @@ export default function BookingCostSummary({
   endDate,
   className = '',
   showCommissions = false,
+  dailyBreakdown,
+  subtotalOverride,
+  totalSavings = 0,
 }: BookingCostSummaryProps) {
-  // const currencySymbol = currency === 'EUR' ? '€' : 'Ar'
   const [commissionCalc, setCommissionCalc] = useState<CommissionCalculation | null>(null)
 
   const bookingDetails = {
@@ -50,13 +56,22 @@ export default function BookingCostSummary({
     guestCount,
   }
 
-  const { baseTotal, extrasTotal, grandTotal } = calculateTotalBookingCost(
+  const fallbackCalc = calculateTotalBookingCost(
     basePrice,
     numberOfDays,
     selectedExtras,
     bookingDetails,
     currency
   )
+
+  const baseTotal = subtotalOverride ?? fallbackCalc.baseTotal
+  const extrasTotal = fallbackCalc.extrasTotal
+  const grandTotal = baseTotal + extrasTotal
+
+  const hasMixedRates =
+    dailyBreakdown &&
+    dailyBreakdown.length > 1 &&
+    dailyBreakdown.some(d => d.finalPrice !== dailyBreakdown[0].finalPrice)
 
   useEffect(() => {
     if (showCommissions && currency === 'EUR' && grandTotal > 0) {
@@ -77,6 +92,20 @@ export default function BookingCostSummary({
         </span>
         <span className='font-medium'>{formatCurrency(baseTotal, currency)}</span>
       </div>
+
+      {/* Savings badge */}
+      {totalSavings > 0 && (
+        <div className='bg-green-50 border border-green-200 rounded-lg px-3 py-2'>
+          <span className='text-sm text-green-700 font-medium'>
+            Vous économisez {formatCurrency(totalSavings, currency, 0)}
+          </span>
+        </div>
+      )}
+
+      {/* Per-day breakdown (collapsible) */}
+      {hasMixedRates && dailyBreakdown && (
+        <DailyBreakdownList dailyBreakdown={dailyBreakdown} />
+      )}
 
       {/* Extras */}
       {selectedExtras.length > 0 && (

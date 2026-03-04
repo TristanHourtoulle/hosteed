@@ -39,7 +39,7 @@ import CreateExtraModal from '@/components/ui/CreateExtraModal'
 import CreateHighlightModal from '@/components/ui/CreateHighlightModal'
 import CreateSpecialPriceModal from '@/components/ui/CreateSpecialPriceModal'
 
-import BookingCostSummary from '@/components/ui/BookingCostSummary'
+import { BookingCostSummary } from '@/components/ui/BookingCostSummary'
 import SortableImageGrid from '@/components/ui/SortableImageGrid'
 import ImageGalleryPreview from '@/components/ui/ImageGalleryPreview'
 import ErrorAlert, { ErrorDetails } from '@/components/ui/ErrorAlert'

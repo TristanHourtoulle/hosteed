@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@/hooks/useAuth'
 import { useBookingProduct, useBookingUser, useBookingPricing } from '@/hooks/useBookingData'
+import { useAvailability } from '@/hooks/useAvailability'
 import { reservationFormSchema, type ReservationFormData } from '@/lib/zod/booking.schema'
 import { MapPin, Star, CreditCard, Shield, ArrowLeft, Check } from 'lucide-react'
 import { Button } from '@/components/ui/shadcnui/button'
@@ -24,6 +25,7 @@ import Image from 'next/image'
 import ExtraSelectionStep from '@/components/booking/ExtraSelectionStep'
 import PhoneInput from '@/components/ui/PhoneInput'
 import { formatCurrency, formatNumber } from '@/lib/utils/formatNumber'
+import { DailyBreakdownList } from '@/components/booking/DailyBreakdownList'
 
 const RESERVATION_MESSAGES = {
   DATES_UNAVAILABLE_TOAST:
@@ -60,7 +62,6 @@ export default function ReservationPage() {
   const [step, setStep] = useState(2)
   const [selectedExtraIds, setSelectedExtraIds] = useState<string[]>([])
   const [extrasCost, setExtrasCost] = useState(0)
-  const [isAvailable, setIsAvailable] = useState<boolean | null>(null)
 
   // React Hook Form with Zod validation
   const form = useForm<ReservationFormData>({
@@ -128,46 +129,28 @@ export default function ReservationPage() {
     }
   }, [userData, isAuthenticated, session, form])
 
-  // Availability check via API route (not a server action)
+  // Availability check via TanStack Query
+  const { data: availabilityData, error: availabilityError } = useAvailability({
+    productId: product?.id,
+    arrivalDate: watchedArrivingDate ? new Date(watchedArrivingDate) : null,
+    leavingDate: watchedLeavingDate ? new Date(watchedLeavingDate) : null,
+    arrivingHour: Number(product?.arriving) || 14,
+    leavingHour: Number(product?.leaving) || 11,
+  })
+
+  const isAvailable = availabilityData?.available ?? null
+
   useEffect(() => {
-    const checkAvailability = async () => {
-      if (!watchedArrivingDate || !watchedLeavingDate || !product?.id) {
-        setIsAvailable(null)
-        return
-      }
-
-      setIsAvailable(null)
-      const arrivingDate = new Date(watchedArrivingDate)
-      const leavingDate = new Date(watchedLeavingDate)
-
-      arrivingDate.setHours(Number(product.arriving) || 14, 0, 0, 0)
-      leavingDate.setHours(Number(product.leaving) || 11, 0, 0, 0)
-
-      try {
-        const params = new URLSearchParams({
-          productId: product.id,
-          arrival: arrivingDate.toISOString(),
-          leaving: leavingDate.toISOString(),
-        })
-        const response = await fetch(`/api/check-availability?${params}`)
-        const result = await response.json()
-
-        if (!response.ok) {
-          throw new Error(result.error?.message || 'Availability check failed')
-        }
-
-        setIsAvailable(result.available)
-        if (!result.available) {
-          toast.error(RESERVATION_MESSAGES.DATES_UNAVAILABLE_TOAST)
-        }
-      } catch {
-        toast.error(RESERVATION_MESSAGES.AVAILABILITY_CHECK_ERROR)
-        setIsAvailable(null)
-      }
+    if (availabilityData && !availabilityData.available) {
+      toast.error(RESERVATION_MESSAGES.DATES_UNAVAILABLE_TOAST)
     }
+  }, [availabilityData])
 
-    checkAvailability()
-  }, [watchedArrivingDate, watchedLeavingDate, product?.id, product?.arriving, product?.leaving])
+  useEffect(() => {
+    if (availabilityError) {
+      toast.error(RESERVATION_MESSAGES.AVAILABILITY_CHECK_ERROR)
+    }
+  }, [availabilityError])
 
   const calculateNights = useCallback(() => {
     if (!watchedArrivingDate || !watchedLeavingDate) return 0
@@ -590,13 +573,13 @@ export default function ReservationPage() {
 
           {/* Summary Sidebar */}
           <div className='lg:col-span-1 order-1 lg:order-2'>
-            <Card className='lg:sticky lg:top-6'>
-              <CardHeader className='p-4 sm:p-6'>
+            <Card className='lg:sticky lg:top-6 gap-2 py-4'>
+              <CardHeader className='px-4 sm:px-6'>
                 <CardTitle className='text-lg sm:text-xl'>
                   Récapitulatif de la réservation
                 </CardTitle>
               </CardHeader>
-              <CardContent className='space-y-4 p-4 sm:p-6 pt-0'>
+              <CardContent className='space-y-4 px-4 sm:px-6'>
                 {/* Dates unavailable warning */}
                 {isAvailable === false && (
                   <div className='bg-red-50 border border-red-200 rounded-lg p-3'>
@@ -672,20 +655,15 @@ export default function ReservationPage() {
                         <div className='text-xs text-green-600 mt-1'>
                           Vous économisez {formatCurrency(totalSavings, 'EUR', 0)} sur ce séjour
                         </div>
-                        {bookingPricing?.priority && (
-                          <div className='text-xs text-gray-500 mt-1'>
-                            Stratégie :{' '}
-                            {bookingPricing.priority === 'MOST_ADVANTAGEOUS'
-                              ? 'Prix le plus avantageux'
-                              : bookingPricing.priority === 'PROMOTION_FIRST'
-                                ? 'Promotion en priorité'
-                                : bookingPricing.priority === 'SPECIAL_PRICE_FIRST'
-                                  ? 'Prix spécial en priorité'
-                                  : 'Réductions cumulées'}
-                          </div>
-                        )}
                       </div>
                     )}
+
+                    {/* Per-day breakdown (collapsible) */}
+                    {bookingPricing?.dailyBreakdown &&
+                      bookingPricing.dailyBreakdown.length > 0 &&
+                      (hasPromotions || hasSpecialPrices) && (
+                        <DailyBreakdownList dailyBreakdown={bookingPricing.dailyBreakdown} />
+                      )}
 
                     {/* Base price */}
                     <div className='space-y-2'>

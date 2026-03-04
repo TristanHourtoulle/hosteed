@@ -158,14 +158,8 @@ export default function BookingCard({
           product.owner?.id
         )
         setBookingPricing(pricing)
-        console.log('💰 [BookingCard] Pricing calculated:', {
-          subtotal: pricing.subtotal,
-          totalSavings: pricing.totalSavings,
-          promotionApplied: pricing.promotionApplied,
-          specialPriceApplied: pricing.specialPriceApplied,
-          averageNightlyPrice: pricing.averageNightlyPrice,
-        })
       } catch (error) {
+        // Client component: pino logger is server-only, console.error is acceptable here
         console.error('Error calculating booking price:', error)
         setBookingPricing(null)
       }
