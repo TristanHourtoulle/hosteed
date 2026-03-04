@@ -1,6 +1,8 @@
 'use client'
 
 import React from 'react'
+import DOMPurify from 'dompurify'
+import { isHtmlContent } from '@/lib/utils/contentFormat'
 import { LazyReactMarkdown, LazySyntaxHighlighter } from '@/components/dynamic/LazyComponents'
 import remarkGfm from 'remark-gfm'
 import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism'
@@ -9,9 +11,22 @@ interface MarkdownRendererProps {
   content: string
 }
 
+const PROSE_CLASSES =
+  'prose prose-lg max-w-none prose-slate prose-headings:font-bold prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl prose-p:text-gray-700 prose-a:text-purple-600 prose-a:no-underline hover:prose-a:underline prose-strong:text-gray-900 prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-blockquote:border-l-purple-500 prose-blockquote:bg-purple-50 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r prose-ul:list-disc prose-ol:list-decimal prose-li:my-1'
+
 export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
+  if (isHtmlContent(content)) {
+    const sanitized = DOMPurify.sanitize(content)
+    return (
+      <div
+        className={PROSE_CLASSES}
+        dangerouslySetInnerHTML={{ __html: sanitized }}
+      />
+    )
+  }
+
   return (
-    <div className='prose prose-lg max-w-none prose-slate prose-headings:font-bold prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl prose-p:text-gray-700 prose-a:text-purple-600 prose-a:no-underline hover:prose-a:underline prose-strong:text-gray-900 prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-blockquote:border-l-purple-500 prose-blockquote:bg-purple-50 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r prose-ul:list-disc prose-ol:list-decimal prose-li:my-1'>
+    <div className={PROSE_CLASSES}>
       <LazyReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
