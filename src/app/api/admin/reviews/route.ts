@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { getAdminCreatedReviews } from '@/lib/services/admin-reviews.service'
+import { serializeBigInt } from '@/lib/utils/bigint'
 
 export async function GET() {
   try {
@@ -15,10 +16,10 @@ export async function GET() {
     const result = await getAdminCreatedReviews(session.user.id!)
 
     if (result.success) {
-      return NextResponse.json({
+      return NextResponse.json(serializeBigInt({
         success: true,
         reviews: result.reviews,
-      })
+      }))
     } else {
       return NextResponse.json(
         { error: result.error || 'Erreur lors de la récupération des avis' },

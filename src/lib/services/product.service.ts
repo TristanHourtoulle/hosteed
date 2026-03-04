@@ -224,7 +224,7 @@ export async function findProductById(id: string) {
           where: {
             approved: true,
           },
-          take: 10, // ✅ Limite les avis à 10 au lieu de TOUS
+          take: 10,
           select: {
             id: true,
             title: true,
@@ -238,6 +238,18 @@ export async function findProductById(id: string) {
             visitDate: true,
             publishDate: true,
             approved: true,
+            rentRelation: {
+              select: {
+                user: {
+                  select: {
+                    name: true,
+                    image: true,
+                    profilePicture: true,
+                    profilePictureBase64: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -333,6 +345,18 @@ export async function findProductByIdForAdmin(id: string) {
             visitDate: true,
             publishDate: true,
             approved: true,
+            rentRelation: {
+              select: {
+                user: {
+                  select: {
+                    name: true,
+                    image: true,
+                    profilePicture: true,
+                    profilePictureBase64: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -398,6 +422,18 @@ export async function findProductBySlugOrId(slugOrId: string) {
         visitDate: true,
         publishDate: true,
         approved: true,
+        rentRelation: {
+          select: {
+            user: {
+              select: {
+                name: true,
+                image: true,
+                profilePicture: true,
+                profilePictureBase64: true,
+              },
+            },
+          },
+        },
       },
     },
   }

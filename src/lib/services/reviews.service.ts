@@ -12,6 +12,9 @@ export async function findAllReviews() {
               select: {
                 name: true,
                 email: true,
+                image: true,
+                profilePicture: true,
+                profilePictureBase64: true,
               },
             },
             product: {
@@ -42,6 +45,9 @@ export async function findAllWaitingReview() {
               select: {
                 name: true,
                 email: true,
+                image: true,
+                profilePicture: true,
+                profilePictureBase64: true,
               },
             },
             product: {
@@ -123,6 +129,9 @@ export async function createReview(params: {
               select: {
                 name: true,
                 email: true,
+                image: true,
+                profilePicture: true,
+                profilePictureBase64: true,
               },
             },
             product: {
