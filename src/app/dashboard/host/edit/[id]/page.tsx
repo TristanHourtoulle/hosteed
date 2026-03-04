@@ -45,6 +45,8 @@ import ImageGalleryPreview from '@/components/ui/ImageGalleryPreview'
 import ErrorAlert, { ErrorDetails } from '@/components/ui/ErrorAlert'
 import { parseCreateProductError, createValidationError } from '@/lib/utils/errorHandler'
 import SEOFieldsCard from '@/components/ui/SEOFieldsCard'
+import { ProductRulesForm } from '@/app/createProduct/components/ProductRulesForm'
+import { ProductPropertyInfoForm } from '@/app/createProduct/components/ProductPropertyInfoForm'
 
 // Import types, utilities, and hooks from createProduct
 import type {
@@ -240,6 +242,11 @@ export default function EditProductPage() {
     })
   }
 
+  // Generic field updater for form section components
+  const handleFieldChange = (field: keyof FormData, value: unknown) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
   // File handling
   const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -416,6 +423,29 @@ export default function EditProductPage() {
         })),
         // SEO data
         seoData: seoData,
+        // Transport options (parsed from comma-separated string)
+        transportOptions: formData.transportation
+          ? formData.transportation
+              .split(',')
+              .map((name: string) => ({ name: name.trim(), description: '' }))
+              .filter((t: { name: string }) => t.name.length > 0)
+          : [],
+        // Rules
+        rules: {
+          smokingAllowed: formData.smokingAllowed || false,
+          petsAllowed: formData.petsAllowed || false,
+          eventsAllowed: formData.eventsAllowed || false,
+          selfCheckIn: formData.selfCheckIn || false,
+          selfCheckInType: (formData.selfCheckInType as string) || undefined,
+        },
+        // Property info
+        propertyInfo: {
+          hasStairs: formData.hasStairs || false,
+          hasElevator: formData.hasElevator || false,
+          hasHandicapAccess: formData.hasHandicapAccess || false,
+          hasPetsOnProperty: formData.hasPetsOnProperty || false,
+          additionalNotes: (formData.additionalNotes as string) || undefined,
+        },
       }
 
       const response = await fetch(`/api/products/${productId}`, {
@@ -888,6 +918,20 @@ export default function EditProductPage() {
               </CardContent>
             </Card>
           </motion.div>
+
+          {/* Rules */}
+          <ProductRulesForm
+            formData={formData as never}
+            onChange={handleFieldChange as never}
+            itemVariants={itemVariants}
+          />
+
+          {/* Property Info */}
+          <ProductPropertyInfoForm
+            formData={formData as never}
+            onChange={handleFieldChange as never}
+            itemVariants={itemVariants}
+          />
 
           {/* Booking Cost Summary */}
           <motion.div variants={itemVariants}>
