@@ -1,4 +1,3 @@
-'use server'
 import prisma from '@/lib/prisma'
 import { sendTemplatedMail } from '@/lib/services/sendTemplatedMail'
 import { UserRole } from '@prisma/client'

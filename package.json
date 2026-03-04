@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "bash scripts/prisma-generate-if-needed.sh && next build",
     "build:analyze": "cross-env ANALYZE=true npm run build",
     "postinstall": "prisma generate",
     "vercel-build": "prisma generate && next build",

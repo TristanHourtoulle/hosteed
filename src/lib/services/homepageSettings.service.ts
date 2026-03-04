@@ -1,4 +1,3 @@
-'use server'
 import prisma from '@/lib/prisma'
 import { HomepageSettings } from '@prisma/client'
 

@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Home } from 'lucide-react'
-import MDEditor from '@uiw/react-md-editor'
+import { LazyMarkdownEditor } from '@/components/dynamic/LazyComponents'
 import RichEditorGuide from '@/components/ui/RichEditorGuide'
 import type { FormData } from '../types'
 
@@ -94,7 +94,7 @@ export default function BasicInfoSection({
               data-color-mode='light'
               className='rounded-md border border-slate-200 overflow-hidden'
             >
-              <MDEditor
+              <LazyMarkdownEditor
                 value={formData.description}
                 onChange={value => setFormData({ ...formData, description: value || '' })}
                 height={400}
