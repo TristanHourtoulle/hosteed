@@ -159,6 +159,7 @@ export default function BookingCard({
         )
         setBookingPricing(pricing)
       } catch (error) {
+        // Client component: pino logger is server-only, console.error is acceptable here
         console.error('Error calculating booking price:', error)
         setBookingPricing(null)
       }
