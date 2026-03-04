@@ -6,7 +6,17 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@/hooks/useAuth'
 import { useBookingProduct, useBookingUser, useBookingPricing } from '@/hooks/useBookingData'
 import { reservationFormSchema, type ReservationFormData } from '@/lib/zod/booking.schema'
-import { MapPin, Star, CreditCard, Shield, ArrowLeft, Check } from 'lucide-react'
+import {
+  MapPin,
+  Star,
+  CreditCard,
+  Shield,
+  ArrowLeft,
+  Check,
+  CalendarDays,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
 import {
@@ -23,7 +33,7 @@ import { toast } from 'sonner'
 import Image from 'next/image'
 import ExtraSelectionStep from '@/components/booking/ExtraSelectionStep'
 import PhoneInput from '@/components/ui/PhoneInput'
-import { formatCurrency, formatNumber } from '@/lib/utils/formatNumber'
+import { formatCurrency, formatCurrencySafe, formatNumber } from '@/lib/utils/formatNumber'
 
 const RESERVATION_MESSAGES = {
   DATES_UNAVAILABLE_TOAST:
@@ -61,6 +71,7 @@ export default function ReservationPage() {
   const [selectedExtraIds, setSelectedExtraIds] = useState<string[]>([])
   const [extrasCost, setExtrasCost] = useState(0)
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null)
+  const [showDailyBreakdown, setShowDailyBreakdown] = useState(false)
 
   // React Hook Form with Zod validation
   const form = useForm<ReservationFormData>({
@@ -590,13 +601,13 @@ export default function ReservationPage() {
 
           {/* Summary Sidebar */}
           <div className='lg:col-span-1 order-1 lg:order-2'>
-            <Card className='lg:sticky lg:top-6'>
-              <CardHeader className='p-4 sm:p-6'>
+            <Card className='lg:sticky lg:top-6 gap-2 py-4'>
+              <CardHeader className='px-4 sm:px-6'>
                 <CardTitle className='text-lg sm:text-xl'>
                   Récapitulatif de la réservation
                 </CardTitle>
               </CardHeader>
-              <CardContent className='space-y-4 p-4 sm:p-6 pt-0'>
+              <CardContent className='space-y-4 px-4 sm:px-6'>
                 {/* Dates unavailable warning */}
                 {isAvailable === false && (
                   <div className='bg-red-50 border border-red-200 rounded-lg p-3'>
@@ -672,20 +683,78 @@ export default function ReservationPage() {
                         <div className='text-xs text-green-600 mt-1'>
                           Vous économisez {formatCurrency(totalSavings, 'EUR', 0)} sur ce séjour
                         </div>
-                        {bookingPricing?.priority && (
-                          <div className='text-xs text-gray-500 mt-1'>
-                            Stratégie :{' '}
-                            {bookingPricing.priority === 'MOST_ADVANTAGEOUS'
-                              ? 'Prix le plus avantageux'
-                              : bookingPricing.priority === 'PROMOTION_FIRST'
-                                ? 'Promotion en priorité'
-                                : bookingPricing.priority === 'SPECIAL_PRICE_FIRST'
-                                  ? 'Prix spécial en priorité'
-                                  : 'Réductions cumulées'}
-                          </div>
-                        )}
                       </div>
                     )}
+
+                    {/* Per-day breakdown (collapsible) */}
+                    {bookingPricing?.dailyBreakdown &&
+                      bookingPricing.dailyBreakdown.length > 0 &&
+                      (hasPromotions || hasSpecialPrices) && (
+                        <div className='space-y-2'>
+                          <button
+                            type='button'
+                            onClick={() => setShowDailyBreakdown(prev => !prev)}
+                            className='flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 transition-colors w-full'
+                          >
+                            <CalendarDays className='h-4 w-4' />
+                            <span className='font-medium'>Détail par nuit</span>
+                            {showDailyBreakdown ? (
+                              <ChevronUp className='h-4 w-4 ml-auto' />
+                            ) : (
+                              <ChevronDown className='h-4 w-4 ml-auto' />
+                            )}
+                          </button>
+
+                          {showDailyBreakdown && (
+                            <div className='space-y-1.5 max-h-48 overflow-y-auto'>
+                              {bookingPricing.dailyBreakdown.map((day, index) => (
+                                <div
+                                  key={index}
+                                  className='flex items-center justify-between py-1.5 px-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors text-xs sm:text-sm'
+                                >
+                                  <span className='font-medium text-gray-800'>
+                                    {new Date(day.date).toLocaleDateString('fr-FR', {
+                                      weekday: 'short',
+                                      day: 'numeric',
+                                      month: 'short',
+                                    })}
+                                  </span>
+                                  <div className='flex items-center gap-2'>
+                                    {day.savings > 0 && (
+                                      <>
+                                        {day.promotionApplied && (
+                                          <span className='text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium'>
+                                            Promo
+                                            {day.promotionDiscount
+                                              ? ` -${day.promotionDiscount}%`
+                                              : ''}
+                                          </span>
+                                        )}
+                                        {day.specialPriceApplied && (
+                                          <span className='text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium'>
+                                            Prix spécial
+                                          </span>
+                                        )}
+                                        <span className='text-xs text-gray-400 line-through'>
+                                          {formatCurrencySafe(day.basePrice)}
+                                        </span>
+                                      </>
+                                    )}
+                                    {day.savings < 0 && day.specialPriceApplied && (
+                                      <span className='text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-medium'>
+                                        Tarif spécial
+                                      </span>
+                                    )}
+                                    <span className='font-semibold text-gray-900'>
+                                      {formatCurrencySafe(day.finalPrice)}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                     {/* Base price */}
                     <div className='space-y-2'>

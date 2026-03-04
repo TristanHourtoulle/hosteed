@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/prisma'
-import { calculateTotalBookingCost } from '@/lib/utils/costCalculation'
+import { calculateBookingPrice } from '@/lib/services/booking-pricing.service'
+import { calculateExtrasCost } from '@/lib/utils/costCalculation'
 
 interface BookingCostRequest {
   productId: string
@@ -30,12 +31,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Récupérer le produit avec son prix de base
     const product = await prisma.product.findUnique({
       where: { id: productId },
       select: {
+        id: true,
         basePrice: true,
         priceMGA: true,
+        ownerId: true,
       },
     })
 
@@ -43,62 +45,65 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Produit non trouvé' }, { status: 404 })
     }
 
-    // Récupérer les extras sélectionnés
-    const selectedExtras = await prisma.productExtra.findMany({
-      where: {
-        id: { in: selectedExtraIds },
-      },
-    })
-
-    // Calculer les dates et la durée
     const bookingStartDate = new Date(startDate)
     const bookingEndDate = new Date(endDate)
-    const numberOfDays = Math.ceil(
-      (bookingEndDate.getTime() - bookingStartDate.getTime()) / (1000 * 60 * 60 * 24)
-    )
 
-    if (numberOfDays <= 0) {
+    if (bookingEndDate <= bookingStartDate) {
       return NextResponse.json(
         { error: 'La date de fin doit être après la date de début' },
         { status: 400 }
       )
     }
 
-    // Obtenir le prix de base selon la devise
-    const basePrice =
-      currency === 'EUR' ? parseFloat(product.basePrice) : parseFloat(product.priceMGA)
+    // Day-by-day pricing with special rates and promotions
+    const pricing = await calculateBookingPrice(
+      productId,
+      bookingStartDate,
+      bookingEndDate,
+      product.ownerId
+    )
 
-    // Calculer le coût total
-    const bookingDetails = {
-      startDate: bookingStartDate,
-      endDate: bookingEndDate,
-      guestCount,
-    }
+    // Calculate extras
+    const selectedExtras = await prisma.productExtra.findMany({
+      where: { id: { in: selectedExtraIds } },
+    })
 
-    const costCalculation = calculateTotalBookingCost(
-      basePrice,
-      numberOfDays,
+    const extrasTotal = calculateExtrasCost(
       selectedExtras,
-      bookingDetails,
+      { startDate: bookingStartDate, endDate: bookingEndDate, guestCount },
       currency
     )
 
-    // Retourner le détail complet du calcul
+    const basePrice =
+      currency === 'EUR' ? parseFloat(product.basePrice) : parseFloat(product.priceMGA)
+
     return NextResponse.json({
       productId,
       bookingDetails: {
         startDate: bookingStartDate,
         endDate: bookingEndDate,
-        numberOfDays,
+        numberOfDays: pricing.numberOfNights,
         guestCount,
       },
       pricing: {
         currency,
         basePrice,
-        basePricePerDay: basePrice,
-        baseTotal: costCalculation.baseTotal,
-        extrasTotal: costCalculation.extrasTotal,
-        grandTotal: costCalculation.grandTotal,
+        basePricePerDay: pricing.averageNightlyPrice,
+        baseTotal: pricing.subtotal,
+        extrasTotal,
+        grandTotal: pricing.subtotal + extrasTotal,
+        totalSavings: pricing.totalSavings,
+        promotionApplied: pricing.promotionApplied,
+        specialPriceApplied: pricing.specialPriceApplied,
+        dailyBreakdown: pricing.dailyBreakdown.map(day => ({
+          date: day.date,
+          basePrice: day.basePrice,
+          finalPrice: day.finalPrice,
+          promotionApplied: day.promotionApplied,
+          promotionDiscount: day.promotionDiscount,
+          specialPriceApplied: day.specialPriceApplied,
+          savings: day.savings,
+        })),
       },
       selectedExtras: selectedExtras.map(extra => ({
         id: extra.id,
