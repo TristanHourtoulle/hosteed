@@ -44,7 +44,7 @@ async function fetchHostProducts(
   return response.json()
 }
 
-export function useHostProducts(page: number = 1, limit: number = 20) {
+export function useHostProducts(page: number = 1, limit: number = 20, enabled: boolean = true) {
   return useQuery({
     queryKey: ['host-products', page, limit],
     queryFn: () => fetchHostProducts(page, limit),
@@ -52,6 +52,7 @@ export function useHostProducts(page: number = 1, limit: number = 20) {
     gcTime: 10 * 60 * 1000, // 10 minutes
     retry: 2,
     refetchOnWindowFocus: false,
+    enabled,
     placeholderData: previousData => previousData, // Garde les données précédentes pendant le chargement
   })
 }

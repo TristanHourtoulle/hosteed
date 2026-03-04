@@ -78,6 +78,7 @@ export function useAdminProductsPaginated() {
   const {
     data: result,
     isLoading,
+    isFetching,
     error,
     refetch,
   } = useQuery<AdminProductsResult>({
@@ -89,8 +90,9 @@ export function useAdminProductsPaginated() {
       }
       return await response.json()
     },
-    staleTime: 30000, // Cache for 30 seconds
+    staleTime: 30000,
     refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
   })
 
   const goToPage = (page: number) => {
@@ -118,6 +120,7 @@ export function useAdminProductsPaginated() {
       hasPrev: false,
     },
     loading: isLoading,
+    isFetching,
     error,
     searchTerm,
     handleSearch,

@@ -36,7 +36,7 @@ export default function HostDashboard() {
     data: hostProductsData,
     isLoading: loading,
     error,
-  } = useHostProducts(currentPage, productsPerPage)
+  } = useHostProducts(currentPage, productsPerPage, status === 'authenticated')
 
   const products = hostProductsData?.products || []
   const totalPages = hostProductsData?.totalPages || 0

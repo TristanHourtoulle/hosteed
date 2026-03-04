@@ -9,7 +9,7 @@ import { motion, Variants } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { XCircle, ArrowLeft } from 'lucide-react'
-import { getProductsForValidation, getValidationStats } from './actions'
+import { getProductsForValidation, getValidationStats, getRejectedProducts } from './actions'
 import { ValidationStatsCards } from './components/ValidationStatsCards'
 import ValidationTabs from './components/ValidationTabs'
 
@@ -107,13 +107,20 @@ export default function ValidationPage() {
     try {
       setLoading(true)
 
-      const [productsResult, statsResult] = await Promise.all([
+      const [productsResult, statsResult, rejectedResult] = await Promise.all([
         getProductsForValidation(),
         getValidationStats(),
+        getRejectedProducts(),
       ])
 
       if (productsResult.success && productsResult.data) {
-        setProducts(productsResult.data)
+        // Merge rejected products that may be missing from the paginated main query
+        const mainProducts = productsResult.data
+        const rejectedProducts =
+          rejectedResult.success && rejectedResult.data ? rejectedResult.data : []
+        const mainIds = new Set(mainProducts.map((p: Product) => p.id))
+        const missingRejected = rejectedProducts.filter((p: Product) => !mainIds.has(p.id))
+        setProducts([...mainProducts, ...missingRejected])
       } else {
         setError(productsResult.error || 'Erreur lors du chargement des produits')
       }
