@@ -93,6 +93,13 @@ export interface CreateProductInput {
   nearbyPlaces?: NearbyPlace[]
   transportOptions?: TransportOption[]
   propertyInfo?: PropertyInfo
+  rules?: {
+    smokingAllowed?: boolean
+    petsAllowed?: boolean
+    eventsAllowed?: boolean
+    selfCheckIn?: boolean
+    selfCheckInType?: string
+  }
   cancellationPolicy?: CancellationPolicy
   // Nouveaux champs pour les hôtels
   isHotel?: boolean

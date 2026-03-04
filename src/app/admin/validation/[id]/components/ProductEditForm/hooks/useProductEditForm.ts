@@ -68,6 +68,16 @@ export const useProductEditForm = ({ product, types }: UseProductEditFormProps) 
     })) || [],
     proximityLandmarks: [],
     transportation: '',
+    smokingAllowed: false,
+    petsAllowed: false,
+    eventsAllowed: false,
+    selfCheckIn: false,
+    selfCheckInType: '',
+    hasStairs: false,
+    hasElevator: false,
+    hasHandicapAccess: false,
+    hasPetsOnProperty: false,
+    additionalNotes: '',
     isHotel: !!(product.hotel && product.hotel.length > 0), // ✅ Check if array has items
     hotelName: product.hotel && product.hotel.length > 0 ? product.hotel[0].name : '', // ✅ Take first hotel
     availableRooms: product.availableRooms?.toString() || '',

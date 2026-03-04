@@ -47,6 +47,8 @@ import ErrorAlert, { ErrorDetails } from '@/components/ui/ErrorAlert'
 import { UserCombobox } from '@/components/ui/UserCombobox'
 import { parseCreateProductError, createValidationError } from '@/lib/utils/errorHandler'
 import SEOFieldsCard from '@/components/ui/SEOFieldsCard'
+import { ProductRulesForm } from './components/ProductRulesForm'
+import { ProductPropertyInfoForm } from './components/ProductPropertyInfoForm'
 
 // Import types, utilities, and hooks
 import type { NearbyPlace, ImageFile, TestBooking, SpecialPrice, FormData } from './types'
@@ -165,6 +167,11 @@ export default function CreateProductPage() {
         [field]: isChecked ? currentArray.filter(item => item !== id) : [...currentArray, id],
       }
     })
+  }
+
+  // Generic field updater for form section components
+  const handleFieldChange = (field: keyof FormData, value: unknown) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
   }
 
   // File handling
@@ -382,6 +389,29 @@ export default function CreateProductPage() {
         })),
         // Données SEO
         seoData: seoData,
+        // Transport options (parsed from comma-separated string)
+        transportOptions: formData.transportation
+          ? formData.transportation
+              .split(',')
+              .map((name: string) => ({ name: name.trim(), description: '' }))
+              .filter((t: { name: string }) => t.name.length > 0)
+          : undefined,
+        // Rules
+        rules: {
+          smokingAllowed: formData.smokingAllowed || false,
+          petsAllowed: formData.petsAllowed || false,
+          eventsAllowed: formData.eventsAllowed || false,
+          selfCheckIn: formData.selfCheckIn || false,
+          selfCheckInType: (formData.selfCheckInType as string) || undefined,
+        },
+        // Property info
+        propertyInfo: {
+          hasStairs: formData.hasStairs || false,
+          hasElevator: formData.hasElevator || false,
+          hasHandicapAccess: formData.hasHandicapAccess || false,
+          hasPetsOnProperty: formData.hasPetsOnProperty || false,
+          additionalNotes: (formData.additionalNotes as string) || undefined,
+        },
       }
 
       const result = await createProduct(productData)
@@ -1267,6 +1297,20 @@ export default function CreateProductPage() {
               </CardContent>
             </Card>
           </motion.div>
+
+          {/* Règles de la propriété */}
+          <ProductRulesForm
+            formData={formData as never}
+            onChange={handleFieldChange as never}
+            itemVariants={itemVariants}
+          />
+
+          {/* Informations sur la propriété */}
+          <ProductPropertyInfoForm
+            formData={formData as never}
+            onChange={handleFieldChange as never}
+            itemVariants={itemVariants}
+          />
 
           {/* Section Admin - Assigner à un autre utilisateur */}
           {session?.user?.roles === 'ADMIN' && (

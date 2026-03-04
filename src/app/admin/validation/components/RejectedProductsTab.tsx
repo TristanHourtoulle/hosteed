@@ -41,13 +41,6 @@ export function RejectedProductsTab({ products, onUpdate }: RejectedProductsTabP
 
   const rejectedProducts = products.filter(p => p.validate === ProductValidation.Refused)
 
-  console.log('RejectedProductsTab - Tous les produits:', products.length)
-  console.log('RejectedProductsTab - Produits rejetés:', rejectedProducts.length)
-  console.log(
-    'RejectedProductsTab - Types de validation:',
-    products.map(p => ({ id: p.id, validate: p.validate }))
-  )
-
   const toggleProductSelection = (productId: string) => {
     setSelectedProducts(prev =>
       prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]

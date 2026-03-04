@@ -264,6 +264,87 @@ export async function findProductById(id: string) {
 }
 
 /**
+ * Find a product by ID for admin view — no limits on relations, includes unapproved reviews.
+ * @param id - Product ID
+ * @returns Full product with all relations, or null if not found
+ */
+export async function findProductByIdForAdmin(id: string) {
+  try {
+    const product = await prisma.product.findUnique({
+      where: { id },
+      include: {
+        img: true,
+        type: true,
+        equipments: true,
+        servicesList: true,
+        mealsList: true,
+        options: true,
+        rents: {
+          orderBy: { id: 'desc' },
+          take: 20,
+          include: {
+            user: {
+              select: { id: true, name: true, lastname: true, email: true },
+            },
+            options: true,
+          },
+        },
+        discount: true,
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            lastname: true,
+            email: true,
+            image: true,
+            profilePicture: true,
+            profilePictureBase64: true,
+          },
+        },
+        securities: true,
+        includedServices: true,
+        extras: true,
+        highlights: true,
+        hotel: true,
+        rules: true,
+        nearbyPlaces: true,
+        transportOptions: true,
+        propertyInfo: true,
+        promotions: {
+          select: {
+            id: true,
+            discountPercentage: true,
+            startDate: true,
+            endDate: true,
+            isActive: true,
+          },
+        },
+        reviews: {
+          select: {
+            id: true,
+            title: true,
+            text: true,
+            grade: true,
+            welcomeGrade: true,
+            staff: true,
+            comfort: true,
+            equipment: true,
+            cleaning: true,
+            visitDate: true,
+            publishDate: true,
+            approved: true,
+          },
+        },
+      },
+    })
+    return product
+  } catch (error) {
+    console.error('Erreur lors de la recherche admin du produit:', error)
+    return null
+  }
+}
+
+/**
  * Find a product by slug or ID (with fallback)
  * This allows accessing products via SEO-friendly URLs while maintaining backward compatibility
  */
@@ -1041,10 +1122,11 @@ export async function createProduct(data: CreateProductInput) {
         productId: createdProduct.id,
         checkInTime: formatHour(data.arriving),
         checkOutTime: formatHour(data.leaving),
-        smokingAllowed: false,
-        petsAllowed: false,
-        eventsAllowed: false,
-        selfCheckIn: false,
+        smokingAllowed: data.rules?.smokingAllowed ?? false,
+        petsAllowed: data.rules?.petsAllowed ?? false,
+        eventsAllowed: data.rules?.eventsAllowed ?? false,
+        selfCheckIn: data.rules?.selfCheckIn ?? false,
+        selfCheckInType: data.rules?.selfCheckInType ?? null,
       },
     })
 
@@ -1328,6 +1410,87 @@ export async function deleteMultipleRejectedProducts(ids: string[]) {
     console.error('Erreur lors de la suppression en masse:', error)
     return { success: false, error: error instanceof Error ? error.message : 'Erreur inconnue' }
   }
+}
+
+/**
+ * Delete a single product by ID, blocking if it has active reservations.
+ * @param id - Product ID to delete
+ * @returns Object with success status and deleted product name
+ * @throws {Error} If product not found or has active reservations (WAITING, RESERVED, CHECKIN)
+ */
+export async function deleteProduct(id: string) {
+  const product = await prisma.product.findUnique({
+    where: { id },
+    include: {
+      _count: {
+        select: {
+          rents: {
+            where: {
+              status: { in: ['WAITING', 'RESERVED', 'CHECKIN'] },
+            },
+          },
+        },
+      },
+    },
+  })
+
+  if (!product) {
+    throw new Error('Produit non trouvé')
+  }
+
+  if (product._count.rents > 0) {
+    throw new Error('Impossible de supprimer un produit avec des réservations actives')
+  }
+
+  await prisma.product.delete({ where: { id } })
+  await invalidateProductCache(id)
+
+  return { success: true, productName: product.name }
+}
+
+/**
+ * Delete multiple products by IDs, skipping those with active reservations.
+ * @param ids - Array of product IDs to delete
+ * @returns Object with deletedCount and blockedProducts (products with active rents that were skipped)
+ * @throws {Error} If no products found for the given IDs
+ */
+export async function deleteMultipleProducts(ids: string[]) {
+  const products = await prisma.product.findMany({
+    where: { id: { in: ids } },
+    include: {
+      _count: {
+        select: {
+          rents: {
+            where: {
+              status: { in: ['WAITING', 'RESERVED', 'CHECKIN'] },
+            },
+          },
+        },
+      },
+    },
+  })
+
+  if (products.length === 0) {
+    throw new Error('Aucun produit trouvé')
+  }
+
+  const blockedProducts = products
+    .filter(p => p._count.rents > 0)
+    .map(p => ({ id: p.id, name: p.name, activeRentsCount: p._count.rents }))
+
+  const eligibleIds = products.filter(p => p._count.rents === 0).map(p => p.id)
+
+  let deletedCount = 0
+  if (eligibleIds.length > 0) {
+    const result = await prisma.product.deleteMany({
+      where: { id: { in: eligibleIds } },
+    })
+    deletedCount = result.count
+
+    await Promise.allSettled(eligibleIds.map(id => invalidateProductCache(id)))
+  }
+
+  return { success: true, deletedCount, blockedProducts }
 }
 
 export async function resubmitProductWithChange(
@@ -1888,6 +2051,21 @@ interface UpdateProductInput {
   extraIds?: string[]
   highlightIds?: string[]
   nearbyPlaces?: Array<{ name: string; distance: number; duration?: number; transport?: string }>
+  transportOptions?: Array<{ name: string; description?: string }>
+  propertyInfo?: {
+    hasStairs?: boolean
+    hasElevator?: boolean
+    hasHandicapAccess?: boolean
+    hasPetsOnProperty?: boolean
+    additionalNotes?: string
+  }
+  rules?: {
+    smokingAllowed?: boolean
+    petsAllowed?: boolean
+    eventsAllowed?: boolean
+    selfCheckIn?: boolean
+    selfCheckInType?: string
+  }
   isHotel?: boolean
   hotelInfo?: { name: string; availableRooms: number }
   // SEO data
@@ -2067,6 +2245,76 @@ export async function updateProduct(productId: string, data: UpdateProductInput)
       }
     }
 
+    // Transport options - delete existing and create new
+    if (data.transportOptions !== undefined) {
+      await prisma.transportOption.deleteMany({
+        where: { productId },
+      })
+
+      if (data.transportOptions.length > 0) {
+        await prisma.transportOption.createMany({
+          data: data.transportOptions.map(t => ({
+            productId,
+            name: t.name,
+            description: t.description || '',
+          })),
+        })
+      }
+    }
+
+    // Property info - upsert
+    if (data.propertyInfo !== undefined) {
+      await prisma.propertyInfo.upsert({
+        where: { productId },
+        update: {
+          hasStairs: data.propertyInfo.hasStairs ?? false,
+          hasElevator: data.propertyInfo.hasElevator ?? false,
+          hasHandicapAccess: data.propertyInfo.hasHandicapAccess ?? false,
+          hasPetsOnProperty: data.propertyInfo.hasPetsOnProperty ?? false,
+          additionalNotes: data.propertyInfo.additionalNotes ?? null,
+        },
+        create: {
+          productId,
+          hasStairs: data.propertyInfo.hasStairs ?? false,
+          hasElevator: data.propertyInfo.hasElevator ?? false,
+          hasHandicapAccess: data.propertyInfo.hasHandicapAccess ?? false,
+          hasPetsOnProperty: data.propertyInfo.hasPetsOnProperty ?? false,
+          additionalNotes: data.propertyInfo.additionalNotes ?? null,
+        },
+      })
+    }
+
+    // Rules - find and update or create
+    if (data.rules !== undefined) {
+      const existingRules = await prisma.rules.findFirst({
+        where: { productId },
+      })
+
+      if (existingRules) {
+        await prisma.rules.update({
+          where: { id: existingRules.id },
+          data: {
+            smokingAllowed: data.rules.smokingAllowed ?? false,
+            petsAllowed: data.rules.petsAllowed ?? false,
+            eventsAllowed: data.rules.eventsAllowed ?? false,
+            selfCheckIn: data.rules.selfCheckIn ?? false,
+            selfCheckInType: data.rules.selfCheckInType ?? null,
+          },
+        })
+      } else {
+        await prisma.rules.create({
+          data: {
+            productId,
+            smokingAllowed: data.rules.smokingAllowed ?? false,
+            petsAllowed: data.rules.petsAllowed ?? false,
+            eventsAllowed: data.rules.eventsAllowed ?? false,
+            selfCheckIn: data.rules.selfCheckIn ?? false,
+            selfCheckInType: data.rules.selfCheckInType ?? null,
+          },
+        })
+      }
+    }
+
     // Hotel info - just update availableRooms on Product
     if (data.isHotel !== undefined && data.isHotel && data.hotelInfo) {
       updateData.availableRooms = data.hotelInfo.availableRooms
@@ -2109,6 +2357,9 @@ export async function updateProduct(productId: string, data: UpdateProductInput)
         extras: true,
         highlights: true,
         nearbyPlaces: true,
+        transportOptions: true,
+        propertyInfo: true,
+        rules: true,
         hotel: true,
       },
     })
