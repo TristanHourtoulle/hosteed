@@ -57,7 +57,7 @@ export default function ProductPricingForm({
 
             <div className='space-y-2'>
               <label htmlFor='basePriceMGA' className='text-sm font-medium text-slate-700'>
-                Prix de base par nuit (MGA)
+                Prix de base par nuit (MGA) *
               </label>
               <NumberInput
                 id='basePriceMGA'
