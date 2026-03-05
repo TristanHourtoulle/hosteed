@@ -360,6 +360,18 @@ export async function GET(request: NextRequest) {
       type: {
         select: { name: true, id: true },
       },
+      // Include approved reviews for rating calculation
+      reviews: {
+        where: { approved: true },
+        select: {
+          grade: true,
+          welcomeGrade: true,
+          staff: true,
+          comfort: true,
+          equipment: true,
+          cleaning: true,
+        },
+      },
       // Include active promotions
       promotions: {
         where: {

@@ -28,7 +28,7 @@ import { ProductHeader } from './components/ProductHeader'
 import { ProductDetails } from './components/ProductDetails'
 import { ProductSidebar } from './components/ProductSidebar'
 import { ComparisonView } from './components/ComparisonView'
-import { ProductEditForm } from './components/ProductEditForm'
+import { ProductEditWizard } from './components/ProductEditWizard'
 
 interface ValidationHistoryEntry {
   id: string
@@ -590,7 +590,7 @@ export default function ValidationDetailPage({ params }: ValidationDetailPagePro
 
         {activeTab === 'edit' && (
           <>
-            <ProductEditForm
+            <ProductEditWizard
               product={product}
               onSave={handleSaveProduct}
               onCancel={handleCancelEdit}
