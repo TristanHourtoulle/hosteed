@@ -19,7 +19,7 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
     const sanitized = DOMPurify.sanitize(content)
     return (
       <div
-        className={PROSE_CLASSES}
+        className={`${PROSE_CLASSES} tiptap-content`}
         dangerouslySetInnerHTML={{ __html: sanitized }}
       />
     )
