@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/shadcnui/badge'
 import { Card, CardContent, CardFooter } from '@/components/ui/shadcnui/card'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Bed, MapPin, Euro, Trash2, Pencil } from 'lucide-react'
+import { Bed, MapPin, Euro, Trash2, Pencil, Wrench, ConciergeBell } from 'lucide-react'
 import { Product } from '@prisma/client'
 import {
   getValidationStatusLabel,
@@ -18,6 +18,10 @@ import { getLocationDisplay } from '@/lib/utils'
 interface ProductCardProps {
   product: Product & {
     img?: { img: string }[]
+    type?: { id: string; name: string } | null
+    equipmentCount?: number
+    serviceCount?: number
+    typeName?: string | null
   }
   selected?: boolean
   onToggleSelect?: (id: string) => void
@@ -71,6 +75,11 @@ export function ProductCard({ product, selected, onToggleSelect, onDelete }: Pro
           >
             {getValidationStatusLabel(product.validate)}
           </Badge>
+          {(product.typeName || product.type?.name) && (
+            <Badge variant='outline' className='absolute top-2 left-2 z-10 bg-white/90 text-xs'>
+              {product.typeName || product.type?.name}
+            </Badge>
+          )}
         </div>
 
         <CardContent className='flex-1 p-4 space-y-3'>
@@ -92,6 +101,18 @@ export function ProductCard({ product, selected, onToggleSelect, onDelete }: Pro
               <Euro className='h-4 w-4' />
               <span>{product.basePrice}€ / nuit</span>
             </div>
+            {(product.equipmentCount !== undefined && product.equipmentCount > 0) && (
+              <div className='flex items-center gap-1'>
+                <Wrench className='h-4 w-4' />
+                <span>{product.equipmentCount} équip.</span>
+              </div>
+            )}
+            {(product.serviceCount !== undefined && product.serviceCount > 0) && (
+              <div className='flex items-center gap-1'>
+                <ConciergeBell className='h-4 w-4' />
+                <span>{product.serviceCount} serv.</span>
+              </div>
+            )}
           </div>
         </CardContent>
 
