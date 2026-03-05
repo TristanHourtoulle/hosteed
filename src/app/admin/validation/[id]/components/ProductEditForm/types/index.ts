@@ -85,9 +85,22 @@ export interface Product {
   minPeople?: number
   maxPeople?: number
   nearbyPlaces?: { name: string; distance: string; duration: string; transport: string }[]
+  rules?: {
+    smokingAllowed: boolean
+    petsAllowed: boolean
+    eventsAllowed: boolean
+    checkInTime: string
+    checkOutTime: string
+    selfCheckIn: boolean
+    selfCheckInType?: string
+  }
+  transportOptions?: { name: string; description: string }[]
   propertyInfo?: {
+    hasStairs?: boolean
+    hasElevator?: boolean
     hasHandicapAccess?: boolean
     hasPetsOnProperty?: boolean
+    additionalNotes?: string
   } | null
   hotel?: { id: string; name: string }[] // Array because it's a one-to-many relation
   img?: { img: string }[]
