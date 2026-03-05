@@ -187,6 +187,7 @@ export async function createUser(
       data: {
         ...data,
         password: hashedPassword,
+        ...(disableEmail ? { emailVerified: new Date() } : {}),
       },
       select: {
         id: true,
@@ -428,4 +429,78 @@ export async function updateUserRole(id: string, role: UserRole) {
     console.error("Erreur lors de la mise à jour du rôle de l'utilisateur:", error)
     return null
   }
+}
+
+const ACTIVE_RENT_STATUSES = ['WAITING', 'RESERVED', 'CHECKIN'] as const
+
+export async function getUserDeletionInfo(id: string) {
+  const [user, ownedProductCount, rentCount, activeRentsAsGuest, activeRentsAsHost] =
+    await Promise.all([
+      prisma.user.findUnique({
+        where: { id },
+        select: { id: true, name: true, lastname: true, email: true },
+      }),
+      prisma.product.count({ where: { ownerId: id } }),
+      prisma.rent.count({ where: { userId: id } }),
+      prisma.rent.findMany({
+        where: { userId: id, status: { in: [...ACTIVE_RENT_STATUSES] } },
+        select: {
+          id: true,
+          status: true,
+          arrivingDate: true,
+          leavingDate: true,
+          product: { select: { id: true, name: true } },
+        },
+      }),
+      prisma.rent.findMany({
+        where: {
+          product: { ownerId: id },
+          status: { in: [...ACTIVE_RENT_STATUSES] },
+        },
+        select: {
+          id: true,
+          status: true,
+          arrivingDate: true,
+          leavingDate: true,
+          product: { select: { id: true, name: true } },
+          user: { select: { id: true, name: true, email: true } },
+        },
+      }),
+    ])
+
+  if (!user) return null
+
+  return {
+    user,
+    ownedProductCount,
+    rentCount,
+    activeRentsAsGuest,
+    activeRentsAsHost,
+    hasActiveReservations: activeRentsAsGuest.length > 0 || activeRentsAsHost.length > 0,
+  }
+}
+
+export async function deleteUser(id: string): Promise<
+  | { success: true }
+  | { success: false; reason: 'NOT_FOUND' }
+  | { success: false; reason: 'ACTIVE_RESERVATIONS'; activeRentsAsGuest: unknown[]; activeRentsAsHost: unknown[] }
+> {
+  const info = await getUserDeletionInfo(id)
+
+  if (!info) {
+    return { success: false, reason: 'NOT_FOUND' }
+  }
+
+  if (info.hasActiveReservations) {
+    return {
+      success: false,
+      reason: 'ACTIVE_RESERVATIONS',
+      activeRentsAsGuest: info.activeRentsAsGuest,
+      activeRentsAsHost: info.activeRentsAsHost,
+    }
+  }
+
+  await prisma.user.delete({ where: { id } })
+
+  return { success: true }
 }
