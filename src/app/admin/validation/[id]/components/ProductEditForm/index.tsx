@@ -3,8 +3,12 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Edit3, Save } from 'lucide-react'
+import { ArrowLeft, Edit3, Save, Users, Home } from 'lucide-react'
 import ErrorAlert from '@/components/ui/ErrorAlert'
+import SEOFieldsCard from '@/components/ui/SEOFieldsCard'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
+import { Input } from '@/components/ui/shadcnui/input'
+import { Label } from '@/components/ui/shadcnui/label'
 import CreateServiceModal from '@/components/ui/CreateServiceModal'
 import CreateExtraModal from '@/components/ui/CreateExtraModal'
 import CreateHighlightModal from '@/components/ui/CreateHighlightModal'
@@ -75,6 +79,8 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
   const {
     formData,
     setFormData,
+    seoData,
+    setSeoData,
     handleInputChange,
     handleCheckboxChange,
   } = useProductEditForm({ product, types })
@@ -192,6 +198,13 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
               availableRooms: Number(formData.availableRooms) || 0,
             }
           : undefined,
+        // SEO data
+        seoData: {
+          metaTitle: seoData.metaTitle,
+          metaDescription: seoData.metaDescription,
+          keywords: seoData.keywords,
+          slug: seoData.slug,
+        },
       }
 
       console.log('📤 Sending update to API:', updateData)
@@ -301,6 +314,77 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
               itemVariants={itemVariants}
             />
 
+            {/* Hotel Configuration - Conditional */}
+            {formData.isHotel && (
+              <motion.div variants={itemVariants}>
+                <Card className="border-0 shadow-lg bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 rounded-2xl">
+                  <CardHeader className="px-6 py-4 border-b border-amber-100">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-amber-100 rounded-lg">
+                        <Users className="h-5 w-5 text-amber-700" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg text-amber-900">Configuration Hôtel</CardTitle>
+                        <p className="text-amber-700 text-sm mt-0.5">
+                          Configuration spécifique pour la gestion hôtelière
+                        </p>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-6 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="hotelName" className="text-amber-800">
+                          Nom de l&apos;hôtel
+                        </Label>
+                        <Input
+                          id="hotelName"
+                          name="hotelName"
+                          type="text"
+                          placeholder="Ex: Hôtel des Jardins"
+                          value={formData.hotelName}
+                          onChange={handleInputChange}
+                          className="bg-white/80 border-amber-200 focus:border-amber-400 focus:ring-amber-200"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="availableRooms" className="text-amber-800">
+                          Nombre de chambres disponibles
+                        </Label>
+                        <Input
+                          id="availableRooms"
+                          name="availableRooms"
+                          type="number"
+                          min="1"
+                          placeholder="Ex: 5"
+                          value={formData.availableRooms}
+                          onChange={handleInputChange}
+                          className="bg-white/80 border-amber-200 focus:border-amber-400 focus:ring-amber-200"
+                        />
+                      </div>
+                    </div>
+                    <div className="bg-amber-100 border border-amber-200 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="p-1.5 bg-amber-200 rounded-full">
+                          <Home className="h-4 w-4 text-amber-700" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="text-sm font-semibold text-amber-800 mb-1">
+                            Fonctionnement Hôtelier
+                          </h4>
+                          <p className="text-xs text-amber-700 leading-relaxed">
+                            Cette chambre représente un type de chambre dans votre hôtel. Si vous avez{' '}
+                            <span className="font-semibold">{formData.availableRooms || 'X'}</span>{' '}
+                            chambres de ce type, plusieurs clients pourront réserver en même temps.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
             {/* Location & Contact Section */}
             <LocationContactSection
               formData={formData}
@@ -374,6 +458,14 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
               setShowGalleryPreview={setShowGalleryPreview}
               itemVariants={itemVariants}
             />
+            {/* SEO Fields */}
+            <motion.div variants={itemVariants}>
+              <SEOFieldsCard
+                seoData={seoData}
+                onSeoChange={setSeoData}
+                articleTitle={formData.name}
+              />
+            </motion.div>
           </div>
 
           {/* Submit Button */}
