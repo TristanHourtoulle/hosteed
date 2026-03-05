@@ -112,6 +112,10 @@ export interface Product {
     type: ExtraPriceType
   }[]
   highlights?: { id: string; name: string; description: string | null; icon: string | null }[]
+  metaTitle?: string | null
+  metaDescription?: string | null
+  keywords?: string | null
+  slug?: string | null
 }
 
 export interface ProductEditFormProps {
