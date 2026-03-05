@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { ProductFormData, Product } from '../types'
 import type { TypeRentInterface } from '@/lib/interface/typeRentInterface'
+import type { SEOData } from '@/components/ui/SEOFieldsCard'
 
 interface UseProductEditFormProps {
   product: Product
@@ -83,6 +84,13 @@ export const useProductEditForm = ({ product, types }: UseProductEditFormProps) 
     availableRooms: product.availableRooms?.toString() || '',
   })
 
+  const [seoData, setSeoData] = useState<SEOData>({
+    metaTitle: product.metaTitle || '',
+    metaDescription: product.metaDescription || '',
+    keywords: product.keywords || '',
+    slug: product.slug || '',
+  })
+
   const [newPlace, setNewPlace] = useState({
     name: '',
     distance: '',
@@ -147,6 +155,8 @@ export const useProductEditForm = ({ product, types }: UseProductEditFormProps) 
   return {
     formData,
     setFormData,
+    seoData,
+    setSeoData,
     newPlace,
     setNewPlace,
     handleInputChange,
