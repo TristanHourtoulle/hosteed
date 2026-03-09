@@ -40,6 +40,8 @@ import {
   deleteEquipement,
 } from '@/lib/services/equipments.service'
 import { EquipmentInterface } from '@/lib/interface/equipmentInterface'
+import { IconPicker } from '@/components/ui/IconPicker'
+import { DynamicIcon } from '@/lib/utils/iconMapping'
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -78,11 +80,13 @@ export default function EquipmentsPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [newOptionName, setNewOptionName] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [selectedIcon, setSelectedIcon] = useState('CheckCircle')
 
   // États pour l'édition
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [editingOption, setEditingOption] = useState<EquipmentInterface | null>(null)
   const [editOptionName, setEditOptionName] = useState('')
+  const [editIcon, setEditIcon] = useState('CheckCircle')
 
   // États pour la suppression
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -120,12 +124,12 @@ export default function EquipmentsPage() {
 
     setIsSubmitting(true)
     try {
-      // Le service createEquipment prend (name, icon) en paramètres
-      const newOption = await createEquipment(newOptionName, 'default-icon')
+      const newOption = await createEquipment(newOptionName, selectedIcon)
 
       if (newOption) {
         setEquipments([...equipments, newOption])
         setNewOptionName('')
+        setSelectedIcon('CheckCircle')
         setIsAddDialogOpen(false)
       } else {
         setError("Erreur lors de la création de l'option")
@@ -141,6 +145,7 @@ export default function EquipmentsPage() {
   const handleEditOption = (option: EquipmentInterface) => {
     setEditingOption(option)
     setEditOptionName(option.name || '')
+    setEditIcon(option.icon || 'CheckCircle')
     setIsEditDialogOpen(true)
   }
 
@@ -149,11 +154,10 @@ export default function EquipmentsPage() {
 
     setIsSubmitting(true)
     try {
-      // updateEquipment prend (id, name, icon)
       const updatedOption = await updateEquipment(
         editingOption.id,
         editOptionName,
-        editingOption.icon || 'default-icon'
+        editIcon
       )
 
       if (updatedOption) {
@@ -276,7 +280,7 @@ export default function EquipmentsPage() {
                     Ajouter un équipement
                   </Button>
                 </DialogTrigger>
-                <DialogContent className='sm:max-w-md'>
+                <DialogContent className='sm:max-w-lg'>
                   <DialogHeader>
                     <DialogTitle className='flex items-center gap-2'>
                       <BrushCleaning className='h-5 w-5 text-green-600' />
@@ -297,11 +301,15 @@ export default function EquipmentsPage() {
                         onKeyDown={e => e.key === 'Enter' && !isSubmitting && handleAddOption()}
                       />
                     </div>
+                    <IconPicker value={selectedIcon} onChange={setSelectedIcon} />
                   </div>
                   <DialogFooter>
                     <Button
                       variant='outline'
-                      onClick={() => setIsAddDialogOpen(false)}
+                      onClick={() => {
+                        setIsAddDialogOpen(false)
+                        setSelectedIcon('CheckCircle')
+                      }}
                       disabled={isSubmitting}
                     >
                       Annuler
@@ -329,7 +337,7 @@ export default function EquipmentsPage() {
 
               {/* Dialog d'édition */}
               <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                <DialogContent className='sm:max-w-[425px]'>
+                <DialogContent className='sm:max-w-lg'>
                   <DialogHeader>
                     <DialogTitle className='flex items-center gap-2'>
                       <Edit3 className='h-5 w-5 text-green-600' />
@@ -348,6 +356,7 @@ export default function EquipmentsPage() {
                         onKeyDown={e => e.key === 'Enter' && !isSubmitting && handleUpdateOption()}
                       />
                     </div>
+                    <IconPicker value={editIcon} onChange={setEditIcon} />
                   </div>
                   <DialogFooter>
                     <Button
@@ -462,7 +471,7 @@ export default function EquipmentsPage() {
                       <div className='flex items-start justify-between'>
                         <div className='flex items-center gap-3'>
                           <div className='p-2 bg-green-50 rounded-lg group-hover:bg-green-100 transition-colors'>
-                            <BrushCleaning className='h-5 w-5 text-green-600' />
+                            <DynamicIcon name={option.icon} className='h-5 w-5 text-green-600' />
                           </div>
                           <div>
                             <CardTitle className='text-lg font-semibold text-slate-800'>
