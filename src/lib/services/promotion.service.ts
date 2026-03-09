@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma'
 import { ProductPromotion, PricingPriority, SpecialPrices } from '@prisma/client'
+import { invalidateProductCache } from '@/lib/cache/invalidation'
 
 // ============================================
 // TYPES & INTERFACES
@@ -124,6 +125,7 @@ export async function createPromotion(data: CreatePromotionInput): Promise<Creat
     },
   })
 
+  await invalidateProductCache(data.productId)
   return { promotion }
 }
 
@@ -134,7 +136,7 @@ export async function confirmPromotionWithOverlap(
   data: CreatePromotionInput,
   overlappingIds: string[]
 ): Promise<ProductPromotion> {
-  return await prisma.$transaction(async tx => {
+  const result = await prisma.$transaction(async tx => {
     // 1. Créer la nouvelle promotion
     const newPromotion = await tx.productPromotion.create({
       data: {
@@ -158,6 +160,9 @@ export async function confirmPromotionWithOverlap(
 
     return newPromotion
   })
+
+  await invalidateProductCache(data.productId)
+  return result
 }
 
 /**
@@ -189,7 +194,7 @@ export async function updatePromotion(
     }
   }
 
-  return await prisma.productPromotion.update({
+  const result = await prisma.productPromotion.update({
     where: { id },
     data: {
       discountPercentage: data.discountPercentage,
@@ -197,16 +202,22 @@ export async function updatePromotion(
       endDate: data.endDate,
     },
   })
+
+  await invalidateProductCache(result.productId)
+  return result
 }
 
 /**
  * Annuler une promotion (soft delete)
  */
 export async function cancelPromotion(id: string): Promise<ProductPromotion> {
-  return await prisma.productPromotion.update({
+  const result = await prisma.productPromotion.update({
     where: { id },
     data: { isActive: false },
   })
+
+  await invalidateProductCache(result.productId)
+  return result
 }
 
 /**
@@ -318,8 +329,6 @@ export async function validatePromotionCommission(
   productId: string,
   discountPercentage: number
 ): Promise<boolean> {
-  console.log('🔶 [validatePromotionCommission] Called with:', { productId, discountPercentage })
-
   const product = await prisma.product.findUnique({
     where: { id: productId },
     include: {
@@ -332,34 +341,19 @@ export async function validatePromotionCommission(
   })
 
   if (!product) {
-    console.log('❌ [validatePromotionCommission] Product not found')
     throw new Error('Produit non trouvé')
   }
 
-  console.log('📦 [validatePromotionCommission] Product found:', {
-    id: product.id,
-    name: product.name,
-    basePrice: product.basePrice,
-    typeId: product.typeId,
-  })
-
   const basePrice = parseFloat(product.basePrice)
   const discountedPrice = basePrice * (1 - discountPercentage / 100)
-  console.log('💰 [validatePromotionCommission] Price calculation:', { basePrice, discountedPrice, discountPercentage })
 
-  // Vérifier que le prix réduit n'est pas négatif
   if (discountedPrice < 0) {
-    console.log('❌ [validatePromotionCommission] Discounted price is negative - rejecting')
     return false
   }
 
-  // Récupérer les commissions
   const commission = product.type.commission
-  console.log('📊 [validatePromotionCommission] Commission config:', commission)
 
   if (!commission) {
-    console.log('✅ [validatePromotionCommission] No commission configured - allowing promotion')
-    // Pas de commission configurée, on autorise
     return true
   }
 
@@ -371,26 +365,8 @@ export async function validatePromotionCommission(
 
   const platformRevenue = hostCommission + clientCommission
 
-  console.log('💵 [validatePromotionCommission] Commission breakdown:', {
-    hostCommissionRate: commission.hostCommissionRate,
-    hostCommissionFixed: commission.hostCommissionFixed,
-    clientCommissionRate: commission.clientCommissionRate,
-    clientCommissionFixed: commission.clientCommissionFixed,
-    hostCommission,
-    clientCommission,
-    platformRevenue,
-    minimumRequired: 1,
-  })
-
-  const isValid = platformRevenue >= 1
-  console.log(`${isValid ? '✅' : '❌'} [validatePromotionCommission] Validation result:`, {
-    isValid,
-    platformRevenue,
-    meetsMinimum: platformRevenue >= 1,
-  })
-
   // La plateforme doit gagner au minimum 1€
-  return isValid
+  return platformRevenue >= 1
 }
 
 // ============================================
