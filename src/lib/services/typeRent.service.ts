@@ -30,12 +30,13 @@ export async function findAllTypeRent(): Promise<TypeRent[]> {
       },
     })
 
-    // Add productCount to each type and sort by count (descending)
+    // Add productCount, filter out empty categories, and sort by count (descending)
     return result
       .map(type => ({
         ...type,
         productCount: type._count.products,
       }))
+      .filter(type => type._count.products > 0)
       .sort((a, b) => b._count.products - a._count.products) as unknown as TypeRent[]
   } catch (error) {
     console.error('Erreur lors de la recherche des types de location:', error)

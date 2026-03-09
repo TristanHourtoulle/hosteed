@@ -13,7 +13,7 @@ export async function GET() {
 
     return NextResponse.json(types || [], {
       headers: {
-        'Cache-Control': 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=172800', // 24h cache
+        'Cache-Control': 'public, max-age=300, s-maxage=300, stale-while-revalidate=3600', // 5min cache, 1h stale
         'X-Response-Time': responseTime.toString(),
         'X-Cache-Service': 'redis-static',
         'X-Cache-Meta': JSON.stringify({

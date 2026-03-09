@@ -1,4 +1,5 @@
 import { revalidateTag, revalidatePath } from 'next/cache'
+import { staticDataCacheService } from '@/lib/cache/redis-cache.service'
 
 /**
  * Invalidation centralisée du cache
@@ -11,6 +12,11 @@ export async function invalidateProductCache(productId?: string) {
   if (productId) {
     revalidateTag(`product-${productId}`, 'max')
   }
+
+  // Invalider le cache typeRent (les compteurs de catégories dépendent des produits)
+  revalidateTag('type-rent', 'max')
+  revalidateTag('static-data', 'max')
+  await staticDataCacheService.invalidateStaticData('typeRent')
 
   // Invalider les pages concernées
   revalidatePath('/search')
