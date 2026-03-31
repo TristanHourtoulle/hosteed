@@ -5,7 +5,7 @@ import { DayEnum } from '@prisma/client'
 export interface NearbyPlace {
   name: string
   distance: string
-  unit: 'mètres' | 'kilomètres'
+  unit: 'mètres' | 'kilomètres' | 'minutes à pied'
 }
 
 export interface ImageFile {

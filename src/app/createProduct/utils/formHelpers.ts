@@ -15,7 +15,10 @@ export const isHotelType = (typeId: string, types: TypeRentInterface[]): boolean
 export const calculateDistance = (place: NearbyPlace): number => {
   const distance = parseFloat(place.distance)
   if (place.unit === 'kilomètres') {
-    return distance * 1000 // Convert to meters
+    return distance * 1000
+  }
+  if (place.unit === 'minutes à pied') {
+    return 0
   }
   return distance
 }
