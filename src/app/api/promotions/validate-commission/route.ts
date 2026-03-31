@@ -34,14 +34,17 @@ export async function POST(request: NextRequest) {
     const parsedDiscount = parseFloat(discountPercentage)
     console.log('🔍 [API validate-commission] Calling validatePromotionCommission with:', { productId, parsedDiscount })
 
-    const isValid = await validatePromotionCommission(productId, parsedDiscount)
-    console.log('📊 [API validate-commission] Validation result:', isValid)
+    const { isValid, maxAllowedPercentage } = await validatePromotionCommission(productId, parsedDiscount)
+    console.log('📊 [API validate-commission] Validation result:', { isValid, maxAllowedPercentage })
 
     const response = {
       valid: isValid,
+      maxAllowedPercentage,
       message: isValid
         ? 'Commission valide'
-        : 'Réduction trop importante. La plateforme ne pourrait pas couvrir ses frais.',
+        : maxAllowedPercentage !== null && maxAllowedPercentage > 0
+          ? `Réduction trop importante. Maximum autorisé pour ce produit : ${maxAllowedPercentage}%.`
+          : 'Réduction trop importante. La plateforme ne peut pas couvrir ses frais de commission.',
     }
     console.log('📤 [API validate-commission] Sending response:', response)
 

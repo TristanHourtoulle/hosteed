@@ -98,11 +98,18 @@ export async function createPromotion(data: CreatePromotionInput): Promise<Creat
   }
 
   // 2. Vérifier que la promotion ne fait pas perdre d'argent à la plateforme
-  const isValid = await validatePromotionCommission(data.productId, data.discountPercentage)
+  const { isValid, maxAllowedPercentage } = await validatePromotionCommission(
+    data.productId,
+    data.discountPercentage
+  )
 
   if (!isValid) {
+    const maxInfo =
+      maxAllowedPercentage !== null && maxAllowedPercentage > 0
+        ? ` Maximum autorisé pour ce produit : ${maxAllowedPercentage}%.`
+        : ''
     throw new Error(
-      'Cette réduction est trop importante. La plateforme ne pourrait pas couvrir ses frais. Veuillez réduire le pourcentage de réduction.'
+      `Réduction trop importante (${data.discountPercentage}%). La plateforme ne pourrait pas couvrir ses frais de commission.${maxInfo}`
     )
   }
 
@@ -322,13 +329,19 @@ export async function getPromotionsByHost(hostId: string): Promise<ProductPromot
   })
 }
 
+export interface ValidatePromotionCommissionResult {
+  isValid: boolean
+  maxAllowedPercentage: number | null
+}
+
 /**
- * Valider qu'une promotion ne fait pas perdre d'argent à la plateforme
+ * Valider qu'une promotion ne fait pas perdre d'argent à la plateforme.
+ * Retourne également le pourcentage maximum autorisé pour ce produit.
  */
 export async function validatePromotionCommission(
   productId: string,
   discountPercentage: number
-): Promise<boolean> {
+): Promise<ValidatePromotionCommissionResult> {
   const product = await prisma.product.findUnique({
     where: { id: productId },
     include: {
@@ -345,28 +358,39 @@ export async function validatePromotionCommission(
   }
 
   const basePrice = parseFloat(product.basePrice)
-  const discountedPrice = basePrice * (1 - discountPercentage / 100)
-
-  if (discountedPrice < 0) {
-    return false
-  }
-
   const commission = product.type.commission
 
   if (!commission) {
-    return true
+    return { isValid: true, maxAllowedPercentage: 99 }
   }
 
-  const hostCommission =
-    (discountedPrice * commission.hostCommissionRate) / 100 + commission.hostCommissionFixed
+  const totalRate = commission.hostCommissionRate + commission.clientCommissionRate
+  const totalFixed = commission.hostCommissionFixed + commission.clientCommissionFixed
 
-  const clientCommission =
-    (discountedPrice * commission.clientCommissionRate) / 100 + commission.clientCommissionFixed
+  // Calcul du pourcentage maximum autorisé :
+  // discountedPrice × totalRate / 100 + totalFixed >= 1
+  // basePrice × (1 - maxDiscount/100) >= (1 - totalFixed) / (totalRate / 100)
+  let maxAllowedPercentage: number
+  if (totalRate === 0) {
+    // Aucune commission en pourcentage : seul le fixe compte
+    maxAllowedPercentage = totalFixed >= 1 ? 99 : 0
+  } else {
+    const minDiscountedPrice = (1 - totalFixed) / (totalRate / 100)
+    maxAllowedPercentage = Math.floor((1 - minDiscountedPrice / basePrice) * 100)
+    maxAllowedPercentage = Math.max(0, Math.min(99, maxAllowedPercentage))
+  }
 
-  const platformRevenue = hostCommission + clientCommission
+  const discountedPrice = basePrice * (1 - discountPercentage / 100)
+  const platformRevenue =
+    (discountedPrice * commission.hostCommissionRate) / 100 +
+    commission.hostCommissionFixed +
+    (discountedPrice * commission.clientCommissionRate) / 100 +
+    commission.clientCommissionFixed
 
-  // La plateforme doit gagner au minimum 1€
-  return platformRevenue >= 1
+  return {
+    isValid: platformRevenue >= 1,
+    maxAllowedPercentage,
+  }
 }
 
 // ============================================
