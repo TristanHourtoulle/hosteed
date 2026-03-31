@@ -47,7 +47,7 @@ export const locationSchema = z.object({
   nearbyPlaces: z.array(z.object({
     name: z.string(),
     distance: z.string(),
-    unit: z.enum(['mètres', 'kilomètres']),
+    unit: z.enum(['mètres', 'kilomètres', 'minutes à pied']),
   })),
   proximityLandmarks: z.array(z.string()),
   transportation: z.string().optional(),

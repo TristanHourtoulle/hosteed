@@ -1,12 +1,14 @@
 'use client'
 
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { MapPin } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { MapPin, X } from 'lucide-react'
 import CityAutocomplete from '@/components/ui/CityAutocomplete'
 import PhoneInput from '@/components/ui/PhoneInput'
 import ProximityLandmarksField from '@/components/ui/ProximityLandmarksField'
-import type { FormData } from '../types'
+import type { FormData, NearbyPlace } from '../types'
 
 interface LocationContactSectionProps {
   formData: FormData
@@ -17,11 +19,31 @@ interface LocationContactSectionProps {
   }
 }
 
+const EMPTY_NEW_PLACE: NearbyPlace = { name: '', distance: '', unit: 'mètres' }
+
 export default function LocationContactSection({
   formData,
   setFormData,
   itemVariants,
 }: LocationContactSectionProps) {
+  const [newPlace, setNewPlace] = useState<NearbyPlace>(EMPTY_NEW_PLACE)
+
+  const addNearbyPlace = () => {
+    if (!newPlace.name || !newPlace.distance) return
+    setFormData(prev => ({
+      ...prev,
+      nearbyPlaces: [...prev.nearbyPlaces, newPlace],
+    }))
+    setNewPlace(EMPTY_NEW_PLACE)
+  }
+
+  const removeNearbyPlace = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      nearbyPlaces: prev.nearbyPlaces.filter((_, i) => i !== index),
+    }))
+  }
+
   return (
     <motion.div variants={itemVariants} className='relative z-50'>
       <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm relative z-50'>
@@ -143,6 +165,67 @@ export default function LocationContactSection({
               setFormData(prev => ({ ...prev, proximityLandmarks: landmarks }))
             }
           />
+
+          <div className='space-y-4'>
+            <label className='text-sm font-medium text-slate-700'>Lieux à proximité</label>
+            <div className='grid grid-cols-1 md:grid-cols-4 gap-3 p-4 bg-slate-50 rounded-lg'>
+              <Input
+                placeholder='Nom du lieu'
+                value={newPlace.name}
+                onChange={e => setNewPlace(prev => ({ ...prev, name: e.target.value }))}
+                className='border-slate-200'
+              />
+              <Input
+                placeholder='Distance'
+                value={newPlace.distance}
+                onChange={e => setNewPlace(prev => ({ ...prev, distance: e.target.value }))}
+                className='border-slate-200'
+              />
+              <select
+                value={newPlace.unit}
+                onChange={e =>
+                  setNewPlace(prev => ({
+                    ...prev,
+                    unit: e.target.value as NearbyPlace['unit'],
+                  }))
+                }
+                className='border border-slate-200 rounded-md px-3 py-2 text-sm'
+              >
+                <option value='mètres'>mètres</option>
+                <option value='kilomètres'>kilomètres</option>
+                <option value='minutes à pied'>minutes à pied</option>
+              </select>
+              <button
+                type='button'
+                onClick={addNearbyPlace}
+                className='px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm'
+              >
+                Ajouter
+              </button>
+            </div>
+
+            {formData.nearbyPlaces.length > 0 && (
+              <div className='space-y-2'>
+                {formData.nearbyPlaces.map((place, index) => (
+                  <div
+                    key={index}
+                    className='flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200'
+                  >
+                    <span className='text-sm'>
+                      <strong>{place.name}</strong> — {place.distance} {place.unit}
+                    </span>
+                    <button
+                      type='button'
+                      onClick={() => removeNearbyPlace(index)}
+                      className='text-red-500 hover:text-red-700 p-1'
+                    >
+                      <X className='h-4 w-4' />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </motion.div>

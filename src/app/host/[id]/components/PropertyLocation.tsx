@@ -101,10 +101,11 @@ export default function PropertyLocation({
                   <div>
                     <p className='text-gray-900'>{place.name}</p>
                     <p className='text-sm text-gray-600'>
-                      {place.distance < 1000
-                        ? `${place.distance}m`
-                        : `${(place.distance / 1000).toFixed(1)}km`}{' '}
-                      • {place.duration} min {place.transport}
+                      {place.transport === 'à pied' && place.duration > 0
+                        ? `${place.duration} min à pied`
+                        : place.distance < 1000
+                          ? `${place.distance}m`
+                          : `${(place.distance / 1000).toFixed(1)}km`}
                     </p>
                   </div>
                 </div>
