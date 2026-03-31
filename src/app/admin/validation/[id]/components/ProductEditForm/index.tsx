@@ -185,9 +185,13 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
         // Nearby places
         nearbyPlaces: formData.nearbyPlaces.map(place => ({
           name: place.name,
-          distance: place.distance ? Number(place.distance) : 0,
-          duration: 0,
-          transport: place.unit === 'kilomètres' ? 'voiture' : 'à pied',
+          distance: place.unit === 'minutes à pied'
+            ? 0
+            : place.unit === 'kilomètres'
+              ? (place.distance ? Number(place.distance) * 1000 : 0)
+              : (place.distance ? Number(place.distance) : 0),
+          duration: place.unit === 'minutes à pied' ? (place.distance ? Number(place.distance) : 0) : 0,
+          transport: place.unit === 'minutes à pied' ? 'à pied' : place.unit === 'kilomètres' ? 'voiture' : 'à pied',
         })),
         proximityLandmarks: formData.proximityLandmarks,
         // Hotel info
