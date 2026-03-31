@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     // GPS coordinates for radius-based search (from Google Places API)
     const lat = searchParams.get('lat') ? parseFloat(searchParams.get('lat')!) : null
     const lon = searchParams.get('lon') ? parseFloat(searchParams.get('lon')!) : null
-    const radius = searchParams.get('radius') ? parseFloat(searchParams.get('radius')!) : 30 // Default 30km radius
+    const radius = searchParams.get('radius') ? parseFloat(searchParams.get('radius')!) : 40 // Default 30km radius
 
     // Filtering options
     const featured = searchParams.get('featured') === 'true'
