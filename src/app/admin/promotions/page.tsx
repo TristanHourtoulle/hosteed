@@ -96,6 +96,8 @@ export default function AdminPromotionsPage() {
   const [discountPercentage, setDiscountPercentage] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [maxAllowedDiscount, setMaxAllowedDiscount] = useState<number | null>(null)
+  const [discountValidationError, setDiscountValidationError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchData()
@@ -136,6 +138,30 @@ export default function AdminPromotionsPage() {
     setStartDate('')
     setEndDate('')
     setEditingPromotion(null)
+    setMaxAllowedDiscount(null)
+    setDiscountValidationError(null)
+  }
+
+  const validateDiscount = async (productId: string, discount: string) => {
+    const parsed = parseFloat(discount)
+    if (!productId || !discount || isNaN(parsed) || parsed <= 0) {
+      setMaxAllowedDiscount(null)
+      setDiscountValidationError(null)
+      return
+    }
+
+    try {
+      const res = await fetch('/api/promotions/validate-commission', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId, discountPercentage: parsed }),
+      })
+      const data = await res.json()
+      setMaxAllowedDiscount(data.maxAllowedPercentage ?? null)
+      setDiscountValidationError(data.valid ? null : data.message)
+    } catch {
+      // silently ignore validation errors — server will catch on submit
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -149,6 +175,11 @@ export default function AdminPromotionsPage() {
     const discount = parseFloat(discountPercentage)
     if (discount <= 0 || discount >= 100) {
       toast.error('La réduction doit être entre 0 et 100%')
+      return
+    }
+
+    if (discountValidationError) {
+      toast.error(discountValidationError)
       return
     }
 
@@ -330,7 +361,10 @@ export default function AdminPromotionsPage() {
                 <Label htmlFor='product'>Hébergement</Label>
                 <Select
                   value={selectedProductId}
-                  onValueChange={setSelectedProductId}
+                  onValueChange={value => {
+                    setSelectedProductId(value)
+                    validateDiscount(value, discountPercentage)
+                  }}
                   disabled={!!editingPromotion}
                 >
                   <SelectTrigger className='w-full'>
@@ -350,7 +384,14 @@ export default function AdminPromotionsPage() {
               </div>
 
               <div>
-                <Label htmlFor='discount'>Réduction (%)</Label>
+                <Label htmlFor='discount'>
+                  Réduction (%)
+                  {maxAllowedDiscount !== null && (
+                    <span className='ml-2 text-xs font-normal text-gray-500'>
+                      — max autorisé : <strong>{maxAllowedDiscount}%</strong>
+                    </span>
+                  )}
+                </Label>
                 <Input
                   id='discount'
                   type='number'
@@ -358,10 +399,17 @@ export default function AdminPromotionsPage() {
                   max='99'
                   step='1'
                   value={discountPercentage}
-                  onChange={e => setDiscountPercentage(e.target.value)}
+                  onChange={e => {
+                    setDiscountPercentage(e.target.value)
+                    validateDiscount(selectedProductId, e.target.value)
+                  }}
                   placeholder='Ex: 20'
                   required
+                  className={discountValidationError ? 'border-red-400 focus-visible:ring-red-300' : ''}
                 />
+                {discountValidationError && (
+                  <p className='text-xs text-red-600 mt-1'>{discountValidationError}</p>
+                )}
               </div>
 
               <div>
