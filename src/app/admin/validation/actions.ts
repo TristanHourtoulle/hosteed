@@ -6,19 +6,32 @@ import {
   deleteRejectedProduct,
   deleteMultipleRejectedProducts,
 } from '@/lib/services/product.service'
+import { ProductValidation } from '@prisma/client'
 import prisma from '@/lib/prisma'
 
-export async function getProductsForValidation() {
+export async function getValidationProductsByStatus({
+  status,
+  statuses,
+  page = 1,
+  limit = 20,
+}: {
+  status?: ProductValidation
+  statuses?: ProductValidation[]
+  page?: number
+  limit?: number
+}) {
   try {
     const result = await validationService.getProductsForValidationPaginated({
-      page: 1,
-      limit: 20, // ✅ Réduit de 100 à 20 produits
-      includeLightweight: true, // ✅ Mode léger = 1 image seulement
+      page,
+      limit,
+      status,
+      statuses,
+      includeLightweight: true,
     })
-    return { success: true, data: result.products }
+    return { success: true, data: result.products, pagination: result.pagination }
   } catch (error) {
     console.error('Error fetching products for validation:', error)
-    return { success: false, error: 'Impossible de charger les produits' }
+    return { success: false, error: 'Impossible de charger les produits', data: [], pagination: null }
   }
 }
 

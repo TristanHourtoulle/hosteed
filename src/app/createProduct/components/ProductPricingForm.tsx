@@ -16,12 +16,16 @@ interface ProductPricingFormProps {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => void
   itemVariants: Variants
+  hasFieldError?: (field: string) => boolean
+  getFieldError?: (field: string) => string | undefined
 }
 
 export default function ProductPricingForm({
   formData,
   onInputChange,
   itemVariants,
+  hasFieldError,
+  getFieldError,
 }: ProductPricingFormProps) {
   return (
     <motion.div variants={itemVariants}>
@@ -40,8 +44,8 @@ export default function ProductPricingForm({
         <CardContent>
           <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
             <div className='space-y-2'>
-              <label htmlFor='basePrice' className='text-sm font-medium text-slate-700'>
-                Prix de base par nuit (EUR) *
+              <label htmlFor='basePrice' className={`text-sm font-medium ${hasFieldError?.('basePrice') ? 'text-red-600' : 'text-slate-700'}`}>
+                Prix de base par nuit (EUR) <span className='text-red-500'>*</span>
               </label>
               <NumberInput
                 id='basePrice'
@@ -51,13 +55,16 @@ export default function ProductPricingForm({
                 onChange={onInputChange}
                 required
                 allowDecimals={true}
-                className='border-slate-200 focus:border-yellow-300 focus:ring-yellow-200'
+                className={hasFieldError?.('basePrice') ? 'border-red-300 focus:border-red-400 focus:ring-red-200' : 'border-slate-200 focus:border-yellow-300 focus:ring-yellow-200'}
               />
+              {getFieldError?.('basePrice') && (
+                <p className='text-xs text-red-500'>{getFieldError('basePrice')}</p>
+              )}
             </div>
 
             <div className='space-y-2'>
-              <label htmlFor='basePriceMGA' className='text-sm font-medium text-slate-700'>
-                Prix de base par nuit (MGA)
+              <label htmlFor='basePriceMGA' className={`text-sm font-medium ${hasFieldError?.('basePriceMGA') ? 'text-red-600' : 'text-slate-700'}`}>
+                Prix de base par nuit (MGA) <span className='text-red-500'>*</span>
               </label>
               <NumberInput
                 id='basePriceMGA'
@@ -66,8 +73,11 @@ export default function ProductPricingForm({
                 value={formData.basePriceMGA}
                 onChange={onInputChange}
                 allowDecimals={false}
-                className='border-slate-200 focus:border-yellow-300 focus:ring-yellow-200'
+                className={hasFieldError?.('basePriceMGA') ? 'border-red-300 focus:border-red-400 focus:ring-red-200' : 'border-slate-200 focus:border-yellow-300 focus:ring-yellow-200'}
               />
+              {getFieldError?.('basePriceMGA') && (
+                <p className='text-xs text-red-500'>{getFieldError('basePriceMGA')}</p>
+              )}
             </div>
           </div>
         </CardContent>

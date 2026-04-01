@@ -1,11 +1,11 @@
-import { DayEnum, ExtraPriceType } from '@prisma/client'
+import { DayEnum } from '@prisma/client'
 
 // ===== INTERFACES DE SUPPORT =====
 
 export interface NearbyPlace {
   name: string
   distance: string
-  unit: 'mètres' | 'kilomètres'
+  unit: 'mètres' | 'kilomètres' | 'minutes à pied'
 }
 
 export interface ImageFile {
@@ -86,6 +86,20 @@ export interface ProductFormData {
   proximityLandmarks: string[] // Points de repère (texte libre)
   transportation: string       // Moyens de transport disponibles
 
+  // ===== RÈGLES =====
+  smokingAllowed: boolean
+  petsAllowed: boolean
+  eventsAllowed: boolean
+  selfCheckIn: boolean
+  selfCheckInType: string
+
+  // ===== INFORMATIONS SUR LA PROPRIÉTÉ =====
+  hasStairs: boolean
+  hasElevator: boolean
+  hasHandicapAccess: boolean
+  hasPetsOnProperty: boolean
+  additionalNotes: string
+
   // ===== CONFIGURATION HÔTEL =====
   isHotel: boolean
   hotelName: string
@@ -151,6 +165,16 @@ export const DEFAULT_FORM_DATA: ProductFormData = {
   nearbyPlaces: [],
   proximityLandmarks: [],
   transportation: '',
+  smokingAllowed: false,
+  petsAllowed: false,
+  eventsAllowed: false,
+  selfCheckIn: false,
+  selfCheckInType: '',
+  hasStairs: false,
+  hasElevator: false,
+  hasHandicapAccess: false,
+  hasPetsOnProperty: false,
+  additionalNotes: '',
   isHotel: false,
   hotelName: '',
   availableRooms: '',

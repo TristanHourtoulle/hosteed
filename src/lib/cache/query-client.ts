@@ -23,6 +23,8 @@ export const CACHE_TAGS = {
     ['favorite-status', userId, productId] as const,
   reservations: (userId: string) => ['reservations', userId] as const,
   reservation: (id: string) => ['reservation', id] as const,
+  availability: (productId: string, arrival: string, leaving: string) =>
+    ['availability', productId, arrival, leaving] as const,
   reviews: (productId: string) => ['reviews', productId] as const,
   userRatings: (userId: string) => ['user-ratings', userId] as const,
   userStats: (userId: string) => ['user-stats', userId] as const,

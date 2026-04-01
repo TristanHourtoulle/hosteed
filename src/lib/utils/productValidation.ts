@@ -46,15 +46,15 @@ export function getValidationStatusVariant(
 export function getValidationStatusClassName(status: ProductValidation): string {
   switch (status) {
     case ProductValidation.NotVerified:
-      return 'bg-yellow-100 text-yellow-800'
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200'
     case ProductValidation.Approve:
-      return 'bg-green-100 text-green-800'
+      return 'bg-green-100 text-green-800 border-green-200'
     case ProductValidation.Refused:
-      return 'bg-red-100 text-red-800'
+      return 'bg-red-100 text-red-800 border-red-200'
     case ProductValidation.RecheckRequest:
-      return 'bg-orange-100 text-orange-800'
+      return 'bg-orange-100 text-orange-800 border-orange-200'
     case ProductValidation.ModificationPending:
-      return 'bg-blue-100 text-blue-800 border-blue-300'
+      return 'bg-blue-100 text-blue-800 border-blue-200'
     default:
       return ''
   }

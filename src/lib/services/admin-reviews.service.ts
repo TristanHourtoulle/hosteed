@@ -1,4 +1,3 @@
-'use server'
 import prisma from '@/lib/prisma'
 import { sendTemplatedMail } from '@/lib/services/sendTemplatedMail'
 import { UserRole } from '@prisma/client'
@@ -89,6 +88,9 @@ export async function createAdminReview(params: CreateAdminReviewParams) {
               select: {
                 name: true,
                 email: true,
+                image: true,
+                profilePicture: true,
+                profilePictureBase64: true,
               },
             },
             product: {
@@ -122,14 +124,16 @@ export async function createAdminReview(params: CreateAdminReviewParams) {
     })
 
     for (const adminUser of admins) {
-      await sendTemplatedMail(
+      sendTemplatedMail(
         adminUser.email,
         'Nouvel avis administratif créé',
         'new-review.html',
         {
           reviewUrl: `${process.env.NEXTAUTH_URL}/host/${params.productId}`,
         }
-      )
+      ).catch((err) => {
+        console.error(`Failed to notify admin ${adminUser.email}:`, err)
+      })
     }
 
     return {
@@ -285,6 +289,9 @@ export async function getAdminCreatedReviews(adminId: string) {
                 name: true,
                 email: true,
                 roles: true,
+                image: true,
+                profilePicture: true,
+                profilePictureBase64: true,
               },
             },
             product: {

@@ -1,6 +1,6 @@
-'use server'
 import prisma from '@/lib/prisma'
 import { ProductPromotion, PricingPriority, SpecialPrices } from '@prisma/client'
+import { invalidateProductCache } from '@/lib/cache/invalidation'
 
 // ============================================
 // TYPES & INTERFACES
@@ -98,11 +98,18 @@ export async function createPromotion(data: CreatePromotionInput): Promise<Creat
   }
 
   // 2. Vérifier que la promotion ne fait pas perdre d'argent à la plateforme
-  const isValid = await validatePromotionCommission(data.productId, data.discountPercentage)
+  const { isValid, maxAllowedPercentage } = await validatePromotionCommission(
+    data.productId,
+    data.discountPercentage
+  )
 
   if (!isValid) {
+    const maxInfo =
+      maxAllowedPercentage !== null && maxAllowedPercentage > 0
+        ? ` Maximum autorisé pour ce produit : ${maxAllowedPercentage}%.`
+        : ''
     throw new Error(
-      'Cette réduction est trop importante. La plateforme ne pourrait pas couvrir ses frais. Veuillez réduire le pourcentage de réduction.'
+      `Réduction trop importante (${data.discountPercentage}%). La plateforme ne pourrait pas couvrir ses frais de commission.${maxInfo}`
     )
   }
 
@@ -125,6 +132,7 @@ export async function createPromotion(data: CreatePromotionInput): Promise<Creat
     },
   })
 
+  await invalidateProductCache(data.productId)
   return { promotion }
 }
 
@@ -135,7 +143,7 @@ export async function confirmPromotionWithOverlap(
   data: CreatePromotionInput,
   overlappingIds: string[]
 ): Promise<ProductPromotion> {
-  return await prisma.$transaction(async tx => {
+  const result = await prisma.$transaction(async tx => {
     // 1. Créer la nouvelle promotion
     const newPromotion = await tx.productPromotion.create({
       data: {
@@ -159,6 +167,9 @@ export async function confirmPromotionWithOverlap(
 
     return newPromotion
   })
+
+  await invalidateProductCache(data.productId)
+  return result
 }
 
 /**
@@ -190,7 +201,7 @@ export async function updatePromotion(
     }
   }
 
-  return await prisma.productPromotion.update({
+  const result = await prisma.productPromotion.update({
     where: { id },
     data: {
       discountPercentage: data.discountPercentage,
@@ -198,16 +209,22 @@ export async function updatePromotion(
       endDate: data.endDate,
     },
   })
+
+  await invalidateProductCache(result.productId)
+  return result
 }
 
 /**
  * Annuler une promotion (soft delete)
  */
 export async function cancelPromotion(id: string): Promise<ProductPromotion> {
-  return await prisma.productPromotion.update({
+  const result = await prisma.productPromotion.update({
     where: { id },
     data: { isActive: false },
   })
+
+  await invalidateProductCache(result.productId)
+  return result
 }
 
 /**
@@ -312,15 +329,19 @@ export async function getPromotionsByHost(hostId: string): Promise<ProductPromot
   })
 }
 
+export interface ValidatePromotionCommissionResult {
+  isValid: boolean
+  maxAllowedPercentage: number | null
+}
+
 /**
- * Valider qu'une promotion ne fait pas perdre d'argent à la plateforme
+ * Valider qu'une promotion ne fait pas perdre d'argent à la plateforme.
+ * Retourne également le pourcentage maximum autorisé pour ce produit.
  */
 export async function validatePromotionCommission(
   productId: string,
   discountPercentage: number
-): Promise<boolean> {
-  console.log('🔶 [validatePromotionCommission] Called with:', { productId, discountPercentage })
-
+): Promise<ValidatePromotionCommissionResult> {
   const product = await prisma.product.findUnique({
     where: { id: productId },
     include: {
@@ -333,65 +354,43 @@ export async function validatePromotionCommission(
   })
 
   if (!product) {
-    console.log('❌ [validatePromotionCommission] Product not found')
     throw new Error('Produit non trouvé')
   }
 
-  console.log('📦 [validatePromotionCommission] Product found:', {
-    id: product.id,
-    name: product.name,
-    basePrice: product.basePrice,
-    typeId: product.typeId,
-  })
-
   const basePrice = parseFloat(product.basePrice)
-  const discountedPrice = basePrice * (1 - discountPercentage / 100)
-  console.log('💰 [validatePromotionCommission] Price calculation:', { basePrice, discountedPrice, discountPercentage })
-
-  // Vérifier que le prix réduit n'est pas négatif
-  if (discountedPrice < 0) {
-    console.log('❌ [validatePromotionCommission] Discounted price is negative - rejecting')
-    return false
-  }
-
-  // Récupérer les commissions
   const commission = product.type.commission
-  console.log('📊 [validatePromotionCommission] Commission config:', commission)
 
   if (!commission) {
-    console.log('✅ [validatePromotionCommission] No commission configured - allowing promotion')
-    // Pas de commission configurée, on autorise
-    return true
+    return { isValid: true, maxAllowedPercentage: 99 }
   }
 
-  const hostCommission =
-    (discountedPrice * commission.hostCommissionRate) / 100 + commission.hostCommissionFixed
+  const totalRate = commission.hostCommissionRate + commission.clientCommissionRate
+  const totalFixed = commission.hostCommissionFixed + commission.clientCommissionFixed
 
-  const clientCommission =
-    (discountedPrice * commission.clientCommissionRate) / 100 + commission.clientCommissionFixed
+  // Calcul du pourcentage maximum autorisé :
+  // discountedPrice × totalRate / 100 + totalFixed >= 1
+  // basePrice × (1 - maxDiscount/100) >= (1 - totalFixed) / (totalRate / 100)
+  let maxAllowedPercentage: number
+  if (totalRate === 0) {
+    // Aucune commission en pourcentage : seul le fixe compte
+    maxAllowedPercentage = totalFixed >= 1 ? 99 : 0
+  } else {
+    const minDiscountedPrice = (1 - totalFixed) / (totalRate / 100)
+    maxAllowedPercentage = Math.floor((1 - minDiscountedPrice / basePrice) * 100)
+    maxAllowedPercentage = Math.max(0, Math.min(99, maxAllowedPercentage))
+  }
 
-  const platformRevenue = hostCommission + clientCommission
+  const discountedPrice = basePrice * (1 - discountPercentage / 100)
+  const platformRevenue =
+    (discountedPrice * commission.hostCommissionRate) / 100 +
+    commission.hostCommissionFixed +
+    (discountedPrice * commission.clientCommissionRate) / 100 +
+    commission.clientCommissionFixed
 
-  console.log('💵 [validatePromotionCommission] Commission breakdown:', {
-    hostCommissionRate: commission.hostCommissionRate,
-    hostCommissionFixed: commission.hostCommissionFixed,
-    clientCommissionRate: commission.clientCommissionRate,
-    clientCommissionFixed: commission.clientCommissionFixed,
-    hostCommission,
-    clientCommission,
-    platformRevenue,
-    minimumRequired: 1,
-  })
-
-  const isValid = platformRevenue >= 1
-  console.log(`${isValid ? '✅' : '❌'} [validatePromotionCommission] Validation result:`, {
-    isValid,
-    platformRevenue,
-    meetsMinimum: platformRevenue >= 1,
-  })
-
-  // La plateforme doit gagner au minimum 1€
-  return isValid
+  return {
+    isValid: platformRevenue >= 1,
+    maxAllowedPercentage,
+  }
 }
 
 // ============================================

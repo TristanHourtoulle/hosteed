@@ -4,7 +4,7 @@ import { useState, useEffect, use, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { useBlogAuth } from '@/hooks/useMultiRoleAuth'
-import MDEditor from '@uiw/react-md-editor'
+import { LazyMarkdownEditor, LazyMarkdownViewer } from '@/components/dynamic/LazyComponents'
 import {
   Card,
   CardContent,
@@ -322,7 +322,7 @@ export default function EditPostPage({ params }: PageProps) {
                     <TabsTrigger value='preview'>Aperçu</TabsTrigger>
                   </TabsList>
                   <TabsContent value='edit' className='mt-4'>
-                    <MDEditor
+                    <LazyMarkdownEditor
                       value={content}
                       onChange={val => setContent(val || '')}
                       preview='edit'
@@ -332,7 +332,7 @@ export default function EditPostPage({ params }: PageProps) {
                   </TabsContent>
                   <TabsContent value='preview' className='mt-4'>
                     <div className='border rounded-lg p-4 min-h-[400px] bg-white'>
-                      <MDEditor.Markdown source={content} />
+                      <LazyMarkdownViewer source={content} />
                     </div>
                   </TabsContent>
                 </Tabs>

@@ -49,11 +49,18 @@ export async function GET(request: NextRequest) {
             take: 1,
             select: { id: true, img: true },
           },
+          room: true,
           type: {
             select: { id: true, name: true },
           },
           owner: {
             select: { id: true, name: true, email: true },
+          },
+          _count: {
+            select: {
+              equipments: true,
+              servicesList: true,
+            },
           },
         },
         orderBy: [{ id: 'desc' }],
@@ -63,13 +70,13 @@ export async function GET(request: NextRequest) {
       prisma.product.count({ where: whereClause }),
     ])
 
-    // Convert BigInt fields for JSON serialization
+    // Convert BigInt fields and add computed counts
     const filteredProducts = rawProducts.map(product => ({
       ...product,
-      room: null, // Not needed for admin list
-      bathroom: null,
-      personMax: null,
-      priceUSD: null,
+      room: product.room ? Number(product.room) : null,
+      equipmentCount: product._count?.equipments || 0,
+      serviceCount: product._count?.servicesList || 0,
+      typeName: product.type?.name || null,
     }))
 
     if (!rawProducts) {

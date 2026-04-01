@@ -44,3 +44,5 @@ yarn-error.log*
 next-env.d.ts
 CLAUDE.md
 /.claude
+/agent-os
+TASKS.md

@@ -29,6 +29,8 @@ import {
   MoreVertical,
   UserPlus,
   Shield,
+  Trash2,
+  ShieldCheck,
 } from 'lucide-react'
 import {
   Dialog,
@@ -57,6 +59,7 @@ import {
 } from '@/components/ui/shadcnui/dropdown-menu'
 import { RoleBadge, RoleIcon } from '@/components/ui/RoleBadge'
 import { EmailVerificationPanel } from './components/EmailVerificationPanel'
+import { ConfirmDeleteUserDialog } from './components/ConfirmDeleteUserDialog'
 import { toast } from 'sonner'
 
 const containerVariants: Variants = {
@@ -116,6 +119,11 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [newRole, setNewRole] = useState('')
   const [isUpdatingRole, setIsUpdatingRole] = useState(false)
+
+  // États pour la suppression d'utilisateur
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deletionInfo, setDeletionInfo] = useState<unknown>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const handleAddOption = async () => {
     if (
@@ -203,6 +211,61 @@ export default function UsersPage() {
       })
     } finally {
       setIsUpdatingRole(false)
+    }
+  }
+
+  const handleDeleteClick = async (user: User) => {
+    try {
+      const response = await fetch(`/api/admin/users/${user.id}`)
+      if (!response.ok) {
+        toast.error('Erreur lors de la recuperation des informations')
+        return
+      }
+      const info = await response.json()
+      setDeletionInfo(info)
+      setDeleteDialogOpen(true)
+    } catch {
+      toast.error('Erreur lors de la recuperation des informations')
+    }
+  }
+
+  const handleDeleteConfirm = async () => {
+    const info = deletionInfo as { user: { id: string } } | null
+    if (!info) return
+
+    setIsDeleting(true)
+    try {
+      const response = await fetch(`/api/admin/users/${info.user.id}`, { method: 'DELETE' })
+
+      if (response.ok) {
+        toast.success('Utilisateur supprime avec succes')
+        setDeleteDialogOpen(false)
+        setDeletionInfo(null)
+        await refetch()
+      } else {
+        const data = await response.json()
+        toast.error(data.error || 'Erreur lors de la suppression')
+      }
+    } catch {
+      toast.error('Erreur technique lors de la suppression')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const handleForceVerifyEmail = async (user: User) => {
+    try {
+      const response = await fetch(`/api/admin/users/${user.id}`, { method: 'PATCH' })
+
+      if (response.ok) {
+        toast.success(`Email de ${user.name || user.email} verifie avec succes`)
+        await refetch()
+      } else {
+        const data = await response.json()
+        toast.error(data.error || 'Erreur lors de la verification')
+      }
+    } catch {
+      toast.error('Erreur technique lors de la verification')
     }
   }
 
@@ -525,6 +588,27 @@ export default function UsersPage() {
                             Modifier le rôle
                           </DropdownMenuItem>
                         )}
+                        {!user.emailVerified && (
+                          <DropdownMenuItem
+                            onClick={() => handleForceVerifyEmail(user)}
+                            className='flex items-center gap-2'
+                          >
+                            <ShieldCheck className='h-4 w-4' />
+                            Vérifier l&apos;email
+                          </DropdownMenuItem>
+                        )}
+                        {session?.user?.id !== user.id && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteClick(user)}
+                              className='flex items-center gap-2 text-red-600 focus:text-red-600'
+                            >
+                              <Trash2 className='h-4 w-4' />
+                              Supprimer
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -671,6 +755,18 @@ export default function UsersPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Modal de confirmation de suppression */}
+        <ConfirmDeleteUserDialog
+          open={deleteDialogOpen}
+          onClose={() => {
+            setDeleteDialogOpen(false)
+            setDeletionInfo(null)
+          }}
+          onConfirm={handleDeleteConfirm}
+          deletionInfo={deletionInfo as Parameters<typeof ConfirmDeleteUserDialog>[0]['deletionInfo']}
+          isLoading={isDeleting}
+        />
       </div>
     </div>
   )

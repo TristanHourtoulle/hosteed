@@ -263,7 +263,7 @@ export function useProductSearchPaginated() {
       ...(gpsCoordinates && {
         lat: gpsCoordinates.lat,
         lon: gpsCoordinates.lng,
-        radius: 30,
+        radius: 40,
       }),
     }),
     [
@@ -303,7 +303,7 @@ export function useProductSearchPaginated() {
       if (recent) searchURL.searchParams.set('recent', 'true')
       if (promo) searchURL.searchParams.set('promo', 'true')
 
-      // Add GPS coordinates if available (30km radius search from Google Places)
+      // Add GPS coordinates if available (40km radius search from Google Places)
       console.log('[SEARCH HOOK] GPS Coordinates:', gpsCoordinates)
       if (gpsCoordinates) {
         console.log('[SEARCH HOOK] Adding GPS params to URL:', {
@@ -312,7 +312,7 @@ export function useProductSearchPaginated() {
         })
         searchURL.searchParams.set('lat', gpsCoordinates.lat.toString())
         searchURL.searchParams.set('lon', gpsCoordinates.lng.toString())
-        searchURL.searchParams.set('radius', '30') // 30km radius
+        searchURL.searchParams.set('radius', '40') // 40km radius
       }
 
       // Add filter parameters

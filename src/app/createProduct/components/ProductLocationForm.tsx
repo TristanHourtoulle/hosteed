@@ -24,7 +24,7 @@ interface FormData {
   nearbyPlaces: Array<{
     name: string
     distance: string
-    unit: 'mètres' | 'kilomètres'
+    unit: 'mètres' | 'kilomètres' | 'minutes à pied'
   }>
 }
 
@@ -37,13 +37,13 @@ interface ProductLocationFormProps {
   newPlace: {
     name: string
     distance: string
-    unit: 'mètres' | 'kilomètres'
+    unit: 'mètres' | 'kilomètres' | 'minutes à pied'
   }
   setNewPlace: React.Dispatch<
     React.SetStateAction<{
       name: string
       distance: string
-      unit: 'mètres' | 'kilomètres'
+      unit: 'mètres' | 'kilomètres' | 'minutes à pied'
     }>
   >
   addNearbyPlace: () => void
@@ -175,13 +175,14 @@ export default function ProductLocationForm({
                 onChange={e =>
                   setNewPlace(prev => ({
                     ...prev,
-                    unit: e.target.value as 'mètres' | 'kilomètres',
+                    unit: e.target.value as 'mètres' | 'kilomètres' | 'minutes à pied',
                   }))
                 }
                 className='border border-slate-200 rounded-md px-3 py-2 text-sm'
               >
                 <option value='mètres'>mètres</option>
                 <option value='kilomètres'>kilomètres</option>
+                <option value='minutes à pied'>minutes à pied</option>
               </select>
               <button
                 type='button'

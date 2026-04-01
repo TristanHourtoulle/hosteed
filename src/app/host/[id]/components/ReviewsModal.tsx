@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Filter, SortAsc, SortDesc, Star, Calendar } from 'lucide-react'
+import { X, Filter, SortAsc, SortDesc, Star, Calendar, User } from 'lucide-react'
 
 interface Reviews {
   id: string
@@ -17,6 +17,14 @@ interface Reviews {
   visitDate: Date
   publishDate: Date
   approved: boolean
+  rentRelation?: {
+    user: {
+      name: string | null
+      image: string | null
+      profilePicture: string | null
+      profilePictureBase64: string | null
+    }
+  }
 }
 
 interface ReviewsModalProps {
@@ -50,27 +58,39 @@ export default function ReviewsModal({ isOpen, onClose, reviews, globalGrade }: 
     }
   })
 
-  const getAvatarColor = (id: string) => {
-    const colors = [
-      'bg-gradient-to-br from-blue-400 to-blue-600',
-      'bg-gradient-to-br from-green-400 to-green-600',
-      'bg-gradient-to-br from-purple-400 to-purple-600',
-      'bg-gradient-to-br from-orange-400 to-orange-600',
-      'bg-gradient-to-br from-pink-400 to-pink-600',
-      'bg-gradient-to-br from-indigo-400 to-indigo-600',
-      'bg-gradient-to-br from-red-400 to-red-600',
-      'bg-gradient-to-br from-teal-400 to-teal-600',
-    ]
-    return colors[parseInt(id.slice(-1), 16) % colors.length]
-  }
+  const avatarGradients = [
+    'bg-gradient-to-br from-blue-400 to-blue-600',
+    'bg-gradient-to-br from-green-400 to-green-600',
+    'bg-gradient-to-br from-purple-400 to-purple-600',
+    'bg-gradient-to-br from-orange-400 to-orange-600',
+    'bg-gradient-to-br from-pink-400 to-pink-600',
+    'bg-gradient-to-br from-indigo-400 to-indigo-600',
+  ]
 
-  const getInitials = (title: string) => {
-    return title
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase()
+  const getAvatarForReview = (review: Reviews) => {
+    const user = review.rentRelation?.user
+    const avatarSrc = user?.profilePicture || user?.profilePictureBase64 || user?.image
+    const gradientIndex = parseInt(review.id.slice(-1), 16) % avatarGradients.length
+
+    if (avatarSrc) {
+      return (
+        <img
+          src={avatarSrc}
+          alt={user?.name || 'Avatar'}
+          width={48}
+          height={48}
+          className='w-12 h-12 rounded-full object-cover shadow-md flex-shrink-0'
+        />
+      )
+    }
+
+    return (
+      <div
+        className={`w-12 h-12 rounded-full ${avatarGradients[gradientIndex]} flex items-center justify-center shadow-md flex-shrink-0`}
+      >
+        <User className='h-6 w-6 text-white' />
+      </div>
+    )
   }
 
   return (
@@ -184,16 +204,15 @@ export default function ReviewsModal({ isOpen, onClose, reviews, globalGrade }: 
                 >
                   <div className='flex items-start gap-4'>
                     {/* Avatar */}
-                    <div
-                      className={`w-12 h-12 rounded-full ${getAvatarColor(review.id)} flex items-center justify-center text-white font-bold text-sm shadow-md flex-shrink-0`}
-                    >
-                      {getInitials(review.title)}
-                    </div>
+                    {getAvatarForReview(review)}
 
                     <div className='flex-1 space-y-3'>
                       {/* En-tête de l'avis */}
                       <div className='flex items-start justify-between'>
                         <div>
+                          {review.rentRelation?.user?.name && (
+                            <p className='text-sm font-medium text-gray-500'>{review.rentRelation.user.name}</p>
+                          )}
                           <h4 className='font-semibold text-gray-900 text-lg leading-tight'>
                             {review.title}
                           </h4>

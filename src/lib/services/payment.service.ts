@@ -54,13 +54,16 @@ export async function getPayablePricesPerRent(rentId: string): Promise<PayablePr
     } else if (
       rent.status === (RentStatus.CHECKIN || RentStatus.RESERVED) &&
       (rent.payment === PaymentStatus.CLIENT_PAID ||
-        rent.payment === PaymentStatus.MID_TRANSFER_DONE)
+        rent.payment === PaymentStatus.MID_TRANSFER_DONE ||
+        rent.payment === PaymentStatus.MID_TRANSFER_REQ)
     ) {
       availablePrice = price / 2
     } else if (rent.status === RentStatus.CHECKOUT) {
       if (rent.payment === PaymentStatus.CLIENT_PAID) {
         availablePrice = price
       } else if (rent.payment === PaymentStatus.MID_TRANSFER_DONE) {
+        availablePrice = price / 2
+      } else if (rent.payment === PaymentStatus.MID_TRANSFER_REQ) {
         availablePrice = price / 2
       }
     } else if (!product.contract && rent.payment === PaymentStatus.CLIENT_PAID) {
@@ -192,6 +195,7 @@ export async function createPayRequest(
       type == PaymentStatus.MID_TRANSFER_REQ &&
       (rent.status == RentStatus.RESERVED ||
         rent.status == RentStatus.CHECKIN ||
+        rent.status == RentStatus.CHECKOUT ||
         rent.product.contract)
     ) {
       const tempPrices = price / 2

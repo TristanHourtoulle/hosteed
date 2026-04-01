@@ -80,12 +80,29 @@ export const PricingSkeleton = () => (
   </div>
 )
 
+// Tiptap WYSIWYG editor - dynamically imported
+export const LazyTiptapEditor = dynamic(
+  () => import('@/components/ui/TiptapEditor').then(mod => ({ default: mod.TiptapEditor })),
+  {
+    ssr: false,
+    loading: () => <EditorSkeleton />,
+  }
+)
+
 // Heavy components - dynamically imported
 export const LazyMarkdownEditor = dynamic(
   () => import('@uiw/react-md-editor').then(mod => ({ default: mod.default })),
   {
     ssr: false,
     loading: () => <EditorSkeleton />,
+  }
+)
+
+export const LazyMarkdownViewer = dynamic(
+  () => import('@uiw/react-md-editor').then(mod => ({ default: mod.default.Markdown })),
+  {
+    ssr: false,
+    loading: () => <div className='bg-gray-100 rounded p-4 animate-pulse h-40' />,
   }
 )
 

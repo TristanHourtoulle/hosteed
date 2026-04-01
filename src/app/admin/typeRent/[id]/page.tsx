@@ -74,13 +74,17 @@ export default function TypeRentDetailPage({ params }: { params: Promise<{ id: s
   // États pour la suppression
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
 
-  useEffect(() => {
-    if (!session?.user?.roles || session.user.roles !== 'ADMIN') {
-      router.push('/')
-    }
-  }, [session, router])
+  const isAdmin = session?.user?.roles === 'ADMIN'
 
   useEffect(() => {
+    if (session && !isAdmin) {
+      router.push('/')
+    }
+  }, [session, isAdmin, router])
+
+  useEffect(() => {
+    if (!isAdmin) return
+
     const fetchData = async () => {
       try {
         // Récupérer le type de logement
@@ -105,7 +109,7 @@ export default function TypeRentDetailPage({ params }: { params: Promise<{ id: s
       }
     }
     fetchData()
-  }, [id])
+  }, [id, isAdmin])
 
   const handleEditType = () => {
     if (typeRent) {

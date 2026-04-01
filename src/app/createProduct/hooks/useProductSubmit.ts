@@ -29,6 +29,8 @@ export const useProductSubmit = () => {
     const nearbyPlacesWithDistance = formData.nearbyPlaces.map(place => ({
       name: place.name,
       distance: calculateDistance(place),
+      duration: place.unit === 'minutes à pied' ? parseInt(place.distance) : 0,
+      transport: place.unit === 'minutes à pied' ? 'à pied' : '',
     }))
 
     // Prepare payload

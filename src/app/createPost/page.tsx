@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import MDEditor from '@uiw/react-md-editor'
+import { LazyMarkdownEditor, LazyMarkdownViewer } from '@/components/dynamic/LazyComponents'
 import Image from 'next/image'
 import { createPost } from '@/lib/services/post.service'
 import {
@@ -343,7 +343,7 @@ export default function CreatePostPage() {
                           data-color-mode='light'
                           className='rounded-xl border-2 border-purple-200 overflow-hidden bg-white shadow-inner'
                         >
-                          <MDEditor
+                          <LazyMarkdownEditor
                             value={content}
                             onChange={value => setContent(value || '')}
                             height={500}
@@ -368,7 +368,7 @@ export default function CreatePostPage() {
                         <div className='rounded-xl border-2 border-slate-200 bg-white'>
                           <ScrollArea className='h-[500px] w-full p-6'>
                             <div data-color-mode='light' className='prose prose-lg max-w-none'>
-                              <MDEditor.Markdown
+                              <LazyMarkdownViewer
                                 source={content || '*Votre article apparaîtra ici...*'}
                                 style={{
                                   backgroundColor: 'transparent',

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { ProductFormData, Product } from '../types'
 import type { TypeRentInterface } from '@/lib/interface/typeRentInterface'
+import type { SEOData } from '@/components/ui/SEOFieldsCard'
 
 interface UseProductEditFormProps {
   product: Product
@@ -68,9 +69,26 @@ export const useProductEditForm = ({ product, types }: UseProductEditFormProps) 
     })) || [],
     proximityLandmarks: [],
     transportation: '',
+    smokingAllowed: false,
+    petsAllowed: false,
+    eventsAllowed: false,
+    selfCheckIn: false,
+    selfCheckInType: '',
+    hasStairs: false,
+    hasElevator: false,
+    hasHandicapAccess: false,
+    hasPetsOnProperty: false,
+    additionalNotes: '',
     isHotel: !!(product.hotel && product.hotel.length > 0), // ✅ Check if array has items
     hotelName: product.hotel && product.hotel.length > 0 ? product.hotel[0].name : '', // ✅ Take first hotel
     availableRooms: product.availableRooms?.toString() || '',
+  })
+
+  const [seoData, setSeoData] = useState<SEOData>({
+    metaTitle: product.metaTitle || '',
+    metaDescription: product.metaDescription || '',
+    keywords: product.keywords || '',
+    slug: product.slug || '',
   })
 
   const [newPlace, setNewPlace] = useState({
@@ -137,6 +155,8 @@ export const useProductEditForm = ({ product, types }: UseProductEditFormProps) 
   return {
     formData,
     setFormData,
+    seoData,
+    setSeoData,
     newPlace,
     setNewPlace,
     handleInputChange,

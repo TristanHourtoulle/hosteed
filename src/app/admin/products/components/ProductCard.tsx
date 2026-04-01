@@ -6,7 +6,8 @@ import { motion } from 'framer-motion'
 import { Badge } from '@/components/ui/shadcnui/badge'
 import { Card, CardContent, CardFooter } from '@/components/ui/shadcnui/card'
 import { Button } from '@/components/ui/shadcnui/button'
-import { Bed, MapPin, Euro } from 'lucide-react'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Bed, MapPin, Euro, Trash2, Pencil, Wrench, ConciergeBell } from 'lucide-react'
 import { Product } from '@prisma/client'
 import {
   getValidationStatusLabel,
@@ -17,11 +18,20 @@ import { getLocationDisplay } from '@/lib/utils'
 interface ProductCardProps {
   product: Product & {
     img?: { img: string }[]
+    type?: { id: string; name: string } | null
+    equipmentCount?: number
+    serviceCount?: number
+    typeName?: string | null
   }
+  selected?: boolean
+  onToggleSelect?: (id: string) => void
+  onDelete?: (product: { id: string; name: string }) => void
 }
 
-export function ProductCard({ product }: ProductCardProps) {
-  // Construire l'objet de localisation pour l'affichage
+/**
+ * Admin product card with optional selection checkbox and delete button.
+ */
+export function ProductCard({ product, selected, onToggleSelect, onDelete }: ProductCardProps) {
   const locationDisplay = getLocationDisplay({
     address: product.address,
     neighborhood: product.neighborhood,
@@ -38,7 +48,17 @@ export function ProductCard({ product }: ProductCardProps) {
       whileHover={{ y: -5 }}
       className='h-full'
     >
-      <Card className='overflow-hidden h-full flex flex-col py-0'>
+      <Card className='overflow-hidden h-full flex flex-col py-0 relative'>
+        {onToggleSelect && (
+          <div className='absolute top-4 left-4 z-10'>
+            <Checkbox
+              checked={selected}
+              onCheckedChange={() => onToggleSelect(product.id)}
+              className='bg-white border-2'
+            />
+          </div>
+        )}
+
         <div className='relative aspect-[16/9] overflow-hidden'>
           {product.img && product.img[0] && (
             <Image
@@ -55,6 +75,11 @@ export function ProductCard({ product }: ProductCardProps) {
           >
             {getValidationStatusLabel(product.validate)}
           </Badge>
+          {(product.typeName || product.type?.name) && (
+            <Badge variant='outline' className='absolute top-2 left-2 z-10 bg-white/90 text-xs'>
+              {product.typeName || product.type?.name}
+            </Badge>
+          )}
         </div>
 
         <CardContent className='flex-1 p-4 space-y-3'>
@@ -76,13 +101,45 @@ export function ProductCard({ product }: ProductCardProps) {
               <Euro className='h-4 w-4' />
               <span>{product.basePrice}€ / nuit</span>
             </div>
+            {(product.equipmentCount !== undefined && product.equipmentCount > 0) && (
+              <div className='flex items-center gap-1'>
+                <Wrench className='h-4 w-4' />
+                <span>{product.equipmentCount} équip.</span>
+              </div>
+            )}
+            {(product.serviceCount !== undefined && product.serviceCount > 0) && (
+              <div className='flex items-center gap-1'>
+                <ConciergeBell className='h-4 w-4' />
+                <span>{product.serviceCount} serv.</span>
+              </div>
+            )}
           </div>
         </CardContent>
 
-        <CardFooter className='p-4 pt-0'>
-          <Button asChild className='w-full' variant='outline'>
+        <CardFooter className='p-4 pt-0 gap-2'>
+          <Button asChild className='flex-1' variant='outline'>
             <Link href={`/admin/products/${product.id}`}>Voir détails</Link>
           </Button>
+          <Button
+            asChild
+            variant='outline'
+            size='icon'
+            title='Modifier cet hébergement'
+          >
+            <Link href={`/admin/validation/${product.id}?tab=edit`}>
+              <Pencil className='h-4 w-4' />
+            </Link>
+          </Button>
+          {onDelete && (
+            <Button
+              variant='destructive'
+              size='icon'
+              onClick={() => onDelete({ id: product.id, name: product.name })}
+              title='Supprimer cet hébergement'
+            >
+              <Trash2 className='h-4 w-4' />
+            </Button>
+          )}
         </CardFooter>
       </Card>
     </motion.div>

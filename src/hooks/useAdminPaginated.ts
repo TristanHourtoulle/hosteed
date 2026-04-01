@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Product, User } from '@prisma/client'
+import { useState, useMemo, useEffect } from 'react'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
+import { Product, User, RentStatus, PaymentStatus } from '@prisma/client'
 
 interface PaginationInfo {
   currentPage: number
@@ -11,6 +11,38 @@ interface PaginationInfo {
   totalItems: number
   hasNext: boolean
   hasPrev: boolean
+}
+
+interface AdminReservation {
+  id: string
+  arrivingDate: string
+  leavingDate: string
+  status: RentStatus
+  payment: PaymentStatus
+  totalAmount: number | null
+  numberOfNights: number | null
+  numberPeople: number | null
+  createdAt: string
+  accepted: boolean
+  confirmed: boolean
+  product: {
+    id: string
+    name: string
+    address: string
+    owner: { id: string; name: string | null; email: string }
+  }
+  user: {
+    id: string
+    name: string | null
+    lastname: string | null
+    email: string
+  }
+}
+
+interface AdminReservationsResult {
+  reservations: AdminReservation[]
+  stats: Record<string, number>
+  pagination: PaginationInfo
 }
 
 interface ExtendedProduct extends Product {
@@ -46,6 +78,7 @@ export function useAdminProductsPaginated() {
   const {
     data: result,
     isLoading,
+    isFetching,
     error,
     refetch,
   } = useQuery<AdminProductsResult>({
@@ -57,8 +90,9 @@ export function useAdminProductsPaginated() {
       }
       return await response.json()
     },
-    staleTime: 30000, // Cache for 30 seconds
+    staleTime: 30000,
     refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
   })
 
   const goToPage = (page: number) => {
@@ -86,6 +120,7 @@ export function useAdminProductsPaginated() {
       hasPrev: false,
     },
     loading: isLoading,
+    isFetching,
     error,
     searchTerm,
     handleSearch,
@@ -169,6 +204,97 @@ export function useAdminUsersPaginated() {
     roleFilter,
     handleSearch,
     handleRoleFilter,
+    goToPage,
+    nextPage,
+    prevPage,
+    refetch,
+  }
+}
+
+export function useAdminReservationsPaginated() {
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(20)
+  const [searchInput, setSearchInput] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string>('')
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(searchInput)
+      setCurrentPage(1)
+    }, 300)
+    return () => clearTimeout(timeout)
+  }, [searchInput])
+
+  const searchParams = useMemo(() => {
+    const params = new URLSearchParams()
+    params.set('page', currentPage.toString())
+    params.set('limit', itemsPerPage.toString())
+    if (debouncedSearch.trim()) {
+      params.set('search', debouncedSearch.trim())
+    }
+    if (statusFilter) {
+      params.set('status', statusFilter)
+    }
+    return params.toString()
+  }, [currentPage, itemsPerPage, debouncedSearch, statusFilter])
+
+  const {
+    data: result,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+  } = useQuery<AdminReservationsResult>({
+    queryKey: ['admin-reservations', searchParams],
+    queryFn: async () => {
+      const response = await fetch(`/api/admin/reservations?${searchParams}`)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      return await response.json()
+    },
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
+  })
+
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= (result?.pagination.totalPages || 1)) {
+      setCurrentPage(page)
+    }
+  }
+
+  const nextPage = () => goToPage(currentPage + 1)
+  const prevPage = () => goToPage(currentPage - 1)
+
+  const handleSearch = (term: string) => {
+    setSearchInput(term)
+  }
+
+  const handleStatusFilter = (status: string) => {
+    setStatusFilter(status)
+    setCurrentPage(1)
+  }
+
+  return {
+    reservations: result?.reservations || [],
+    stats: result?.stats || { WAITING: 0, RESERVED: 0, CHECKIN: 0, CHECKOUT: 0, CANCEL: 0, total: 0 },
+    pagination: result?.pagination || {
+      currentPage: 1,
+      totalPages: 1,
+      itemsPerPage,
+      totalItems: 0,
+      hasNext: false,
+      hasPrev: false,
+    },
+    loading: isLoading,
+    isFetching,
+    error,
+    searchTerm: searchInput,
+    statusFilter,
+    handleSearch,
+    handleStatusFilter,
     goToPage,
     nextPage,
     prevPage,
