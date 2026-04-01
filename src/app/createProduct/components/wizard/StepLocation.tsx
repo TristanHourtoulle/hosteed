@@ -47,6 +47,8 @@ export function StepLocation({
         formData={formData as never}
         setFormData={setFormData as never}
         itemVariants={itemVariants}
+        hasFieldError={hasFieldError}
+        getFieldError={getFieldError}
       />
 
       <ProductCharacteristicsForm
