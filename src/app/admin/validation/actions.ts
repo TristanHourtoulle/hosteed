@@ -9,36 +9,29 @@ import {
 import { ProductValidation } from '@prisma/client'
 import prisma from '@/lib/prisma'
 
-export async function getProductsForValidation() {
+export async function getValidationProductsByStatus({
+  status,
+  statuses,
+  page = 1,
+  limit = 20,
+}: {
+  status?: ProductValidation
+  statuses?: ProductValidation[]
+  page?: number
+  limit?: number
+}) {
   try {
     const result = await validationService.getProductsForValidationPaginated({
-      page: 1,
-      limit: 20, // ✅ Réduit de 100 à 20 produits
-      includeLightweight: true, // ✅ Mode léger = 1 image seulement
-    })
-    return { success: true, data: result.products }
-  } catch (error) {
-    console.error('Error fetching products for validation:', error)
-    return { success: false, error: 'Impossible de charger les produits' }
-  }
-}
-
-/**
- * Fetch rejected products separately to avoid pagination issues.
- * The main getProductsForValidation() is limited to 20 products, so rejected ones may be missing.
- */
-export async function getRejectedProducts() {
-  try {
-    const result = await validationService.getProductsForValidationPaginated({
-      page: 1,
-      limit: 100,
-      status: ProductValidation.Refused,
+      page,
+      limit,
+      status,
+      statuses,
       includeLightweight: true,
     })
-    return { success: true, data: result.products }
+    return { success: true, data: result.products, pagination: result.pagination }
   } catch (error) {
-    console.error('Error fetching rejected products:', error)
-    return { success: false, error: 'Impossible de charger les produits rejetés' }
+    console.error('Error fetching products for validation:', error)
+    return { success: false, error: 'Impossible de charger les produits', data: [], pagination: null }
   }
 }
 

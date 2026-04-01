@@ -35,17 +35,24 @@ export const validationService = {
     page = 1,
     limit = 20,
     status,
+    statuses,
     includeLightweight = false,
   }: {
     page?: number
     limit?: number
     status?: ProductValidation
+    statuses?: ProductValidation[]
     includeLightweight?: boolean
   } = {}) {
     const skip = (page - 1) * limit
 
-    // Build where clause based on status filter
-    const whereClause = status ? { validate: status } : {}
+    // Build where clause: multi-status takes precedence over single status
+    const whereClause =
+      statuses && statuses.length > 0
+        ? { validate: { in: statuses } }
+        : status
+          ? { validate: status }
+          : {}
 
     // Use the same pattern as getProductForValidation which works
     const baseUserInclude = {

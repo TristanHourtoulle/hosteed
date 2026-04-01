@@ -3,13 +3,12 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
-import { ProductValidation } from '@prisma/client'
 import { isAdmin } from '@/hooks/useAdminAuth'
 import { motion, Variants } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { XCircle, ArrowLeft } from 'lucide-react'
-import { getProductsForValidation, getValidationStats, getRejectedProducts } from './actions'
+import { getValidationStats } from './actions'
 import { ValidationStatsCards } from './components/ValidationStatsCards'
 import ValidationTabs from './components/ValidationTabs'
 
@@ -36,27 +35,6 @@ const itemVariants: Variants = {
   },
 }
 
-interface Product {
-  id: string
-  name: string
-  description: string
-  address: string
-  basePrice: string
-  validate: ProductValidation
-  isDraft?: boolean
-  originalProductId?: string | null
-  img?: { img: string }[]
-  owner: {
-    id: string
-    name?: string | null
-    lastname?: string | null
-    email: string
-    image?: string | null
-  }
-  isRecentlyModified?: boolean
-  wasRecheckRequested?: boolean
-}
-
 interface ValidationStats {
   pending: number
   approved: number
@@ -74,7 +52,6 @@ export default function ValidationPage() {
     isAuthenticated,
   } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
-  const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [stats, setStats] = useState<ValidationStats>({
@@ -106,27 +83,11 @@ export default function ValidationPage() {
   const fetchData = async () => {
     try {
       setLoading(true)
-
-      const [productsResult, statsResult, rejectedResult] = await Promise.all([
-        getProductsForValidation(),
-        getValidationStats(),
-        getRejectedProducts(),
-      ])
-
-      if (productsResult.success && productsResult.data) {
-        // Merge rejected products that may be missing from the paginated main query
-        const mainProducts = productsResult.data
-        const rejectedProducts =
-          rejectedResult.success && rejectedResult.data ? rejectedResult.data : []
-        const mainIds = new Set(mainProducts.map((p: Product) => p.id))
-        const missingRejected = rejectedProducts.filter((p: Product) => !mainIds.has(p.id))
-        setProducts([...mainProducts, ...missingRejected])
-      } else {
-        setError(productsResult.error || 'Erreur lors du chargement des produits')
-      }
-
+      const statsResult = await getValidationStats()
       if (statsResult.success && statsResult.data) {
         setStats(statsResult.data)
+      } else {
+        setError(statsResult.error || 'Erreur lors du chargement des statistiques')
       }
     } catch (err) {
       console.error('Erreur lors du chargement des données:', err)
@@ -194,7 +155,6 @@ export default function ValidationPage() {
       {/* Validation Tabs */}
       <motion.div variants={itemVariants}>
         <ValidationTabs
-          products={products}
           stats={stats}
           currentUserId={session?.user?.id || ''}
           onUpdate={fetchData}
