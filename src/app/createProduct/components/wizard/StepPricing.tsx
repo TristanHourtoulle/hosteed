@@ -69,6 +69,16 @@ export function StepPricing({
     setSpecialPrices(prev => [...prev, specialPriceWithId])
   }
 
+  // priceMGA in wizard maps to basePriceMGA in ProductPricingForm
+  const pricingHasFieldError = (field: string) => {
+    const mappedField = field === 'basePriceMGA' ? 'priceMGA' : field
+    return hasFieldError?.(mappedField) ?? false
+  }
+  const pricingGetFieldError = (field: string) => {
+    const mappedField = field === 'basePriceMGA' ? 'priceMGA' : field
+    return getFieldError?.(mappedField)
+  }
+
   return (
     <motion.div
       variants={stepVariants}
@@ -93,6 +103,8 @@ export function StepPricing({
           }
         }}
         itemVariants={itemVariants}
+        hasFieldError={pricingHasFieldError}
+        getFieldError={pricingGetFieldError}
       />
 
       {/* Special Prices */}
