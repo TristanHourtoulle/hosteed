@@ -7,7 +7,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useBookingProduct, useBookingUser, useBookingPricing } from '@/hooks/useBookingData'
 import { useAvailability } from '@/hooks/useAvailability'
 import { reservationFormSchema, type ReservationFormData } from '@/lib/zod/booking.schema'
-import { MapPin, Star, CreditCard, Shield, ArrowLeft, Check } from 'lucide-react'
+import { MapPin, Star, CreditCard, Shield, ArrowLeft, Check, Info } from 'lucide-react'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
 import {
@@ -62,6 +62,7 @@ export default function ReservationPage() {
   const [step, setStep] = useState(2)
   const [selectedExtraIds, setSelectedExtraIds] = useState<string[]>([])
   const [extrasCost, setExtrasCost] = useState(0)
+  const [showFeeDetail, setShowFeeDetail] = useState(false)
 
   // React Hook Form with Zod validation
   const form = useForm<ReservationFormData>({
@@ -717,8 +718,16 @@ export default function ReservationPage() {
                           <span className='text-blue-800 text-sm sm:text-base font-medium'>
                             Frais de service Hosteed
                           </span>
-                          {priceCalculation?.breakdown && (
-                            <div className='text-xs text-blue-600 mt-1'>
+                          <button
+                            type='button'
+                            onClick={() => setShowFeeDetail(v => !v)}
+                            className='flex items-center gap-1 text-xs text-blue-600 mt-1 hover:text-blue-800 transition-colors'
+                          >
+                            <Info className='w-3 h-3' />
+                            {showFeeDetail ? 'Masquer le détail' : 'Comment sont calculés ces frais ?'}
+                          </button>
+                          {showFeeDetail && priceCalculation?.breakdown && (
+                            <div className='text-xs text-blue-600 mt-2 space-y-0.5 pl-1 border-l-2 border-blue-200'>
                               {priceCalculation.breakdown.clientCommissionRate > 0 && (
                                 <div>
                                   {formatNumber(
