@@ -120,15 +120,3 @@ export const cachedValidationStats = unstable_cache(
   }
 )
 
-// Products for validation with short cache time
-export const cachedProductsForValidation = unstable_cache(
-  async () => {
-    const { getProductsForValidation } = await import('@/app/admin/validation/actions')
-    return getProductsForValidation()
-  },
-  ['products-for-validation'],
-  {
-    revalidate: 60, // 1 minute
-    tags: ['validation-products'],
-  }
-)

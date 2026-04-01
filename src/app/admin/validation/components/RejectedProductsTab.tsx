@@ -10,6 +10,7 @@ import { Trash2, Loader2, AlertTriangle, Eye } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { deleteSingleRejectedProduct, deleteBulkRejectedProducts } from '../actions'
+import Pagination from '@/components/ui/Pagination'
 
 interface Product {
   id: string
@@ -28,18 +29,34 @@ interface Product {
   }
 }
 
-interface RejectedProductsTabProps {
-  products: Product[]
-  currentUserId: string
-  onUpdate: () => void
+interface PaginationInfo {
+  page: number
+  limit: number
+  total: number
+  totalPages: number
+  hasNext: boolean
+  hasPrev: boolean
 }
 
-export function RejectedProductsTab({ products, onUpdate }: RejectedProductsTabProps) {
+interface RejectedProductsTabProps {
+  products: Product[]
+  loading: boolean
+  pagination: PaginationInfo | null
+  currentUserId: string
+  onUpdate: () => void
+  onPageChange: (page: number) => void
+}
+
+export function RejectedProductsTab({
+  products,
+  loading,
+  pagination,
+  onUpdate,
+  onPageChange,
+}: RejectedProductsTabProps) {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([])
   const [isDeleting, setIsDeleting] = useState(false)
   const [isDeletingBulk, setIsDeletingBulk] = useState(false)
-
-  const rejectedProducts = products.filter(p => p.validate === ProductValidation.Refused)
 
   const toggleProductSelection = (productId: string) => {
     setSelectedProducts(prev =>
@@ -48,10 +65,10 @@ export function RejectedProductsTab({ products, onUpdate }: RejectedProductsTabP
   }
 
   const toggleSelectAll = () => {
-    if (selectedProducts.length === rejectedProducts.length) {
+    if (selectedProducts.length === products.length) {
       setSelectedProducts([])
     } else {
-      setSelectedProducts(rejectedProducts.map(p => p.id))
+      setSelectedProducts(products.map(p => p.id))
     }
   }
 
@@ -108,7 +125,15 @@ export function RejectedProductsTab({ products, onUpdate }: RejectedProductsTabP
     }
   }
 
-  if (rejectedProducts.length === 0) {
+  if (loading) {
+    return (
+      <div className='flex items-center justify-center py-16'>
+        <Loader2 className='h-8 w-8 text-blue-500 animate-spin' />
+      </div>
+    )
+  }
+
+  if (products.length === 0) {
     return (
       <Card>
         <CardContent className='flex flex-col items-center justify-center py-12'>
@@ -122,19 +147,16 @@ export function RejectedProductsTab({ products, onUpdate }: RejectedProductsTabP
 
   return (
     <div className='space-y-6'>
-      {/* Actions en masse */}
+      {/* Bulk actions */}
       <Card>
         <CardHeader>
           <CardTitle className='flex items-center justify-between'>
-            <span>Annonces rejetées ({rejectedProducts.length})</span>
+            <span>Annonces rejetées ({pagination?.total ?? products.length})</span>
             <div className='flex items-center gap-4'>
               <div className='flex items-center gap-2'>
                 <Checkbox
                   id='select-all'
-                  checked={
-                    selectedProducts.length === rejectedProducts.length &&
-                    rejectedProducts.length > 0
-                  }
+                  checked={selectedProducts.length === products.length && products.length > 0}
                   onCheckedChange={toggleSelectAll}
                 />
                 <label htmlFor='select-all' className='text-sm text-gray-700'>
@@ -166,9 +188,9 @@ export function RejectedProductsTab({ products, onUpdate }: RejectedProductsTabP
         </CardHeader>
       </Card>
 
-      {/* Liste des produits rejetés */}
+      {/* Rejected products grid */}
       <div className='grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6'>
-        {rejectedProducts.map((product, index) => (
+        {products.map((product, index) => (
           <motion.div
             key={product.id}
             initial={{ opacity: 0, y: 20 }}
@@ -176,7 +198,6 @@ export function RejectedProductsTab({ products, onUpdate }: RejectedProductsTabP
             transition={{ delay: index * 0.05 }}
           >
             <Card className='relative overflow-hidden hover:shadow-lg transition-all duration-300'>
-              {/* Checkbox de sélection */}
               <div className='absolute top-4 left-4 z-10'>
                 <Checkbox
                   checked={selectedProducts.includes(product.id)}
@@ -185,7 +206,6 @@ export function RejectedProductsTab({ products, onUpdate }: RejectedProductsTabP
                 />
               </div>
 
-              {/* Image du produit */}
               <div className='relative h-48 w-full'>
                 {product.img && product.img.length > 0 ? (
                   <Image
@@ -208,7 +228,6 @@ export function RejectedProductsTab({ products, onUpdate }: RejectedProductsTabP
 
               <CardContent className='p-4'>
                 <div className='space-y-3'>
-                  {/* Titre et description */}
                   <div>
                     <h3 className='font-semibold text-lg text-gray-900 line-clamp-1'>
                       {product.name}
@@ -216,7 +235,6 @@ export function RejectedProductsTab({ products, onUpdate }: RejectedProductsTabP
                     <p className='text-gray-600 text-sm line-clamp-2 mt-1'>{product.description}</p>
                   </div>
 
-                  {/* Informations hôte */}
                   <div className='text-sm text-gray-600'>
                     <span>Hôte: </span>
                     <span className='font-medium'>
@@ -226,7 +244,6 @@ export function RejectedProductsTab({ products, onUpdate }: RejectedProductsTabP
                     </span>
                   </div>
 
-                  {/* Actions */}
                   <div className='flex gap-2 pt-2'>
                     <Button variant='outline' size='sm' asChild className='flex-1'>
                       <Link href={`/admin/validation/${product.id}`}>
@@ -256,6 +273,24 @@ export function RejectedProductsTab({ products, onUpdate }: RejectedProductsTabP
           </motion.div>
         ))}
       </div>
+
+      {pagination && pagination.totalPages > 1 && (
+        <div className='flex flex-col items-center gap-2'>
+          <Pagination
+            currentPage={pagination.page}
+            totalPages={pagination.totalPages}
+            onPageChange={onPageChange}
+            showPrevNext={true}
+            showNumbers={true}
+            maxVisiblePages={5}
+          />
+          <p className='text-sm text-gray-500'>
+            Affichage de {(pagination.page - 1) * pagination.limit + 1} à{' '}
+            {Math.min(pagination.page * pagination.limit, pagination.total)} sur {pagination.total}{' '}
+            annonces rejetées
+          </p>
+        </div>
+      )}
     </div>
   )
 }

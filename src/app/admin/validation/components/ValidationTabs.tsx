@@ -1,13 +1,15 @@
 'use client'
 
-import React, { useMemo, useCallback } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { ProductValidation } from '@prisma/client'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
-import { Home } from 'lucide-react'
+import { Home, Loader2 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import ProductValidationCard from './ProductValidationCard'
 import { RejectedProductsTab } from './RejectedProductsTab'
+import Pagination from '@/components/ui/Pagination'
+import { getValidationProductsByStatus } from '../actions'
 
 interface Product {
   id: string
@@ -24,9 +26,17 @@ interface Product {
     email: string
     image?: string | null
   }
-  // Nouvelles métadonnées pour le contexte de validation
   isRecentlyModified?: boolean
   wasRecheckRequested?: boolean
+}
+
+interface PaginationInfo {
+  page: number
+  limit: number
+  total: number
+  totalPages: number
+  hasNext: boolean
+  hasPrev: boolean
 }
 
 interface ValidationStats {
@@ -38,13 +48,22 @@ interface ValidationStats {
 }
 
 interface ValidationTabsProps {
-  products: Product[]
   stats: ValidationStats
   currentUserId: string
   onUpdate: () => void
 }
 
-// Memoized motion variants to prevent recreation on every render
+const ITEMS_PER_PAGE = 20
+
+const TAB_STATUS_MAP: Record<string, { status?: ProductValidation; statuses?: ProductValidation[] }> = {
+  all: {},
+  pending: { statuses: [ProductValidation.NotVerified, ProductValidation.RecheckRequest] },
+  new: { status: ProductValidation.NotVerified },
+  resubmitted: { status: ProductValidation.RecheckRequest },
+  approved: { status: ProductValidation.Approve },
+  rejected: { status: ProductValidation.Refused },
+}
+
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: {
@@ -58,80 +77,161 @@ const itemVariants = {
   },
 }
 
-function ValidationTabs({ products, stats, currentUserId, onUpdate }: ValidationTabsProps) {
-  // Memoize all filtered product arrays to prevent unnecessary recalculations
-  const filteredProducts = useMemo(() => {
-    return {
-      all: products,
-      pending: products.filter(
-        p =>
-          p.validate === ProductValidation.NotVerified ||
-          p.validate === ProductValidation.RecheckRequest
-      ),
-      new: products.filter(
-        p => p.validate === ProductValidation.NotVerified && !p.isRecentlyModified
-      ),
-      resubmitted: products.filter(
-        p =>
-          p.validate === ProductValidation.RecheckRequest ||
-          (p.validate === ProductValidation.NotVerified && p.isRecentlyModified)
-      ),
-      approved: products.filter(p => p.validate === ProductValidation.Approve),
-      rejected: products.filter(p => p.validate === ProductValidation.Refused),
-    }
-  }, [products])
+interface TabState {
+  products: Product[]
+  pagination: PaginationInfo | null
+  loading: boolean
+}
 
-  // Memoize messages object to prevent recreation
-  const emptyStateMessages = useMemo(
-    () => ({
-      all: "Aucune annonce n'a été soumise pour le moment.",
-      pending: 'Aucune annonce en attente de validation.',
-      new: 'Aucune nouvelle annonce soumise.',
-      resubmitted: 'Aucune annonce modifiée en attente.',
-      approved: 'Aucune annonce validée pour le moment.',
-      rejected: 'Aucune annonce rejetée pour le moment.',
-    }),
+const initialTabState = (): TabState => ({
+  products: [],
+  pagination: null,
+  loading: false,
+})
+
+function ValidationTabs({ stats, currentUserId, onUpdate }: ValidationTabsProps) {
+  const [activeTab, setActiveTab] = useState('all')
+  const [pages, setPages] = useState<Record<string, number>>({
+    all: 1,
+    pending: 1,
+    new: 1,
+    resubmitted: 1,
+    approved: 1,
+    rejected: 1,
+  })
+  const [tabStates, setTabStates] = useState<Record<string, TabState>>({
+    all: initialTabState(),
+    pending: initialTabState(),
+    new: initialTabState(),
+    resubmitted: initialTabState(),
+    approved: initialTabState(),
+    rejected: initialTabState(),
+  })
+
+  const fetchTab = useCallback(
+    async (tab: string, page: number) => {
+      setTabStates(prev => ({
+        ...prev,
+        [tab]: { ...prev[tab], loading: true },
+      }))
+
+      const { status, statuses } = TAB_STATUS_MAP[tab]
+
+      const result = await getValidationProductsByStatus({
+        status,
+        statuses,
+        page,
+        limit: ITEMS_PER_PAGE,
+      })
+
+      if (result.success && result.data) {
+        const products = result.data as Product[]
+
+        setTabStates(prev => ({
+          ...prev,
+          [tab]: {
+            products,
+            pagination: result.pagination ?? null,
+            loading: false,
+          },
+        }))
+      } else {
+        setTabStates(prev => ({
+          ...prev,
+          [tab]: { ...prev[tab], loading: false },
+        }))
+      }
+    },
     []
   )
 
-  // Memoized empty state renderer
-  const renderEmptyState = useCallback(
-    (activeTab: string) => {
-      return (
-        <Card>
-          <CardContent className='flex flex-col items-center justify-center py-12'>
-            <Home className='h-12 w-12 text-gray-400 mb-4' />
-            <h3 className='text-lg font-medium text-gray-900 mb-2'>Aucune annonce trouvée</h3>
-            <p className='text-gray-500 text-center'>
-              {emptyStateMessages[activeTab as keyof typeof emptyStateMessages]}
-            </p>
-          </CardContent>
-        </Card>
-      )
+  useEffect(() => {
+    fetchTab(activeTab, pages[activeTab])
+  }, [activeTab, pages, fetchTab])
+
+  const handleTabChange = useCallback((tab: string) => {
+    setActiveTab(tab)
+    setPages(prev => ({ ...prev, [tab]: 1 }))
+  }, [])
+
+  const handlePageChange = useCallback(
+    (page: number) => {
+      setPages(prev => ({ ...prev, [activeTab]: page }))
     },
-    [emptyStateMessages]
+    [activeTab]
   )
 
-  // Memoized product grid renderer with useCallback to prevent recreation
-  const renderProductGrid = useCallback(
-    (productList: Product[]) => (
-      <div className='grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6'>
-        {productList.map((product, index) => (
-          <motion.div key={product.id} variants={itemVariants} transition={{ delay: index * 0.1 }}>
-            <ProductValidationCard
-              product={product}
-              currentUserId={currentUserId}
-              onUpdate={onUpdate}
-            />
-          </motion.div>
-        ))}
-      </div>
-    ),
-    [currentUserId, onUpdate]
+  const handleUpdate = useCallback(() => {
+    onUpdate()
+    // Re-fetch current tab after a mutation
+    fetchTab(activeTab, pages[activeTab])
+  }, [onUpdate, fetchTab, activeTab, pages])
+
+  const renderTabContent = useCallback(
+    (tab: string) => {
+      const { products, pagination, loading } = tabStates[tab]
+
+      if (loading) {
+        return (
+          <div className='flex items-center justify-center py-16'>
+            <Loader2 className='h-8 w-8 text-blue-500 animate-spin' />
+          </div>
+        )
+      }
+
+      if (products.length === 0) {
+        return (
+          <Card>
+            <CardContent className='flex flex-col items-center justify-center py-12'>
+              <Home className='h-12 w-12 text-gray-400 mb-4' />
+              <h3 className='text-lg font-medium text-gray-900 mb-2'>Aucune annonce trouvée</h3>
+              <p className='text-gray-500 text-center'>
+                Aucune annonce dans cet onglet pour le moment.
+              </p>
+            </CardContent>
+          </Card>
+        )
+      }
+
+      return (
+        <div className='space-y-6'>
+          <div className='grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6'>
+            {products.map((product, index) => (
+              <motion.div key={product.id} variants={itemVariants} transition={{ delay: index * 0.05 }}>
+                <ProductValidationCard
+                  product={product}
+                  currentUserId={currentUserId}
+                  onUpdate={handleUpdate}
+                />
+              </motion.div>
+            ))}
+          </div>
+
+          {pagination && pagination.totalPages > 1 && (
+            <div className='flex flex-col items-center gap-2'>
+              <Pagination
+                currentPage={pagination.page}
+                totalPages={pagination.totalPages}
+                onPageChange={handlePageChange}
+                showPrevNext={true}
+                showNumbers={true}
+                maxVisiblePages={5}
+              />
+              <p className='text-sm text-gray-500'>
+                Affichage de {(pagination.page - 1) * pagination.limit + 1} à{' '}
+                {Math.min(pagination.page * pagination.limit, pagination.total)} sur{' '}
+                {pagination.total} annonces
+              </p>
+            </div>
+          )}
+        </div>
+      )
+    },
+    [tabStates, currentUserId, handleUpdate, handlePageChange]
   )
 
   return (
-    <Tabs defaultValue='all' className='w-full'>
+    <Tabs value={activeTab} onValueChange={handleTabChange} className='w-full'>
       <TabsList className='grid w-full grid-cols-6'>
         <TabsTrigger value='all'>Toutes ({stats.total})</TabsTrigger>
         <TabsTrigger value='pending'>
@@ -148,91 +248,37 @@ function ValidationTabs({ products, stats, currentUserId, onUpdate }: Validation
       </TabsList>
 
       <TabsContent value='all' className='mt-6'>
-        {filteredProducts.all.length === 0
-          ? renderEmptyState('all')
-          : renderProductGrid(filteredProducts.all)}
+        {renderTabContent('all')}
       </TabsContent>
 
       <TabsContent value='pending' className='mt-6'>
-        {filteredProducts.pending.length === 0
-          ? renderEmptyState('pending')
-          : renderProductGrid(filteredProducts.pending)}
+        {renderTabContent('pending')}
       </TabsContent>
 
       <TabsContent value='new' className='mt-6'>
-        {filteredProducts.new.length === 0
-          ? renderEmptyState('new')
-          : renderProductGrid(filteredProducts.new)}
+        {renderTabContent('new')}
       </TabsContent>
 
       <TabsContent value='resubmitted' className='mt-6'>
-        {filteredProducts.resubmitted.length === 0
-          ? renderEmptyState('resubmitted')
-          : renderProductGrid(filteredProducts.resubmitted)}
+        {renderTabContent('resubmitted')}
       </TabsContent>
 
       <TabsContent value='approved' className='mt-6'>
-        {filteredProducts.approved.length === 0
-          ? renderEmptyState('approved')
-          : renderProductGrid(filteredProducts.approved)}
+        {renderTabContent('approved')}
       </TabsContent>
 
       <TabsContent value='rejected' className='mt-6'>
         <RejectedProductsTab
-          products={products}
+          products={tabStates['rejected'].products}
+          loading={tabStates['rejected'].loading}
+          pagination={tabStates['rejected'].pagination}
           currentUserId={currentUserId}
-          onUpdate={onUpdate}
+          onUpdate={handleUpdate}
+          onPageChange={handlePageChange}
         />
       </TabsContent>
     </Tabs>
   )
 }
 
-// Custom comparison function for React.memo to prevent unnecessary re-renders
-const arePropsEqual = (prevProps: ValidationTabsProps, nextProps: ValidationTabsProps) => {
-  // Check if currentUserId changed
-  if (prevProps.currentUserId !== nextProps.currentUserId) {
-    return false
-  }
-
-  // Check if onUpdate function reference changed (callback)
-  if (prevProps.onUpdate !== nextProps.onUpdate) {
-    return false
-  }
-
-  // Check if stats changed (shallow comparison)
-  const prevStats = prevProps.stats
-  const nextStats = nextProps.stats
-  if (
-    prevStats.pending !== nextStats.pending ||
-    prevStats.approved !== nextStats.approved ||
-    prevStats.rejected !== nextStats.rejected ||
-    prevStats.recheckRequest !== nextStats.recheckRequest ||
-    prevStats.total !== nextStats.total
-  ) {
-    return false
-  }
-
-  // Check if products array changed (length and product IDs)
-  if (prevProps.products.length !== nextProps.products.length) {
-    return false
-  }
-
-  // Check if product IDs changed (shallow comparison for performance)
-  for (let i = 0; i < prevProps.products.length; i++) {
-    if (prevProps.products[i].id !== nextProps.products[i].id) {
-      return false
-    }
-    // Also check critical fields that affect filtering
-    if (
-      prevProps.products[i].validate !== nextProps.products[i].validate ||
-      prevProps.products[i].isRecentlyModified !== nextProps.products[i].isRecentlyModified
-    ) {
-      return false
-    }
-  }
-
-  return true
-}
-
-export default React.memo(ValidationTabs, arePropsEqual)
+export default ValidationTabs
