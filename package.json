@@ -76,6 +76,7 @@
     "ioredis": "^5.8.2",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.513.0",
+    "marked": "^18.0.0",
     "nanoid": "^5.1.6",
     "next": "16.1.1",
     "next-auth": "5.0.0-beta.29",

@@ -1,16 +1,16 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
+import { marked } from 'marked'
 import {
   Save,
   Loader2,
   ImagePlus,
   X,
   FileText,
-  Eye,
   Edit3,
   type LucideIcon,
 } from 'lucide-react'
@@ -18,13 +18,25 @@ import {
 import { Button } from '@/components/ui/shadcnui/button'
 import { Input } from '@/components/ui/shadcnui/input'
 import { Label } from '@/components/ui/shadcnui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/shadcnui/tabs'
 import SEOFieldsCard, { type SEOData } from '@/components/ui/SEOFieldsCard'
-import {
-  LazyMarkdownEditor,
-  LazyMarkdownViewer,
-} from '@/components/dynamic/LazyComponents'
+import { LazyTiptapEditor } from '@/components/dynamic/LazyComponents'
 import { PageHeader } from '@/components/admin/ui/PageHeader'
+
+/**
+ * Convert existing Markdown content to HTML so the Tiptap editor can pick it up.
+ * Detects HTML by looking for a leading tag; otherwise parses as Markdown.
+ */
+function toEditorHtml(raw: string): string {
+  if (!raw) return ''
+  const trimmed = raw.trimStart()
+  if (trimmed.startsWith('<')) return raw
+  try {
+    return marked.parse(raw, { async: false }) as string
+  } catch (error) {
+    console.error('Failed to convert Markdown → HTML for the editor:', error)
+    return raw
+  }
+}
 
 /**
  * Form data emitted to the parent on submit. Image handling is the parent's
@@ -100,8 +112,10 @@ export function BlogPostForm({
   headerActions,
   onSubmit,
 }: BlogPostFormProps) {
+  const initialHtml = useMemo(() => toEditorHtml(initialContent), [initialContent])
+
   const [title, setTitle] = useState(initialTitle)
-  const [content, setContent] = useState(initialContent)
+  const [content, setContent] = useState(initialHtml)
   const [newImageFile, setNewImageFile] = useState<File | null>(null)
   const [imageUrl, setImageUrl] = useState(initialImageUrl)
   const [seoData, setSeoData] = useState<SEOData>(
@@ -232,51 +246,15 @@ export function BlogPostForm({
                 </div>
               </div>
               <div className='p-6'>
-                <Tabs defaultValue='edit' className='w-full'>
-                  <TabsList className='grid w-full grid-cols-2'>
-                    <TabsTrigger value='edit' className='gap-2'>
-                      <Edit3 className='h-3.5 w-3.5' />
-                      Édition
-                    </TabsTrigger>
-                    <TabsTrigger value='preview' className='gap-2'>
-                      <Eye className='h-3.5 w-3.5' />
-                      Aperçu
-                    </TabsTrigger>
-                  </TabsList>
-                  <TabsContent value='edit' className='mt-4'>
-                    <div
-                      data-color-mode='light'
-                      className='overflow-hidden rounded-xl border border-slate-200 bg-white'
-                    >
-                      <LazyMarkdownEditor
-                        value={content}
-                        onChange={val => setContent(val || '')}
-                        preview='edit'
-                        height={460}
-                        data-color-mode='light'
-                        visibleDragbar={false}
-                        textareaProps={{
-                          placeholder:
-                            "Commencez à écrire votre article ici…\n\n# Titre principal\n\nVotre contenu. Utilisez **gras** et *italique* pour mettre en forme.\n\n## Sous-titre\n\n- Liste à puces\n- Deuxième élément\n\n[Lien](https://example.com)",
-                        }}
-                      />
-                    </div>
-                    <p className='mt-3 text-xs text-slate-500'>
-                      La syntaxe Markdown est prise en charge (titres, listes, liens, images,
-                      code…).
-                    </p>
-                  </TabsContent>
-                  <TabsContent value='preview' className='mt-4'>
-                    <div className='min-h-[460px] rounded-xl border border-slate-200 bg-white p-6'>
-                      <div data-color-mode='light' className='prose prose-sm max-w-none'>
-                        <LazyMarkdownViewer
-                          source={content || '*Votre article apparaîtra ici…*'}
-                          style={{ backgroundColor: 'transparent', fontFamily: 'inherit' }}
-                        />
-                      </div>
-                    </div>
-                  </TabsContent>
-                </Tabs>
+                <LazyTiptapEditor
+                  content={content}
+                  onChange={setContent}
+                  placeholder='Commencez à écrire votre article ici…'
+                />
+                <p className='mt-3 text-xs text-slate-500'>
+                  Utilisez la barre d&apos;outils pour mettre en forme votre texte (gras, titres,
+                  listes, liens).
+                </p>
               </div>
             </div>
           </div>
@@ -341,16 +319,17 @@ export function BlogPostForm({
               </div>
             </div>
 
-            {/* SEO card */}
-            <SEOFieldsCard
-              seoData={seoData}
-              onSeoChange={setSeoData}
-              articleTitle={title}
-            />
-
             {sidebarExtra}
           </div>
         </div>
+
+        {/* Full-width SEO card — placed outside the 2/3 - 1/3 grid so it has
+         *  room to breathe on wide screens. */}
+        <SEOFieldsCard
+          seoData={seoData}
+          onSeoChange={setSeoData}
+          articleTitle={title}
+        />
       </motion.form>
     </div>
   )

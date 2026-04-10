@@ -17,19 +17,21 @@ import { PlusCircle, Calendar, Clock, ChevronRight, Search } from 'lucide-react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { Post } from '@prisma/client'
+import { toPlainTextPreview } from '@/lib/utils/contentFormat'
 
 function truncateText(text: string, maxLength: number) {
-  // Supprimer les balises Markdown
-  const strippedText = text.replace(/[#*-]/g, '').replace(/\n/g, ' ').trim()
+  // Handle both legacy Markdown and new Tiptap HTML content.
+  const strippedText = toPlainTextPreview(text)
   if (strippedText.length <= maxLength) return strippedText
   return strippedText.substring(0, maxLength) + '...'
 }
 
 function estimateReadingTime(content: string): number {
+  // Strip markup before counting words so HTML tags don't inflate the count.
+  const plain = toPlainTextPreview(content)
   const wordsPerMinute = 200
-  const words = content.split(/\s+/).length
-  const readingTime = Math.ceil(words / wordsPerMinute)
-  return readingTime
+  const words = plain.split(/\s+/).filter(Boolean).length
+  return Math.max(1, Math.ceil(words / wordsPerMinute))
 }
 
 type SortOption = 'recent' | 'old' | 'az' | 'za'
