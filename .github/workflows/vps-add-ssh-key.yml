@@ -1,0 +1,62 @@
+name: Add SSH Key to VPS
+
+on:
+  workflow_dispatch:
+    inputs:
+      public_key:
+        description: 'SSH public key to add (full line, e.g. "ssh-ed25519 AAAA... comment")'
+        required: true
+        type: string
+      comment:
+        description: 'Owner / purpose of the key (for traceability in authorized_keys)'
+        required: true
+        type: string
+
+jobs:
+  add-key:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Append public key to authorized_keys on VPS
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          NEW_PUBLIC_KEY: ${{ inputs.public_key }}
+          KEY_COMMENT: ${{ inputs.comment }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          envs: NEW_PUBLIC_KEY,KEY_COMMENT
+          script: |
+            set -e
+
+            # Ensure ~/.ssh exists with correct permissions
+            mkdir -p ~/.ssh
+            chmod 700 ~/.ssh
+            touch ~/.ssh/authorized_keys
+            chmod 600 ~/.ssh/authorized_keys
+
+            # Validate the input looks like a real SSH public key
+            if ! echo "$NEW_PUBLIC_KEY" | ssh-keygen -lf - > /dev/null 2>&1; then
+              echo "ERROR: Provided input is not a valid SSH public key."
+              exit 1
+            fi
+
+            FINGERPRINT=$(echo "$NEW_PUBLIC_KEY" | ssh-keygen -lf - | awk '{print $2}')
+            echo "Fingerprint to add: $FINGERPRINT"
+
+            # Idempotent: skip if the exact key is already present
+            if grep -qF "$NEW_PUBLIC_KEY" ~/.ssh/authorized_keys; then
+              echo "Key already present in authorized_keys, skipping."
+            else
+              TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+              echo "" >> ~/.ssh/authorized_keys
+              echo "# Added by vps-add-ssh-key workflow on $TIMESTAMP - $KEY_COMMENT" >> ~/.ssh/authorized_keys
+              echo "$NEW_PUBLIC_KEY" >> ~/.ssh/authorized_keys
+              echo "Key appended successfully."
+            fi
+
+            echo "--- Current authorized_keys fingerprints ---"
+            ssh-keygen -lf ~/.ssh/authorized_keys || true
