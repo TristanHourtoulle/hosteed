@@ -1,36 +1,40 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
+import Link from 'next/link'
+import { motion } from 'framer-motion'
+import { User } from '@prisma/client'
 import { useAuth } from '@/hooks/useAuth'
 import { isFullAdmin } from '@/hooks/useAdminAuth'
 import { createUser } from '@/lib/services/user.service'
-import { User } from '@prisma/client'
 import { useAdminUsersPaginated } from '@/hooks/useAdminPaginated'
 import Pagination from '@/components/ui/Pagination'
-import Link from 'next/link'
-import { motion, Variants } from 'framer-motion'
-import { Card, CardContent, CardHeader } from '@/components/ui/shadcnui/card'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Input } from '@/components/ui/shadcnui/input'
 import { Alert, AlertDescription } from '@/components/ui/shadcnui/alert'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/shadcnui/avatar'
 import {
   Loader2,
-  Search,
-  User as UserIcon,
   Calendar,
   Mail,
   Eye,
-  CheckCircle,
+  CheckCircle2,
   Edit3,
-  Users,
-  Filter,
-  MoreVertical,
+  Users as UsersIcon,
   UserPlus,
   Shield,
   Trash2,
   ShieldCheck,
+  UserCheck,
+  UserCog,
+  Crown,
+  Home,
+  PenLine,
+  UserCircle2,
+  MoreHorizontal,
+  MailCheck,
+  MailX,
 } from 'lucide-react'
 import {
   Dialog,
@@ -57,30 +61,67 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/shadcnui/dropdown-menu'
-import { RoleBadge, RoleIcon } from '@/components/ui/RoleBadge'
 import { EmailVerificationPanel } from './components/EmailVerificationPanel'
 import { ConfirmDeleteUserDialog } from './components/ConfirmDeleteUserDialog'
 import { toast } from 'sonner'
 
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-    },
-  },
+import { PageHeader } from '@/components/admin/ui/PageHeader'
+import { KpiCard, KpiMetric, type KpiTone } from '@/components/admin/ui/KpiCard'
+import { FilterBar } from '@/components/admin/ui/FilterBar'
+import { DataTable, type DataTableColumn, type DataTableSort } from '@/components/admin/ui/DataTable'
+
+/**
+ * Ordered list of roles known to the admin panel.
+ * The order determines how they appear in the role-filter buttons and the role <Select>.
+ */
+const ROLES: Array<{
+  value: string
+  label: string
+  short: string
+  icon: React.ComponentType<{ className?: string }>
+  tone: KpiTone
+}> = [
+  { value: 'ADMIN', label: 'Administrateurs', short: 'Admin', icon: Crown, tone: 'purple' },
+  { value: 'HOST_MANAGER', label: 'Gestionnaires Hôtes', short: 'Gestionnaire', icon: ShieldCheck, tone: 'indigo' },
+  { value: 'BLOGWRITER', label: 'Rédacteurs Blog', short: 'Rédacteur', icon: PenLine, tone: 'blue' },
+  { value: 'HOST_VERIFIED', label: 'Hôtes Vérifiés', short: 'Hôte vérifié', icon: UserCheck, tone: 'emerald' },
+  { value: 'HOST', label: 'Hôtes', short: 'Hôte', icon: Home, tone: 'amber' },
+  { value: 'USER', label: 'Utilisateurs', short: 'Utilisateur', icon: UserCircle2, tone: 'slate' },
+]
+
+function getRoleConfig(role: string) {
+  return ROLES.find(r => r.value === role)
 }
 
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.5,
-    },
-  },
+function RolePill({ role }: { role: string }) {
+  const config = getRoleConfig(role)
+  if (!config) {
+    return (
+      <span className='inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200'>
+        <UserCog className='h-3 w-3' />
+        {role}
+      </span>
+    )
+  }
+  const Icon = config.icon
+  const toneClass: Record<KpiTone, string> = {
+    slate: 'bg-slate-100 text-slate-700 ring-slate-200',
+    blue: 'bg-blue-50 text-blue-700 ring-blue-200',
+    indigo: 'bg-indigo-50 text-indigo-700 ring-indigo-200',
+    emerald: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+    amber: 'bg-amber-50 text-amber-700 ring-amber-200',
+    orange: 'bg-orange-50 text-orange-700 ring-orange-200',
+    red: 'bg-red-50 text-red-700 ring-red-200',
+    purple: 'bg-purple-50 text-purple-700 ring-purple-200',
+  }
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ${toneClass[config.tone]}`}
+    >
+      <Icon className='h-3 w-3' />
+      {config.short}
+    </span>
+  )
 }
 
 export default function UsersPage() {
@@ -91,7 +132,6 @@ export default function UsersPage() {
   } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
 
-  // Use optimized pagination hook
   const {
     users,
     pagination,
@@ -106,37 +146,44 @@ export default function UsersPage() {
   } = useAdminUsersPaginated()
 
   const [error, setError] = useState<string | null>(null)
+  const [sort, setSort] = useState<DataTableSort | null>({ key: 'createdAt', direction: 'desc' })
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
+  // Add-user dialog
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [newUserName, setNewUserName] = useState('')
-  const [newUserSurname, setnewUserSurname] = useState('')
-  const [newUserEmail, setnewUserEmail] = useState('')
-  const [newUserPassword, setnewUserPassword] = useState('')
+  const [newUserSurname, setNewUserSurname] = useState('')
+  const [newUserEmail, setNewUserEmail] = useState('')
+  const [newUserPassword, setNewUserPassword] = useState('')
 
-  // États pour la modification des rôles
+  // Edit-role dialog
   const [isEditRoleDialogOpen, setIsEditRoleDialogOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [newRole, setNewRole] = useState('')
   const [isUpdatingRole, setIsUpdatingRole] = useState(false)
 
-  // États pour la suppression d'utilisateur
+  // Delete dialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deletionInfo, setDeletionInfo] = useState<unknown>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  const handleAddOption = async () => {
-    if (
-      !newUserName.trim() &&
-      !newUserSurname.trim() &&
-      !newUserEmail.trim() &&
-      !newUserPassword.trim()
-    )
-      return
+  useEffect(() => {
+    if (isAuthenticated && (!session?.user?.roles || !isFullAdmin(session.user.roles))) {
+      router.push('/')
+    }
+  }, [isAuthenticated, session, router])
 
+  // Reset selection when page / filter changes
+  useEffect(() => {
+    setSelectedIds(new Set())
+  }, [pagination.currentPage, searchTerm, roleFilter])
+
+  const handleAddUser = async () => {
+    if (!newUserName.trim() || !newUserEmail.trim() || !newUserPassword.trim()) return
     setIsSubmitting(true)
     try {
-      const newOption = await createUser(
+      const result = await createUser(
         {
           email: newUserEmail,
           password: newUserPassword,
@@ -145,21 +192,20 @@ export default function UsersPage() {
         },
         true
       )
-
-      if (newOption) {
-        // Refresh the paginated data instead of manually updating state
+      if (result) {
         await refetch()
         setNewUserName('')
-        setnewUserEmail('')
-        setnewUserSurname('')
-        setnewUserPassword('')
+        setNewUserEmail('')
+        setNewUserSurname('')
+        setNewUserPassword('')
         setIsAddDialogOpen(false)
+        toast.success('Utilisateur créé avec succès')
       } else {
         setError("Erreur lors de la création de l'utilisateur")
       }
     } catch (err) {
       console.error('Erreur lors de la création:', err)
-      setError("Erreur lors de la création de l'utilisateurs")
+      setError("Erreur lors de la création de l'utilisateur")
     } finally {
       setIsSubmitting(false)
     }
@@ -173,39 +219,30 @@ export default function UsersPage() {
 
   const handleUpdateRole = async () => {
     if (!editingUser || !newRole || editingUser.roles === newRole) return
-
     setIsUpdatingRole(true)
     try {
       const response = await fetch(`/api/admin/users/${editingUser.id}/role`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role: newRole }),
       })
-
       if (response.ok) {
-        // Refresh the paginated data instead of manually updating state
         await refetch()
         setIsEditRoleDialogOpen(false)
         setEditingUser(null)
         setNewRole('')
-
-        // Notification toast de succès
-        toast.success('Rôle mis à jour avec succès !', {
-          description: `Un email de notification a été envoyé à ${editingUser.name || editingUser.email} pour l'informer du changement de rôle.`,
+        toast.success('Rôle mis à jour avec succès', {
+          description: `Un email de notification a été envoyé à ${editingUser.name || editingUser.email}.`,
           duration: 5000,
         })
       } else {
         const errorData = await response.json()
-        setError(errorData.error || 'Erreur lors de la modification du rôle')
         toast.error('Erreur lors de la modification du rôle', {
           description: errorData.error || 'Une erreur est survenue',
         })
       }
     } catch (err) {
       console.error('Erreur lors de la modification du rôle:', err)
-      setError('Erreur lors de la modification du rôle')
       toast.error('Erreur lors de la modification du rôle', {
         description: 'Une erreur technique est survenue',
       })
@@ -218,27 +255,25 @@ export default function UsersPage() {
     try {
       const response = await fetch(`/api/admin/users/${user.id}`)
       if (!response.ok) {
-        toast.error('Erreur lors de la recuperation des informations')
+        toast.error('Erreur lors de la récupération des informations')
         return
       }
       const info = await response.json()
       setDeletionInfo(info)
       setDeleteDialogOpen(true)
     } catch {
-      toast.error('Erreur lors de la recuperation des informations')
+      toast.error('Erreur lors de la récupération des informations')
     }
   }
 
   const handleDeleteConfirm = async () => {
     const info = deletionInfo as { user: { id: string } } | null
     if (!info) return
-
     setIsDeleting(true)
     try {
       const response = await fetch(`/api/admin/users/${info.user.id}`, { method: 'DELETE' })
-
       if (response.ok) {
-        toast.success('Utilisateur supprime avec succes')
+        toast.success('Utilisateur supprimé avec succès')
         setDeleteDialogOpen(false)
         setDeletionInfo(null)
         await refetch()
@@ -256,468 +291,485 @@ export default function UsersPage() {
   const handleForceVerifyEmail = async (user: User) => {
     try {
       const response = await fetch(`/api/admin/users/${user.id}`, { method: 'PATCH' })
-
       if (response.ok) {
-        toast.success(`Email de ${user.name || user.email} verifie avec succes`)
+        toast.success(`Email de ${user.name || user.email} vérifié avec succès`)
         await refetch()
       } else {
         const data = await response.json()
-        toast.error(data.error || 'Erreur lors de la verification')
+        toast.error(data.error || 'Erreur lors de la vérification')
       }
     } catch {
-      toast.error('Erreur technique lors de la verification')
+      toast.error('Erreur technique lors de la vérification')
     }
   }
 
-  const getRoleDisplayName = (role: string) => {
-    const roleNames: { [key: string]: string } = {
-      ADMIN: 'Administrateur',
-      HOST_MANAGER: 'Gestionnaire Hôtes',
-      BLOGWRITER: 'Rédacteur Blog',
-      HOST: 'Hôte',
-      HOST_VERIFIED: 'Hôte Vérifié',
-      USER: 'Utilisateur',
+  // Count users per role on the current page (display-only, not precise totals).
+  const rolesCountOnPage = useMemo(() => {
+    const acc: Record<string, number> = {}
+    for (const u of users) {
+      acc[u.roles] = (acc[u.roles] || 0) + 1
     }
-    return roleNames[role] || role
-  }
+    return acc
+  }, [users])
 
-  useEffect(() => {
-    if (isAuthenticated && (!session?.user?.roles || !isFullAdmin(session.user.roles))) {
-      router.push('/')
-    }
-  }, [isAuthenticated, session, router])
+  const unverifiedCount = useMemo(
+    () => users.filter(u => !u.emailVerified).length,
+    [users]
+  )
 
-  // Remove manual data fetching - handled by hook now
+  const columns: DataTableColumn<User>[] = [
+    {
+      key: 'user',
+      header: 'Utilisateur',
+      sortable: true,
+      sortAccessor: u => (u.name || u.email).toLowerCase(),
+      render: user => (
+        <div className='flex min-w-0 items-center gap-3'>
+          <Avatar className='h-9 w-9 shrink-0 border-2 border-white shadow-sm'>
+            <AvatarImage
+              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`}
+              alt={user.name || user.email}
+            />
+            <AvatarFallback className='bg-gradient-to-br from-indigo-500 to-purple-500 text-xs font-semibold text-white'>
+              {(user.name?.[0] || user.email[0]).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div className='min-w-0'>
+            <div className='flex items-center gap-2'>
+              <span className='truncate text-sm font-semibold text-slate-900'>
+                {user.name || user.lastname
+                  ? `${user.name || ''} ${user.lastname || ''}`.trim()
+                  : 'Sans nom'}
+              </span>
+              {user.emailVerified ? (
+                <MailCheck className='h-3.5 w-3.5 shrink-0 text-emerald-500' />
+              ) : (
+                <MailX className='h-3.5 w-3.5 shrink-0 text-amber-500' />
+              )}
+            </div>
+            <p className='truncate text-xs text-slate-500'>
+              <Mail className='mr-1 inline h-3 w-3' />
+              {user.email}
+            </p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'role',
+      header: 'Rôle',
+      sortable: true,
+      sortAccessor: u => u.roles,
+      render: user => <RolePill role={user.roles} />,
+    },
+    {
+      key: 'createdAt',
+      header: 'Inscrit le',
+      sortable: true,
+      sortAccessor: u => new Date(u.createdAt),
+      render: user => (
+        <div className='flex items-center gap-1.5 text-xs text-slate-500'>
+          <Calendar className='h-3 w-3' />
+          {new Date(user.createdAt).toLocaleDateString('fr-FR')}
+        </div>
+      ),
+      cellClassName: 'whitespace-nowrap',
+    },
+  ]
 
-  if (isAuthLoading || loading) {
+  if (isAuthLoading) {
     return (
-      <div className='min-h-screen flex items-center justify-center'>
-        <div className='flex flex-col items-center gap-4'>
-          <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin'></div>
-          <p className='text-slate-600 text-lg'>Chargement...</p>
+      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/40'>
+        <div className='mx-auto max-w-7xl space-y-8 p-6'>
+          <div className='space-y-3'>
+            <div className='h-4 w-40 animate-pulse rounded bg-slate-200' />
+            <div className='h-10 w-80 animate-pulse rounded bg-slate-200' />
+            <div className='h-4 w-96 animate-pulse rounded bg-slate-200' />
+          </div>
+          <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
+            {[0, 1, 2, 3].map(i => (
+              <div
+                key={i}
+                className='h-32 animate-pulse rounded-2xl border border-slate-200/80 bg-white'
+              />
+            ))}
+          </div>
+          <div className='h-16 animate-pulse rounded-2xl border border-slate-200/80 bg-white' />
+          <div className='h-96 animate-pulse rounded-2xl border border-slate-200/80 bg-white' />
         </div>
       </div>
     )
   }
 
-  if (!session) {
-    return null
-  }
+  if (!session) return null
 
-  if (error || hookError) {
-    return (
-      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-8'>
-        <div className='max-w-7xl mx-auto'>
-          <Alert variant='destructive' className='rounded-2xl'>
+  return (
+    <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/40'>
+      <motion.div
+        className='mx-auto max-w-7xl space-y-8 p-6'
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
+        {/* Header */}
+        <PageHeader
+          backHref='/admin'
+          backLabel='Retour au panel admin'
+          eyebrow='Espace administrateur'
+          eyebrowIcon={Shield}
+          title='Gestion des utilisateurs'
+          subtitle='Consultez les comptes, modifiez les rôles et gérez les vérifications d’email depuis cet espace.'
+          actions={
+            <div className='flex items-center gap-2'>
+              <EmailVerificationPanel users={users} refreshUsers={refetch} />
+              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className='gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm hover:from-blue-700 hover:to-indigo-700'>
+                    <UserPlus className='h-4 w-4' />
+                    Ajouter
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className='sm:max-w-md'>
+                  <DialogHeader>
+                    <DialogTitle className='flex items-center gap-2'>
+                      <UserPlus className='h-5 w-5 text-blue-600' />
+                      Nouvel utilisateur
+                    </DialogTitle>
+                    <DialogDescription>
+                      Créez un compte utilisateur avec les informations ci-dessous.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className='space-y-4 py-4'>
+                    <div className='grid grid-cols-2 gap-4'>
+                      <div className='space-y-2'>
+                        <Label htmlFor='userName'>Nom</Label>
+                        <Input
+                          id='userName'
+                          placeholder='Dupont'
+                          value={newUserName}
+                          onChange={e => setNewUserName(e.target.value)}
+                        />
+                      </div>
+                      <div className='space-y-2'>
+                        <Label htmlFor='userSurname'>Prénom</Label>
+                        <Input
+                          id='userSurname'
+                          placeholder='Jean'
+                          value={newUserSurname}
+                          onChange={e => setNewUserSurname(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className='space-y-2'>
+                      <Label htmlFor='userEmail'>Email</Label>
+                      <Input
+                        id='userEmail'
+                        type='email'
+                        placeholder='jean.dupont@email.com'
+                        value={newUserEmail}
+                        onChange={e => setNewUserEmail(e.target.value)}
+                      />
+                    </div>
+                    <div className='space-y-2'>
+                      <Label htmlFor='userPassword'>Mot de passe</Label>
+                      <Input
+                        id='userPassword'
+                        type='password'
+                        placeholder='••••••••'
+                        value={newUserPassword}
+                        onChange={e => setNewUserPassword(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      variant='outline'
+                      onClick={() => setIsAddDialogOpen(false)}
+                      disabled={isSubmitting}
+                    >
+                      Annuler
+                    </Button>
+                    <Button
+                      onClick={handleAddUser}
+                      disabled={
+                        !newUserName.trim() ||
+                        !newUserEmail.trim() ||
+                        !newUserPassword.trim() ||
+                        isSubmitting
+                      }
+                      className='gap-2 bg-blue-600 text-white hover:bg-blue-700'
+                    >
+                      {isSubmitting ? (
+                        <Loader2 className='h-4 w-4 animate-spin' />
+                      ) : (
+                        <CheckCircle2 className='h-4 w-4' />
+                      )}
+                      Créer
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          }
+        />
+
+        {/* Error */}
+        {(error || hookError) && (
+          <Alert variant='destructive'>
             <AlertDescription>
               {error || hookError?.message || 'Erreur lors du chargement'}
             </AlertDescription>
           </Alert>
+        )}
+
+        {/* KPI row */}
+        <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
+          <KpiCard
+            label='Utilisateurs'
+            value={pagination.totalItems}
+            hint='au total sur la plateforme'
+            icon={UsersIcon}
+            tone='blue'
+            loading={loading}
+          />
+          <KpiCard
+            label='Administrateurs'
+            value={rolesCountOnPage['ADMIN'] ?? 0}
+            hint='sur cette page'
+            icon={Crown}
+            tone='purple'
+            loading={loading}
+          />
+          <KpiCard
+            label='Hôtes'
+            value={(rolesCountOnPage['HOST'] ?? 0) + (rolesCountOnPage['HOST_VERIFIED'] ?? 0)}
+            hint='vérifiés et non vérifiés'
+            icon={Home}
+            tone='amber'
+            loading={loading}
+          />
+          <KpiCard
+            label='Non vérifiés'
+            value={unverifiedCount}
+            hint='emails en attente de vérification'
+            icon={MailX}
+            tone='red'
+            loading={loading}
+          />
         </div>
-      </div>
-    )
-  }
 
-  return (
-    <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100'>
-      <div className='container mx-auto p-6 space-y-8'>
-        {/* Header Section */}
-        <motion.div
-          className='text-center space-y-4'
-          variants={containerVariants}
-          initial='hidden'
-          animate='visible'
-        >
-          <motion.div
-            variants={itemVariants}
-            className='inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg mb-4'
+        {/* Role filter chips */}
+        <div className='flex flex-wrap items-center gap-2'>
+          <button
+            onClick={() => handleRoleFilter('')}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+              roleFilter === ''
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50'
+            }`}
           >
-            <Users className='w-8 h-8 text-white' />
-          </motion.div>
-          <motion.h1
-            variants={itemVariants}
-            className='text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-800 bg-clip-text text-transparent'
-          >
-            Gestion des Utilisateurs
-          </motion.h1>
-          <motion.p variants={itemVariants} className='text-gray-600 text-lg max-w-2xl mx-auto'>
-            Gérez les comptes utilisateurs, leurs rôles et permissions depuis ce panneau
-            d&apos;administration
-          </motion.p>
-        </motion.div>
-
-        {/* Stats Cards */}
-        <motion.div
-          variants={containerVariants}
-          initial='hidden'
-          animate='visible'
-          className='grid grid-cols-1 md:grid-cols-4 gap-6 mb-8'
-        >
-          <motion.div variants={itemVariants}>
-            <Card className='border-0 shadow-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white'>
-              <CardContent className='p-6'>
-                <div className='flex items-center justify-between'>
-                  <div>
-                    <p className='text-blue-100 text-sm font-medium'>Total Utilisateurs</p>
-                    <p className='text-3xl font-bold'>{pagination.totalItems}</p>
-                  </div>
-                  <Users className='h-8 w-8 text-blue-200' />
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {['ADMIN', 'HOST_MANAGER', 'HOST_VERIFIED', 'HOST', 'USER'].map(role => {
-            const count = users.filter(user => user.roles === role).length
+            Tous
+          </button>
+          {ROLES.map(role => {
+            const active = roleFilter === role.value
+            const Icon = role.icon
             return (
-              <motion.div key={role} variants={itemVariants}>
-                <Card
-                  className='border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 backdrop-blur-sm cursor-pointer'
-                  onClick={() => handleRoleFilter(roleFilter === role ? '' : role)}
-                >
-                  <CardContent className='p-6'>
-                    <div className='flex items-center justify-between'>
-                      <div>
-                        <p className='text-gray-600 text-sm font-medium'>
-                          {role === 'ADMIN'
-                            ? 'Administrateurs'
-                            : role === 'HOST_MANAGER'
-                              ? 'Gestionnaires Hôtes'
-                              : role === 'HOST_VERIFIED'
-                                ? 'Hôtes Vérifiés'
-                                : role === 'HOST'
-                                  ? 'Hôtes'
-                                  : 'Utilisateurs'}
-                          {roleFilter === role && ' (Filtré)'}
-                        </p>
-                        <p className='text-2xl font-bold text-gray-900'>
-                          {roleFilter === role ? pagination.totalItems : count}
-                        </p>
-                      </div>
-                      <RoleIcon role={role} size='md' />
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+              <button
+                key={role.value}
+                onClick={() => handleRoleFilter(active ? '' : role.value)}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                  active
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                <Icon className='h-3 w-3' />
+                {role.short}
+              </button>
             )
           })}
-        </motion.div>
+        </div>
 
-        {/* Search and Actions */}
-        <motion.div
-          variants={containerVariants}
-          initial='hidden'
-          animate='visible'
-          className='flex flex-col sm:flex-row gap-4 items-center justify-between bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border-0'
-        >
-          <motion.div variants={itemVariants} className='flex items-center gap-4 w-full sm:w-auto'>
-            <div className='relative flex-1 sm:min-w-[300px]'>
-              <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4' />
-              <Input
-                type='text'
-                placeholder='Rechercher par nom, email...'
-                value={searchTerm}
-                onChange={e => handleSearch(e.target.value)}
-                className='pl-10 py-3 border-0 bg-gray-50 focus:bg-white transition-colors rounded-xl'
-              />
-            </div>
-          </motion.div>
-
-          <motion.div variants={itemVariants} className='flex gap-3'>
-            <Button variant='outline' className='rounded-xl border-gray-200 hover:bg-gray-50'>
-              <Filter className='h-4 w-4 mr-2' />
-              Filtrer
-            </Button>
-            <EmailVerificationPanel users={users} refreshUsers={refetch} />
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className='bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl shadow-lg'>
-                  <UserPlus className='h-4 w-4 mr-2' />
-                  Ajouter un utilisateur
+        {/* Filter bar */}
+        <FilterBar
+          searchValue={searchTerm}
+          onSearchChange={handleSearch}
+          searchPlaceholder='Rechercher par nom, email…'
+          belowSlot={
+            selectedIds.size > 0 ? (
+              <div className='flex items-center justify-between'>
+                <span className='text-sm font-medium text-slate-600'>
+                  {selectedIds.size} utilisateur
+                  {selectedIds.size > 1 ? 's' : ''} sélectionné{selectedIds.size > 1 ? 's' : ''}
+                </span>
+                <Button
+                  variant='ghost'
+                  size='sm'
+                  onClick={() => setSelectedIds(new Set())}
+                  className='text-slate-500 hover:text-slate-900'
+                >
+                  Tout désélectionner
                 </Button>
-              </DialogTrigger>
-              <DialogContent className='sm:max-w-md rounded-2xl'>
-                <DialogHeader>
-                  <DialogTitle className='flex items-center gap-2 text-xl'>
-                    <UserPlus className='h-5 w-5 text-blue-600' />
-                    Ajouter un utilisateur
-                  </DialogTitle>
-                  <DialogDescription>
-                    Créez un nouveau compte utilisateur avec les informations ci-dessous.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className='space-y-4 py-4'>
-                  <div className='grid grid-cols-2 gap-4'>
-                    <div className='space-y-2'>
-                      <Label htmlFor='userName'>Nom</Label>
-                      <Input
-                        id='userName'
-                        placeholder='Dupont'
-                        value={newUserName}
-                        onChange={e => setNewUserName(e.target.value)}
-                        className='rounded-xl'
-                      />
-                    </div>
-                    <div className='space-y-2'>
-                      <Label htmlFor='userSurname'>Prénom</Label>
-                      <Input
-                        id='userSurname'
-                        placeholder='Jean'
-                        value={newUserSurname}
-                        onChange={e => setnewUserSurname(e.target.value)}
-                        className='rounded-xl'
-                      />
-                    </div>
-                  </div>
-                  <div className='space-y-2'>
-                    <Label htmlFor='userEmail'>Email</Label>
-                    <Input
-                      id='userEmail'
-                      type='email'
-                      placeholder='jean.dupont@email.com'
-                      value={newUserEmail}
-                      onChange={e => setnewUserEmail(e.target.value)}
-                      className='rounded-xl'
-                    />
-                  </div>
-                  <div className='space-y-2'>
-                    <Label htmlFor='userPassword'>Mot de passe</Label>
-                    <Input
-                      id='userPassword'
-                      type='password'
-                      placeholder='••••••••'
-                      value={newUserPassword}
-                      onChange={e => setnewUserPassword(e.target.value)}
-                      className='rounded-xl'
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    variant='outline'
-                    onClick={() => setIsAddDialogOpen(false)}
-                    disabled={isSubmitting}
-                    className='rounded-xl'
-                  >
-                    Annuler
-                  </Button>
-                  <Button
-                    onClick={handleAddOption}
-                    disabled={!newUserName.trim() || isSubmitting}
-                    className='bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 rounded-xl'
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                        Création...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className='h-4 w-4 mr-2' />
-                        Créer
-                      </>
-                    )}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </motion.div>
-        </motion.div>
+              </div>
+            ) : null
+          }
+        />
 
-        {/* Users Grid */}
-        <motion.div
-          variants={containerVariants}
-          initial='hidden'
-          animate='visible'
-          className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
-        >
-          {users.map((user, index) => (
-            <motion.div key={user.id} variants={itemVariants} transition={{ delay: index * 0.1 }}>
-              <Card className='group hover:shadow-2xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm rounded-2xl overflow-hidden'>
-                <CardHeader className='pb-4'>
-                  <div className='flex items-start justify-between'>
-                    <div className='flex items-center gap-4'>
-                      <Avatar className='h-12 w-12 border-2 border-white shadow-lg'>
-                        <AvatarImage
-                          src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`}
-                        />
-                        <AvatarFallback className='bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold'>
-                          {(user.name?.[0] || user.email[0]).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className='flex-1'>
-                        <h3 className='font-semibold text-lg text-gray-900 group-hover:text-blue-600 transition-colors'>
-                          {user.name || user.lastname
-                            ? `${user.name || ''} ${user.lastname || ''}`.trim()
-                            : 'Sans nom'}
-                        </h3>
-                        <p className='text-gray-500 text-sm flex items-center gap-1'>
-                          <Mail className='h-3 w-3' />
-                          {user.email}
-                        </p>
-                      </div>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant='ghost'
-                          size='sm'
-                          className='h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity'
-                        >
-                          <MoreVertical className='h-4 w-4' />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align='end' className='rounded-xl'>
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild>
-                          <Link
-                            href={`/admin/users/${user.id}`}
-                            className='flex items-center gap-2'
-                          >
-                            <Eye className='h-4 w-4' />
-                            Voir le profil
-                          </Link>
-                        </DropdownMenuItem>
-                        {session?.user?.id !== user.id && (
-                          <DropdownMenuItem
-                            onClick={() => handleEditRole(user)}
-                            className='flex items-center gap-2'
-                          >
-                            <Edit3 className='h-4 w-4' />
-                            Modifier le rôle
-                          </DropdownMenuItem>
-                        )}
-                        {!user.emailVerified && (
-                          <DropdownMenuItem
-                            onClick={() => handleForceVerifyEmail(user)}
-                            className='flex items-center gap-2'
-                          >
-                            <ShieldCheck className='h-4 w-4' />
-                            Vérifier l&apos;email
-                          </DropdownMenuItem>
-                        )}
-                        {session?.user?.id !== user.id && (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteClick(user)}
-                              className='flex items-center gap-2 text-red-600 focus:text-red-600'
-                            >
-                              <Trash2 className='h-4 w-4' />
-                              Supprimer
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </CardHeader>
-                <CardContent className='pt-0'>
-                  <div className='space-y-4'>
-                    <div className='flex items-center justify-between'>
-                      <RoleBadge role={user.roles} size='sm' />
-                      {session?.user?.id !== user.id && (
-                        <Button
-                          variant='ghost'
-                          size='sm'
-                          onClick={() => handleEditRole(user)}
-                          className='h-8 w-8 p-0 rounded-full hover:bg-blue-50 hover:text-blue-600'
-                          title='Modifier le rôle'
-                        >
-                          <Edit3 className='h-3 w-3' />
-                        </Button>
-                      )}
-                    </div>
-                    <div className='flex items-center gap-2 text-sm text-gray-500'>
-                      <Calendar className='h-4 w-4' />
-                      <span>Inscrit le {new Date(user.createdAt).toLocaleDateString('fr-FR')}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </motion.div>
+        {/* Data table */}
+        <DataTable<User>
+          columns={columns}
+          rows={users}
+          getRowId={u => u.id}
+          loading={loading}
+          sort={sort}
+          onSortChange={setSort}
+          selection={{
+            selectedIds,
+            onSelectionChange: setSelectedIds,
+          }}
+          rowActions={user => (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant='ghost'
+                  size='sm'
+                  className='h-8 w-8 p-0'
+                  aria-label='Actions utilisateur'
+                >
+                  <MoreHorizontal className='h-4 w-4' />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align='end'>
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href={`/admin/users/${user.id}`} className='flex items-center gap-2'>
+                    <Eye className='h-4 w-4' />
+                    Voir le profil
+                  </Link>
+                </DropdownMenuItem>
+                {session?.user?.id !== user.id && (
+                  <DropdownMenuItem
+                    onClick={() => handleEditRole(user)}
+                    className='flex items-center gap-2'
+                  >
+                    <Edit3 className='h-4 w-4' />
+                    Modifier le rôle
+                  </DropdownMenuItem>
+                )}
+                {!user.emailVerified && (
+                  <DropdownMenuItem
+                    onClick={() => handleForceVerifyEmail(user)}
+                    className='flex items-center gap-2'
+                  >
+                    <ShieldCheck className='h-4 w-4' />
+                    Vérifier l’email
+                  </DropdownMenuItem>
+                )}
+                {session?.user?.id !== user.id && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => handleDeleteClick(user)}
+                      className='flex items-center gap-2 text-red-600 focus:text-red-600'
+                    >
+                      <Trash2 className='h-4 w-4' />
+                      Supprimer
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          emptyState={{
+            icon: UsersIcon,
+            title: 'Aucun utilisateur trouvé',
+            subtitle:
+              searchTerm || roleFilter
+                ? 'Essayez d’ajuster votre recherche ou vos filtres.'
+                : 'Ajoutez votre premier utilisateur avec le bouton en haut à droite.',
+          }}
+        />
 
-        {users.length === 0 && !loading && (
-          <motion.div variants={itemVariants} className='text-center py-12'>
-            <UserIcon className='h-12 w-12 text-gray-400 mx-auto mb-4' />
-            <h3 className='text-lg font-medium text-gray-900 mb-2'>Aucun utilisateur trouvé</h3>
-            <p className='text-gray-500'>
-              Essayez de modifier votre recherche ou ajoutez un nouvel utilisateur.
+        {/* Footer: summary + pagination */}
+        {!loading && users.length > 0 && (
+          <div className='flex flex-col items-center gap-3 md:flex-row md:justify-between'>
+            <p className='text-sm text-slate-500'>
+              <KpiMetric
+                label='utilisateurs affichés'
+                value={`${(pagination.currentPage - 1) * pagination.itemsPerPage + 1}–${Math.min(
+                  pagination.currentPage * pagination.itemsPerPage,
+                  pagination.totalItems
+                )} / ${pagination.totalItems}`}
+                icon={UsersIcon}
+                tone='slate'
+              />
             </p>
-          </motion.div>
-        )}
-
-        {/* Pagination */}
-        {pagination.totalPages > 1 && (
-          <div className='mt-8 flex justify-center'>
-            <Pagination
-              currentPage={pagination.currentPage}
-              totalPages={pagination.totalPages}
-              onPageChange={goToPage}
-              showPrevNext={true}
-              showNumbers={true}
-              maxVisiblePages={5}
-            />
+            {pagination.totalPages > 1 && (
+              <Pagination
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                onPageChange={goToPage}
+                showPrevNext={true}
+                showNumbers={true}
+                maxVisiblePages={5}
+              />
+            )}
           </div>
         )}
 
-        {/* Results summary */}
-        {users.length > 0 && (
-          <div className='mt-4 text-center text-sm text-gray-500'>
-            Affichage de {(pagination.currentPage - 1) * pagination.itemsPerPage + 1} à{' '}
-            {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} sur{' '}
-            {pagination.totalItems} utilisateurs
-          </div>
-        )}
-
-        {/* Modal de modification des rôles */}
+        {/* Edit role dialog */}
         <Dialog open={isEditRoleDialogOpen} onOpenChange={setIsEditRoleDialogOpen}>
-          <DialogContent className='sm:max-w-md rounded-2xl'>
+          <DialogContent className='sm:max-w-md'>
             <DialogHeader>
-              <DialogTitle className='flex items-center gap-2 text-xl'>
+              <DialogTitle className='flex items-center gap-2'>
                 <Shield className='h-5 w-5 text-blue-600' />
-                Modifier le rôle utilisateur
+                Modifier le rôle
               </DialogTitle>
               <DialogDescription>
                 Modifiez le rôle de{' '}
-                <span className='font-semibold'>{editingUser?.name || editingUser?.email}</span>
+                <span className='font-semibold'>{editingUser?.name || editingUser?.email}</span>.
+                Un email de notification sera envoyé.
               </DialogDescription>
             </DialogHeader>
             <div className='space-y-6 py-4'>
-              <div className='text-center'>
-                <div className='inline-flex items-center gap-3 p-4 bg-gray-50 rounded-xl'>
-                  <Avatar className='h-10 w-10'>
-                    <AvatarImage
-                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${editingUser?.email}`}
-                    />
-                    <AvatarFallback className='bg-gradient-to-r from-blue-500 to-indigo-600 text-white'>
-                      {(editingUser?.name?.[0] || editingUser?.email?.[0] || 'U').toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className='text-left'>
-                    <p className='font-medium'>{editingUser?.name || editingUser?.email}</p>
-                    <p className='text-sm text-gray-500'>
-                      Rôle actuel: {getRoleDisplayName(editingUser?.roles || '')}
-                    </p>
-                  </div>
+              <div className='flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4'>
+                <Avatar className='h-10 w-10'>
+                  <AvatarImage
+                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${editingUser?.email}`}
+                  />
+                  <AvatarFallback className='bg-gradient-to-br from-indigo-500 to-purple-500 text-sm font-semibold text-white'>
+                    {(editingUser?.name?.[0] || editingUser?.email?.[0] || 'U').toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className='min-w-0 flex-1'>
+                  <p className='truncate font-medium text-slate-900'>
+                    {editingUser?.name || editingUser?.email}
+                  </p>
+                  <p className='truncate text-xs text-slate-500'>{editingUser?.email}</p>
                 </div>
+                {editingUser && <RolePill role={editingUser.roles} />}
               </div>
               <div className='space-y-2'>
                 <Label htmlFor='userRole'>Nouveau rôle</Label>
                 <Select value={newRole} onValueChange={setNewRole}>
-                  <SelectTrigger className='rounded-xl'>
+                  <SelectTrigger>
                     <SelectValue placeholder='Sélectionner un rôle' />
                   </SelectTrigger>
-                  <SelectContent className='rounded-xl'>
-                    <SelectItem value='USER'>👤 Utilisateur</SelectItem>
-                    <SelectItem value='HOST'>🏠 Hôte</SelectItem>
-                    <SelectItem value='HOST_VERIFIED'>✅ Hôte Vérifié</SelectItem>
-                    <SelectItem value='BLOGWRITER'>✍️ Rédacteur Blog</SelectItem>
-                    <SelectItem value='HOST_MANAGER'>🎯 Gestionnaire Hôtes</SelectItem>
-                    <SelectItem value='ADMIN'>👑 Administrateur</SelectItem>
+                  <SelectContent>
+                    {ROLES.slice()
+                      .reverse()
+                      .map(role => {
+                        const Icon = role.icon
+                        return (
+                          <SelectItem key={role.value} value={role.value}>
+                            <span className='inline-flex items-center gap-2'>
+                              <Icon className='h-4 w-4' />
+                              {role.label}
+                            </span>
+                          </SelectItem>
+                        )
+                      })}
                   </SelectContent>
                 </Select>
               </div>
@@ -731,32 +783,26 @@ export default function UsersPage() {
                   setNewRole('')
                 }}
                 disabled={isUpdatingRole}
-                className='rounded-xl'
               >
                 Annuler
               </Button>
               <Button
                 onClick={handleUpdateRole}
                 disabled={!newRole || isUpdatingRole || editingUser?.roles === newRole}
-                className='bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 rounded-xl'
+                className='gap-2 bg-blue-600 text-white hover:bg-blue-700'
               >
                 {isUpdatingRole ? (
-                  <>
-                    <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                    Modification...
-                  </>
+                  <Loader2 className='h-4 w-4 animate-spin' />
                 ) : (
-                  <>
-                    <CheckCircle className='h-4 w-4 mr-2' />
-                    Modifier
-                  </>
+                  <CheckCircle2 className='h-4 w-4' />
                 )}
+                Mettre à jour
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Modal de confirmation de suppression */}
+        {/* Delete dialog */}
         <ConfirmDeleteUserDialog
           open={deleteDialogOpen}
           onClose={() => {
@@ -767,7 +813,7 @@ export default function UsersPage() {
           deletionInfo={deletionInfo as Parameters<typeof ConfirmDeleteUserDialog>[0]['deletionInfo']}
           isLoading={isDeleting}
         />
-      </div>
+      </motion.div>
     </div>
   )
 }
