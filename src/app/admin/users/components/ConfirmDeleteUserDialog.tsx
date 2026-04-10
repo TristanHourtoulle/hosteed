@@ -9,7 +9,15 @@ import {
   DialogTitle,
 } from '@/components/ui/shadcnui/dialog'
 import { Button } from '@/components/ui/shadcnui/button'
-import { Loader2, Trash2, AlertTriangle, Package, CalendarDays } from 'lucide-react'
+import {
+  Loader2,
+  Trash2,
+  AlertTriangle,
+  Package,
+  CalendarDays,
+  ShieldAlert,
+  CalendarClock,
+} from 'lucide-react'
 
 interface ActiveRent {
   id: string
@@ -40,10 +48,30 @@ interface ConfirmDeleteUserDialogProps {
 function formatStatus(status: string) {
   const labels: Record<string, string> = {
     WAITING: 'En attente',
-    RESERVED: 'Reservee',
+    RESERVED: 'Réservée',
     CHECKIN: 'Check-in',
+    CHECKOUT: 'Check-out',
+    CANCEL: 'Annulée',
   }
   return labels[status] || status
+}
+
+function ActiveRentRow({ rent, showGuest }: { rent: ActiveRent; showGuest?: boolean }) {
+  return (
+    <li className='flex items-start gap-3 rounded-xl border border-red-100 bg-red-50/60 p-3'>
+      <div className='mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white text-red-600 shadow-sm'>
+        <CalendarClock className='h-3.5 w-3.5' />
+      </div>
+      <div className='min-w-0 flex-1'>
+        <p className='truncate text-sm font-semibold text-slate-900'>{rent.product.name}</p>
+        <p className='text-xs text-slate-600'>
+          {formatStatus(rent.status)} · {new Date(rent.arrivingDate).toLocaleDateString('fr-FR')}{' '}
+          → {new Date(rent.leavingDate).toLocaleDateString('fr-FR')}
+          {showGuest && rent.user && ` · ${rent.user.name || rent.user.email}`}
+        </p>
+      </div>
+    </li>
+  )
 }
 
 export function ConfirmDeleteUserDialog({
@@ -55,79 +83,101 @@ export function ConfirmDeleteUserDialog({
 }: ConfirmDeleteUserDialogProps) {
   if (!deletionInfo) return null
 
-  const { user, ownedProductCount, rentCount, activeRentsAsGuest, activeRentsAsHost, hasActiveReservations } = deletionInfo
+  const {
+    user,
+    ownedProductCount,
+    rentCount,
+    activeRentsAsGuest,
+    activeRentsAsHost,
+    hasActiveReservations,
+  } = deletionInfo
   const displayName = [user.name, user.lastname].filter(Boolean).join(' ') || user.email
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className='sm:max-w-[520px]'>
+      <DialogContent className='sm:max-w-[560px]'>
         <DialogHeader>
-          <DialogTitle className='flex items-center gap-2'>
-            <AlertTriangle className='h-5 w-5 text-red-600' />
-            Supprimer l&apos;utilisateur
-          </DialogTitle>
-          <DialogDescription>
-            {hasActiveReservations
-              ? `Impossible de supprimer "${displayName}" car il a des reservations actives.`
-              : `Etes-vous sur de vouloir supprimer definitivement "${displayName}" ? Cette action est irreversible.`}
-          </DialogDescription>
+          <div className='flex items-start gap-3'>
+            <div className='flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600 ring-1 ring-red-100'>
+              <AlertTriangle className='h-5 w-5' />
+            </div>
+            <div className='min-w-0 flex-1 space-y-1'>
+              <DialogTitle className='text-lg'>
+                {hasActiveReservations
+                  ? 'Suppression impossible'
+                  : "Supprimer l'utilisateur"}
+              </DialogTitle>
+              <DialogDescription className='text-sm text-slate-600'>
+                {hasActiveReservations ? (
+                  <>
+                    <span className='font-semibold text-slate-900'>{displayName}</span> a des
+                    réservations actives et ne peut pas être supprimé pour le moment.
+                  </>
+                ) : (
+                  <>
+                    Cette action supprimera définitivement{' '}
+                    <span className='font-semibold text-slate-900'>{displayName}</span> et toutes
+                    ses données associées. Elle est <strong>irréversible</strong>.
+                  </>
+                )}
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
+        {/* Impact summary */}
         <div className='space-y-4 py-2'>
-          <div className='flex gap-4 text-sm text-gray-600'>
-            <div className='flex items-center gap-1.5'>
-              <Package className='h-4 w-4' />
-              <span>{ownedProductCount} hebergement{ownedProductCount > 1 ? 's' : ''}</span>
+          <div className='grid grid-cols-2 gap-3'>
+            <div className='flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5'>
+              <div className='flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600'>
+                <Package className='h-4 w-4' />
+              </div>
+              <div className='min-w-0'>
+                <p className='text-xs text-slate-500'>Hébergements</p>
+                <p className='text-sm font-semibold text-slate-900'>
+                  {ownedProductCount} possédé{ownedProductCount > 1 ? 's' : ''}
+                </p>
+              </div>
             </div>
-            <div className='flex items-center gap-1.5'>
-              <CalendarDays className='h-4 w-4' />
-              <span>{rentCount} reservation{rentCount > 1 ? 's' : ''} (total)</span>
+            <div className='flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5'>
+              <div className='flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-purple-50 text-purple-600'>
+                <CalendarDays className='h-4 w-4' />
+              </div>
+              <div className='min-w-0'>
+                <p className='text-xs text-slate-500'>Réservations</p>
+                <p className='text-sm font-semibold text-slate-900'>
+                  {rentCount} au total
+                </p>
+              </div>
             </div>
           </div>
 
           {hasActiveReservations && (
-            <div className='space-y-3'>
+            <div className='space-y-3 rounded-xl border border-red-200 bg-red-50/40 p-4'>
+              <div className='flex items-center gap-2 text-sm font-semibold text-red-700'>
+                <ShieldAlert className='h-4 w-4' />
+                Réservations actives bloquantes
+              </div>
               {activeRentsAsGuest.length > 0 && (
-                <div>
-                  <p className='text-sm font-medium text-gray-900 mb-2'>
-                    Reservations actives (en tant que voyageur) :
+                <div className='space-y-2'>
+                  <p className='text-xs font-medium uppercase tracking-wide text-slate-500'>
+                    En tant que voyageur ({activeRentsAsGuest.length})
                   </p>
-                  <ul className='space-y-1.5'>
+                  <ul className='space-y-2'>
                     {activeRentsAsGuest.map(rent => (
-                      <li
-                        key={rent.id}
-                        className='text-sm bg-red-50 border border-red-100 rounded-lg px-3 py-2'
-                      >
-                        <span className='font-medium'>{rent.product.name}</span>
-                        <span className='text-gray-500'>
-                          {' '}&mdash; {formatStatus(rent.status)} &mdash;{' '}
-                          {new Date(rent.arrivingDate).toLocaleDateString('fr-FR')} au{' '}
-                          {new Date(rent.leavingDate).toLocaleDateString('fr-FR')}
-                        </span>
-                      </li>
+                      <ActiveRentRow key={rent.id} rent={rent} />
                     ))}
                   </ul>
                 </div>
               )}
               {activeRentsAsHost.length > 0 && (
-                <div>
-                  <p className='text-sm font-medium text-gray-900 mb-2'>
-                    Reservations actives (en tant qu&apos;hote) :
+                <div className='space-y-2'>
+                  <p className='text-xs font-medium uppercase tracking-wide text-slate-500'>
+                    En tant qu’hôte ({activeRentsAsHost.length})
                   </p>
-                  <ul className='space-y-1.5'>
+                  <ul className='space-y-2'>
                     {activeRentsAsHost.map(rent => (
-                      <li
-                        key={rent.id}
-                        className='text-sm bg-red-50 border border-red-100 rounded-lg px-3 py-2'
-                      >
-                        <span className='font-medium'>{rent.product.name}</span>
-                        <span className='text-gray-500'>
-                          {' '}&mdash; {formatStatus(rent.status)} &mdash;{' '}
-                          {new Date(rent.arrivingDate).toLocaleDateString('fr-FR')} au{' '}
-                          {new Date(rent.leavingDate).toLocaleDateString('fr-FR')}
-                          {rent.user && ` (${rent.user.name || rent.user.email})`}
-                        </span>
-                      </li>
+                      <ActiveRentRow key={rent.id} rent={rent} showGuest />
                     ))}
                   </ul>
                 </div>
@@ -136,10 +186,14 @@ export function ConfirmDeleteUserDialog({
           )}
 
           {!hasActiveReservations && ownedProductCount > 0 && (
-            <p className='text-sm text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2'>
-              Attention : les {ownedProductCount} hebergement{ownedProductCount > 1 ? 's' : ''} de
-              cet utilisateur seront egalement supprimes.
-            </p>
+            <div className='flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50/60 p-3 text-sm'>
+              <AlertTriangle className='mt-0.5 h-4 w-4 shrink-0 text-amber-600' />
+              <p className='text-amber-800'>
+                Les <strong>{ownedProductCount}</strong> hébergement
+                {ownedProductCount > 1 ? 's' : ''} de cet utilisateur seront également supprimé
+                {ownedProductCount > 1 ? 's' : ''}.
+              </p>
+            </div>
           )}
         </div>
 
@@ -148,16 +202,21 @@ export function ConfirmDeleteUserDialog({
             {hasActiveReservations ? 'Fermer' : 'Annuler'}
           </Button>
           {!hasActiveReservations && (
-            <Button variant='destructive' onClick={onConfirm} disabled={isLoading}>
+            <Button
+              variant='destructive'
+              onClick={onConfirm}
+              disabled={isLoading}
+              className='gap-2'
+            >
               {isLoading ? (
                 <>
                   <Loader2 className='h-4 w-4 animate-spin' />
-                  Suppression...
+                  Suppression…
                 </>
               ) : (
                 <>
                   <Trash2 className='h-4 w-4' />
-                  Supprimer
+                  Supprimer définitivement
                 </>
               )}
             </Button>
