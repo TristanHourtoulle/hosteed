@@ -1,17 +1,12 @@
-// TODO: Implement chat with the host for a reservation
-
 import Image from 'next/image'
-import Link from 'next/link'
 import { getReservationDetails } from './actions'
-import { Button } from '@/components/ui/shadcnui/button'
-import { Card, CardContent } from '@/components/ui/shadcnui/card'
 import { getProfileImageUrl } from '@/lib/utils'
 import GuestReservationDetailsCard from './GuestReservationDetailsCard'
 import GuestPricingDetailsCard from './GuestPricingDetailsCard'
 import {
   MapPin,
   Calendar,
-  User,
+  Users as UsersIcon,
   Mail,
   Home,
   Info,
@@ -20,8 +15,12 @@ import {
   Car,
   Map,
   Star,
+  ArrowRight,
+  CreditCard,
+  BadgeCheck,
+  Phone,
 } from 'lucide-react'
-import {
+import type {
   Equipment,
   Service,
   Security,
@@ -36,25 +35,90 @@ import {
   getPaymentStatusColor,
   getRentStatusColor,
 } from './utils'
+import { PageHeader } from '@/components/admin/ui/PageHeader'
 
-function HostAvatar({ host }: { host: { name: string; email: string; image: string } }) {
-  const profileImage = getProfileImageUrl(host.image)
+interface FeatureBlockProps {
+  title: string
+  icon: React.ComponentType<{ className?: string }>
+  tone: 'blue' | 'emerald' | 'purple' | 'amber' | 'red' | 'indigo' | 'slate'
+  items: Array<{ id: string; name: string }>
+  itemIcon?: React.ComponentType<{ className?: string }>
+  emptyLabel?: string
+}
 
+const TONE: Record<
+  FeatureBlockProps['tone'],
+  { iconBg: string; iconText: string }
+> = {
+  blue: { iconBg: 'bg-blue-50', iconText: 'text-blue-600' },
+  emerald: { iconBg: 'bg-emerald-50', iconText: 'text-emerald-600' },
+  purple: { iconBg: 'bg-purple-50', iconText: 'text-purple-600' },
+  amber: { iconBg: 'bg-amber-50', iconText: 'text-amber-600' },
+  red: { iconBg: 'bg-red-50', iconText: 'text-red-600' },
+  indigo: { iconBg: 'bg-indigo-50', iconText: 'text-indigo-600' },
+  slate: { iconBg: 'bg-slate-100', iconText: 'text-slate-600' },
+}
+
+function FeatureBlock({
+  title,
+  icon: Icon,
+  tone,
+  items,
+  itemIcon: ItemIcon = Info,
+  emptyLabel = 'Aucun élément renseigné.',
+}: FeatureBlockProps) {
+  const toneClass = TONE[tone]
   return (
-    <div className='relative h-20 w-20 rounded-full overflow-hidden bg-gray-200'>
-      {profileImage && (
+    <div className='rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm'>
+      <div className='mb-4 flex items-center gap-3'>
+        <div
+          className={`flex h-9 w-9 items-center justify-center rounded-lg ${toneClass.iconBg} ${toneClass.iconText}`}
+        >
+          <Icon className='h-4 w-4' />
+        </div>
+        <h3 className='text-sm font-semibold uppercase tracking-wide text-slate-500'>
+          {title}
+        </h3>
+      </div>
+      {items.length === 0 ? (
+        <p className='text-sm text-slate-400'>{emptyLabel}</p>
+      ) : (
+        <ul className='space-y-1.5'>
+          {items.map(item => (
+            <li
+              key={item.id}
+              className='flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-1.5 text-sm text-slate-700'
+            >
+              <ItemIcon className='h-3.5 w-3.5 shrink-0 text-slate-400' />
+              <span className='truncate'>{item.name}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function HostAvatarLarge({
+  host,
+}: {
+  host: { name: string; email: string; image: string }
+}) {
+  const profileImage = getProfileImageUrl(host.image)
+  return (
+    <div className='relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 ring-4 ring-white shadow-lg'>
+      {profileImage ? (
         <Image
           src={profileImage}
-          alt={host.name ?? 'host'}
+          alt={host.name ?? 'Host'}
           width={80}
           height={80}
-          className='h-full w-full object-cover rounded-full'
+          className='h-full w-full object-cover'
           referrerPolicy='no-referrer'
         />
-      )}
-      {!profileImage && (
-        <div className='absolute inset-0 flex items-center justify-center text-lg font-medium text-gray-600 bg-gray-100'>
-          {host.name?.charAt(0) ?? 'H'}
+      ) : (
+        <div className='flex h-full w-full items-center justify-center text-2xl font-bold text-white'>
+          {host.name?.charAt(0)?.toUpperCase() ?? 'H'}
         </div>
       )}
     </div>
@@ -71,285 +135,273 @@ export default async function ReservationDetailsPage({
     resolvedParams.id
   )) as unknown as ReservationDetails
 
+  const rentStatus = getRentStatusColor(reservation.status)
+  const paymentStatus = getPaymentStatusColor(reservation.payment)
+
+  const isVerifiedHost = host.roles === 'HOST_VERIFIED' || host.roles === 'ADMIN'
+
+  const productImages = reservation.product.img as Array<{ img: string }> | undefined
+  const firstImage = productImages && productImages.length > 0 ? productImages[0].img : null
+
+  const numberOfNights = (() => {
+    const arrival = new Date(reservation.arrivingDate)
+    const departure = new Date(reservation.leavingDate)
+    const diff = Math.round((departure.getTime() - arrival.getTime()) / (1000 * 60 * 60 * 24))
+    return diff > 0 ? diff : 0
+  })()
+
   return (
-    <div className='min-h-screen bg-gradient-to-b from-blue-50 to-white py-10'>
-      <div className='container mx-auto px-4 sm:px-6 lg:px-8'>
-        <div className='max-w-4xl mx-auto space-y-8'>
-          {/* Header */}
-          <div className='flex items-center justify-between'>
-            <h1 className='text-3xl font-bold text-gray-900'>Détails de la réservation</h1>
-            <Link href='/account'>
-              <Button variant='outline'>Retour</Button>
-            </Link>
+    <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/40'>
+      <div className='mx-auto max-w-6xl space-y-8 p-6'>
+        <PageHeader
+          backHref='/account'
+          backLabel='Retour à mon compte'
+          eyebrow={`Réservation #${reservation.id.slice(-6).toUpperCase()}`}
+          title='Détails de la réservation'
+          subtitle='Consultez les informations de votre séjour, votre hôte et les équipements inclus.'
+        />
+
+        {/* Status card row */}
+        <div className='grid gap-4 md:grid-cols-3'>
+          <div className='rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm'>
+            <p className='text-xs font-semibold uppercase tracking-wide text-slate-500'>
+              Statut
+            </p>
+            <span
+              className={`mt-2 inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ring-1 ring-inset ${rentStatus.bg} ${rentStatus.text} ring-current/10`}
+            >
+              {translateRentStatus(reservation.status)}
+            </span>
           </div>
+          <div className='rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm'>
+            <p className='text-xs font-semibold uppercase tracking-wide text-slate-500'>
+              Confirmation hôte
+            </p>
+            <span
+              className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold ring-1 ${
+                reservation.confirmed
+                  ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+                  : 'bg-amber-50 text-amber-700 ring-amber-200'
+              }`}
+            >
+              <BadgeCheck className='h-3.5 w-3.5' />
+              {reservation.confirmed ? 'Confirmé' : 'En attente'}
+            </span>
+          </div>
+          <div className='rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm'>
+            <p className='text-xs font-semibold uppercase tracking-wide text-slate-500'>
+              Paiement
+            </p>
+            <span
+              className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold ring-1 ring-inset ${paymentStatus.bg} ${paymentStatus.text} ring-current/10`}
+            >
+              <CreditCard className='h-3.5 w-3.5' />
+              {translatePaymentStatus(reservation.payment)}
+            </span>
+          </div>
+        </div>
 
-          {/* Property Overview */}
-          <Card>
-            <CardContent className='p-6'>
-              <div className='flex flex-col md:flex-row gap-6'>
-                <div className='relative w-full md:w-1/3 aspect-[4/3]'>
-                  <Image
-                    src={reservation.product.img?.[0]?.img || '/placeholder.png'}
-                    alt={reservation.product.name}
-                    fill
-                    className='object-cover rounded-lg'
-                  />
+        {/* Property overview */}
+        <div className='overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm'>
+          <div className='grid gap-0 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]'>
+            <div className='relative aspect-[4/3] w-full md:aspect-auto md:min-h-[280px]'>
+              {firstImage ? (
+                <Image
+                  src={firstImage}
+                  alt={reservation.product.name}
+                  fill
+                  className='object-cover'
+                  sizes='(max-width: 768px) 100vw, 40vw'
+                />
+              ) : (
+                <div className='flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200'>
+                  <Home className='h-16 w-16 text-slate-400' />
                 </div>
-                <div className='flex-1'>
-                  <h2 className='text-2xl font-semibold mb-4'>{reservation.product.name}</h2>
-                  <div className='flex items-center gap-2 text-gray-600 mb-4'>
-                    <MapPin className='w-4 h-4' />
-                    <span>{reservation.product.address}</span>
-                  </div>
-                  <div className='grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm'>
-                    <div>
-                      <p className='font-medium'>Arrivée</p>
-                      <div className='flex items-center gap-2 text-gray-600'>
-                        <Calendar className='w-4 h-4' />
-                        <span>{new Date(reservation.arrivingDate).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                    <div>
-                      <p className='font-medium'>Départ</p>
-                      <div className='flex items-center gap-2 text-gray-600'>
-                        <Calendar className='w-4 h-4' />
-                        <span>{new Date(reservation.leavingDate).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                    <div>
-                      <p className='font-medium'>Voyageurs</p>
-                      <div className='flex items-center gap-2 text-gray-600'>
-                        <User className='w-4 h-4' />
-                        <span>{reservation.numberPeople.toString()} personnes</span>
-                      </div>
-                    </div>
-                    <div>
-                      <p className='font-medium'>Prix total</p>
-                      <div className='flex items-center gap-2 text-gray-600'>
-                        <span>{reservation.prices.toString()}€</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              )}
+            </div>
+            <div className='space-y-5 p-6'>
+              <div>
+                <h2 className='text-2xl font-bold text-slate-900'>
+                  {reservation.product.name}
+                </h2>
+                <p className='mt-1 flex items-center gap-1.5 text-sm text-slate-500'>
+                  <MapPin className='h-4 w-4' />
+                  {reservation.product.address}
+                </p>
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Host Information */}
-          <Card>
-            <CardContent className='p-6'>
-              <h3 className='text-xl font-semibold mb-4'>Informations sur l&apos;hôte</h3>
-              <div className='flex flex-col sm:flex-row items-start gap-6'>
-                <div className='flex items-center gap-4'>
-                  <HostAvatar
-                    host={host as unknown as { name: string; email: string; image: string }}
-                  />
-                  <div>
-                    <p className='font-medium text-lg'>{host.name}</p>
-                    <div className='flex flex-col gap-2 text-sm text-gray-600 mt-2'>
-                      <div className='flex items-center gap-2'>
-                        <Mail className='w-4 h-4' />
-                        <span>{host.email}</span>
-                      </div>
-                      {host.roles === 'HOST_VERIFIED' ||
-                        (host.roles === 'ADMIN' && (
-                          <div className='flex items-center gap-2'>
-                            <Star className='w-4 h-4 text-yellow-400' />
-                            <span>Hôte vérifié</span>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
+              <div className='grid grid-cols-2 gap-4'>
+                <div className='rounded-xl bg-slate-50 p-3'>
+                  <p className='text-xs font-semibold uppercase tracking-wide text-slate-500'>
+                    Arrivée
+                  </p>
+                  <p className='mt-1 flex items-center gap-1.5 text-sm font-semibold text-slate-900'>
+                    <Calendar className='h-4 w-4 text-blue-600' />
+                    {new Date(reservation.arrivingDate).toLocaleDateString('fr-FR', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
+                  </p>
                 </div>
-                <div className='flex-1 bg-gray-50 rounded-lg p-4 mt-4 sm:mt-0'>
-                  <p className='text-sm text-gray-600'>
-                    Pour toute question concernant votre séjour, n&apos;hésitez pas à contacter
-                    votre hôte directement par email.
+                <div className='rounded-xl bg-slate-50 p-3'>
+                  <p className='text-xs font-semibold uppercase tracking-wide text-slate-500'>
+                    Départ
+                  </p>
+                  <p className='mt-1 flex items-center gap-1.5 text-sm font-semibold text-slate-900'>
+                    <Calendar className='h-4 w-4 text-blue-600' />
+                    {new Date(reservation.leavingDate).toLocaleDateString('fr-FR', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
+                  </p>
+                </div>
+                <div className='rounded-xl bg-slate-50 p-3'>
+                  <p className='text-xs font-semibold uppercase tracking-wide text-slate-500'>
+                    Durée
+                  </p>
+                  <p className='mt-1 flex items-center gap-1.5 text-sm font-semibold text-slate-900'>
+                    <ArrowRight className='h-4 w-4 text-emerald-600' />
+                    {numberOfNights} nuit{numberOfNights > 1 ? 's' : ''}
+                  </p>
+                </div>
+                <div className='rounded-xl bg-slate-50 p-3'>
+                  <p className='text-xs font-semibold uppercase tracking-wide text-slate-500'>
+                    Voyageurs
+                  </p>
+                  <p className='mt-1 flex items-center gap-1.5 text-sm font-semibold text-slate-900'>
+                    <UsersIcon className='h-4 w-4 text-purple-600' />
+                    {reservation.numberPeople.toString()} personne
+                    {Number(reservation.numberPeople) > 1 ? 's' : ''}
                   </p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Property Details */}
-          <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-            {/* Amenities */}
-            <Card>
-              <CardContent className='p-6'>
-                <h3 className='text-xl font-semibold mb-4'>Équipements</h3>
-                <div className='space-y-3'>
-                  {reservation.product.equipments.map((equipment: Equipment) => (
-                    <div key={equipment.id} className='flex items-center gap-2 text-gray-600'>
-                      <Home className='w-4 h-4' />
-                      <span>{equipment.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Services */}
-            <Card>
-              <CardContent className='p-6'>
-                <h3 className='text-xl font-semibold mb-4'>Services</h3>
-                <div className='space-y-3'>
-                  {reservation.product.servicesList.map((service: Service) => (
-                    <div key={service.id} className='flex items-center gap-2 text-gray-600'>
-                      <Info className='w-4 h-4' />
-                      <span>{service.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Security */}
-            <Card>
-              <CardContent className='p-6'>
-                <h3 className='text-xl font-semibold mb-4'>Sécurité</h3>
-                <div className='space-y-3'>
-                  {reservation.product.securities.map((security: Security) => (
-                    <div key={security.id} className='flex items-center gap-2 text-gray-600'>
-                      <Shield className='w-4 h-4' />
-                      <span>{security.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Meals */}
-            <Card>
-              <CardContent className='p-6'>
-                <h3 className='text-xl font-semibold mb-4'>Repas</h3>
-                <div className='space-y-3'>
-                  {reservation.product.mealsList.map((meal: Meal) => (
-                    <div key={meal.id} className='flex items-center gap-2 text-gray-600'>
-                      <Utensils className='w-4 h-4' />
-                      <span>{meal.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Transport */}
-            <Card>
-              <CardContent className='p-6'>
-                <h3 className='text-xl font-semibold mb-4'>Transport</h3>
-                <div className='space-y-3'>
-                  {reservation.product.transportOptions.map((transport: Transport) => (
-                    <div key={transport.id} className='flex items-center gap-2 text-gray-600'>
-                      <Car className='w-4 h-4' />
-                      <span>{transport.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Nearby Places */}
-            <Card>
-              <CardContent className='p-6'>
-                <h3 className='text-xl font-semibold mb-4'>À proximité</h3>
-                <div className='space-y-3'>
-                  {reservation.product.nearbyPlaces.map((place: NearbyPlace) => (
-                    <div key={place.id} className='flex items-center gap-2 text-gray-600'>
-                      <Map className='w-4 h-4' />
-                      <span>{place.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Proximity Landmarks (visible only with reservation) */}
-            {reservation.product.proximityLandmarks &&
-              reservation.product.proximityLandmarks.length > 0 && (
-                <Card className='border-blue-200 bg-blue-50/50'>
-                  <CardContent className='p-6'>
-                    <div className='flex items-start gap-3 mb-4'>
-                      <Info className='w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0' />
-                      <div>
-                        <h3 className='text-xl font-semibold text-blue-900 mb-1'>
-                          Points de repère pour vous aider à localiser
-                        </h3>
-                        <p className='text-sm text-blue-700'>
-                          Ces informations sont visibles uniquement pour faciliter votre arrivée
-                        </p>
-                      </div>
-                    </div>
-                    <div className='space-y-2'>
-                      {reservation.product.proximityLandmarks.map(
-                        (landmark: string, index: number) => (
-                          <div key={index} className='flex items-center gap-2 text-blue-800'>
-                            <MapPin className='w-4 h-4 flex-shrink-0' />
-                            <span>{landmark}</span>
-                          </div>
-                        )
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+            </div>
           </div>
+        </div>
 
-          {/* Status and Payment */}
-          <Card>
-            <CardContent className='p-6'>
-              <h3 className='text-xl font-semibold mb-4'>Statut de la réservation</h3>
-              <div className='grid grid-cols-1 sm:grid-cols-2 gap-6'>
-                <div>
-                  <p className='font-medium mb-2'>Statut</p>
-                  <span
-                    className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                      getRentStatusColor(reservation.status).bg
-                    } ${getRentStatusColor(reservation.status).text}`}
-                  >
-                    {translateRentStatus(reservation.status)}
+        {/* Host card */}
+        <div className='rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm'>
+          <h3 className='mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500'>
+            Votre hôte
+          </h3>
+          <div className='flex flex-col gap-6 sm:flex-row sm:items-start'>
+            <HostAvatarLarge
+              host={host as unknown as { name: string; email: string; image: string }}
+            />
+            <div className='flex-1'>
+              <div className='flex flex-wrap items-center gap-2'>
+                <p className='text-lg font-bold text-slate-900'>{host.name}</p>
+                {isVerifiedHost && (
+                  <span className='inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200'>
+                    <Star className='h-3 w-3' />
+                    Hôte vérifié
                   </span>
-                </div>
-                {/* Add data for the host confirmation for this reservation (reservation.confirmed) */}
-                {reservation.confirmed ? (
-                  <div>
-                    <p className='font-medium mb-2'>Confirmation de l&apos;hôte</p>
-                    <span className='inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800'>
-                      Confirmé
-                    </span>
-                  </div>
-                ) : (
-                  <div>
-                    <p className='font-medium mb-2'>Confirmation de l&apos;hôte</p>
-                    <span className='inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800'>
-                      En attente
-                    </span>
-                  </div>
                 )}
-                <div>
-                  <p className='font-medium mb-2'>Paiement</p>
-                  <span
-                    className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                      getPaymentStatusColor(reservation.payment).bg
-                    } ${getPaymentStatusColor(reservation.payment).text}`}
-                  >
-                    {translatePaymentStatus(reservation.payment)}
+              </div>
+              <div className='mt-3 space-y-2 text-sm text-slate-600'>
+                <div className='flex items-center gap-2'>
+                  <Mail className='h-4 w-4 text-slate-400' />
+                  <a href={`mailto:${host.email}`} className='hover:text-blue-600'>
+                    {host.email}
+                  </a>
+                </div>
+                <div className='flex items-center gap-2'>
+                  <Phone className='h-4 w-4 text-slate-400' />
+                  <span className='text-slate-500'>
+                    Contactez votre hôte par email pour toute question
                   </span>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Reservation Details Cards */}
-          <div className='grid grid-cols-1 xl:grid-cols-3 gap-8'>
-            {/* Guest Reservation Details */}
-            <div className='xl:col-span-2'>
-              <GuestReservationDetailsCard reservation={reservation} />
             </div>
+          </div>
+        </div>
 
-            {/* Pricing Details */}
-            <div>
-              <GuestPricingDetailsCard rent={reservation} />
+        {/* Property details grid */}
+        <div className='grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3'>
+          <FeatureBlock
+            title='Équipements'
+            icon={Home}
+            tone='blue'
+            items={reservation.product.equipments as Equipment[]}
+            itemIcon={Home}
+          />
+          <FeatureBlock
+            title='Services'
+            icon={Info}
+            tone='indigo'
+            items={reservation.product.servicesList as Service[]}
+          />
+          <FeatureBlock
+            title='Sécurité'
+            icon={Shield}
+            tone='red'
+            items={reservation.product.securities as Security[]}
+            itemIcon={Shield}
+          />
+          <FeatureBlock
+            title='Repas'
+            icon={Utensils}
+            tone='amber'
+            items={reservation.product.mealsList as Meal[]}
+            itemIcon={Utensils}
+          />
+          <FeatureBlock
+            title='Transport'
+            icon={Car}
+            tone='emerald'
+            items={reservation.product.transportOptions as Transport[]}
+            itemIcon={Car}
+          />
+          <FeatureBlock
+            title='À proximité'
+            icon={Map}
+            tone='purple'
+            items={reservation.product.nearbyPlaces as NearbyPlace[]}
+            itemIcon={MapPin}
+          />
+        </div>
+
+        {/* Proximity landmarks (visible only to guest who booked) */}
+        {reservation.product.proximityLandmarks &&
+          reservation.product.proximityLandmarks.length > 0 && (
+            <div className='rounded-2xl border border-blue-200 bg-blue-50/60 p-6'>
+              <div className='mb-4 flex items-start gap-3'>
+                <div className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600'>
+                  <Info className='h-5 w-5' />
+                </div>
+                <div>
+                  <h3 className='text-sm font-semibold uppercase tracking-wide text-blue-900'>
+                    Points de repère
+                  </h3>
+                  <p className='mt-1 text-sm text-blue-700'>
+                    Ces informations sont partagées uniquement avec les voyageurs ayant une
+                    réservation, pour faciliter votre arrivée.
+                  </p>
+                </div>
+              </div>
+              <ul className='space-y-2'>
+                {(reservation.product.proximityLandmarks as string[]).map((landmark, i) => (
+                  <li
+                    key={i}
+                    className='flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm text-slate-700 ring-1 ring-blue-200/60'
+                  >
+                    <MapPin className='h-4 w-4 shrink-0 text-blue-600' />
+                    <span>{landmark}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
+          )}
+
+        {/* Reservation + pricing details cards (existing components) */}
+        <div className='grid grid-cols-1 gap-6 xl:grid-cols-3'>
+          <div className='xl:col-span-2'>
+            <GuestReservationDetailsCard reservation={reservation} />
+          </div>
+          <div>
+            <GuestPricingDetailsCard rent={reservation} />
           </div>
         </div>
       </div>
