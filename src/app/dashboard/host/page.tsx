@@ -191,8 +191,15 @@ export default function HostDashboard() {
             </Card>
           </motion.div>
         ) : (
+          // Re-key the grid on products.length so framer-motion remounts it when data
+          // arrives after the outer container's initial animation has already completed.
+          // Without this, item motion children stay stuck at the `hidden` variant
+          // because the stagger orchestration already ran before they were mounted.
           <motion.div
+            key={`grid-${products.length}`}
             className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
+            initial='hidden'
+            animate='visible'
             variants={containerVariants}
           >
             {products.map(product => {
