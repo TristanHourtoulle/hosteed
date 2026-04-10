@@ -1,15 +1,38 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import Image from 'next/image'
+import Link from 'next/link'
+import { motion } from 'framer-motion'
+import {
+  Home,
+  Hotel,
+  Plus,
+  Eye,
+  Edit,
+  Trash2,
+  Shield,
+  Loader2,
+  ImageIcon,
+  CheckCircle2,
+} from 'lucide-react'
+
 import { useAuth } from '@/hooks/useAuth'
 import { isAdmin } from '@/hooks/useAdminAuth'
-import Link from 'next/link'
-import { motion, Variants } from 'framer-motion'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
+import { findAllTypeRent, createTypeRent, updateTypeRent } from '@/lib/services/typeRent.service'
+import { TypeRentInterface } from '@/lib/interface/typeRentInterface'
+import DeleteTypeModal from './components/DeleteTypeModal'
+import ImageUpload from './components/ImageUpload'
+
+import { PageHeader } from '@/components/admin/ui/PageHeader'
+import { KpiCard } from '@/components/admin/ui/KpiCard'
+import { FilterBar } from '@/components/admin/ui/FilterBar'
+import { DataTable, type DataTableColumn } from '@/components/admin/ui/DataTable'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Input } from '@/components/ui/shadcnui/input'
-import { Alert, AlertDescription } from '@/components/ui/shadcnui/alert'
+import { Label } from '@/components/ui/shadcnui/label'
+import { Checkbox } from '@/components/ui/shadcnui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -17,49 +40,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/shadcnui/dialog'
-import { Label } from '@/components/ui/shadcnui/label'
-import { Badge } from '@/components/ui/shadcnui/badge'
-import { Checkbox } from '@/components/ui/shadcnui/checkbox'
-import {
-  Loader2,
-  Search,
-  Eye,
-  Home,
-  Plus,
-  ArrowLeft,
-  CheckCircle,
-  Edit3,
-  Trash2,
-  Hotel,
-} from 'lucide-react'
-import { findAllTypeRent, createTypeRent, updateTypeRent } from '@/lib/services/typeRent.service'
-import { TypeRentInterface } from '@/lib/interface/typeRentInterface'
-import DeleteTypeModal from './components/DeleteTypeModal'
-import ImageUpload from './components/ImageUpload'
 
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-    },
-  },
-}
-
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: 'tween' as const,
-      duration: 0.5,
-      ease: 'easeOut',
-    },
-  },
+interface TypeRentWithCount extends TypeRentInterface {
+  _count?: { products: number }
 }
 
 export default function TypeRentPage() {
@@ -69,10 +53,12 @@ export default function TypeRentPage() {
     isAuthenticated,
   } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
-  const [typeRents, setTypeRents] = useState<TypeRentInterface[]>([])
+
+  const [typeRents, setTypeRents] = useState<TypeRentWithCount[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+
+  // Add dialog state
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [newTypeName, setNewTypeName] = useState('')
   const [newTypeDescription, setNewTypeDescription] = useState('')
@@ -80,15 +66,15 @@ export default function TypeRentPage() {
   const [newCoverImage, setNewCoverImage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // États pour l'édition
+  // Edit dialog state
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [editingType, setEditingType] = useState<TypeRentInterface | null>(null)
+  const [editingType, setEditingType] = useState<TypeRentWithCount | null>(null)
   const [editTypeName, setEditTypeName] = useState('')
   const [editTypeDescription, setEditTypeDescription] = useState('')
   const [editIsHotelType, setEditIsHotelType] = useState(false)
   const [editCoverImage, setEditCoverImage] = useState<string | null>(null)
 
-  // États pour la suppression
+  // Delete modal state
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [deletingType, setDeletingType] = useState<TypeRentInterface | null>(null)
 
@@ -101,13 +87,10 @@ export default function TypeRentPage() {
   useEffect(() => {
     const fetchTypeRents = async () => {
       try {
-        const typeRentData = await findAllTypeRent()
-        if (typeRentData) {
-          setTypeRents(typeRentData)
-        }
-      } catch (err) {
-        setError('Erreur lors du chargement des types de logements')
-        console.error(err)
+        const data = await findAllTypeRent()
+        if (data) setTypeRents(data as TypeRentWithCount[])
+      } catch (error) {
+        console.error('Erreur lors du chargement des types:', error)
       } finally {
         setLoading(false)
       }
@@ -115,11 +98,33 @@ export default function TypeRentPage() {
     fetchTypeRents()
   }, [])
 
-  const filteredTypes = typeRents.filter(
-    type =>
-      type.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      type.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredTypes = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase()
+    if (!query) return typeRents
+    return typeRents.filter(
+      type =>
+        type.name?.toLowerCase().includes(query) ||
+        type.description?.toLowerCase().includes(query)
+    )
+  }, [typeRents, searchTerm])
+
+  const stats = useMemo(() => {
+    const total = typeRents.length
+    const hotelCount = typeRents.filter(t => t.isHotelType).length
+    const withImage = typeRents.filter(t => Boolean(t.coverImage)).length
+    const totalUsages = typeRents.reduce(
+      (sum, t) => sum + (t._count?.products ?? 0),
+      0
+    )
+    return { total, hotelCount, withImage, totalUsages }
+  }, [typeRents])
+
+  const resetNewForm = () => {
+    setNewTypeName('')
+    setNewTypeDescription('')
+    setNewIsHotelType(false)
+    setNewCoverImage(null)
+  }
 
   const handleAddType = async () => {
     if (!newTypeName.trim() || !newTypeDescription.trim()) return
@@ -132,26 +137,19 @@ export default function TypeRentPage() {
         newIsHotelType,
         newCoverImage || undefined
       )
-
       if (newType) {
-        setTypeRents([...typeRents, newType])
-        setNewTypeName('')
-        setNewTypeDescription('')
-        setNewIsHotelType(false)
-        setNewCoverImage(null)
+        setTypeRents(prev => [...prev, newType as TypeRentWithCount])
+        resetNewForm()
         setIsAddDialogOpen(false)
-      } else {
-        setError('Erreur lors de la création du type de logement')
       }
-    } catch (err) {
-      console.error('Erreur lors de la création:', err)
-      setError('Erreur lors de la création du type de logement')
+    } catch (error) {
+      console.error('Erreur lors de la création:', error)
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const handleEditType = (type: TypeRentInterface) => {
+  const handleEditType = (type: TypeRentWithCount) => {
     setEditingType(type)
     setEditTypeName(type.name || '')
     setEditTypeDescription(type.description || '')
@@ -165,418 +163,447 @@ export default function TypeRentPage() {
 
     setIsSubmitting(true)
     try {
-      const updatedType = await updateTypeRent(
+      const updated = await updateTypeRent(
         editingType.id,
         editTypeName,
         editTypeDescription,
         editIsHotelType,
         editCoverImage
       )
-
-      if (updatedType) {
-        setTypeRents(typeRents.map(type => (type.id === editingType.id ? updatedType : type)))
-        setEditTypeName('')
-        setEditTypeDescription('')
-        setEditIsHotelType(false)
-        setEditCoverImage(null)
+      if (updated) {
+        setTypeRents(prev =>
+          prev.map(t =>
+            t.id === editingType.id ? ({ ...updated, _count: t._count } as TypeRentWithCount) : t
+          )
+        )
         setEditingType(null)
         setIsEditDialogOpen(false)
-      } else {
-        setError('Erreur lors de la modification du type de logement')
       }
-    } catch (err) {
-      console.error('Erreur lors de la modification:', err)
-      setError('Erreur lors de la modification du type de logement')
+    } catch (error) {
+      console.error('Erreur lors de la modification:', error)
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const handleDeleteType = (type: TypeRentInterface) => {
+  const handleDeleteType = (type: TypeRentWithCount) => {
     setDeletingType(type)
     setIsDeleteModalOpen(true)
   }
 
   const handleDeleteSuccess = (typeId: string) => {
-    setTypeRents(typeRents.filter(type => type.id !== typeId))
+    setTypeRents(prev => prev.filter(t => t.id !== typeId))
     setDeletingType(null)
     setIsDeleteModalOpen(false)
   }
 
-  const handleDeleteError = (message: string) => {
-    setError(message)
-    setTimeout(() => setError(null), 5000)
-  }
+  const columns: Array<DataTableColumn<TypeRentWithCount>> = [
+    {
+      key: 'name',
+      header: 'Type de logement',
+      sortable: true,
+      sortAccessor: item => (item.name ?? '').toLowerCase(),
+      render: item => (
+        <div className='flex items-center gap-3 min-w-0'>
+          <div className='relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 text-white shadow-sm'>
+            {item.coverImage ? (
+              <Image
+                src={item.coverImage}
+                alt={item.name || 'Type'}
+                fill
+                className='object-cover'
+                sizes='44px'
+                unoptimized
+              />
+            ) : (
+              <Home className='h-5 w-5' />
+            )}
+          </div>
+          <div className='min-w-0'>
+            <p className='truncate text-sm font-semibold text-slate-900'>
+              {item.name || 'Type sans nom'}
+            </p>
+            <p className='truncate text-xs text-slate-500'>
+              {item.description || 'Aucune description'}
+            </p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'flags',
+      header: 'Caractéristiques',
+      render: item => (
+        <div className='flex flex-wrap items-center gap-1.5'>
+          {item.isHotelType && (
+            <span className='inline-flex items-center gap-1 rounded-full bg-purple-50 px-2 py-0.5 text-xs font-semibold text-purple-700 ring-1 ring-purple-200'>
+              <Hotel className='h-3 w-3' />
+              Hôtel
+            </span>
+          )}
+          {item.coverImage ? (
+            <span className='inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200'>
+              <ImageIcon className='h-3 w-3' />
+              Image
+            </span>
+          ) : (
+            <span className='inline-flex items-center rounded-full bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-500 ring-1 ring-slate-200'>
+              Sans image
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'count',
+      header: 'Produits',
+      sortable: true,
+      sortAccessor: item => item._count?.products ?? 0,
+      align: 'right',
+      render: item => {
+        const count = item._count?.products ?? 0
+        return (
+          <span
+            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${
+              count > 0
+                ? 'bg-blue-50 text-blue-700 ring-blue-200'
+                : 'bg-slate-50 text-slate-600 ring-slate-200'
+            }`}
+          >
+            {count} produit{count > 1 ? 's' : ''}
+          </span>
+        )
+      },
+      cellClassName: 'whitespace-nowrap',
+    },
+  ]
 
   if (isAuthLoading || loading) {
     return (
-      <div className='min-h-screen flex items-center justify-center'>
-        <div className='flex flex-col items-center gap-4'>
-          <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin'></div>
-          <p className='text-slate-600 text-lg'>Chargement...</p>
+      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/40'>
+        <div className='mx-auto max-w-7xl space-y-8 p-6'>
+          <div className='space-y-3'>
+            <div className='h-4 w-40 animate-pulse rounded bg-slate-200' />
+            <div className='h-10 w-80 animate-pulse rounded bg-slate-200' />
+            <div className='h-4 w-96 animate-pulse rounded bg-slate-200' />
+          </div>
+          <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
+            {[0, 1, 2, 3].map(i => (
+              <div
+                key={i}
+                className='h-32 animate-pulse rounded-2xl border border-slate-200/80 bg-white'
+              />
+            ))}
+          </div>
+          <div className='h-96 animate-pulse rounded-2xl border border-slate-200/80 bg-white' />
         </div>
       </div>
     )
   }
 
-  if (!session) {
-    return null
-  }
-
-  if (error) {
-    return (
-      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-8'>
-        <div className='max-w-7xl mx-auto'>
-          <Alert variant='destructive'>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        </div>
-      </div>
-    )
-  }
+  if (!session) return null
 
   return (
-    <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50'>
+    <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/40'>
       <motion.div
-        className='max-w-7xl mx-auto p-6 space-y-8'
-        variants={containerVariants}
-        initial='hidden'
-        animate='visible'
+        className='mx-auto max-w-7xl space-y-8 p-6'
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
       >
-        {/* Header with breadcrumb */}
-        <motion.div className='flex items-center gap-4' variants={itemVariants}>
-          <Button variant='ghost' size='sm' asChild className='text-slate-600 hover:text-slate-800'>
-            <Link href='/admin' className='flex items-center gap-2'>
-              <ArrowLeft className='h-4 w-4' />
-              Retour au panel admin
-            </Link>
-          </Button>
-        </motion.div>
+        <PageHeader
+          backHref='/admin'
+          backLabel='Retour au panel admin'
+          eyebrow='Espace administrateur'
+          eyebrowIcon={Shield}
+          title='Types de logements'
+          subtitle='Gérez les catégories d’hébergements disponibles sur la plateforme (villa, appartement, hôtel, etc.).'
+          actions={
+            <Button onClick={() => setIsAddDialogOpen(true)} className='gap-2'>
+              <Plus className='h-4 w-4' />
+              Ajouter un type
+            </Button>
+          }
+        />
 
-        {/* Page Header */}
-        <motion.div className='text-center space-y-4' variants={itemVariants}>
-          <div className='inline-flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-full text-sm font-medium'>
-            <Home className='h-4 w-4' />
-            Types de Logements
-          </div>
-          <h1 className='text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 via-purple-700 to-indigo-700'>
-            Gestion des types de logements
-          </h1>
-          <p className='text-slate-600 max-w-2xl mx-auto text-lg'>
-            {typeRents.length} type{typeRents.length > 1 ? 's' : ''} de logement
-            {typeRents.length > 1 ? 's' : ''} enregistré{typeRents.length > 1 ? 's' : ''}
-          </p>
-        </motion.div>
+        {/* KPI row */}
+        <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
+          <KpiCard
+            label='Types enregistrés'
+            value={stats.total}
+            hint='dans le catalogue'
+            icon={Home}
+            tone='purple'
+          />
+          <KpiCard
+            label='Types hôteliers'
+            value={stats.hotelCount}
+            hint='gestion multi-chambres'
+            icon={Hotel}
+            tone='indigo'
+          />
+          <KpiCard
+            label='Avec image'
+            value={stats.withImage}
+            hint={`sur ${stats.total} au total`}
+            icon={ImageIcon}
+            tone='emerald'
+          />
+          <KpiCard
+            label='Produits catégorisés'
+            value={stats.totalUsages}
+            hint='hébergements concernés'
+            icon={CheckCircle2}
+            tone='blue'
+          />
+        </div>
 
-        {/* Search and Add */}
-        <motion.div variants={itemVariants}>
-          <div className='flex flex-col sm:flex-row gap-4 items-center justify-between bg-white/70 backdrop-blur-sm rounded-2xl p-6 border-0 shadow-lg'>
-            <div className='relative flex-1 max-w-md'>
-              <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4' />
-              <Input
-                placeholder='Rechercher un type de logement...'
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className='pl-10 border-slate-200 focus:border-purple-300 focus:ring-purple-200'
-              />
-            </div>
-            <div className='flex gap-3'>
-              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className='bg-purple-600 hover:bg-purple-700 text-white shadow-lg'>
-                    <Plus className='h-4 w-4 mr-2' />
-                    Ajouter un type
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className='sm:max-w-[425px]'>
-                  <DialogHeader>
-                    <DialogTitle className='flex items-center gap-2'>
-                      <Home className='h-5 w-5 text-purple-600' />
-                      Ajouter un type de logement
-                    </DialogTitle>
-                    <DialogDescription>
-                      Créez un nouveau type de logement pour votre plateforme.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className='space-y-4 py-4'>
-                    <div className='space-y-2'>
-                      <Label htmlFor='typeName'>Nom du type</Label>
-                      <Input
-                        id='typeName'
-                        placeholder='Ex: Villa, Appartement, Maison...'
-                        value={newTypeName}
-                        onChange={e => setNewTypeName(e.target.value)}
-                      />
-                    </div>
-                    <div className='space-y-2'>
-                      <Label htmlFor='typeDescription'>Description</Label>
-                      <Input
-                        id='typeDescription'
-                        placeholder='Description du type de logement...'
-                        value={newTypeDescription}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                          setNewTypeDescription(e.target.value)
-                        }
-                      />
-                    </div>
-                    <ImageUpload
-                      currentImage={newCoverImage}
-                      onImageChange={setNewCoverImage}
-                      entityType='type-rent'
-                    />
-                    <div className='flex items-center space-x-2 pt-2'>
-                      <Checkbox
-                        id='isHotelType'
-                        checked={newIsHotelType}
-                        onCheckedChange={checked => setNewIsHotelType(checked as boolean)}
-                      />
-                      <Label
-                        htmlFor='isHotelType'
-                        className='text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer'
-                      >
-                        <div className='flex items-center gap-2'>
-                          <Hotel className='h-4 w-4 text-purple-600' />
-                          <span>Fonctionne comme un hôtel (gestion multi-chambres)</span>
-                        </div>
-                      </Label>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button
-                      variant='outline'
-                      onClick={() => setIsAddDialogOpen(false)}
-                      disabled={isSubmitting}
-                    >
-                      Annuler
-                    </Button>
-                    <Button
-                      onClick={handleAddType}
-                      disabled={!newTypeName.trim() || !newTypeDescription.trim() || isSubmitting}
-                      className='bg-purple-600 hover:bg-purple-700'
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                          Création...
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle className='h-4 w-4 mr-2' />
-                          Créer
-                        </>
-                      )}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+        {/* Search */}
+        <FilterBar
+          searchValue={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder='Rechercher un type de logement…'
+        />
 
-              {/* Dialog d'édition */}
-              <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                <DialogContent className='sm:max-w-[425px]'>
-                  <DialogHeader>
-                    <DialogTitle className='flex items-center gap-2'>
-                      <Edit3 className='h-5 w-5 text-orange-600' />
-                      Modifier le type de logement
-                    </DialogTitle>
-                    <DialogDescription>
-                      Modifiez les informations de ce type de logement.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className='space-y-4 py-4'>
-                    <div className='space-y-2'>
-                      <Label htmlFor='editTypeName'>Nom du type</Label>
-                      <Input
-                        id='editTypeName'
-                        placeholder='Ex: Villa, Appartement, Maison...'
-                        value={editTypeName}
-                        onChange={e => setEditTypeName(e.target.value)}
-                      />
-                    </div>
-                    <div className='space-y-2'>
-                      <Label htmlFor='editTypeDescription'>Description</Label>
-                      <Input
-                        id='editTypeDescription'
-                        placeholder='Description du type de logement...'
-                        value={editTypeDescription}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                          setEditTypeDescription(e.target.value)
-                        }
-                      />
-                    </div>
-                    <ImageUpload
-                      currentImage={editCoverImage}
-                      onImageChange={setEditCoverImage}
-                      entityType='type-rent'
-                      entityId={editingType?.id}
-                    />
-                    <div className='flex items-center space-x-2 pt-2'>
-                      <Checkbox
-                        id='editIsHotelType'
-                        checked={editIsHotelType}
-                        onCheckedChange={checked => setEditIsHotelType(checked as boolean)}
-                      />
-                      <Label
-                        htmlFor='editIsHotelType'
-                        className='text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer'
-                      >
-                        <div className='flex items-center gap-2'>
-                          <Hotel className='h-4 w-4 text-orange-600' />
-                          <span>Fonctionne comme un hôtel (gestion multi-chambres)</span>
-                        </div>
-                      </Label>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button
-                      variant='outline'
-                      onClick={() => setIsEditDialogOpen(false)}
-                      disabled={isSubmitting}
-                    >
-                      Annuler
-                    </Button>
-                    <Button
-                      onClick={handleUpdateType}
-                      disabled={!editTypeName.trim() || !editTypeDescription.trim() || isSubmitting}
-                      className='bg-orange-600 hover:bg-orange-700'
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                          Modification...
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle className='h-4 w-4 mr-2' />
-                          Modifier
-                        </>
-                      )}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-
-              {/* Modal de suppression améliorée */}
-              <DeleteTypeModal
-                isOpen={isDeleteModalOpen}
-                onClose={() => {
-                  setIsDeleteModalOpen(false)
-                  setDeletingType(null)
-                }}
-                typeToDelete={deletingType}
-                onDeleteSuccess={handleDeleteSuccess}
-                onError={handleDeleteError}
-              />
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Content */}
-        <motion.div variants={itemVariants}>
-          {filteredTypes.length === 0 ? (
-            <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm'>
-              <CardContent className='text-center py-12'>
-                <Home className='h-16 w-16 text-slate-300 mx-auto mb-4' />
-                <h3 className='text-xl font-semibold text-slate-600 mb-2'>
-                  {searchTerm ? 'Aucun résultat' : 'Aucun type de logement'}
-                </h3>
-                <p className='text-slate-500 mb-6'>
-                  {searchTerm
-                    ? 'Aucun type ne correspond à votre recherche.'
-                    : 'Commencez par ajouter votre premier type de logement.'}
-                </p>
-                {!searchTerm && (
-                  <Button
-                    onClick={() => setIsAddDialogOpen(true)}
-                    className='bg-purple-600 hover:bg-purple-700'
-                  >
-                    <Plus className='h-4 w-4 mr-2' />
-                    Ajouter un type
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
-            <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3 items-stretch'>
-              {filteredTypes.map((type, index) => (
-                <motion.div
-                  key={type.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
+        {/* Table */}
+        <DataTable<TypeRentWithCount>
+          columns={columns}
+          rows={filteredTypes}
+          getRowId={item => item.id}
+          loading={loading}
+          rowActions={item => (
+            <div className='flex items-center justify-end gap-1'>
+              <Button variant='ghost' size='sm' asChild>
+                <Link
+                  href={`/admin/typeRent/${item.id}`}
+                  className='gap-1 text-slate-600 hover:text-slate-900'
                 >
-                  <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm hover:shadow-xl transition-all duration-300 group h-full'>
-                    <CardHeader className='pb-3'>
-                      <div className='flex items-start justify-between'>
-                        <div className='flex items-center gap-3'>
-                          <div className='p-2 bg-purple-50 rounded-lg group-hover:bg-purple-100 transition-colors'>
-                            <Home className='h-5 w-5 text-purple-600' />
-                          </div>
-                          <div>
-                            <CardTitle className='text-lg font-semibold text-slate-800'>
-                              {type.name || 'Type sans nom'}
-                            </CardTitle>
-                          </div>
-                        </div>
-                        <div className='flex gap-1'>
-                          {type.isHotelType && (
-                            <Badge
-                              variant='secondary'
-                              className='bg-purple-50 text-purple-700 border-purple-200 flex items-center gap-1'
-                            >
-                              <Hotel className='h-3 w-3' />
-                              Hôtel
-                            </Badge>
-                          )}
-                          <Badge
-                            variant='secondary'
-                            className='bg-green-50 text-green-700 border-green-200'
-                          >
-                            Actif
-                          </Badge>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className='pt-0'>
-                      <p className='text-slate-600 text-sm mb-4 line-clamp-2'>
-                        {type.description || 'Aucune description'}
-                      </p>
-                      <div className='flex items-center gap-2'>
-                        <Button
-                          variant='ghost'
-                          size='sm'
-                          asChild
-                          className='flex-1 hover:bg-purple-50 hover:text-purple-600'
-                        >
-                          <Link href={`/admin/typeRent/${type.id}`}>
-                            <Eye className='h-4 w-4 mr-2' />
-                            Voir logements
-                          </Link>
-                        </Button>
-                        <Button
-                          variant='ghost'
-                          size='sm'
-                          className='hover:bg-orange-50 hover:text-orange-600'
-                          onClick={() => handleEditType(type)}
-                        >
-                          <Edit3 className='h-4 w-4' />
-                        </Button>
-                        <Button
-                          variant='ghost'
-                          size='sm'
-                          className='hover:bg-red-50 hover:text-red-600'
-                          onClick={() => handleDeleteType(type)}
-                        >
-                          <Trash2 className='h-4 w-4' />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
+                  <Eye className='h-4 w-4' />
+                  Voir
+                </Link>
+              </Button>
+              <Button
+                variant='ghost'
+                size='sm'
+                onClick={() => handleEditType(item)}
+                className='text-slate-600 hover:text-slate-900'
+              >
+                <Edit className='h-4 w-4' />
+              </Button>
+              <Button
+                variant='ghost'
+                size='sm'
+                onClick={() => handleDeleteType(item)}
+                className='text-red-600 hover:bg-red-50 hover:text-red-700'
+              >
+                <Trash2 className='h-4 w-4' />
+              </Button>
             </div>
           )}
-        </motion.div>
+          emptyState={{
+            icon: Home,
+            title: searchTerm ? 'Aucun résultat' : 'Aucun type de logement',
+            subtitle: searchTerm
+              ? 'Essayez d’ajuster votre recherche.'
+              : 'Commencez par ajouter votre premier type de logement.',
+          }}
+        />
       </motion.div>
+
+      {/* Add dialog */}
+      <Dialog
+        open={isAddDialogOpen}
+        onOpenChange={open => {
+          setIsAddDialogOpen(open)
+          if (!open) resetNewForm()
+        }}
+      >
+        <DialogContent className='sm:max-w-[520px]'>
+          <DialogHeader>
+            <div className='flex items-start gap-3'>
+              <div className='flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600 ring-1 ring-purple-100'>
+                <Home className='h-5 w-5' />
+              </div>
+              <div className='min-w-0 flex-1 space-y-1'>
+                <DialogTitle className='text-lg'>Ajouter un type de logement</DialogTitle>
+                <DialogDescription className='text-sm text-slate-600'>
+                  Créez un nouveau type de logement pour votre plateforme.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className='space-y-4 py-2'>
+            <div className='space-y-1.5'>
+              <Label htmlFor='typeName'>
+                Nom <span className='text-red-500'>*</span>
+              </Label>
+              <Input
+                id='typeName'
+                placeholder='Ex: Villa, Appartement, Hôtel'
+                value={newTypeName}
+                onChange={e => setNewTypeName(e.target.value)}
+              />
+            </div>
+            <div className='space-y-1.5'>
+              <Label htmlFor='typeDescription'>
+                Description <span className='text-red-500'>*</span>
+              </Label>
+              <Input
+                id='typeDescription'
+                placeholder='Description du type de logement…'
+                value={newTypeDescription}
+                onChange={e => setNewTypeDescription(e.target.value)}
+              />
+            </div>
+            <ImageUpload
+              currentImage={newCoverImage}
+              onImageChange={setNewCoverImage}
+              entityType='type-rent'
+            />
+            <div className='flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3'>
+              <Checkbox
+                id='isHotelType'
+                checked={newIsHotelType}
+                onCheckedChange={checked => setNewIsHotelType(checked === true)}
+              />
+              <Label htmlFor='isHotelType' className='cursor-pointer space-y-0.5'>
+                <span className='flex items-center gap-1.5 text-sm font-medium text-slate-900'>
+                  <Hotel className='h-4 w-4 text-purple-600' />
+                  Fonctionne comme un hôtel
+                </span>
+                <span className='text-xs text-slate-500'>
+                  Active la gestion multi-chambres pour ce type.
+                </span>
+              </Label>
+            </div>
+          </div>
+
+          <DialogFooter className='gap-2'>
+            <Button
+              variant='outline'
+              onClick={() => setIsAddDialogOpen(false)}
+              disabled={isSubmitting}
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={handleAddType}
+              disabled={!newTypeName.trim() || !newTypeDescription.trim() || isSubmitting}
+              className='gap-2'
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className='h-4 w-4 animate-spin' />
+                  Création…
+                </>
+              ) : (
+                'Créer'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className='sm:max-w-[520px]'>
+          <DialogHeader>
+            <div className='flex items-start gap-3'>
+              <div className='flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 ring-1 ring-blue-100'>
+                <Edit className='h-5 w-5' />
+              </div>
+              <div className='min-w-0 flex-1 space-y-1'>
+                <DialogTitle className='text-lg'>Modifier le type de logement</DialogTitle>
+                <DialogDescription className='text-sm text-slate-600'>
+                  Mettez à jour les informations de ce type.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className='space-y-4 py-2'>
+            <div className='space-y-1.5'>
+              <Label htmlFor='editTypeName'>
+                Nom <span className='text-red-500'>*</span>
+              </Label>
+              <Input
+                id='editTypeName'
+                value={editTypeName}
+                onChange={e => setEditTypeName(e.target.value)}
+              />
+            </div>
+            <div className='space-y-1.5'>
+              <Label htmlFor='editTypeDescription'>
+                Description <span className='text-red-500'>*</span>
+              </Label>
+              <Input
+                id='editTypeDescription'
+                value={editTypeDescription}
+                onChange={e => setEditTypeDescription(e.target.value)}
+              />
+            </div>
+            <ImageUpload
+              currentImage={editCoverImage}
+              onImageChange={setEditCoverImage}
+              entityType='type-rent'
+              entityId={editingType?.id}
+            />
+            <div className='flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3'>
+              <Checkbox
+                id='editIsHotelType'
+                checked={editIsHotelType}
+                onCheckedChange={checked => setEditIsHotelType(checked === true)}
+              />
+              <Label htmlFor='editIsHotelType' className='cursor-pointer space-y-0.5'>
+                <span className='flex items-center gap-1.5 text-sm font-medium text-slate-900'>
+                  <Hotel className='h-4 w-4 text-purple-600' />
+                  Fonctionne comme un hôtel
+                </span>
+                <span className='text-xs text-slate-500'>
+                  Active la gestion multi-chambres pour ce type.
+                </span>
+              </Label>
+            </div>
+          </div>
+
+          <DialogFooter className='gap-2'>
+            <Button
+              variant='outline'
+              onClick={() => setIsEditDialogOpen(false)}
+              disabled={isSubmitting}
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={handleUpdateType}
+              disabled={!editTypeName.trim() || !editTypeDescription.trim() || isSubmitting}
+              className='gap-2'
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className='h-4 w-4 animate-spin' />
+                  Mise à jour…
+                </>
+              ) : (
+                'Mettre à jour'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete modal (specialised — checks for associated products) */}
+      <DeleteTypeModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false)
+          setDeletingType(null)
+        }}
+        typeToDelete={deletingType}
+        onDeleteSuccess={handleDeleteSuccess}
+        onError={message => console.error(message)}
+      />
     </div>
   )
 }

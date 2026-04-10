@@ -54,7 +54,11 @@ export async function GET(request: NextRequest) {
 
     const offset = (page - 1) * limit
 
-    // Execute optimized single query with Promise.all for better performance
+    // Execute optimized single query with Promise.all for better performance.
+    // We include the three profile picture fields so the admin list can render
+    // the user's real avatar via `getUserAvatarUrl()`. `profilePictureBase64`
+    // can be heavy, but this endpoint is admin-only and capped at 50 rows per
+    // page, so the trade-off is acceptable.
     const [users, totalItems] = await Promise.all([
       prisma.user.findMany({
         where: whereClause,
@@ -66,6 +70,9 @@ export async function GET(request: NextRequest) {
           roles: true,
           createdAt: true,
           emailVerified: true,
+          image: true,
+          profilePicture: true,
+          profilePictureBase64: true,
         },
         orderBy: [{ createdAt: 'desc' }, { email: 'asc' }],
         skip: offset,

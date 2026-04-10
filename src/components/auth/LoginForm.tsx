@@ -107,6 +107,7 @@ export const LoginForm = () => {
                 <div className='relative'>
                   <Input {...field} type={showPassword ? 'text' : 'password'} className='py-6' />
                   <Button
+                    type='button'
                     variant='ghost'
                     size='icon'
                     onClick={() => setShowPassword(!showPassword)}

@@ -24,8 +24,11 @@ export async function GET(request: NextRequest) {
 
       posts = await getPostsByAuthor(authorId)
     } else {
-      // Get all posts (public access)
-      posts = await getPost()
+      // Get all posts (public access). `getPost()` now returns a paginated
+      // shape `{ posts, pagination }` for internal use — the public
+      // `/api/posts` contract stays a plain array, so we unwrap here.
+      const paginated = await getPost({ limit: 1000 })
+      posts = paginated?.posts ?? null
     }
 
     if (!posts) {

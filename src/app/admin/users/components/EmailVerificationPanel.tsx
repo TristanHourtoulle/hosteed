@@ -12,7 +12,6 @@ import {
   DialogTrigger,
 } from '@/components/ui/shadcnui/dialog'
 import { Button } from '@/components/ui/shadcnui/button'
-import { Alert, AlertDescription } from '@/components/ui/shadcnui/alert'
 import {
   Select,
   SelectContent,
@@ -21,7 +20,20 @@ import {
   SelectValue,
 } from '@/components/ui/shadcnui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Mail, Loader2, CheckCircle, XCircle, Users, User as UserIcon } from 'lucide-react'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/shadcnui/avatar'
+import {
+  Mail,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  Users as UsersIcon,
+  User as UserIcon,
+  MailX,
+  MailCheck,
+  Send,
+} from 'lucide-react'
+import { toast } from 'sonner'
+import { getUserAvatarUrl } from '@/lib/utils/userAvatar'
 
 interface EmailVerificationPanelProps {
   users: User[]
@@ -35,9 +47,11 @@ interface SendResult {
   error?: string
 }
 
+type SendMode = 'all' | 'selected' | 'single'
+
 export function EmailVerificationPanel({ users, refreshUsers }: EmailVerificationPanelProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const [mode, setMode] = useState<'all' | 'selected' | 'single'>('all')
+  const [mode, setMode] = useState<SendMode>('all')
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
   const [singleUser, setSingleUser] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
@@ -48,87 +62,55 @@ export function EmailVerificationPanel({ users, refreshUsers }: EmailVerificatio
     failures: number
   } | null>(null)
 
-  // Filtrer les utilisateurs non vérifiés
-  const unverifiedUsers = users.filter(user => !user.emailVerified)
+  const unverifiedUsers = users.filter(u => !u.emailVerified)
 
-  const handleUserSelection = (userId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedUsers([...selectedUsers, userId])
-    } else {
-      setSelectedUsers(selectedUsers.filter(id => id !== userId))
-    }
+  const toggleUser = (userId: string, checked: boolean) => {
+    setSelectedUsers(prev =>
+      checked ? [...prev, userId] : prev.filter(id => id !== userId)
+    )
   }
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedUsers(unverifiedUsers.map(user => user.id))
-    } else {
-      setSelectedUsers([])
-    }
+  const toggleAll = (checked: boolean) => {
+    setSelectedUsers(checked ? unverifiedUsers.map(u => u.id) : [])
   }
 
-  const handleSendEmails = async () => {
+  const handleSend = async () => {
     setIsLoading(true)
     setResults([])
     setSummary(null)
 
     try {
       let userIds: string[] = []
-
-      if (mode === 'all') {
-        userIds = unverifiedUsers.map(user => user.id)
-      } else if (mode === 'selected') {
-        userIds = selectedUsers
-      } else if (mode === 'single') {
-        userIds = [singleUser]
-      }
+      if (mode === 'all') userIds = unverifiedUsers.map(u => u.id)
+      else if (mode === 'selected') userIds = selectedUsers
+      else if (mode === 'single' && singleUser) userIds = [singleUser]
 
       if (userIds.length === 0) {
-        console.error('Aucun utilisateur sélectionné')
+        toast.error('Aucun utilisateur sélectionné')
         return
       }
 
       const response = await fetch('/api/admin/users/send-verification', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userIds,
-          mode,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userIds, mode }),
       })
 
       const data = await response.json()
-
       if (response.ok) {
         setResults(data.results || [])
         setSummary(data.summary || null)
-
-        // Afficher un toast de succès
         const successCount = data.summary?.success || 0
-        const failureCount = data.summary?.failures || 0
-
         if (successCount > 0) {
-          console.log(`${successCount} email(s) envoyé(s) avec succès`)
+          toast.success(`${successCount} email${successCount > 1 ? 's' : ''} envoyé${successCount > 1 ? 's' : ''}`)
         }
-        if (failureCount > 0) {
-          console.warn(`${failureCount} échec(s) lors de l'envoi`)
-        }
-
-        // Rafraîchir la liste des utilisateurs après envoi
-        setTimeout(() => {
-          refreshUsers()
-        }, 1000)
+        setTimeout(() => refreshUsers(), 1000)
       } else {
-        console.error('Erreur:', data.error)
-        // Afficher un toast d'erreur
-        console.error("Erreur lors de l'envoi des emails")
+        toast.error(data.error || "Erreur lors de l'envoi des emails")
       }
     } catch (error) {
-      console.error("Erreur lors de l'envoi des emails:", error)
-      // Afficher un toast d'erreur
-      console.error("Erreur de connexion lors de l'envoi des emails")
+      console.error("Erreur lors de l'envoi:", error)
+      toast.error('Erreur technique lors de l’envoi')
     } finally {
       setIsLoading(false)
     }
@@ -147,115 +129,173 @@ export function EmailVerificationPanel({ users, refreshUsers }: EmailVerificatio
     resetForm()
   }
 
+  const canSubmit =
+    !isLoading &&
+    ((mode === 'all' && unverifiedUsers.length > 0) ||
+      (mode === 'selected' && selectedUsers.length > 0) ||
+      (mode === 'single' && !!singleUser))
+
+  const selectedCount =
+    mode === 'all'
+      ? unverifiedUsers.length
+      : mode === 'selected'
+        ? selectedUsers.length
+        : singleUser
+          ? 1
+          : 0
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant='outline' className='gap-2' disabled={unverifiedUsers.length === 0}>
+        <Button
+          variant='outline'
+          className='gap-2 border-slate-200 bg-white/80 text-slate-700 shadow-sm hover:bg-slate-50'
+          disabled={unverifiedUsers.length === 0}
+        >
           <Mail className='h-4 w-4' />
           Renvoyer emails de vérification
           {unverifiedUsers.length > 0 && (
-            <span className='ml-1 px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded-full'>
+            <span className='ml-1 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800'>
               {unverifiedUsers.length}
             </span>
           )}
         </Button>
       </DialogTrigger>
 
-      <DialogContent className='max-w-2xl max-h-[80vh] overflow-y-auto'>
+      <DialogContent className='max-h-[85vh] overflow-y-auto sm:max-w-2xl'>
         <DialogHeader>
-          <DialogTitle>Renvoyer les emails de vérification</DialogTitle>
-          <DialogDescription>
-            Choisissez les utilisateurs à qui renvoyer l&apos;email de vérification de compte. Seuls
-            les comptes non vérifiés sont concernés ({unverifiedUsers.length} comptes).
-          </DialogDescription>
+          <div className='flex items-start gap-3'>
+            <div className='flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 ring-1 ring-blue-100'>
+              <Mail className='h-5 w-5' />
+            </div>
+            <div className='min-w-0 flex-1 space-y-1'>
+              <DialogTitle className='text-lg'>Renvoyer les emails de vérification</DialogTitle>
+              <DialogDescription className='text-sm text-slate-600'>
+                Seuls les comptes non vérifiés sont concernés.{' '}
+                <strong>{unverifiedUsers.length}</strong> compte
+                {unverifiedUsers.length > 1 ? 's' : ''} en attente.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className='space-y-4'>
-          {/* Mode de sélection */}
-          <div>
-            <label className='text-sm font-medium'>Mode d&apos;envoi</label>
-            <Select
-              value={mode}
-              onValueChange={(value: 'all' | 'selected' | 'single') => setMode(value)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='all'>
-                  <div className='flex items-center gap-2'>
-                    <Users className='h-4 w-4' />
-                    Tous les comptes non vérifiés ({unverifiedUsers.length})
+        <div className='space-y-5 py-2'>
+          {/* Mode selection as icon cards */}
+          <div className='grid gap-2 sm:grid-cols-3'>
+            {[
+              {
+                value: 'all' as SendMode,
+                icon: UsersIcon,
+                title: 'Tous les non vérifiés',
+                subtitle: `${unverifiedUsers.length} compte${unverifiedUsers.length > 1 ? 's' : ''}`,
+              },
+              {
+                value: 'selected' as SendMode,
+                icon: UsersIcon,
+                title: 'Sélection',
+                subtitle: 'Choix manuel',
+              },
+              {
+                value: 'single' as SendMode,
+                icon: UserIcon,
+                title: 'Un utilisateur',
+                subtitle: 'Compte unique',
+              },
+            ].map(opt => {
+              const Icon = opt.icon
+              const active = mode === opt.value
+              return (
+                <button
+                  key={opt.value}
+                  type='button'
+                  onClick={() => setMode(opt.value)}
+                  className={`flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition ${
+                    active
+                      ? 'border-blue-300 bg-blue-50/60 ring-2 ring-blue-100'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}
+                >
+                  <div
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+                      active ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-600'
+                    }`}
+                  >
+                    <Icon className='h-4 w-4' />
                   </div>
-                </SelectItem>
-                <SelectItem value='selected'>
-                  <div className='flex items-center gap-2'>
-                    <Users className='h-4 w-4' />
-                    Comptes sélectionnés
-                  </div>
-                </SelectItem>
-                <SelectItem value='single'>
-                  <div className='flex items-center gap-2'>
-                    <UserIcon className='h-4 w-4' />
-                    Un seul compte
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
+                  <p className='text-sm font-semibold text-slate-900'>{opt.title}</p>
+                  <p className='text-xs text-slate-500'>{opt.subtitle}</p>
+                </button>
+              )
+            })}
           </div>
 
-          {/* Sélection multiple */}
+          {/* Mode: selected — checkbox list */}
           {mode === 'selected' && (
-            <div className='space-y-3'>
-              <div className='flex items-center gap-2'>
-                <Checkbox
-                  checked={selectedUsers.length === unverifiedUsers.length}
-                  onCheckedChange={handleSelectAll}
-                />
-                <label className='text-sm'>Sélectionner tout</label>
+            <div className='space-y-3 rounded-xl border border-slate-200 bg-slate-50/40 p-3'>
+              <div className='flex items-center justify-between gap-3 border-b border-slate-200 pb-3'>
+                <label className='flex items-center gap-2 text-sm font-medium text-slate-700'>
+                  <Checkbox
+                    checked={
+                      selectedUsers.length === unverifiedUsers.length &&
+                      unverifiedUsers.length > 0
+                    }
+                    onCheckedChange={toggleAll}
+                  />
+                  Tout sélectionner
+                </label>
+                <span className='text-xs text-slate-500'>
+                  {selectedUsers.length} / {unverifiedUsers.length}
+                </span>
               </div>
-
-              <div className='max-h-48 overflow-y-auto border rounded p-3 space-y-2'>
-                {unverifiedUsers.map(user => (
-                  <div key={user.id} className='flex items-center gap-2'>
-                    <Checkbox
-                      checked={selectedUsers.includes(user.id)}
-                      onCheckedChange={(checked: boolean) => handleUserSelection(user.id, checked)}
-                    />
-                    <div className='flex-1'>
-                      <div className='text-sm font-medium'>
-                        {user.name} {user.lastname}
+              <div className='max-h-60 space-y-1.5 overflow-y-auto'>
+                {unverifiedUsers.map(user => {
+                  const isChecked = selectedUsers.includes(user.id)
+                  return (
+                    <label
+                      key={user.id}
+                      className={`flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 transition ${
+                        isChecked ? 'bg-blue-50/80' : 'hover:bg-white'
+                      }`}
+                    >
+                      <Checkbox
+                        checked={isChecked}
+                        onCheckedChange={(checked: boolean) => toggleUser(user.id, checked)}
+                      />
+                      <Avatar className='h-8 w-8 shrink-0'>
+                        <AvatarImage src={getUserAvatarUrl(user)} alt={user.name || user.email} />
+                        <AvatarFallback className='bg-gradient-to-br from-indigo-500 to-purple-500 text-[10px] font-semibold text-white'>
+                          {(user.name?.[0] || user.email[0]).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className='min-w-0 flex-1'>
+                        <p className='truncate text-sm font-medium text-slate-900'>
+                          {[user.name, user.lastname].filter(Boolean).join(' ') || 'Sans nom'}
+                        </p>
+                        <p className='truncate text-xs text-slate-500'>{user.email}</p>
                       </div>
-                      <div className='text-xs text-gray-500'>{user.email}</div>
-                    </div>
-                  </div>
-                ))}
+                    </label>
+                  )
+                })}
               </div>
-
-              {selectedUsers.length > 0 && (
-                <div className='text-sm text-blue-600'>
-                  {selectedUsers.length} compte(s) sélectionné(s)
-                </div>
-              )}
             </div>
           )}
 
-          {/* Sélection unique */}
+          {/* Mode: single — select */}
           {mode === 'single' && (
-            <div>
-              <label className='text-sm font-medium'>Utilisateur</label>
+            <div className='space-y-2'>
+              <label className='text-sm font-medium text-slate-700'>Utilisateur</label>
               <Select value={singleUser} onValueChange={setSingleUser}>
                 <SelectTrigger>
-                  <SelectValue placeholder='Choisir un utilisateur' />
+                  <SelectValue placeholder='Choisir un utilisateur…' />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className='max-h-72'>
                   {unverifiedUsers.map(user => (
                     <SelectItem key={user.id} value={user.id}>
-                      <div>
-                        <div className='font-medium'>
-                          {user.name} {user.lastname}
-                        </div>
-                        <div className='text-xs text-gray-500'>{user.email}</div>
+                      <div className='flex flex-col'>
+                        <span className='font-medium'>
+                          {[user.name, user.lastname].filter(Boolean).join(' ') || user.email}
+                        </span>
+                        <span className='text-xs text-slate-500'>{user.email}</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -264,33 +304,52 @@ export function EmailVerificationPanel({ users, refreshUsers }: EmailVerificatio
             </div>
           )}
 
-          {/* Résultats */}
+          {/* Results summary */}
           {summary && (
-            <Alert>
-              <CheckCircle className='h-4 w-4' />
-              <AlertDescription>
-                <div className='font-medium'>Envoi terminé</div>
-                <div className='text-sm'>
-                  {summary.success} emails envoyés avec succès, {summary.failures} échecs sur{' '}
-                  {summary.total} total
+            <div className='rounded-xl border border-slate-200 bg-white p-4'>
+              <div className='mb-3 flex items-center justify-between'>
+                <p className='text-sm font-semibold text-slate-900'>Résultat de l’envoi</p>
+                <span className='text-xs text-slate-500'>
+                  {summary.total} email{summary.total > 1 ? 's' : ''} traité
+                  {summary.total > 1 ? 's' : ''}
+                </span>
+              </div>
+              <div className='grid grid-cols-2 gap-3'>
+                <div className='flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-emerald-700 ring-1 ring-emerald-100'>
+                  <MailCheck className='h-4 w-4' />
+                  <span className='text-sm font-semibold tabular-nums'>{summary.success}</span>
+                  <span className='text-xs'>envoyés</span>
                 </div>
-              </AlertDescription>
-            </Alert>
+                <div className='flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-red-700 ring-1 ring-red-100'>
+                  <MailX className='h-4 w-4' />
+                  <span className='text-sm font-semibold tabular-nums'>{summary.failures}</span>
+                  <span className='text-xs'>échecs</span>
+                </div>
+              </div>
+            </div>
           )}
 
+          {/* Per-email result list */}
           {results.length > 0 && (
             <div className='space-y-2'>
-              <h4 className='text-sm font-medium'>Détails des envois :</h4>
-              <div className='max-h-32 overflow-y-auto space-y-1'>
+              <h4 className='text-xs font-semibold uppercase tracking-wide text-slate-500'>
+                Détails
+              </h4>
+              <div className='max-h-40 space-y-1 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2'>
                 {results.map((result, index) => (
-                  <div key={index} className='flex items-center gap-2 text-xs'>
+                  <div
+                    key={`${result.userId}-${index}`}
+                    className='flex items-center gap-2 rounded-md px-2 py-1.5 text-xs'
+                  >
                     {result.success ? (
-                      <CheckCircle className='h-3 w-3 text-green-500' />
+                      <CheckCircle2 className='h-3.5 w-3.5 shrink-0 text-emerald-500' />
                     ) : (
-                      <XCircle className='h-3 w-3 text-red-500' />
+                      <XCircle className='h-3.5 w-3.5 shrink-0 text-red-500' />
                     )}
-                    <span className='flex-1'>{result.email}</span>
-                    {!result.success && <span className='text-red-500'>{result.error}</span>}
+                    <span className='flex-1 truncate text-slate-700'>{result.email}</span>
+                    {!result.success && result.error && (
+                      <span className='truncate text-red-500'>{result.error}</span>
+                    )}
                   </div>
                 ))}
               </div>
@@ -298,24 +357,19 @@ export function EmailVerificationPanel({ users, refreshUsers }: EmailVerificatio
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant='outline' onClick={handleClose}>
+        <DialogFooter className='gap-2'>
+          <Button variant='outline' onClick={handleClose} disabled={isLoading}>
             Fermer
           </Button>
           <Button
-            onClick={handleSendEmails}
-            disabled={
-              isLoading ||
-              (mode === 'selected' && selectedUsers.length === 0) ||
-              (mode === 'single' && !singleUser)
-            }
+            onClick={handleSend}
+            disabled={!canSubmit}
+            className='gap-2 bg-blue-600 text-white hover:bg-blue-700'
           >
-            {isLoading ? (
-              <Loader2 className='h-4 w-4 animate-spin mr-2' />
-            ) : (
-              <Mail className='h-4 w-4 mr-2' />
-            )}
-            {isLoading ? 'Envoi en cours...' : 'Envoyer les emails'}
+            {isLoading ? <Loader2 className='h-4 w-4 animate-spin' /> : <Send className='h-4 w-4' />}
+            {isLoading
+              ? 'Envoi…'
+              : `Envoyer ${selectedCount > 0 ? `(${selectedCount})` : ''}`.trim()}
           </Button>
         </DialogFooter>
       </DialogContent>

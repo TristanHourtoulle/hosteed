@@ -15,6 +15,7 @@ export async function getHomepageSettings(): Promise<HomepageSettings | null> {
 export async function updateHomepageSettings(data: {
   heroBackgroundImage?: string | null
   howItWorksImage?: string | null
+  authBackgroundImage?: string | null
 }): Promise<HomepageSettings | null> {
   try {
     // Récupérer l'enregistrement existant ou créer un nouveau

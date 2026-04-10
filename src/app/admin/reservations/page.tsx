@@ -1,18 +1,16 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { motion } from 'framer-motion'
 import { useAuth } from '@/hooks/useAuth'
 import { isFullAdmin } from '@/hooks/useAdminAuth'
 import { useAdminReservationsPaginated } from '@/hooks/useAdminPaginated'
 import { useAdminReservationStatusChange } from '@/hooks/useAdminReservationMutations'
 import Pagination from '@/components/ui/Pagination'
-import { motion, Variants } from 'framer-motion'
-import { Card, CardContent } from '@/components/ui/shadcnui/card'
 import { Button } from '@/components/ui/shadcnui/button'
-import { Input } from '@/components/ui/shadcnui/input'
 import { Alert, AlertDescription } from '@/components/ui/shadcnui/alert'
-import { Loader2, Search, CalendarDays, XCircle } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -23,37 +21,170 @@ import {
   Label,
 } from '@/shadcnui'
 import { Textarea } from '@/components/ui/shadcnui/textarea'
-import { ReservationCard } from '@/components/reservations/ReservationCard'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/shadcnui/dropdown-menu'
+import {
+  Loader2,
+  CalendarDays,
+  Clock,
+  CheckCircle2,
+  DoorOpen,
+  DoorClosed,
+  XCircle,
+  Ban,
+  MoreHorizontal,
+  MapPin,
+  Eye,
+  Shield,
+  ArrowRight,
+  CreditCard,
+  AlertCircle,
+} from 'lucide-react'
+import { PageHeader } from '@/components/admin/ui/PageHeader'
+import { KpiCard, KpiMetric } from '@/components/admin/ui/KpiCard'
+import { FilterBar } from '@/components/admin/ui/FilterBar'
+import { DataTable, type DataTableColumn } from '@/components/admin/ui/DataTable'
 
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-    },
+type RentStatus = 'WAITING' | 'RESERVED' | 'CHECKIN' | 'CHECKOUT' | 'CANCEL'
+
+type PaymentStatus =
+  | 'NOT_PAID'
+  | 'CLIENT_PAID'
+  | 'MID_TRANSFER_REQ'
+  | 'MID_TRANSFER_DONE'
+  | 'REST_TRANSFER_REQ'
+  | 'REST_TRANSFER_DONE'
+  | 'FULL_TRANSFER_REQ'
+  | 'FULL_TRANSFER_DONE'
+  | 'REFUNDED'
+  | 'DISPUTE'
+
+interface AdminReservationRow {
+  id: string
+  arrivingDate: string
+  leavingDate: string
+  status: RentStatus
+  payment: PaymentStatus
+  totalAmount: number | null
+  numberOfNights: number | null
+  numberPeople: number | null
+  createdAt: string
+  accepted: boolean
+  confirmed: boolean
+  product: {
+    id: string
+    name: string
+    address: string
+    owner: { id: string; name: string | null; email: string }
+  }
+  user: {
+    id: string
+    name: string | null
+    lastname: string | null
+    email: string
+  }
+}
+
+const STATUS_LABEL: Record<
+  RentStatus,
+  { label: string; tone: string; icon: React.ComponentType<{ className?: string }> }
+> = {
+  WAITING: {
+    label: 'En attente',
+    tone: 'bg-amber-50 text-amber-700 ring-amber-200',
+    icon: Clock,
+  },
+  RESERVED: {
+    label: 'Confirmée',
+    tone: 'bg-blue-50 text-blue-700 ring-blue-200',
+    icon: CheckCircle2,
+  },
+  CHECKIN: {
+    label: 'Check-in',
+    tone: 'bg-indigo-50 text-indigo-700 ring-indigo-200',
+    icon: DoorOpen,
+  },
+  CHECKOUT: {
+    label: 'Check-out',
+    tone: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+    icon: DoorClosed,
+  },
+  CANCEL: {
+    label: 'Annulée',
+    tone: 'bg-red-50 text-red-700 ring-red-200',
+    icon: Ban,
   },
 }
 
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.5,
-    },
-  },
+const PAYMENT_LABEL: Record<PaymentStatus, { label: string; tone: string }> = {
+  NOT_PAID: { label: 'Non payé', tone: 'bg-slate-100 text-slate-700' },
+  CLIENT_PAID: { label: 'Payé', tone: 'bg-emerald-50 text-emerald-700' },
+  MID_TRANSFER_REQ: { label: '50% demandé', tone: 'bg-amber-50 text-amber-700' },
+  MID_TRANSFER_DONE: { label: '50% versé', tone: 'bg-blue-50 text-blue-700' },
+  REST_TRANSFER_REQ: { label: 'Solde demandé', tone: 'bg-amber-50 text-amber-700' },
+  REST_TRANSFER_DONE: { label: 'Soldé', tone: 'bg-emerald-50 text-emerald-700' },
+  FULL_TRANSFER_REQ: { label: '100% demandé', tone: 'bg-amber-50 text-amber-700' },
+  FULL_TRANSFER_DONE: { label: '100% versé', tone: 'bg-emerald-50 text-emerald-700' },
+  REFUNDED: { label: 'Remboursé', tone: 'bg-red-50 text-red-700' },
+  DISPUTE: { label: 'Litige', tone: 'bg-red-50 text-red-700' },
 }
 
-const STATS_CARDS = [
-  { key: 'total', label: 'Total', gradient: 'from-blue-500 to-blue-600', textMuted: 'text-blue-100', iconColor: 'text-blue-200' },
-  { key: 'WAITING', label: 'En attente', gradient: 'from-yellow-400 to-yellow-500', textMuted: 'text-yellow-100', iconColor: 'text-yellow-200' },
-  { key: 'RESERVED', label: 'Confirmées', gradient: 'from-blue-400 to-indigo-500', textMuted: 'text-blue-100', iconColor: 'text-blue-200' },
-  { key: 'CHECKIN', label: 'Check-in', gradient: 'from-green-400 to-green-500', textMuted: 'text-green-100', iconColor: 'text-green-200' },
-  { key: 'CHECKOUT', label: 'Check-out', gradient: 'from-gray-400 to-gray-500', textMuted: 'text-gray-100', iconColor: 'text-gray-200' },
-  { key: 'CANCEL', label: 'Annulées', gradient: 'from-red-400 to-red-500', textMuted: 'text-red-100', iconColor: 'text-red-200' },
+const STATUS_FILTERS: Array<{
+  value: '' | RentStatus
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+}> = [
+  { value: '', label: 'Toutes', icon: CalendarDays },
+  { value: 'WAITING', label: 'En attente', icon: Clock },
+  { value: 'RESERVED', label: 'Confirmées', icon: CheckCircle2 },
+  { value: 'CHECKIN', label: 'Check-in', icon: DoorOpen },
+  { value: 'CHECKOUT', label: 'Check-out', icon: DoorClosed },
+  { value: 'CANCEL', label: 'Annulées', icon: Ban },
 ]
+
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'EUR',
+    maximumFractionDigits: 0,
+  }).format(amount)
+}
+
+function formatDate(date: string | Date): string {
+  return new Date(date).toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+function StatusPill({ status }: { status: RentStatus }) {
+  const config = STATUS_LABEL[status]
+  const Icon = config.icon
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${config.tone}`}
+    >
+      <Icon className='h-3 w-3' />
+      {config.label}
+    </span>
+  )
+}
+
+function PaymentPill({ payment }: { payment: PaymentStatus }) {
+  const config = PAYMENT_LABEL[payment]
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${config.tone}`}>
+      {config.label}
+    </span>
+  )
+}
 
 export default function AdminReservationsPage() {
   const {
@@ -68,7 +199,6 @@ export default function AdminReservationsPage() {
     stats,
     pagination,
     loading,
-    isFetching,
     error: hookError,
     searchTerm,
     statusFilter,
@@ -89,11 +219,15 @@ export default function AdminReservationsPage() {
     }
   }, [isAuthenticated, session, router])
 
-  const handleStatusAction = (rentId: string, status: 'RESERVED' | 'CHECKIN' | 'CHECKOUT' | 'CANCEL') => {
+  const openCancelDialog = (rentId: string) => {
+    setCancelTargetId(rentId)
+    setCancelReason('')
+    setCancelDialogOpen(true)
+  }
+
+  const handleStatusAction = (rentId: string, status: Exclude<RentStatus, 'WAITING'>) => {
     if (status === 'CANCEL') {
-      setCancelTargetId(rentId)
-      setCancelReason('')
-      setCancelDialogOpen(true)
+      openCancelDialog(rentId)
       return
     }
     statusMutation.mutate({ rentId, status })
@@ -113,12 +247,145 @@ export default function AdminReservationsPage() {
     )
   }
 
+  const totalRevenue = useMemo(
+    () =>
+      (reservations as AdminReservationRow[])
+        .filter(
+          r =>
+            r.payment !== 'NOT_PAID' &&
+            r.payment !== 'REFUNDED' &&
+            r.payment !== 'DISPUTE' &&
+            r.status !== 'CANCEL'
+        )
+        .reduce((sum, r) => sum + (r.totalAmount ?? 0), 0),
+    [reservations]
+  )
+
+  const columns: DataTableColumn<AdminReservationRow>[] = [
+    {
+      key: 'reference',
+      header: 'Référence',
+      sortable: true,
+      sortAccessor: r => new Date(r.createdAt),
+      render: r => (
+        <div className='min-w-0'>
+          <p className='text-sm font-semibold text-slate-900'>#{r.id.slice(-6).toUpperCase()}</p>
+          <p className='truncate text-xs text-slate-500'>Créée le {formatDate(r.createdAt)}</p>
+        </div>
+      ),
+      cellClassName: 'whitespace-nowrap',
+    },
+    {
+      key: 'guest',
+      header: 'Voyageur',
+      sortable: true,
+      sortAccessor: r => (r.user.name || r.user.email).toLowerCase(),
+      render: r => {
+        const displayName = [r.user.name, r.user.lastname].filter(Boolean).join(' ') || '—'
+        return (
+          <div className='min-w-0'>
+            <p className='truncate text-sm font-medium text-slate-900'>{displayName}</p>
+            <p className='truncate text-xs text-slate-500'>{r.user.email}</p>
+          </div>
+        )
+      },
+    },
+    {
+      key: 'product',
+      header: 'Hébergement',
+      render: r => (
+        <Link
+          href={`/admin/validation/${r.product.id}`}
+          className='group block min-w-0'
+        >
+          <p className='truncate text-sm font-medium text-slate-900 group-hover:text-blue-700'>
+            {r.product.name}
+          </p>
+          <p className='flex items-center gap-1 truncate text-xs text-slate-500'>
+            <MapPin className='h-3 w-3' />
+            {r.product.address}
+          </p>
+        </Link>
+      ),
+    },
+    {
+      key: 'host',
+      header: 'Hôte',
+      render: r => {
+        const hostName = r.product.owner.name || r.product.owner.email
+        return (
+          <p className='truncate text-sm text-slate-700' title={r.product.owner.email}>
+            {hostName}
+          </p>
+        )
+      },
+    },
+    {
+      key: 'stay',
+      header: 'Séjour',
+      sortable: true,
+      sortAccessor: r => new Date(r.arrivingDate),
+      render: r => (
+        <div className='min-w-0'>
+          <p className='flex items-center gap-1 text-xs text-slate-900 whitespace-nowrap'>
+            {formatDate(r.arrivingDate)}
+            <ArrowRight className='h-3 w-3 text-slate-400' />
+            {formatDate(r.leavingDate)}
+          </p>
+          <p className='text-xs text-slate-500'>
+            {r.numberOfNights ?? '—'} nuits · {r.numberPeople ?? '—'} voyageur
+            {(r.numberPeople ?? 0) > 1 ? 's' : ''}
+          </p>
+        </div>
+      ),
+    },
+    {
+      key: 'amount',
+      header: 'Montant',
+      sortable: true,
+      sortAccessor: r => r.totalAmount ?? 0,
+      align: 'right',
+      render: r => (
+        <div className='text-right'>
+          <p className='text-sm font-bold tabular-nums text-slate-900'>
+            {r.totalAmount != null ? formatCurrency(r.totalAmount) : '—'}
+          </p>
+          <div className='mt-0.5 flex justify-end'>
+            <PaymentPill payment={r.payment} />
+          </div>
+        </div>
+      ),
+      cellClassName: 'whitespace-nowrap',
+    },
+    {
+      key: 'status',
+      header: 'Statut',
+      sortable: true,
+      sortAccessor: r => r.status,
+      render: r => <StatusPill status={r.status} />,
+      cellClassName: 'whitespace-nowrap',
+    },
+  ]
+
   if (isAuthLoading || loading) {
     return (
-      <div className='min-h-screen flex items-center justify-center'>
-        <div className='flex flex-col items-center gap-4'>
-          <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin' />
-          <p className='text-slate-600 text-lg'>Chargement...</p>
+      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/40'>
+        <div className='mx-auto max-w-7xl space-y-8 p-6'>
+          <div className='space-y-3'>
+            <div className='h-4 w-40 animate-pulse rounded bg-slate-200' />
+            <div className='h-10 w-80 animate-pulse rounded bg-slate-200' />
+            <div className='h-4 w-96 animate-pulse rounded bg-slate-200' />
+          </div>
+          <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
+            {[0, 1, 2, 3].map(i => (
+              <div
+                key={i}
+                className='h-32 animate-pulse rounded-2xl border border-slate-200/80 bg-white'
+              />
+            ))}
+          </div>
+          <div className='h-16 animate-pulse rounded-2xl border border-slate-200/80 bg-white' />
+          <div className='h-96 animate-pulse rounded-2xl border border-slate-200/80 bg-white' />
         </div>
       </div>
     )
@@ -126,210 +393,285 @@ export default function AdminReservationsPage() {
 
   if (!session) return null
 
-  if (hookError) {
-    return (
-      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-8'>
-        <div className='max-w-7xl mx-auto'>
-          <Alert variant='destructive' className='rounded-2xl'>
+  return (
+    <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/40'>
+      <motion.div
+        className='mx-auto max-w-7xl space-y-8 p-6'
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
+        <PageHeader
+          backHref='/admin'
+          backLabel='Retour au panel admin'
+          eyebrow='Espace administrateur'
+          eyebrowIcon={Shield}
+          title='Gestion des réservations'
+          subtitle='Consultez, filtrez et gérez toutes les réservations de la plateforme. Les actions d’approbation, de check-in et d’annulation sont disponibles depuis le menu de chaque ligne.'
+        />
+
+        {hookError && (
+          <Alert variant='destructive'>
             <AlertDescription>
               {hookError.message || 'Erreur lors du chargement des réservations'}
             </AlertDescription>
           </Alert>
+        )}
+
+        {/* KPI row */}
+        <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
+          <KpiCard
+            label='Total'
+            value={stats.total || 0}
+            hint='réservations au total'
+            icon={CalendarDays}
+            tone='blue'
+            loading={loading}
+          />
+          <KpiCard
+            label='À traiter'
+            value={(stats.WAITING || 0) as number}
+            hint='en attente de confirmation'
+            icon={Clock}
+            tone='amber'
+            loading={loading}
+          />
+          <KpiCard
+            label='Confirmées'
+            value={(stats.RESERVED || 0) as number}
+            hint='prêtes pour le check-in'
+            icon={CheckCircle2}
+            tone='indigo'
+            loading={loading}
+          />
+          <KpiCard
+            label='Revenus (page)'
+            value={formatCurrency(totalRevenue)}
+            hint='sur la page actuelle, hors annulées'
+            icon={CreditCard}
+            tone='emerald'
+            loading={loading}
+          />
         </div>
-      </div>
-    )
-  }
 
-  return (
-    <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100'>
-      <div className='container mx-auto p-6 space-y-8'>
-        {/* Header */}
-        <motion.div
-          className='text-center space-y-4'
-          variants={containerVariants}
-          initial='hidden'
-          animate='visible'
-        >
-          <motion.div
-            variants={itemVariants}
-            className='inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg mb-4'
-          >
-            <CalendarDays className='w-8 h-8 text-white' />
-          </motion.div>
-          <motion.h1
-            variants={itemVariants}
-            className='text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-800 bg-clip-text text-transparent'
-          >
-            Gestion des Réservations
-          </motion.h1>
-          <motion.p variants={itemVariants} className='text-gray-600 text-lg max-w-2xl mx-auto'>
-            Consultez, filtrez et gérez toutes les réservations de la plateforme
-          </motion.p>
-        </motion.div>
+        {/* Secondary metrics */}
+        <div className='grid gap-3 sm:grid-cols-3'>
+          <KpiMetric
+            label='check-in'
+            value={(stats.CHECKIN || 0) as number}
+            icon={DoorOpen}
+            tone='slate'
+          />
+          <KpiMetric
+            label='check-out'
+            value={(stats.CHECKOUT || 0) as number}
+            icon={DoorClosed}
+            tone='slate'
+          />
+          <KpiMetric
+            label='annulées'
+            value={(stats.CANCEL || 0) as number}
+            icon={Ban}
+            tone='red'
+          />
+        </div>
 
-        {/* Stats Cards */}
-        <motion.div
-          variants={containerVariants}
-          initial='hidden'
-          animate='visible'
-          className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4'
-        >
-          {STATS_CARDS.map(({ key, label, gradient, textMuted, iconColor }) => {
-            const isActive = (key === 'total' && !statusFilter) || statusFilter === key
+        {/* Status filter chips */}
+        <div className='flex flex-wrap items-center gap-2'>
+          {STATUS_FILTERS.map(filter => {
+            const Icon = filter.icon
+            const active =
+              (filter.value === '' && !statusFilter) || statusFilter === filter.value
             return (
-              <motion.div key={key} variants={itemVariants}>
-                <Card
-                  className={`border-0 shadow-lg cursor-pointer transition-all duration-300 hover:shadow-xl ${
-                    key === 'total' || isActive
-                      ? `bg-gradient-to-r ${gradient} text-white`
-                      : 'bg-white/80 backdrop-blur-sm hover:scale-[1.02]'
-                  }`}
-                  onClick={() => handleStatusFilter(key === 'total' ? '' : statusFilter === key ? '' : key)}
-                >
-                  <CardContent className='p-4'>
-                    <div className='flex items-center justify-between'>
-                      <div>
-                        <p className={`text-xs font-medium ${key === 'total' || isActive ? textMuted : 'text-gray-500'}`}>
-                          {label}
-                          {isActive && key !== 'total' && ' (Filtré)'}
-                        </p>
-                        <p className={`text-2xl font-bold ${key === 'total' || isActive ? '' : 'text-gray-900'}`}>
-                          {stats[key] || 0}
-                        </p>
-                      </div>
-                      <CalendarDays className={`h-6 w-6 ${key === 'total' || isActive ? iconColor : 'text-gray-300'}`} />
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+              <button
+                key={filter.value || 'all'}
+                onClick={() => handleStatusFilter(active ? '' : filter.value)}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                  active
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                <Icon className='h-3 w-3' />
+                {filter.label}
+              </button>
             )
           })}
-        </motion.div>
-
-        {/* Search */}
-        <motion.div
-          variants={containerVariants}
-          initial='hidden'
-          animate='visible'
-          className='bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border-0'
-        >
-          <motion.div variants={itemVariants} className='relative max-w-md'>
-            {isFetching ? (
-              <Loader2 className='absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 h-4 w-4 animate-spin' />
-            ) : (
-              <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4' />
-            )}
-            <Input
-              type='text'
-              placeholder='Rechercher par voyageur, hôte, hébergement...'
-              value={searchTerm}
-              onChange={e => handleSearch(e.target.value)}
-              className='pl-10 py-3 border-0 bg-gray-50 focus:bg-white transition-colors rounded-xl'
-            />
-          </motion.div>
-        </motion.div>
-
-        {/* Reservation Cards Grid */}
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-          {reservations.map((reservation, index) => (
-            <ReservationCard
-              key={reservation.id}
-              reservation={reservation}
-              index={index}
-              onStatusAction={handleStatusAction}
-            />
-          ))}
         </div>
 
-        {/* Empty State */}
-        {reservations.length === 0 && !loading && (
-          <motion.div variants={itemVariants} className='text-center py-12'>
-            <CalendarDays className='h-12 w-12 text-gray-400 mx-auto mb-4' />
-            <h3 className='text-lg font-medium text-gray-900 mb-2'>Aucune réservation trouvée</h3>
-            <p className='text-gray-500'>
-              Essayez de modifier votre recherche ou vos filtres.
+        {/* Filter bar */}
+        <FilterBar
+          searchValue={searchTerm}
+          onSearchChange={handleSearch}
+          searchPlaceholder='Rechercher par voyageur, hôte, hébergement…'
+        />
+
+        {/* Data table */}
+        <DataTable<AdminReservationRow>
+          columns={columns}
+          rows={reservations as unknown as AdminReservationRow[]}
+          getRowId={r => r.id}
+          loading={loading}
+          rowActions={reservation => {
+            const canConfirm = reservation.status === 'WAITING'
+            const canCheckIn = reservation.status === 'RESERVED'
+            const canCheckOut = reservation.status === 'CHECKIN'
+            const canCancel = !['CANCEL', 'CHECKOUT'].includes(reservation.status)
+            return (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant='ghost'
+                    size='sm'
+                    className='h-8 w-8 p-0'
+                    aria-label='Actions réservation'
+                  >
+                    <MoreHorizontal className='h-4 w-4' />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align='end' className='w-52'>
+                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href={`/reservations/${reservation.id}`}
+                      className='flex items-center gap-2'
+                    >
+                      <Eye className='h-4 w-4' />
+                      Voir le détail
+                    </Link>
+                  </DropdownMenuItem>
+                  {canConfirm && (
+                    <DropdownMenuItem
+                      onClick={() => handleStatusAction(reservation.id, 'RESERVED')}
+                      className='flex items-center gap-2 text-blue-700'
+                    >
+                      <CheckCircle2 className='h-4 w-4' />
+                      Confirmer
+                    </DropdownMenuItem>
+                  )}
+                  {canCheckIn && (
+                    <DropdownMenuItem
+                      onClick={() => handleStatusAction(reservation.id, 'CHECKIN')}
+                      className='flex items-center gap-2 text-indigo-700'
+                    >
+                      <DoorOpen className='h-4 w-4' />
+                      Marquer check-in
+                    </DropdownMenuItem>
+                  )}
+                  {canCheckOut && (
+                    <DropdownMenuItem
+                      onClick={() => handleStatusAction(reservation.id, 'CHECKOUT')}
+                      className='flex items-center gap-2 text-emerald-700'
+                    >
+                      <DoorClosed className='h-4 w-4' />
+                      Marquer check-out
+                    </DropdownMenuItem>
+                  )}
+                  {canCancel && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => openCancelDialog(reservation.id)}
+                        className='flex items-center gap-2 text-red-600 focus:text-red-600'
+                      >
+                        <XCircle className='h-4 w-4' />
+                        Annuler la réservation
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )
+          }}
+          emptyState={{
+            icon: CalendarDays,
+            title: 'Aucune réservation trouvée',
+            subtitle:
+              searchTerm || statusFilter
+                ? 'Essayez d’ajuster votre recherche ou vos filtres.'
+                : 'Aucune réservation n’a encore été effectuée sur la plateforme.',
+          }}
+        />
+
+        {/* Footer: summary + pagination */}
+        {!loading && reservations.length > 0 && (
+          <div className='flex flex-col items-center gap-3 md:flex-row md:justify-between'>
+            <p className='text-sm text-slate-500'>
+              Affichage de {(pagination.currentPage - 1) * pagination.itemsPerPage + 1} à{' '}
+              {Math.min(
+                pagination.currentPage * pagination.itemsPerPage,
+                pagination.totalItems
+              )}{' '}
+              sur {pagination.totalItems} réservations
             </p>
-          </motion.div>
-        )}
-
-        {/* Pagination */}
-        {pagination.totalPages > 1 && (
-          <div className='mt-8 flex justify-center'>
-            <Pagination
-              currentPage={pagination.currentPage}
-              totalPages={pagination.totalPages}
-              onPageChange={goToPage}
-              showPrevNext={true}
-              showNumbers={true}
-              maxVisiblePages={5}
-            />
+            {pagination.totalPages > 1 && (
+              <Pagination
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                onPageChange={goToPage}
+                showPrevNext={true}
+                showNumbers={true}
+                maxVisiblePages={5}
+              />
+            )}
           </div>
         )}
 
-        {/* Results summary */}
-        {reservations.length > 0 && (
-          <div className='mt-4 text-center text-sm text-gray-500'>
-            Affichage de {(pagination.currentPage - 1) * pagination.itemsPerPage + 1} à{' '}
-            {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} sur{' '}
-            {pagination.totalItems} réservations
-          </div>
-        )}
-
-        {/* Cancel Dialog */}
+        {/* Cancel dialog */}
         <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-          <DialogContent className='sm:max-w-md rounded-2xl'>
+          <DialogContent className='sm:max-w-md'>
             <DialogHeader>
-              <DialogTitle className='flex items-center gap-2 text-xl'>
-                <XCircle className='h-5 w-5 text-red-600' />
-                Annuler la réservation
-              </DialogTitle>
-              <DialogDescription>
-                Cette action annulera la réservation et effectuera un remboursement Stripe si applicable.
-              </DialogDescription>
+              <div className='flex items-start gap-3'>
+                <div className='flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600 ring-1 ring-red-100'>
+                  <AlertCircle className='h-5 w-5' />
+                </div>
+                <div className='space-y-1'>
+                  <DialogTitle className='text-lg'>Annuler la réservation</DialogTitle>
+                  <DialogDescription className='text-sm text-slate-600'>
+                    Cette action annulera la réservation et effectuera un remboursement Stripe si
+                    applicable. L’hôte et le voyageur seront notifiés.
+                  </DialogDescription>
+                </div>
+              </div>
             </DialogHeader>
-            <div className='space-y-4 py-4'>
+            <div className='space-y-4 py-2'>
               <div className='space-y-2'>
                 <Label htmlFor='cancelReason'>Raison (optionnel)</Label>
                 <Textarea
                   id='cancelReason'
-                  placeholder="Indiquez la raison de l'annulation..."
+                  placeholder='Expliquez la raison de l’annulation…'
                   value={cancelReason}
                   onChange={e => setCancelReason(e.target.value)}
-                  className='rounded-xl'
                   rows={3}
                 />
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className='gap-2'>
               <Button
                 variant='outline'
                 onClick={() => setCancelDialogOpen(false)}
                 disabled={statusMutation.isPending}
-                className='rounded-xl'
               >
                 Retour
               </Button>
               <Button
+                variant='destructive'
                 onClick={handleConfirmCancel}
                 disabled={statusMutation.isPending}
-                className='bg-red-600 hover:bg-red-700 text-white rounded-xl'
+                className='gap-2'
               >
                 {statusMutation.isPending ? (
-                  <>
-                    <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                    Annulation...
-                  </>
+                  <Loader2 className='h-4 w-4 animate-spin' />
                 ) : (
-                  <>
-                    <XCircle className='h-4 w-4 mr-2' />
-                    Confirmer l&apos;annulation
-                  </>
+                  <XCircle className='h-4 w-4' />
                 )}
+                Confirmer l’annulation
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
+      </motion.div>
     </div>
   )
 }

@@ -7,7 +7,7 @@ import { isAdmin } from '@/hooks/useAdminAuth'
 import { motion, Variants } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { XCircle, ArrowLeft } from 'lucide-react'
+import { XCircle, ArrowLeft, RefreshCw, ShieldCheck, Loader2 } from 'lucide-react'
 import { getValidationStats } from './actions'
 import { ValidationStatsCards } from './components/ValidationStatsCards'
 import ValidationTabs from './components/ValidationTabs'
@@ -53,6 +53,7 @@ export default function ValidationPage() {
   } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [stats, setStats] = useState<ValidationStats>({
     pending: 0,
@@ -80,9 +81,14 @@ export default function ValidationPage() {
     }
   }, [isAuthenticated, session, router])
 
-  const fetchData = async () => {
+  const fetchData = async (opts?: { silent?: boolean }) => {
+    const silent = opts?.silent ?? false
     try {
-      setLoading(true)
+      if (silent) {
+        setRefreshing(true)
+      } else {
+        setLoading(true)
+      }
       const statsResult = await getValidationStats()
       if (statsResult.success && statsResult.data) {
         setStats(statsResult.data)
@@ -93,16 +99,45 @@ export default function ValidationPage() {
       console.error('Erreur lors du chargement des données:', err)
       setError('Erreur lors du chargement des données')
     } finally {
-      setLoading(false)
+      if (silent) {
+        setRefreshing(false)
+      } else {
+        setLoading(false)
+      }
     }
+  }
+
+  const handleRefresh = () => {
+    setError(null)
+    fetchData({ silent: true })
   }
 
   if (isAuthLoading || loading) {
     return (
-      <div className='min-h-screen flex items-center justify-center'>
-        <div className='flex flex-col items-center gap-4'>
-          <div className='w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin'></div>
-          <p className='text-slate-600 text-lg'>Chargement...</p>
+      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/40'>
+        <div className='container mx-auto max-w-7xl space-y-8 p-6'>
+          <div className='space-y-3'>
+            <div className='h-4 w-40 animate-pulse rounded bg-slate-200' />
+            <div className='h-10 w-80 animate-pulse rounded bg-slate-200' />
+            <div className='h-4 w-96 animate-pulse rounded bg-slate-200' />
+          </div>
+          <div className='grid gap-4 md:grid-cols-3'>
+            {[0, 1, 2].map(i => (
+              <div
+                key={i}
+                className='h-32 animate-pulse rounded-2xl border border-slate-200/80 bg-white'
+              />
+            ))}
+          </div>
+          <div className='h-14 animate-pulse rounded-xl border border-slate-200/80 bg-white' />
+          <div className='grid gap-6 lg:grid-cols-2 xl:grid-cols-3'>
+            {[0, 1, 2].map(i => (
+              <div
+                key={i}
+                className='h-[30rem] animate-pulse rounded-2xl border border-slate-200/80 bg-white'
+              />
+            ))}
+          </div>
         </div>
       </div>
     )
@@ -112,54 +147,87 @@ export default function ValidationPage() {
     return null
   }
 
-  if (error) {
-    return (
-      <div className='container mx-auto p-6 max-w-4xl'>
-        <Alert className='border-red-200 bg-red-50'>
-          <XCircle className='h-4 w-4 text-red-600' />
-          <AlertDescription className='text-red-800'>{error}</AlertDescription>
-        </Alert>
-      </div>
-    )
-  }
-
   return (
-    <motion.div
-      className='container mx-auto p-6 max-w-7xl'
-      variants={containerVariants}
-      initial='hidden'
-      animate='visible'
-    >
-      {/* Header */}
-      <motion.div className='flex items-center gap-4 mb-8' variants={itemVariants}>
-        <Button
-          variant='ghost'
-          size='sm'
-          onClick={() => router.push('/admin')}
-          className='flex items-center gap-2'
+    <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/40'>
+      <motion.div
+        className='container mx-auto max-w-7xl space-y-8 p-6'
+        variants={containerVariants}
+        initial='hidden'
+        animate='visible'
+      >
+        {/* Breadcrumb / back link */}
+        <motion.div variants={itemVariants}>
+          <Button
+            variant='ghost'
+            size='sm'
+            onClick={() => router.push('/admin')}
+            className='text-slate-600 hover:text-slate-900'
+          >
+            <ArrowLeft className='mr-2 h-4 w-4' />
+            Retour au panel admin
+          </Button>
+        </motion.div>
+
+        {/* Header */}
+        <motion.div
+          variants={itemVariants}
+          className='flex flex-col gap-4 md:flex-row md:items-start md:justify-between'
         >
-          <ArrowLeft className='h-4 w-4' />
-          Retour au dashboard
-        </Button>
-        <div>
-          <h1 className='text-3xl font-bold text-gray-900'>Validation des annonces</h1>
-          <p className='text-gray-600 mt-1'>Gérer et valider les annonces soumises par les hôtes</p>
-        </div>
-      </motion.div>
+          <div className='space-y-3'>
+            <span className='inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-700'>
+              <ShieldCheck className='h-3.5 w-3.5' />
+              Espace administrateur
+            </span>
+            <h1 className='bg-gradient-to-r from-slate-900 via-blue-800 to-indigo-800 bg-clip-text text-4xl font-bold tracking-tight text-transparent md:text-5xl'>
+              Validation des annonces
+            </h1>
+            <p className='max-w-2xl text-base text-slate-600'>
+              Passez en revue, validez ou refusez les annonces soumises par les hôtes.
+              Les annonces en attente d’action sont mises en avant en haut de la liste.
+            </p>
+          </div>
 
-      {/* Statistics Cards */}
-      <motion.div variants={itemVariants}>
-        <ValidationStatsCards stats={stats} />
-      </motion.div>
+          <div className='shrink-0'>
+            <Button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              variant='outline'
+              className='gap-2 border-slate-200 bg-white/80 text-slate-700 shadow-sm hover:bg-slate-50'
+            >
+              {refreshing ? (
+                <Loader2 className='h-4 w-4 animate-spin' />
+              ) : (
+                <RefreshCw className='h-4 w-4' />
+              )}
+              {refreshing ? 'Actualisation…' : 'Actualiser'}
+            </Button>
+          </div>
+        </motion.div>
 
-      {/* Validation Tabs */}
-      <motion.div variants={itemVariants}>
-        <ValidationTabs
-          stats={stats}
-          currentUserId={session?.user?.id || ''}
-          onUpdate={fetchData}
-        />
+        {/* Error */}
+        {error && (
+          <motion.div variants={itemVariants}>
+            <Alert className='border-red-200 bg-red-50'>
+              <XCircle className='h-4 w-4 text-red-600' />
+              <AlertDescription className='text-red-800'>{error}</AlertDescription>
+            </Alert>
+          </motion.div>
+        )}
+
+        {/* Statistics */}
+        <motion.div variants={itemVariants}>
+          <ValidationStatsCards stats={stats} />
+        </motion.div>
+
+        {/* Validation Tabs */}
+        <motion.div variants={itemVariants}>
+          <ValidationTabs
+            stats={stats}
+            currentUserId={session?.user?.id || ''}
+            onUpdate={() => fetchData({ silent: true })}
+          />
+        </motion.div>
       </motion.div>
-    </motion.div>
+    </div>
   )
 }

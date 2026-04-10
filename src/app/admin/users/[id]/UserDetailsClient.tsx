@@ -1,16 +1,33 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
+import { motion, Variants } from 'framer-motion'
 import { useAuth } from '@/hooks/useAuth'
-import Link from 'next/link'
-import { motion } from 'framer-motion'
-import { Button } from '@/components/ui/shadcnui/button'
-import { ArrowLeft } from 'lucide-react'
+import { isFullAdmin } from '@/hooks/useAdminAuth'
+import { Shield } from 'lucide-react'
 import type { ExtendedUser } from './types'
 import { LoadingDisplay } from './components/LoadingDisplay'
 import { UserPersonalInfo } from './components/UserPersonalInfo'
 import { UserListingsAndBookings } from './components/UserListingsAndBookings'
+import { PageHeader } from '@/components/admin/ui/PageHeader'
+
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08 },
+  },
+}
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { type: 'tween', duration: 0.4, ease: 'easeOut' },
+  },
+}
 
 interface UserDetailsClientProps {
   initialData: ExtendedUser
@@ -23,17 +40,14 @@ export function UserDetailsClient({ initialData }: UserDetailsClientProps) {
     isAuthenticated,
   } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
-  const [user] = useState<ExtendedUser>(initialData)
-  const [loading] = useState(false)
 
   useEffect(() => {
-    if (isAuthenticated && (!session?.user?.roles || session.user.roles !== 'ADMIN')) {
+    if (isAuthenticated && (!session?.user?.roles || !isFullAdmin(session.user.roles))) {
       router.push('/')
-      return
     }
   }, [isAuthenticated, session, router])
 
-  if (isAuthLoading || loading) {
+  if (isAuthLoading) {
     return <LoadingDisplay />
   }
 
@@ -42,57 +56,36 @@ export function UserDetailsClient({ initialData }: UserDetailsClientProps) {
   }
 
   return (
-    <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100'>
-      <div className='container mx-auto p-6 space-y-8'>
-        <motion.div
-          className='space-y-6'
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          {/* Header avec navigation */}
-          <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border-0'>
-            <div>
-              <h1 className='text-3xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-800 bg-clip-text text-transparent'>
-                Profil Utilisateur
-              </h1>
-              <p className='text-gray-600 mt-1'>
-                Informations détaillées et activité de l&apos;utilisateur
-              </p>
-            </div>
-            <Button
-              variant='outline'
-              asChild
-              className='rounded-xl border-gray-200 hover:bg-gray-50'
-            >
-              <Link href='/admin/users' className='flex items-center gap-2'>
-                <ArrowLeft className='h-4 w-4' />
-                <span>Retour à la liste</span>
-              </Link>
-            </Button>
-          </div>
+    <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/40'>
+      <motion.div
+        className='mx-auto max-w-7xl space-y-8 p-6'
+        variants={containerVariants}
+        initial='hidden'
+        animate='visible'
+      >
+        <motion.div variants={itemVariants}>
+          <PageHeader
+            backHref='/admin/users'
+            backLabel='Retour à la liste'
+            eyebrow='Espace administrateur'
+            eyebrowIcon={Shield}
+            title='Profil utilisateur'
+            subtitle='Informations détaillées, annonces et réservations de cet utilisateur.'
+          />
+        </motion.div>
 
-          {/* Contenu principal */}
-          <div className='grid grid-cols-1 xl:grid-cols-4 gap-8'>
-            <div className='xl:col-span-1'>
-              <UserPersonalInfo user={user} />
-            </div>
-            <div className='xl:col-span-3'>
-              <UserListingsAndBookings
-                userId={user.id}
-                user={{
-                  id: user.id,
-                  name: user.name,
-                  email: user.email,
-                  role: user.roles,
-                }}
-                posts={[]}
-                bookings={[]}
-              />
-            </div>
+        <motion.div
+          variants={itemVariants}
+          className='grid gap-6 xl:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]'
+        >
+          <div>
+            <UserPersonalInfo user={initialData} />
+          </div>
+          <div>
+            <UserListingsAndBookings user={initialData} />
           </div>
         </motion.div>
-      </div>
+      </motion.div>
     </div>
   )
 }
