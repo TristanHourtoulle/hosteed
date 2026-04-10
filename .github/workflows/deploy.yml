@@ -26,6 +26,17 @@ jobs:
             echo "=== 0. Check system resources ==="
             free -h
 
+            echo "=== 0b. Rescue any runtime uploads before pnpm build wipes standalone ==="
+            # Previous deploys had a broken symlink step, so runtime writes may
+            # have landed in standalone/public/uploads (a real directory) instead
+            # of the canonical public/uploads/. Rsync them back before pnpm build
+            # destroys the standalone tree. Safe no-op once standalone/public/uploads
+            # is a proper symlink.
+            if [ -d .next/standalone/public/uploads ] && [ ! -L .next/standalone/public/uploads ]; then
+              echo "Preserving runtime-written uploads back to canonical public/uploads/"
+              rsync -a .next/standalone/public/uploads/ public/uploads/ || true
+            fi
+
             echo "=== 1. Pull latest changes ==="
             git fetch origin main
             git reset --hard origin/main
@@ -45,11 +56,19 @@ jobs:
             echo "=== 6. Copy static files (without overwriting) ==="
             cp -rn .next/static/* .next/standalone/.next/static/ 2>/dev/null || cp -r .next/static .next/standalone/.next/
 
-            echo "=== 7. Sync public files (new files only) ==="
-            rsync -a --ignore-existing public/ .next/standalone/public/
+            echo "=== 7. Sync public files (excluding uploads, which is symlinked) ==="
+            rsync -a --ignore-existing --exclude='uploads' public/ .next/standalone/public/
 
-            echo "=== 8. Ensure uploads symlink ==="
-            ln -sfn /var/www/hosteedv2.com/public/uploads .next/standalone/public/uploads
+            echo "=== 8. Ensure uploads is a real symlink (force-replace any directory) ==="
+            # ln -sfn cannot replace an existing directory; remove it first then
+            # create the symlink pointing to the persistent canonical path.
+            rm -rf .next/standalone/public/uploads
+            ln -s /var/www/hosteedv2.com/public/uploads .next/standalone/public/uploads
+            # Sanity-check: abort the deploy if the symlink is not what we expect
+            if [ "$(readlink .next/standalone/public/uploads)" != "/var/www/hosteedv2.com/public/uploads" ]; then
+              echo "ERROR: uploads symlink creation failed"
+              exit 1
+            fi
 
             echo "=== 9. Link .env file to standalone ==="
             ln -sfn /var/www/hosteedv2.com/.env .next/standalone/.env

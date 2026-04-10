@@ -289,11 +289,20 @@ export function ProductEditWizard({ product, onSave, onCancel }: ProductEditForm
 
       // Update images
       if (allImageUrls.length > 0) {
-        await fetch(`/api/products/${product.id}/images`, {
+        const imagesResponse = await fetch(`/api/products/${product.id}/images`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ imageUrls: allImageUrls }),
         })
+
+        if (!imagesResponse.ok) {
+          const errorBody = await imagesResponse.json().catch(() => ({}))
+          throw new Error(
+            errorBody.error ||
+              `Échec de l'enregistrement des images (HTTP ${imagesResponse.status})`
+          )
+        }
       }
 
       toast.success('Annonce mise à jour avec succes!')

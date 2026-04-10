@@ -197,7 +197,11 @@ export default function CreateProductPage() {
       })
 
       if (!updateResponse.ok) {
-        console.error('Erreur lors de la mise à jour des images')
+        const errorBody = await updateResponse.json().catch(() => ({}))
+        throw new Error(
+          errorBody.error ||
+            `Échec de l'enregistrement des images (HTTP ${updateResponse.status})`
+        )
       }
 
       await queryClient.invalidateQueries({ queryKey: ['host-products'] })
