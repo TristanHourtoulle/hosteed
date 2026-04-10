@@ -4,10 +4,17 @@ import React, { useState, useMemo, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ProductValidation } from '@prisma/client'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { CheckCircle, XCircle, Eye, MapPin, Home, User, Loader2 } from 'lucide-react'
+import {
+  CheckCircle2,
+  XCircle,
+  Eye,
+  MapPin,
+  Home,
+  Loader2,
+  UserCircle2,
+} from 'lucide-react'
+import { toPlainTextPreview } from '@/lib/utils/contentFormat'
 import { approveProduct, rejectProduct } from '../actions'
 
 interface Product {
@@ -25,7 +32,6 @@ interface Product {
     email: string
     image?: string | null
   }
-  // Nouvelles métadonnées pour le contexte de validation
   isRecentlyModified?: boolean
   wasRecheckRequested?: boolean
 }
@@ -36,49 +42,65 @@ interface ProductValidationCardProps {
   onUpdate: () => void
 }
 
+type StatusAccent = {
+  label: string
+  badgeClass: string
+  borderClass: string
+}
+
+function getStatusAccent(
+  validate: ProductValidation,
+  isRecentlyModified?: boolean
+): StatusAccent {
+  switch (validate) {
+    case ProductValidation.NotVerified:
+      if (isRecentlyModified) {
+        return {
+          label: 'Modifié · à revalider',
+          badgeClass: 'bg-blue-100 text-blue-800 ring-1 ring-blue-200',
+          borderClass: 'before:bg-blue-500',
+        }
+      }
+      return {
+        label: 'En attente',
+        badgeClass: 'bg-amber-100 text-amber-800 ring-1 ring-amber-200',
+        borderClass: 'before:bg-amber-500',
+      }
+    case ProductValidation.RecheckRequest:
+      return {
+        label: 'Révision demandée',
+        badgeClass: 'bg-orange-100 text-orange-800 ring-1 ring-orange-200',
+        borderClass: 'before:bg-orange-500',
+      }
+    case ProductValidation.Approve:
+      return {
+        label: 'Validé',
+        badgeClass: 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200',
+        borderClass: 'before:bg-emerald-500',
+      }
+    case ProductValidation.Refused:
+      return {
+        label: 'Refusé',
+        badgeClass: 'bg-red-100 text-red-800 ring-1 ring-red-200',
+        borderClass: 'before:bg-red-500',
+      }
+    default:
+      return {
+        label: 'Inconnu',
+        badgeClass: 'bg-slate-100 text-slate-700 ring-1 ring-slate-200',
+        borderClass: 'before:bg-slate-400',
+      }
+  }
+}
+
 function ProductValidationCard({ product, currentUserId, onUpdate }: ProductValidationCardProps) {
   const [loading, setLoading] = useState(false)
 
-  // Memoize the validation badge to prevent recreation on every render
-  const validationBadge = useMemo(() => {
-    switch (product.validate) {
-      case ProductValidation.NotVerified:
-        if (product.isRecentlyModified) {
-          return (
-            <Badge variant='secondary' className='bg-blue-100 text-blue-800 border-blue-300'>
-              Modifié - À revalider
-            </Badge>
-          )
-        }
-        return (
-          <Badge variant='secondary' className='bg-yellow-100 text-yellow-800'>
-            En attente
-          </Badge>
-        )
-      case ProductValidation.RecheckRequest:
-        return (
-          <Badge variant='secondary' className='bg-orange-100 text-orange-800'>
-            Révision demandée
-          </Badge>
-        )
-      case ProductValidation.Approve:
-        return (
-          <Badge variant='default' className='bg-green-100 text-green-800'>
-            Validé
-          </Badge>
-        )
-      case ProductValidation.Refused:
-        return (
-          <Badge variant='destructive' className='bg-red-100 text-red-800'>
-            Refusé
-          </Badge>
-        )
-      default:
-        return <Badge variant='outline'>Inconnu</Badge>
-    }
-  }, [product.validate, product.isRecentlyModified])
+  const statusAccent = useMemo(
+    () => getStatusAccent(product.validate, product.isRecentlyModified),
+    [product.validate, product.isRecentlyModified]
+  )
 
-  // Memoize user display name to prevent recalculation
   const userDisplayName = useMemo(() => {
     const user = product.owner
     if (user?.name && user?.lastname) {
@@ -87,7 +109,15 @@ function ProductValidationCard({ product, currentUserId, onUpdate }: ProductVali
     return user?.email || 'Utilisateur inconnu'
   }, [product.owner])
 
-  // Memoize whether validation actions should be shown
+  const initials = useMemo(() => {
+    const name = userDisplayName
+    const parts = name.split(/\s+/).filter(Boolean)
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase()
+    }
+    return (parts[0]?.[0] || '?').toUpperCase()
+  }, [userDisplayName])
+
   const showValidationActions = useMemo(() => {
     return (
       product.validate === ProductValidation.NotVerified ||
@@ -95,26 +125,27 @@ function ProductValidationCard({ product, currentUserId, onUpdate }: ProductVali
     )
   }, [product.validate])
 
-  // Memoize first image URL
   const firstImageUrl = useMemo(() => {
     return product.img && product.img.length > 0 ? product.img[0].img : null
   }, [product.img])
 
-  // Memoized validation action handler to prevent recreation
+  const descriptionPreview = useMemo(
+    () => toPlainTextPreview(product.description),
+    [product.description]
+  )
+
   const handleValidationAction = useCallback(
     async (action: 'approve' | 'reject') => {
       setLoading(true)
       try {
-        let result
-        if (action === 'approve') {
-          result = await approveProduct(product.id, currentUserId, 'Approuvé par admin')
-        } else {
-          result = await rejectProduct(
-            product.id,
-            currentUserId,
-            "Produit rejeté par l'administrateur"
-          )
-        }
+        const result =
+          action === 'approve'
+            ? await approveProduct(product.id, currentUserId, 'Approuvé par admin')
+            : await rejectProduct(
+                product.id,
+                currentUserId,
+                "Produit rejeté par l'administrateur"
+              )
 
         if (result.success) {
           onUpdate()
@@ -133,141 +164,173 @@ function ProductValidationCard({ product, currentUserId, onUpdate }: ProductVali
     [product.id, currentUserId, onUpdate]
   )
 
-  // Memoized click handlers to prevent recreation
   const handleApprove = useCallback(
     () => handleValidationAction('approve'),
     [handleValidationAction]
   )
-  const handleReject = useCallback(() => handleValidationAction('reject'), [handleValidationAction])
+  const handleReject = useCallback(
+    () => handleValidationAction('reject'),
+    [handleValidationAction]
+  )
 
   return (
-    <Card className='overflow-hidden hover:shadow-lg transition-all duration-300'>
-      {/* Product Image */}
-      <div className='relative h-48 w-full'>
+    <article
+      className={`group relative flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg before:absolute before:left-0 before:top-0 before:h-full before:w-1.5 ${statusAccent.borderClass}`}
+    >
+      {/* Image + status badge overlay */}
+      <div className='relative h-56 w-full overflow-hidden bg-slate-100'>
         {firstImageUrl ? (
-          <Image src={firstImageUrl} alt={product.name} fill className='object-cover' />
+          <Image
+            src={firstImageUrl}
+            alt={product.name}
+            fill
+            className='object-cover transition-transform duration-500 group-hover:scale-[1.03]'
+            sizes='(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw'
+          />
         ) : (
-          <div className='w-full h-full bg-gray-200 flex items-center justify-center'>
-            <Home className='h-12 w-12 text-gray-400' />
+          <div className='flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200'>
+            <Home className='h-12 w-12 text-slate-400' />
           </div>
         )}
-        <div className='absolute top-4 right-4'>{validationBadge}</div>
+
+        <div className='absolute left-4 top-4'>
+          <span
+            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${statusAccent.badgeClass}`}
+          >
+            {statusAccent.label}
+          </span>
+        </div>
+
+        <div className='absolute right-4 top-4'>
+          <span className='inline-flex items-center gap-1 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm'>
+            {product.basePrice}€
+            <span className='font-normal opacity-80'>/nuit</span>
+          </span>
+        </div>
       </div>
 
-      <CardContent className='p-4'>
-        <div className='space-y-3'>
-          {/* Product Title */}
-          <div>
-            <h3 className='font-semibold text-lg text-gray-900 line-clamp-1'>{product.name}</h3>
-            <p className='text-gray-600 text-sm line-clamp-2 mt-1'>{product.description}</p>
-          </div>
-
-          {/* Location and Price */}
-          <div className='flex items-center justify-between'>
-            <div className='flex items-center gap-1 text-gray-600'>
-              <MapPin className='h-4 w-4' />
-              <span className='text-sm line-clamp-1'>{product.address}</span>
+      {/* Body */}
+      <div className='flex flex-1 flex-col gap-4 p-5'>
+        {/* Host row */}
+        <div className='flex items-center gap-3 border-b border-slate-100 pb-4'>
+          {product.owner.image ? (
+            <Image
+              src={product.owner.image}
+              alt={userDisplayName}
+              width={36}
+              height={36}
+              className='h-9 w-9 rounded-full object-cover ring-2 ring-white'
+            />
+          ) : (
+            <div className='flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 text-xs font-semibold text-white ring-2 ring-white'>
+              {initials}
             </div>
-            <div className='text-lg font-bold text-primary'>{product.basePrice}€</div>
-          </div>
-
-          {/* Host Info */}
-          <div className='flex items-center gap-2 text-sm text-gray-600'>
-            <User className='h-4 w-4' />
-            <span>{userDisplayName}</span>
-          </div>
-
-          {/* Actions */}
-          <div className='flex gap-2 pt-2'>
-            <Button variant='outline' size='sm' asChild className='flex-1'>
-              <Link href={`/admin/validation/${product.id}`}>
-                <Eye className='h-4 w-4 mr-1' />
-                Détails
-              </Link>
-            </Button>
-
-            {showValidationActions && (
-              <>
-                <Button
-                  size='sm'
-                  onClick={handleApprove}
-                  className='bg-green-600 hover:bg-green-700'
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <Loader2 className='h-4 w-4 animate-spin' />
-                  ) : (
-                    <CheckCircle className='h-4 w-4' />
-                  )}
-                </Button>
-                <Button variant='destructive' size='sm' onClick={handleReject} disabled={loading}>
-                  {loading ? (
-                    <Loader2 className='h-4 w-4 animate-spin' />
-                  ) : (
-                    <XCircle className='h-4 w-4' />
-                  )}
-                </Button>
-              </>
-            )}
+          )}
+          <div className='min-w-0 flex-1'>
+            <p className='truncate text-sm font-medium text-slate-900'>{userDisplayName}</p>
+            <p className='truncate text-xs text-slate-500'>
+              <UserCircle2 className='inline h-3 w-3 align-text-bottom' /> {product.owner.email}
+            </p>
           </div>
         </div>
-      </CardContent>
-    </Card>
+
+        {/* Title + description */}
+        <div className='space-y-2'>
+          <h3 className='line-clamp-1 text-lg font-semibold text-slate-900'>{product.name}</h3>
+          <p className='line-clamp-2 text-sm text-slate-600'>
+            {descriptionPreview || 'Aucune description'}
+          </p>
+        </div>
+
+        {/* Location */}
+        <div className='flex items-start gap-2 text-sm text-slate-500'>
+          <MapPin className='mt-0.5 h-4 w-4 shrink-0' />
+          <span className='line-clamp-1'>{product.address}</span>
+        </div>
+
+        {/* Actions */}
+        <div className='mt-auto flex flex-wrap items-center gap-2 pt-2'>
+          <Button variant='outline' size='sm' asChild className='flex-1 min-w-[110px]'>
+            <Link href={`/admin/validation/${product.id}`}>
+              <Eye className='mr-1 h-4 w-4' />
+              Détails
+            </Link>
+          </Button>
+
+          {showValidationActions && (
+            <div className='flex gap-2'>
+              <Button
+                size='sm'
+                onClick={handleApprove}
+                className='bg-emerald-600 text-white hover:bg-emerald-700'
+                disabled={loading}
+                aria-label='Approuver l’annonce'
+                title='Approuver'
+              >
+                {loading ? (
+                  <Loader2 className='h-4 w-4 animate-spin' />
+                ) : (
+                  <CheckCircle2 className='h-4 w-4' />
+                )}
+              </Button>
+              <Button
+                size='sm'
+                variant='destructive'
+                onClick={handleReject}
+                disabled={loading}
+                aria-label='Refuser l’annonce'
+                title='Refuser'
+              >
+                {loading ? (
+                  <Loader2 className='h-4 w-4 animate-spin' />
+                ) : (
+                  <XCircle className='h-4 w-4' />
+                )}
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    </article>
   )
 }
 
-// Custom comparison function for React.memo to prevent unnecessary re-renders
 const arePropsEqual = (
   prevProps: ProductValidationCardProps,
   nextProps: ProductValidationCardProps
 ) => {
-  // Check if currentUserId changed
-  if (prevProps.currentUserId !== nextProps.currentUserId) {
-    return false
-  }
+  if (prevProps.currentUserId !== nextProps.currentUserId) return false
+  if (prevProps.onUpdate !== nextProps.onUpdate) return false
 
-  // Check if onUpdate function reference changed
-  if (prevProps.onUpdate !== nextProps.onUpdate) {
-    return false
-  }
-
-  // Check if product has changed (deep comparison of key fields)
-  const prevProduct = prevProps.product
-  const nextProduct = nextProps.product
+  const p = prevProps.product
+  const n = nextProps.product
 
   if (
-    prevProduct.id !== nextProduct.id ||
-    prevProduct.name !== nextProduct.name ||
-    prevProduct.description !== nextProduct.description ||
-    prevProduct.address !== nextProduct.address ||
-    prevProduct.basePrice !== nextProduct.basePrice ||
-    prevProduct.validate !== nextProduct.validate ||
-    prevProduct.isRecentlyModified !== nextProduct.isRecentlyModified ||
-    prevProduct.wasRecheckRequested !== nextProduct.wasRecheckRequested
+    p.id !== n.id ||
+    p.name !== n.name ||
+    p.description !== n.description ||
+    p.address !== n.address ||
+    p.basePrice !== n.basePrice ||
+    p.validate !== n.validate ||
+    p.isRecentlyModified !== n.isRecentlyModified ||
+    p.wasRecheckRequested !== n.wasRecheckRequested
   ) {
     return false
   }
 
-  // Check if images changed (shallow comparison)
-  if (prevProduct.img?.length !== nextProduct.img?.length) {
-    return false
+  if (p.img?.length !== n.img?.length) return false
+  if (p.img && n.img && p.img.length > 0) {
+    if (p.img[0].img !== n.img[0].img) return false
   }
 
-  if (prevProduct.img && nextProduct.img && prevProduct.img.length > 0) {
-    if (prevProduct.img[0].img !== nextProduct.img[0].img) {
-      return false
-    }
-  }
-
-  // Check if user data changed
-  const prevUser = prevProduct.owner
-  const nextUser = nextProduct.owner
-
+  const pu = p.owner
+  const nu = n.owner
   if (
-    prevUser?.id !== nextUser?.id ||
-    prevUser?.name !== nextUser?.name ||
-    prevUser?.lastname !== nextUser?.lastname ||
-    prevUser?.email !== nextUser?.email
+    pu?.id !== nu?.id ||
+    pu?.name !== nu?.name ||
+    pu?.lastname !== nu?.lastname ||
+    pu?.email !== nu?.email ||
+    pu?.image !== nu?.image
   ) {
     return false
   }
