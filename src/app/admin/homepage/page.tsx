@@ -55,6 +55,7 @@ export default function HomepageSettingsPage() {
 
   const [heroImage, setHeroImage] = useState<string | null>(null)
   const [howItWorksImage, setHowItWorksImage] = useState<string | null>(null)
+  const [authImage, setAuthImage] = useState<string | null>(null)
 
   useEffect(() => {
     if (isAuthenticated && (!session?.user?.roles || !isAdmin(session.user.roles))) {
@@ -70,6 +71,7 @@ export default function HomepageSettingsPage() {
           const data = await response.json()
           setHeroImage(data.heroBackgroundImage || null)
           setHowItWorksImage(data.howItWorksImage || null)
+          setAuthImage(data.authBackgroundImage || null)
         }
       } catch (err) {
         setError('Erreur lors du chargement des paramètres')
@@ -93,6 +95,7 @@ export default function HomepageSettingsPage() {
         body: JSON.stringify({
           heroBackgroundImage: heroImage,
           howItWorksImage: howItWorksImage,
+          authBackgroundImage: authImage,
         }),
       })
 
@@ -178,7 +181,7 @@ export default function HomepageSettingsPage() {
         )}
 
         {/* Settings Cards */}
-        <div className='grid gap-6 md:grid-cols-2'>
+        <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-3'>
           {/* Hero Section Image */}
           <motion.div variants={itemVariants}>
             <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm h-full'>
@@ -220,6 +223,31 @@ export default function HomepageSettingsPage() {
                   onImageChange={setHowItWorksImage}
                   entityType='homepage'
                   entityId='how-it-works'
+                />
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Auth Page Left Panel Image */}
+          <motion.div variants={itemVariants}>
+            <Card className='border-0 shadow-lg bg-white/70 backdrop-blur-sm h-full'>
+              <CardHeader>
+                <CardTitle className='flex items-center gap-2'>
+                  <ImageIcon className='h-5 w-5 text-emerald-600' />
+                  Page d&apos;authentification
+                </CardTitle>
+                <CardDescription>
+                  Image de fond du panneau gauche des pages de connexion, inscription et
+                  réinitialisation (desktop uniquement). Format portrait recommandé. Si aucune image
+                  n&apos;est définie, le dégradé actuel sera affiché.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ImageUpload
+                  currentImage={authImage}
+                  onImageChange={setAuthImage}
+                  entityType='homepage'
+                  entityId='auth-background'
                 />
               </CardContent>
             </Card>

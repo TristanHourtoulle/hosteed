@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@/lib/auth'
 import {
   getHomepageSettings,
   updateHomepageSettings,
@@ -16,12 +17,26 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+    }
+
+    const canManageSettings = ['ADMIN', 'HOST_MANAGER'].includes(session.user.roles as string)
+    if (!canManageSettings) {
+      console.warn(
+        `[PUT /api/homepage-settings] forbidden: user=${session.user.id} role=${session.user.roles}`
+      )
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 403 })
+    }
+
     const body = await request.json()
-    const { heroBackgroundImage, howItWorksImage } = body
+    const { heroBackgroundImage, howItWorksImage, authBackgroundImage } = body
 
     const updatedSettings = await updateHomepageSettings({
       heroBackgroundImage,
       howItWorksImage,
+      authBackgroundImage,
     })
 
     if (!updatedSettings) {
