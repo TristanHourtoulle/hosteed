@@ -69,6 +69,7 @@ import { PageHeader } from '@/components/admin/ui/PageHeader'
 import { KpiCard, KpiMetric, type KpiTone } from '@/components/admin/ui/KpiCard'
 import { FilterBar } from '@/components/admin/ui/FilterBar'
 import { DataTable, type DataTableColumn, type DataTableSort } from '@/components/admin/ui/DataTable'
+import { getUserAvatarUrl } from '@/lib/utils/userAvatar'
 
 /**
  * Ordered list of roles known to the admin panel.
@@ -326,10 +327,7 @@ export default function UsersPage() {
       render: user => (
         <div className='flex min-w-0 items-center gap-3'>
           <Avatar className='h-9 w-9 shrink-0 border-2 border-white shadow-sm'>
-            <AvatarImage
-              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`}
-              alt={user.name || user.email}
-            />
+            <AvatarImage src={getUserAvatarUrl(user)} alt={user.name || user.email} />
             <AvatarFallback className='bg-gradient-to-br from-indigo-500 to-purple-500 text-xs font-semibold text-white'>
               {(user.name?.[0] || user.email[0]).toUpperCase()}
             </AvatarFallback>
@@ -735,9 +733,7 @@ export default function UsersPage() {
             <div className='space-y-6 py-4'>
               <div className='flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4'>
                 <Avatar className='h-10 w-10'>
-                  <AvatarImage
-                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${editingUser?.email}`}
-                  />
+                  {editingUser && <AvatarImage src={getUserAvatarUrl(editingUser)} />}
                   <AvatarFallback className='bg-gradient-to-br from-indigo-500 to-purple-500 text-sm font-semibold text-white'>
                     {(editingUser?.name?.[0] || editingUser?.email?.[0] || 'U').toUpperCase()}
                   </AvatarFallback>

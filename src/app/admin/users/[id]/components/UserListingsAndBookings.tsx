@@ -1,247 +1,227 @@
 'use client'
 
-import { MapPin, Calendar, Euro, Home } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
-import { Badge } from '@/components/ui/shadcnui/badge'
-import { Button } from '@/components/ui/shadcnui/button'
 import Link from 'next/link'
-import Image from 'next/image'
+import { MapPin, Calendar, Home, CalendarClock, ArrowUpRight, Receipt } from 'lucide-react'
+import { KpiCard } from '@/components/admin/ui/KpiCard'
+import type { ExtendedUser, ExtendedRent } from '../types'
+import { Product } from '@prisma/client'
 
 interface UserListingsAndBookingsProps {
-  userId: string
-  user: {
-    id: string
-    name: string | null
-    email: string
-    role: string
-  }
-  posts: Array<{
-    id: string
-    title: string
-    description: string
-    price: number
-    location: string
-    images: string[]
-    status: string
-    createdAt: Date
-    isPromoted?: boolean
-  }>
-  bookings: Array<{
-    id: string
-    product: {
-      id: string
-      title: string
-      price: number
-      location: string
-      images: string[]
-    }
-    totalPrice: number
-    startDate: Date
-    endDate: Date
-    status: string
-    createdAt: Date
-  }>
+  user: ExtendedUser
 }
 
-export function UserListingsAndBookings({ posts, bookings }: UserListingsAndBookingsProps) {
-  // Calculer les statistiques
-  const totalEarnings = bookings
-    .filter(booking => booking.status === 'CONFIRMED')
-    .reduce((sum, booking) => sum + booking.totalPrice, 0)
+const PAYMENT_PAID_STATES = new Set([
+  'CLIENT_PAID',
+  'MID_TRANSFER_REQ',
+  'MID_TRANSFER_DONE',
+  'REST_TRANSFER_REQ',
+  'REST_TRANSFER_DONE',
+  'FULL_TRANSFER_REQ',
+  'FULL_TRANSFER_DONE',
+])
 
-  const activePosts = posts.filter(post => post.status === 'APPROVED').length
-  const totalBookings = bookings.length
+const VALIDATION_LABEL: Record<string, { label: string; tone: string }> = {
+  Approve: { label: 'Validé', tone: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
+  NotVerified: { label: 'En attente', tone: 'bg-amber-50 text-amber-700 ring-amber-200' },
+  RecheckRequest: {
+    label: 'Révision demandée',
+    tone: 'bg-orange-50 text-orange-700 ring-orange-200',
+  },
+  Refused: { label: 'Refusé', tone: 'bg-red-50 text-red-700 ring-red-200' },
+  ModificationPending: {
+    label: 'Modification en attente',
+    tone: 'bg-purple-50 text-purple-700 ring-purple-200',
+  },
+}
+
+const RENT_STATUS_LABEL: Record<string, { label: string; tone: string }> = {
+  WAITING: { label: 'En attente', tone: 'bg-amber-50 text-amber-700 ring-amber-200' },
+  RESERVED: { label: 'Réservée', tone: 'bg-blue-50 text-blue-700 ring-blue-200' },
+  CHECKIN: { label: 'Check-in', tone: 'bg-indigo-50 text-indigo-700 ring-indigo-200' },
+  CHECKOUT: { label: 'Check-out', tone: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
+  CANCEL: { label: 'Annulée', tone: 'bg-red-50 text-red-700 ring-red-200' },
+}
+
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'EUR',
+    maximumFractionDigits: 0,
+  }).format(amount)
+}
+
+export function UserListingsAndBookings({ user }: UserListingsAndBookingsProps) {
+  const products: Product[] = user.Product ?? []
+  const rents: ExtendedRent[] = user.Rent ?? []
+
+  const paidRents = rents.filter(r => PAYMENT_PAID_STATES.has(r.payment as unknown as string))
+  const totalSpent = paidRents.reduce((sum, r) => sum + (r.totalAmount ?? 0), 0)
+
+  const activeListings = products.filter(
+    p => (p as Product).validate === 'Approve' && !(p as Product).isDraft
+  ).length
 
   return (
-    <div className='space-y-8'>
-      {/* Statistiques */}
-      <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
-        <Card className='border-0 shadow-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl'>
-          <CardContent className='p-6'>
-            <div className='flex items-center justify-between'>
-              <div>
-                <p className='text-blue-100 text-sm font-medium'>Revenus totaux</p>
-                <p className='text-2xl font-bold mt-1'>{totalEarnings}€</p>
-              </div>
-              <div className='bg-white/20 p-3 rounded-full'>
-                <Euro className='h-6 w-6 text-white' />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className='border-0 shadow-lg bg-gradient-to-r from-green-500 to-green-600 text-white rounded-2xl'>
-          <CardContent className='p-6'>
-            <div className='flex items-center justify-between'>
-              <div>
-                <p className='text-green-100 text-sm font-medium'>Annonces actives</p>
-                <p className='text-2xl font-bold mt-1'>{activePosts}</p>
-              </div>
-              <div className='bg-white/20 p-3 rounded-full'>
-                <Home className='h-6 w-6 text-white' />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className='border-0 shadow-lg bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-2xl'>
-          <CardContent className='p-6'>
-            <div className='flex items-center justify-between'>
-              <div>
-                <p className='text-purple-100 text-sm font-medium'>Réservations</p>
-                <p className='text-2xl font-bold mt-1'>{totalBookings}</p>
-              </div>
-              <div className='bg-white/20 p-3 rounded-full'>
-                <Calendar className='h-6 w-6 text-white' />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+    <div className='space-y-6'>
+      {/* Stats row */}
+      <div className='grid gap-4 md:grid-cols-3'>
+        <KpiCard
+          label='Dépensé total'
+          value={formatCurrency(totalSpent)}
+          hint='sur les réservations payées'
+          icon={Receipt}
+          tone='emerald'
+        />
+        <KpiCard
+          label='Annonces actives'
+          value={activeListings}
+          hint={`${products.length} au total`}
+          icon={Home}
+          tone='blue'
+        />
+        <KpiCard
+          label='Réservations'
+          value={rents.length}
+          hint={`${paidRents.length} payées`}
+          icon={Calendar}
+          tone='purple'
+        />
       </div>
 
-      {/* Annonces de l'utilisateur */}
-      <Card className='border-0 shadow-lg rounded-2xl'>
-        <CardHeader className='pb-4'>
-          <CardTitle className='text-xl font-bold text-gray-900 flex items-center gap-2'>
-            <Home className='h-5 w-5 text-blue-600' />
-            Annonces ({posts.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {posts.length === 0 ? (
-            <div className='text-center py-12'>
-              <Home className='h-12 w-12 text-gray-300 mx-auto mb-4' />
-              <p className='text-gray-500'>Aucune annonce trouvée</p>
-            </div>
-          ) : (
-            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-              {posts.map(post => (
-                <div
-                  key={post.id}
-                  className='border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow'
-                >
-                  {post.images && post.images.length > 0 && (
-                    <div className='aspect-video bg-gray-100 relative'>
-                      <Image
-                        src={post.images[0]}
-                        alt={post.title}
-                        fill
-                        className='object-cover'
-                        unoptimized
-                      />
-                      {post.isPromoted && (
-                        <Badge className='absolute top-2 right-2 bg-yellow-500 text-white border-0'>
-                          Sponsorisé
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-                  <div className='p-4'>
-                    <h3 className='font-medium text-gray-900 mb-2 line-clamp-2'>{post.title}</h3>
-                    <div className='flex items-center gap-1 text-gray-500 text-sm mb-2'>
-                      <MapPin className='h-4 w-4' />
-                      <span>{post.location}</span>
-                    </div>
-                    <div className='flex items-center justify-between'>
-                      <span className='font-bold text-blue-600'>{post.price}€/nuit</span>
-                      <Badge
-                        variant={
-                          post.status === 'APPROVED'
-                            ? 'default'
-                            : post.status === 'PENDING'
-                              ? 'secondary'
-                              : 'destructive'
-                        }
-                      >
-                        {post.status === 'APPROVED'
-                          ? 'Approuvé'
-                          : post.status === 'PENDING'
-                            ? 'En attente'
-                            : 'Rejeté'}
-                      </Badge>
-                    </div>
-                    <div className='mt-3'>
-                      <Button variant='outline' size='sm' asChild className='w-full'>
-                        <Link href={`/posts/${post.id}`}>Voir l&apos;annonce</Link>
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+      {/* Listings */}
+      <div className='rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm'>
+        <div className='mb-4 flex items-center justify-between'>
+          <h3 className='text-lg font-semibold text-slate-900'>
+            Annonces possédées{' '}
+            <span className='text-sm font-normal text-slate-500'>({products.length})</span>
+          </h3>
+          {products.length > 0 && (
+            <Link
+              href={`/admin/products?ownerId=${user.id}`}
+              className='text-xs font-medium text-blue-600 hover:underline'
+            >
+              Voir tout
+            </Link>
           )}
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Réservations de l'utilisateur */}
-      <Card className='border-0 shadow-lg rounded-2xl'>
-        <CardHeader className='pb-4'>
-          <CardTitle className='text-xl font-bold text-gray-900 flex items-center gap-2'>
-            <Calendar className='h-5 w-5 text-purple-600' />
-            Réservations ({bookings.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {bookings.length === 0 ? (
-            <div className='text-center py-12'>
-              <Calendar className='h-12 w-12 text-gray-300 mx-auto mb-4' />
-              <p className='text-gray-500'>Aucune réservation trouvée</p>
+        {products.length === 0 ? (
+          <div className='flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 py-10 text-center'>
+            <div className='mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400'>
+              <Home className='h-6 w-6' />
             </div>
-          ) : (
-            <div className='space-y-4'>
-              {bookings.map(booking => (
-                <div
-                  key={booking.id}
-                  className='border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow'
+            <p className='text-sm font-semibold text-slate-900'>Aucune annonce</p>
+            <p className='mt-0.5 text-xs text-slate-500'>
+              Cet utilisateur n’a pas encore créé d’annonce.
+            </p>
+          </div>
+        ) : (
+          <div className='space-y-2'>
+            {products.map(product => {
+              const validation =
+                VALIDATION_LABEL[product.validate] ?? {
+                  label: product.validate,
+                  tone: 'bg-slate-100 text-slate-700 ring-slate-200',
+                }
+              return (
+                <Link
+                  key={product.id}
+                  href={`/admin/validation/${product.id}`}
+                  className='group flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-3 transition hover:border-blue-200 hover:bg-blue-50/30'
                 >
-                  <div className='flex items-start gap-4'>
-                    {booking.product.images && booking.product.images.length > 0 && (
-                      <div className='w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 relative'>
-                        <Image
-                          src={booking.product.images[0]}
-                          alt={booking.product.title}
-                          fill
-                          className='object-cover'
-                          unoptimized
-                        />
-                      </div>
+                  <div className='flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600'>
+                    <Home className='h-5 w-5' />
+                  </div>
+                  <div className='min-w-0 flex-1'>
+                    <p className='truncate text-sm font-semibold text-slate-900 group-hover:text-blue-700'>
+                      {product.name}
+                    </p>
+                    <p className='truncate text-xs text-slate-500'>
+                      <MapPin className='mr-1 inline h-3 w-3' />
+                      {product.address}
+                    </p>
+                  </div>
+                  <div className='flex items-center gap-3'>
+                    <span className='text-sm font-bold text-slate-900 tabular-nums'>
+                      {product.basePrice}€
+                      <span className='text-xs font-normal text-slate-500'>/nuit</span>
+                    </span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ${validation.tone}`}
+                    >
+                      {validation.label}
+                    </span>
+                    <ArrowUpRight className='h-4 w-4 text-slate-300 transition group-hover:text-slate-600' />
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Bookings */}
+      <div className='rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm'>
+        <div className='mb-4 flex items-center justify-between'>
+          <h3 className='text-lg font-semibold text-slate-900'>
+            Réservations effectuées{' '}
+            <span className='text-sm font-normal text-slate-500'>({rents.length})</span>
+          </h3>
+        </div>
+
+        {rents.length === 0 ? (
+          <div className='flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 py-10 text-center'>
+            <div className='mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400'>
+              <Calendar className='h-6 w-6' />
+            </div>
+            <p className='text-sm font-semibold text-slate-900'>Aucune réservation</p>
+            <p className='mt-0.5 text-xs text-slate-500'>
+              Cet utilisateur n’a effectué aucune réservation.
+            </p>
+          </div>
+        ) : (
+          <div className='space-y-2'>
+            {rents.map(rent => {
+              const status = RENT_STATUS_LABEL[rent.status as unknown as string] ?? {
+                label: rent.status,
+                tone: 'bg-slate-100 text-slate-700 ring-slate-200',
+              }
+              return (
+                <div
+                  key={rent.id}
+                  className='flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-3'
+                >
+                  <div className='flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-purple-50 text-purple-600'>
+                    <CalendarClock className='h-5 w-5' />
+                  </div>
+                  <div className='min-w-0 flex-1'>
+                    <p className='truncate text-sm font-semibold text-slate-900'>
+                      Réservation #{rent.id.slice(-6)}
+                    </p>
+                    <p className='truncate text-xs text-slate-500'>
+                      <Calendar className='mr-1 inline h-3 w-3' />
+                      {new Date(rent.arrivingDate).toLocaleDateString('fr-FR')} →{' '}
+                      {new Date(rent.leavingDate).toLocaleDateString('fr-FR')}
+                    </p>
+                  </div>
+                  <div className='flex items-center gap-3'>
+                    {rent.totalAmount != null && (
+                      <span className='text-sm font-bold text-slate-900 tabular-nums'>
+                        {formatCurrency(rent.totalAmount)}
+                      </span>
                     )}
-                    <div className='flex-1 min-w-0'>
-                      <h3 className='font-medium text-gray-900 mb-1'>{booking.product.title}</h3>
-                      <div className='flex items-center gap-1 text-gray-500 text-sm mb-2'>
-                        <MapPin className='h-4 w-4' />
-                        <span>{booking.product.location}</span>
-                      </div>
-                      <div className='text-sm text-gray-600 mb-2'>
-                        {new Date(booking.startDate).toLocaleDateString('fr-FR')} -{' '}
-                        {new Date(booking.endDate).toLocaleDateString('fr-FR')}
-                      </div>
-                      <div className='flex items-center justify-between'>
-                        <span className='font-bold text-green-600'>{booking.totalPrice}€</span>
-                        <Badge
-                          variant={
-                            booking.status === 'CONFIRMED'
-                              ? 'default'
-                              : booking.status === 'PENDING'
-                                ? 'secondary'
-                                : 'destructive'
-                          }
-                        >
-                          {booking.status === 'CONFIRMED'
-                            ? 'Confirmé'
-                            : booking.status === 'PENDING'
-                              ? 'En attente'
-                              : 'Annulé'}
-                        </Badge>
-                      </div>
-                    </div>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ${status.tone}`}
+                    >
+                      {status.label}
+                    </span>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
