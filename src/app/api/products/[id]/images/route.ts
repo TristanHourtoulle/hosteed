@@ -63,17 +63,22 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const session = await auth()
     if (!session?.user?.id) {
+      console.warn('[PUT /api/products/[id]/images] unauthenticated request rejected')
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
     const { id: productId } = await params
     const { imageUrls } = await request.json()
 
+    console.log(
+      `[PUT /api/products/${productId}/images] user=${session.user.id} role=${session.user.roles} count=${Array.isArray(imageUrls) ? imageUrls.length : 'invalid'}`
+    )
+
     if (!imageUrls || !Array.isArray(imageUrls)) {
       return NextResponse.json({ error: 'imageUrls doit être un tableau' }, { status: 400 })
     }
 
-    // Vérifier que l'utilisateur est propriétaire du produit
+    // Vérifier que l'utilisateur est propriétaire du produit OU admin/host_manager
     const product = await prisma.product.findUnique({
       where: { id: productId },
       include: {
@@ -87,7 +92,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const isOwner = product.owner.id === session.user.id
-    if (!isOwner) {
+    const canManageAny = ['ADMIN', 'HOST_MANAGER'].includes(session.user.roles as string)
+    if (!isOwner && !canManageAny) {
+      console.warn(
+        `[PUT /api/products/${productId}/images] forbidden: user=${session.user.id} role=${session.user.roles} owner=${product.owner.id}`
+      )
       return NextResponse.json({ error: 'Non autorisé' }, { status: 403 })
     }
 

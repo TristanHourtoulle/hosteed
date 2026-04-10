@@ -231,13 +231,22 @@ export function ProductEditForm({ product, onSave, onCancel }: ProductEditFormPr
 
       // Update images separately if needed
       if (finalImages.length > 0) {
-        await fetch(`/api/products/${product.id}/images`, {
+        const imagesResponse = await fetch(`/api/products/${product.id}/images`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
           },
+          credentials: 'include',
           body: JSON.stringify({ imageUrls: finalImages }),
         })
+
+        if (!imagesResponse.ok) {
+          const errorBody = await imagesResponse.json().catch(() => ({}))
+          throw new Error(
+            errorBody.error ||
+              `Échec de l'enregistrement des images (HTTP ${imagesResponse.status})`
+          )
+        }
       }
 
       onSave(updatedProduct as unknown as Product)

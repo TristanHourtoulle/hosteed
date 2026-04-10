@@ -258,11 +258,20 @@ export default function EditProductPage() {
         ...newImageUrls,
       ]
 
-      await fetch(`/api/products/${productId}/images`, {
+      const imagesResponse = await fetch(`/api/products/${productId}/images`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ imageUrls: allImageUrls }),
       })
+
+      if (!imagesResponse.ok) {
+        const errorBody = await imagesResponse.json().catch(() => ({}))
+        throw new Error(
+          errorBody.error ||
+            `Échec de l'enregistrement des images (HTTP ${imagesResponse.status})`
+        )
+      }
 
       toast.success('Annonce modifiée avec succès!')
       setTimeout(() => router.push('/dashboard/host'), 1500)
