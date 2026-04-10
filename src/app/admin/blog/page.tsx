@@ -1,56 +1,45 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { useBlogAuth } from '@/hooks/useMultiRoleAuth'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/shadcnui/card'
-import { Button } from '@/components/ui/shadcnui/button'
-import { Input } from '@/components/ui/shadcnui/input'
-import { Badge } from '@/components/ui/shadcnui/badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/shadcnui/table'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/shadcnui/alert-dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/shadcnui/dropdown-menu'
+import Link from 'next/link'
+import { toast } from 'sonner'
 import {
   BookOpen,
   Plus,
-  Edit3,
+  Edit,
   Trash2,
   Eye,
-  MoreHorizontal,
-  Search,
   Calendar,
-  User,
+  Clock,
+  Shield,
+  CalendarDays,
+  UserCircle2,
+  AlertTriangle,
+  Loader2,
+  Crown,
+  PenLine,
 } from 'lucide-react'
-import Link from 'next/link'
-import { toast } from 'sonner'
+
+import { useBlogAuth } from '@/hooks/useMultiRoleAuth'
+import { Button } from '@/components/ui/shadcnui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/shadcnui/dialog'
+import type { LucideIcon } from 'lucide-react'
+import { PageHeader } from '@/components/admin/ui/PageHeader'
+import { KpiCard } from '@/components/admin/ui/KpiCard'
+import { FilterBar } from '@/components/admin/ui/FilterBar'
+import {
+  DataTable,
+  type DataTableColumn,
+  type DataTableSort,
+} from '@/components/admin/ui/DataTable'
 
 interface Post {
   id: string
@@ -66,53 +55,121 @@ interface Post {
   }
 }
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { duration: 0.3, staggerChildren: 0.1 },
-  },
+const INFO_TILE_TONE: Record<
+  'blue' | 'indigo' | 'emerald' | 'amber' | 'purple' | 'slate',
+  { bg: string; text: string }
+> = {
+  blue: { bg: 'bg-blue-50', text: 'text-blue-600' },
+  indigo: { bg: 'bg-indigo-50', text: 'text-indigo-600' },
+  emerald: { bg: 'bg-emerald-50', text: 'text-emerald-600' },
+  amber: { bg: 'bg-amber-50', text: 'text-amber-600' },
+  purple: { bg: 'bg-purple-50', text: 'text-purple-600' },
+  slate: { bg: 'bg-slate-100', text: 'text-slate-600' },
 }
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0 },
+function InfoTile({
+  label,
+  value,
+  hint,
+  icon: Icon,
+  tone = 'slate',
+  loading = false,
+}: {
+  label: string
+  value: string
+  hint?: string
+  icon: LucideIcon
+  tone?: keyof typeof INFO_TILE_TONE
+  loading?: boolean
+}) {
+  const toneClass = INFO_TILE_TONE[tone]
+  if (loading) {
+    return (
+      <div className='relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm'>
+        <div className='flex items-start justify-between gap-4'>
+          <div className='flex-1 space-y-2'>
+            <div className='h-4 w-24 animate-pulse rounded bg-slate-200' />
+            <div className='h-6 w-32 animate-pulse rounded bg-slate-200' />
+            <div className='h-3 w-32 animate-pulse rounded bg-slate-200' />
+          </div>
+          <div className='h-10 w-10 animate-pulse rounded-xl bg-slate-200' />
+        </div>
+      </div>
+    )
+  }
+  return (
+    <div className='rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm'>
+      <div className='flex items-start justify-between gap-4'>
+        <div className='min-w-0 space-y-1'>
+          <p className='text-sm font-medium text-slate-500'>{label}</p>
+          <p
+            className={`text-lg font-semibold leading-tight ${toneClass.text}`}
+          >
+            {value}
+          </p>
+          {hint && <p className='text-xs text-slate-500'>{hint}</p>}
+        </div>
+        <div
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${toneClass.bg} ${toneClass.text}`}
+        >
+          <Icon className='h-5 w-5' />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function formatDate(dateString: string) {
+  return new Date(dateString).toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+function formatDateTime(dateString: string) {
+  return new Date(dateString).toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 export default function BlogManagementPage() {
   const { isAuthorized, isLoading, session } = useBlogAuth()
+
   const [posts, setPosts] = useState<Post[]>([])
-  const [filteredPosts, setFilteredPosts] = useState<Post[]>([])
-  const [searchTerm, setSearchTerm] = useState('')
   const [isLoadingPosts, setIsLoadingPosts] = useState(true)
-  const [deletingPostId, setDeletingPostId] = useState<string | null>(null)
+  const [searchValue, setSearchValue] = useState('')
+  const [sort, setSort] = useState<DataTableSort | null>({
+    key: 'createdAt',
+    direction: 'desc',
+  })
+
+  const [deleteTarget, setDeleteTarget] = useState<Post | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  const isAdmin = session?.user?.roles === 'ADMIN'
 
   const fetchPosts = useCallback(async () => {
     if (!session?.user?.id) return
-
     try {
       setIsLoadingPosts(true)
-      // For BLOGWRITER: fetch only their posts, for ADMIN: fetch all posts
-      const authorParam = session.user.roles === 'ADMIN' ? '' : `?authorId=${session.user.id}`
+      const authorParam = isAdmin ? '' : `?authorId=${session.user.id}`
       const response = await fetch(`/api/posts${authorParam}`, {
         cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache',
-        },
+        headers: { 'Cache-Control': 'no-cache' },
       })
-
       if (!response.ok) {
         throw new Error('Erreur lors du chargement des articles')
       }
-
       const data = await response.json()
-      // Defensive: the /api/posts contract is an array, but guard against a
-      // wrapped shape (e.g. `{ posts, pagination }`) in case an upstream
-      // change accidentally leaks the paginated object through.
       const normalized = Array.isArray(data)
         ? data
         : Array.isArray((data as { posts?: unknown }).posts)
-          ? ((data as { posts: Post[] }).posts)
+          ? (data as { posts: Post[] }).posts
           : []
       setPosts(normalized)
     } catch (error) {
@@ -121,7 +178,7 @@ export default function BlogManagementPage() {
     } finally {
       setIsLoadingPosts(false)
     }
-  }, [session])
+  }, [session, isAdmin])
 
   useEffect(() => {
     if (isAuthorized && session?.user?.id) {
@@ -129,276 +186,383 @@ export default function BlogManagementPage() {
     }
   }, [isAuthorized, session, fetchPosts])
 
-  useEffect(() => {
-    if (searchTerm) {
-      const filtered = posts.filter(post =>
-        post.title.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-      setFilteredPosts(filtered)
-    } else {
-      setFilteredPosts(posts)
-    }
-  }, [searchTerm, posts])
+  const filteredPosts = useMemo(() => {
+    const q = searchValue.trim().toLowerCase()
+    if (!q) return posts
+    return posts.filter(
+      post =>
+        post.title.toLowerCase().includes(q) ||
+        (post.author.name ?? '').toLowerCase().includes(q) ||
+        post.author.email.toLowerCase().includes(q) ||
+        (post.slug ?? '').toLowerCase().includes(q)
+    )
+  }, [posts, searchValue])
 
-  const handleDeletePost = async (postId: string) => {
+  const stats = useMemo(() => {
+    const total = posts.length
+    const now = new Date()
+    const thisMonth = posts.filter(post => {
+      const date = new Date(post.createdAt)
+      return (
+        date.getMonth() === now.getMonth() &&
+        date.getFullYear() === now.getFullYear()
+      )
+    }).length
+    const authors = new Set(posts.map(p => p.author.id)).size
+    const lastPublished = posts.length > 0
+      ? posts.reduce((latest, p) =>
+          new Date(p.createdAt) > new Date(latest.createdAt) ? p : latest
+        ).createdAt
+      : null
+    return { total, thisMonth, authors, lastPublished }
+  }, [posts])
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return
     try {
-      setDeletingPostId(postId)
-      const response = await fetch(`/api/posts/${postId}`, {
+      setDeleting(true)
+      const response = await fetch(`/api/posts/${deleteTarget.id}`, {
         method: 'DELETE',
       })
-
       if (!response.ok) {
         throw new Error('Erreur lors de la suppression')
       }
-
       const result = await response.json()
-      toast.success(result.message || 'Article supprimé avec succès')
-
-      // Remove from local state
-      setPosts(posts.filter(post => post.id !== postId))
+      toast.success(result.message || 'Article supprimé')
+      setPosts(prev => prev.filter(p => p.id !== deleteTarget.id))
+      setDeleteTarget(null)
     } catch (error) {
       console.error('Error deleting post:', error)
       toast.error("Erreur lors de la suppression de l'article")
     } finally {
-      setDeletingPostId(null)
+      setDeleting(false)
     }
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('fr-FR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
+  const columns: Array<DataTableColumn<Post>> = [
+    {
+      key: 'title',
+      header: 'Article',
+      sortable: true,
+      sortAccessor: post => post.title.toLowerCase(),
+      render: post => (
+        <div className='flex items-center gap-3'>
+          <div className='flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600'>
+            <BookOpen className='h-4 w-4' />
+          </div>
+          <div className='min-w-0 max-w-[420px]'>
+            <p
+              className='truncate text-sm font-semibold text-slate-900'
+              title={post.title}
+            >
+              {post.title}
+            </p>
+            {post.slug && (
+              <p
+                className='truncate font-mono text-xs text-slate-500'
+                title={`/${post.slug}`}
+              >
+                /{post.slug}
+              </p>
+            )}
+          </div>
+        </div>
+      ),
+      cellClassName: 'max-w-[460px]',
+    },
+    ...(isAdmin
+      ? [
+          {
+            key: 'author',
+            header: 'Auteur',
+            sortable: true,
+            sortAccessor: (post: Post) =>
+              (post.author.name || post.author.email).toLowerCase(),
+            render: (post: Post) => {
+              const isAuthorAdmin = post.author.roles === 'ADMIN'
+              const AuthorIcon = isAuthorAdmin ? Crown : PenLine
+              return (
+                <div className='flex items-center gap-2 min-w-0'>
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ${
+                      isAuthorAdmin
+                        ? 'bg-purple-50 text-purple-700 ring-purple-200'
+                        : 'bg-blue-50 text-blue-700 ring-blue-200'
+                    }`}
+                  >
+                    <AuthorIcon className='h-3 w-3' />
+                    {isAuthorAdmin ? 'Admin' : 'Rédacteur'}
+                  </span>
+                  <span className='truncate text-sm text-slate-600'>
+                    {post.author.name || post.author.email}
+                  </span>
+                </div>
+              )
+            },
+          } as DataTableColumn<Post>,
+        ]
+      : []),
+    {
+      key: 'createdAt',
+      header: 'Créé',
+      sortable: true,
+      sortAccessor: post => new Date(post.createdAt),
+      render: post => (
+        <p className='whitespace-nowrap text-sm text-slate-600'>
+          {formatDate(post.createdAt)}
+        </p>
+      ),
+      cellClassName: 'whitespace-nowrap',
+    },
+    {
+      key: 'updatedAt',
+      header: 'Modifié',
+      sortable: true,
+      sortAccessor: post => new Date(post.updatedAt),
+      render: post => (
+        <p className='whitespace-nowrap text-sm text-slate-600'>
+          {formatDate(post.updatedAt)}
+        </p>
+      ),
+      cellClassName: 'whitespace-nowrap',
+    },
+  ]
 
   if (isLoading || !isAuthorized) {
     return (
-      <div className='flex items-center justify-center min-h-screen'>
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className='text-center'>
-          <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4'></div>
-          <p className='text-gray-600'>Chargement...</p>
-        </motion.div>
+      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/40'>
+        <div className='mx-auto max-w-7xl space-y-8 p-6'>
+          <div className='space-y-3'>
+            <div className='h-4 w-40 animate-pulse rounded bg-slate-200' />
+            <div className='h-10 w-80 animate-pulse rounded bg-slate-200' />
+            <div className='h-4 w-96 animate-pulse rounded bg-slate-200' />
+          </div>
+          <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
+            {[0, 1, 2, 3].map(i => (
+              <div
+                key={i}
+                className='h-32 animate-pulse rounded-2xl border border-slate-200/80 bg-white'
+              />
+            ))}
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <motion.div
-      variants={containerVariants}
-      initial='hidden'
-      animate='visible'
-      className='space-y-6 p-6'
-    >
-      {/* Header */}
-      <motion.div variants={itemVariants} className='flex items-center justify-between'>
-        <div>
-          <h1 className='text-3xl font-bold text-gray-900 flex items-center gap-3'>
-            <BookOpen className='h-8 w-8 text-blue-600' />
-            Gestion des articles
-          </h1>
-          <p className='text-gray-600 mt-2'>
-            {session?.user?.roles === 'ADMIN'
-              ? 'Gérer tous les articles du blog'
-              : 'Gérer vos articles de blog'}
-          </p>
+    <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/40'>
+      <motion.div
+        className='mx-auto max-w-7xl space-y-8 p-6'
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
+        <PageHeader
+          backHref='/admin'
+          backLabel='Retour au panel admin'
+          eyebrow='Espace administrateur'
+          eyebrowIcon={Shield}
+          title='Gestion du blog'
+          subtitle={
+            isAdmin
+              ? 'Consultez, modifiez et supprimez tous les articles publiés sur le blog.'
+              : 'Consultez, modifiez et supprimez vos propres articles.'
+          }
+          actions={
+            <Button asChild className='gap-2'>
+              <Link href='/createPost'>
+                <Plus className='h-4 w-4' />
+                Créer un article
+              </Link>
+            </Button>
+          }
+        />
+
+        {/* KPI row */}
+        <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
+          <KpiCard
+            label='Total articles'
+            value={stats.total}
+            hint={isAdmin ? 'tous auteurs confondus' : 'de votre publication'}
+            icon={BookOpen}
+            tone='blue'
+            loading={isLoadingPosts}
+          />
+          <KpiCard
+            label='Publiés ce mois'
+            value={stats.thisMonth}
+            hint='nouveaux articles'
+            icon={CalendarDays}
+            tone='emerald'
+            loading={isLoadingPosts}
+          />
+          <KpiCard
+            label={isAdmin ? 'Auteurs actifs' : 'Votre activité'}
+            value={isAdmin ? stats.authors : stats.total}
+            hint={isAdmin ? 'ont publié au moins 1 article' : 'articles rédigés'}
+            icon={UserCircle2}
+            tone='purple'
+            loading={isLoadingPosts}
+          />
+          <InfoTile
+            label='Dernière publication'
+            value={stats.lastPublished ? formatDate(stats.lastPublished) : '—'}
+            hint='article le plus récent'
+            icon={Clock}
+            tone='indigo'
+            loading={isLoadingPosts}
+          />
         </div>
-        <Button asChild className='bg-blue-600 hover:bg-blue-700'>
-          <Link href='/createPost'>
-            <Plus className='h-4 w-4 mr-2' />
-            Créer un article
-          </Link>
-        </Button>
+
+        {/* Search */}
+        <FilterBar
+          searchValue={searchValue}
+          onSearchChange={setSearchValue}
+          searchPlaceholder='Rechercher un article par titre, auteur ou slug…'
+        />
+
+        {/* Data table */}
+        <DataTable<Post>
+          columns={columns}
+          rows={filteredPosts}
+          getRowId={post => post.id}
+          loading={isLoadingPosts}
+          sort={sort}
+          onSortChange={setSort}
+          rowActions={post => (
+            <div className='flex items-center justify-end gap-1'>
+              <Button
+                variant='ghost'
+                size='sm'
+                asChild
+                className='text-slate-600 hover:text-slate-900'
+              >
+                <Link
+                  href={`/posts/article/${post.slug || post.id}`}
+                  target='_blank'
+                  title='Voir en ligne'
+                >
+                  <Eye className='h-4 w-4' />
+                </Link>
+              </Button>
+              <Button
+                variant='ghost'
+                size='sm'
+                asChild
+                className='text-slate-600 hover:text-slate-900'
+              >
+                <Link href={`/admin/blog/edit/${post.id}`} title='Modifier'>
+                  <Edit className='h-4 w-4' />
+                </Link>
+              </Button>
+              <Button
+                variant='ghost'
+                size='sm'
+                onClick={() => setDeleteTarget(post)}
+                className='text-red-600 hover:bg-red-50 hover:text-red-700'
+                title='Supprimer'
+              >
+                <Trash2 className='h-4 w-4' />
+              </Button>
+            </div>
+          )}
+          emptyState={{
+            icon: BookOpen,
+            title: searchValue
+              ? 'Aucun article trouvé'
+              : 'Aucun article pour l’instant',
+            subtitle: searchValue
+              ? 'Essayez d’ajuster votre recherche.'
+              : 'Commencez par rédiger votre premier article.',
+          }}
+        />
       </motion.div>
 
-      {/* Stats Cards */}
-      <motion.div variants={itemVariants} className='grid grid-cols-1 md:grid-cols-3 gap-6'>
-        <Card>
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Total Articles</CardTitle>
-            <BookOpen className='h-4 w-4 text-muted-foreground' />
-          </CardHeader>
-          <CardContent>
-            <div className='text-2xl font-bold'>{posts.length}</div>
-            <p className='text-xs text-muted-foreground'>
-              {session?.user?.roles === 'ADMIN' ? 'Tous les articles' : 'Vos articles'}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Publiés ce mois</CardTitle>
-            <Calendar className='h-4 w-4 text-muted-foreground' />
-          </CardHeader>
-          <CardContent>
-            <div className='text-2xl font-bold'>
-              {
-                posts.filter(post => {
-                  const postDate = new Date(post.createdAt)
-                  const now = new Date()
-                  return (
-                    postDate.getMonth() === now.getMonth() &&
-                    postDate.getFullYear() === now.getFullYear()
-                  )
-                }).length
-              }
-            </div>
-            <p className='text-xs text-muted-foreground'>Ce mois-ci</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Dernière publication</CardTitle>
-            <User className='h-4 w-4 text-muted-foreground' />
-          </CardHeader>
-          <CardContent>
-            <div className='text-2xl font-bold'>
-              {posts.length > 0 ? formatDate(posts[0]?.createdAt).split(' ')[0] : 'Aucun'}
-            </div>
-            <p className='text-xs text-muted-foreground'>Dernier article</p>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Search and Filters */}
-      <motion.div variants={itemVariants}>
-        <Card>
-          <CardHeader>
-            <CardTitle>Articles</CardTitle>
-            <CardDescription>Gérez vos articles de blog</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className='flex items-center space-x-2 mb-6'>
-              <div className='relative flex-1'>
-                <Search className='absolute left-2 top-2.5 h-4 w-4 text-muted-foreground' />
-                <Input
-                  placeholder='Rechercher un article...'
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  className='pl-8'
-                />
+      {/* Delete confirmation */}
+      <Dialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={open => !open && !deleting && setDeleteTarget(null)}
+      >
+        <DialogContent className='sm:max-w-[480px]'>
+          <DialogHeader>
+            <div className='flex items-start gap-3'>
+              <div className='flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600 ring-1 ring-red-100'>
+                <AlertTriangle className='h-5 w-5' />
+              </div>
+              <div className='min-w-0 flex-1 space-y-1'>
+                <DialogTitle className='text-lg'>
+                  Supprimer l&apos;article
+                </DialogTitle>
+                <DialogDescription className='text-sm text-slate-600'>
+                  {deleteTarget ? (
+                    <>
+                      Cette action supprimera définitivement{' '}
+                      <span className='font-semibold text-slate-900'>
+                        {deleteTarget.title}
+                      </span>
+                      . Elle est <strong>irréversible</strong>.
+                    </>
+                  ) : null}
+                </DialogDescription>
               </div>
             </div>
+          </DialogHeader>
 
-            {isLoadingPosts ? (
-              <div className='flex items-center justify-center py-8'>
-                <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600'></div>
-                <span className='ml-2'>Chargement des articles...</span>
+          {deleteTarget && (
+            <div className='space-y-2 rounded-xl border border-slate-200 bg-slate-50/60 p-4 text-sm'>
+              <div className='flex items-center justify-between gap-4'>
+                <span className='text-slate-500'>Auteur</span>
+                <span className='truncate font-medium text-slate-900'>
+                  {deleteTarget.author.name || deleteTarget.author.email}
+                </span>
               </div>
-            ) : filteredPosts.length === 0 ? (
-              <div className='text-center py-8'>
-                <BookOpen className='mx-auto h-12 w-12 text-gray-400' />
-                <h3 className='mt-2 text-sm font-medium text-gray-900'>Aucun article</h3>
-                <p className='mt-1 text-sm text-gray-500'>
-                  {searchTerm
-                    ? 'Aucun article trouvé pour cette recherche.'
-                    : 'Commencez par créer votre premier article.'}
-                </p>
-                <div className='mt-6'>
-                  <Button asChild>
-                    <Link href='/createPost'>
-                      <Plus className='h-4 w-4 mr-2' />
-                      Créer un article
-                    </Link>
-                  </Button>
+              <div className='flex items-center justify-between gap-4'>
+                <span className='text-slate-500'>Créé le</span>
+                <span className='font-medium text-slate-900'>
+                  {formatDateTime(deleteTarget.createdAt)}
+                </span>
+              </div>
+              {deleteTarget.slug && (
+                <div className='flex items-center justify-between gap-4'>
+                  <span className='text-slate-500'>Slug</span>
+                  <span className='truncate font-mono text-xs text-slate-900'>
+                    /{deleteTarget.slug}
+                  </span>
                 </div>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Titre</TableHead>
-                    {session?.user?.roles === 'ADMIN' && <TableHead>Auteur</TableHead>}
-                    <TableHead>Créé le</TableHead>
-                    <TableHead>Modifié le</TableHead>
-                    <TableHead className='text-right'>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredPosts.map(post => (
-                    <TableRow key={post.id}>
-                      <TableCell className='font-medium'>
-                        <div className='flex flex-col'>
-                          <span className='truncate max-w-xs'>{post.title}</span>
-                          {post.slug && <span className='text-xs text-gray-500'>/{post.slug}</span>}
-                        </div>
-                      </TableCell>
-                      {session?.user?.roles === 'ADMIN' && (
-                        <TableCell>
-                          <div className='flex items-center gap-2'>
-                            <Badge variant='secondary'>
-                              {post.author.roles === 'ADMIN' ? '👑 Admin' : '✍️ Rédacteur'}
-                            </Badge>
-                            <span className='text-sm text-gray-600'>
-                              {post.author.name || post.author.email}
-                            </span>
-                          </div>
-                        </TableCell>
-                      )}
-                      <TableCell>{formatDate(post.createdAt)}</TableCell>
-                      <TableCell>{formatDate(post.updatedAt)}</TableCell>
-                      <TableCell className='text-right'>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant='ghost' className='h-8 w-8 p-0'>
-                              <MoreHorizontal className='h-4 w-4' />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align='end'>
-                            <DropdownMenuItem asChild>
-                              <Link href={`/posts/article/${post.slug || post.id}`}>
-                                <Eye className='mr-2 h-4 w-4' />
-                                Voir
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link href={`/admin/blog/edit/${post.id}`}>
-                                <Edit3 className='mr-2 h-4 w-4' />
-                                Modifier
-                              </Link>
-                            </DropdownMenuItem>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <DropdownMenuItem onSelect={e => e.preventDefault()}>
-                                  <Trash2 className='mr-2 h-4 w-4' />
-                                  Supprimer
-                                </DropdownMenuItem>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Êtes-vous sûr de vouloir supprimer l&apos;article &quot;
-                                    {post.title}&quot; ? Cette action est irréversible.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleDeletePost(post.id)}
-                                    disabled={deletingPostId === post.id}
-                                    className='bg-red-600 hover:bg-red-700'
-                                  >
-                                    {deletingPostId === post.id ? 'Suppression...' : 'Supprimer'}
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
-    </motion.div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className='gap-2'>
+            <Button
+              variant='outline'
+              onClick={() => setDeleteTarget(null)}
+              disabled={deleting}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant='destructive'
+              onClick={handleDelete}
+              disabled={deleting}
+              className='gap-2'
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className='h-4 w-4 animate-spin' />
+                  Suppression…
+                </>
+              ) : (
+                <>
+                  <Trash2 className='h-4 w-4' />
+                  Supprimer définitivement
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }
