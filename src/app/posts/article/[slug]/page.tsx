@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { getPostBySlugOrId, getSuggestedPosts } from '@/lib/services/post.service'
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer'
+import { toPlainTextPreview } from '@/lib/utils/contentFormat'
 import ShareButton from '@/components/ui/ShareButton'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
 import { Button } from '@/components/ui/shadcnui/button'
@@ -26,13 +27,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
   }
 
+  const plainPreview = toPlainTextPreview(post.content).substring(0, 160)
+
   return {
     title: post.metaTitle || post.title,
-    description: post.metaDescription || post.content.substring(0, 160),
+    description: post.metaDescription || plainPreview,
     keywords: post.keywords || '',
     openGraph: {
       title: post.metaTitle || post.title,
-      description: post.metaDescription || post.content.substring(0, 160),
+      description: post.metaDescription || plainPreview,
       type: 'article',
       publishedTime: post.createdAt.toISOString(),
       modifiedTime: post.updatedAt.toISOString(),
@@ -50,7 +53,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     twitter: {
       card: 'summary_large_image',
       title: post.metaTitle || post.title,
-      description: post.metaDescription || post.content.substring(0, 160),
+      description: post.metaDescription || plainPreview,
       images: post.image ? [post.image] : [],
     },
     alternates: {
@@ -79,10 +82,11 @@ export default async function PostPage({ params }: PageProps) {
   }
 
   const estimateReadingTime = (content: string) => {
+    // Strip HTML/Markdown so tags don't count as words.
+    const plain = toPlainTextPreview(content)
     const wordsPerMinute = 200
-    const words = content.split(/\s+/).length
-    const readingTime = Math.ceil(words / wordsPerMinute)
-    return readingTime
+    const words = plain.split(/\s+/).filter(Boolean).length
+    return Math.max(1, Math.ceil(words / wordsPerMinute))
   }
 
   // Use relative URL - ShareButton will construct the full URL
@@ -222,7 +226,8 @@ export default async function PostPage({ params }: PageProps) {
               '@context': 'https://schema.org',
               '@type': 'BlogPosting',
               headline: post.title,
-              description: post.metaDescription || post.content.substring(0, 160),
+              description:
+                post.metaDescription || toPlainTextPreview(post.content).substring(0, 160),
               image: post.image || '',
               author: {
                 '@type': 'Organization',
