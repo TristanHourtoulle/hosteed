@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { Button } from '@/components/ui/shadcnui/button'
 import { LoginForm } from './LoginForm'
@@ -17,6 +18,22 @@ interface AuthFormProps {
 
 export const AuthForm = ({ mode = 'login' }: AuthFormProps) => {
   const router = useRouter()
+  const [backgroundImage, setBackgroundImage] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch('/api/homepage-settings')
+        if (response.ok) {
+          const data = await response.json()
+          setBackgroundImage(data.authBackgroundImage || null)
+        }
+      } catch (error) {
+        console.error('Error fetching homepage settings:', error)
+      }
+    }
+    fetchSettings()
+  }, [])
 
   const handleGoogleSignIn = () => {
     signIn('google', { redirectTo: '/host' })
@@ -77,17 +94,39 @@ export const AuthForm = ({ mode = 'login' }: AuthFormProps) => {
       }
     >
       <div className='flex' style={{ height: 'calc(100vh - 64px)' }}>
-        {/* Left side - Image */}
-        <div className='hidden lg:flex lg:w-1/2 bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600'>
-          <div className='w-full flex flex-col items-center justify-center text-white'>
+        {/* Left side - Image or gradient fallback */}
+        <div
+          className={`relative hidden lg:flex lg:w-1/2 overflow-hidden ${
+            backgroundImage
+              ? ''
+              : 'bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600'
+          }`}
+        >
+          {backgroundImage && (
+            <>
+              <Image
+                src={backgroundImage}
+                alt='Auth background'
+                fill
+                className='object-cover'
+                priority
+                sizes='50vw'
+              />
+              {/* Dark overlay to keep the white text readable whatever the image */}
+              <div className='absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/50' />
+            </>
+          )}
+          <div className='relative z-10 w-full flex flex-col items-center justify-center text-white'>
             <div className='text-center'>
               <div className='text-6xl mb-4'>☀️</div>
               <h1 className='text-4xl font-bold mb-2'>Bienvenue sur Hosteed</h1>
               <p className='text-xl'>Découvrez des hébergements exceptionnels</p>
             </div>
-            <div className='absolute bottom-10'>
-              <Image src='/window.svg' alt='Window' width={64} height={64} />
-            </div>
+            {!backgroundImage && (
+              <div className='absolute bottom-10'>
+                <Image src='/window.svg' alt='Window' width={64} height={64} />
+              </div>
+            )}
           </div>
         </div>
 
