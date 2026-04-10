@@ -9,6 +9,40 @@ import {
   requestPaymentInfo,
 } from '@/lib/services/payment.service'
 import { PaymentStatus, PaymentMethod, PaymentReqStatus } from '@prisma/client'
+import { formatCurrency } from '@/lib/utils/formatNumber'
+import { PageHeader } from '@/components/admin/ui/PageHeader'
+import { KpiCard } from '@/components/admin/ui/KpiCard'
+import { Button } from '@/components/ui/shadcnui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/shadcnui/dialog'
+import {
+  Shield,
+  Banknote,
+  Percent,
+  Coins,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  MessageSquare,
+  Loader2,
+  CreditCard,
+  User as UserIcon,
+  Mail,
+  Home,
+  MapPin,
+  Calendar,
+  History,
+  AlertTriangle,
+  Wallet,
+  FileText,
+  Send,
+} from 'lucide-react'
 
 interface PayRequestDetails {
   id: string
@@ -34,7 +68,6 @@ interface PayRequestDetails {
     checkOut: string
     totalPrice: number
   }
-  // Historique des actions (à implémenter dans le service)
   history?: Array<{
     id: string
     action: string
@@ -49,7 +82,250 @@ interface PayRequestDetails {
 
 type ActionType = 'approve' | 'reject' | 'request_info'
 
-export default function PaymentDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  SEPA_VIREMENT: 'Virement SEPA',
+  PRIPEO: 'Pripeo',
+  MOBILE_MONEY: 'Mobile Money',
+  PAYPAL: 'PayPal',
+  MONEYGRAM: 'MoneyGram',
+  TAPTAP: 'Taptap',
+  INTERNATIONAL: 'Virement International',
+  OTHER: 'Autre',
+}
+
+const REQUEST_TYPE_CONFIG: Partial<
+  Record<
+    PaymentStatus,
+    {
+      label: string
+      tone: string
+      icon: React.ComponentType<{ className?: string }>
+    }
+  >
+> = {
+  FULL_TRANSFER_REQ: {
+    label: 'Paiement intégral',
+    tone: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+    icon: Banknote,
+  },
+  MID_TRANSFER_REQ: {
+    label: 'Paiement 50%',
+    tone: 'bg-blue-50 text-blue-700 ring-blue-200',
+    icon: Percent,
+  },
+  REST_TRANSFER_REQ: {
+    label: 'Solde restant',
+    tone: 'bg-amber-50 text-amber-700 ring-amber-200',
+    icon: Coins,
+  },
+}
+
+const STATUS_CONFIG: Record<
+  PaymentReqStatus,
+  {
+    label: string
+    tone: string
+    icon: React.ComponentType<{ className?: string }>
+  }
+> = {
+  RECEIVED: {
+    label: 'En attente',
+    tone: 'bg-amber-50 text-amber-700 ring-amber-200',
+    icon: Clock,
+  },
+  DONE: {
+    label: 'Terminée',
+    tone: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+    icon: CheckCircle2,
+  },
+  REFUSED: {
+    label: 'Refusée',
+    tone: 'bg-red-50 text-red-700 ring-red-200',
+    icon: XCircle,
+  },
+}
+
+const ACTION_CONFIG: Record<
+  ActionType,
+  {
+    title: string
+    description: string
+    buttonLabel: string
+    icon: React.ComponentType<{ className?: string }>
+    iconBg: string
+    iconText: string
+    submitButtonClass: string
+  }
+> = {
+  approve: {
+    title: 'Approuver la demande',
+    description:
+      "Le paiement sera approuvé et l'hôte sera notifié par email.",
+    buttonLabel: 'Approuver',
+    icon: CheckCircle2,
+    iconBg: 'bg-emerald-50',
+    iconText: 'text-emerald-600',
+    submitButtonClass: 'bg-emerald-600 hover:bg-emerald-700 text-white',
+  },
+  reject: {
+    title: 'Refuser la demande',
+    description:
+      "Cette action ne peut pas être annulée. L'hôte sera notifié par email.",
+    buttonLabel: 'Refuser',
+    icon: XCircle,
+    iconBg: 'bg-red-50',
+    iconText: 'text-red-600',
+    submitButtonClass: 'bg-red-600 hover:bg-red-700 text-white',
+  },
+  request_info: {
+    title: 'Demander des informations',
+    description:
+      "L'hôte recevra un email avec votre demande d'informations supplémentaires.",
+    buttonLabel: 'Envoyer la demande',
+    icon: MessageSquare,
+    iconBg: 'bg-blue-50',
+    iconText: 'text-blue-600',
+    submitButtonClass: 'bg-blue-600 hover:bg-blue-700 text-white',
+  },
+}
+
+function RequestTypePill({ type }: { type: PaymentStatus }) {
+  const config = REQUEST_TYPE_CONFIG[type]
+  if (!config) {
+    return (
+      <span className='inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200'>
+        {type}
+      </span>
+    )
+  }
+  const Icon = config.icon
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${config.tone}`}
+    >
+      <Icon className='h-3 w-3' />
+      {config.label}
+    </span>
+  )
+}
+
+function RequestStatusPill({ status }: { status: PaymentReqStatus }) {
+  const config = STATUS_CONFIG[status]
+  const Icon = config.icon
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold ring-1 ${config.tone}`}
+    >
+      <Icon className='h-3.5 w-3.5' />
+      {config.label}
+    </span>
+  )
+}
+
+const INFO_TILE_TONE: Record<
+  'blue' | 'indigo' | 'emerald' | 'amber' | 'red' | 'slate',
+  { bg: string; text: string }
+> = {
+  blue: { bg: 'bg-blue-50', text: 'text-blue-600' },
+  indigo: { bg: 'bg-indigo-50', text: 'text-indigo-600' },
+  emerald: { bg: 'bg-emerald-50', text: 'text-emerald-600' },
+  amber: { bg: 'bg-amber-50', text: 'text-amber-600' },
+  red: { bg: 'bg-red-50', text: 'text-red-600' },
+  slate: { bg: 'bg-slate-100', text: 'text-slate-600' },
+}
+
+function InfoTile({
+  label,
+  value,
+  hint,
+  icon: Icon,
+  tone = 'slate',
+}: {
+  label: string
+  value: string
+  hint?: string
+  icon: React.ComponentType<{ className?: string }>
+  tone?: keyof typeof INFO_TILE_TONE
+}) {
+  const toneClass = INFO_TILE_TONE[tone]
+  return (
+    <div className='rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm'>
+      <div className='flex items-start justify-between gap-4'>
+        <div className='min-w-0 space-y-1'>
+          <p className='text-sm font-medium text-slate-500'>{label}</p>
+          <p
+            className={`text-lg font-semibold leading-tight ${toneClass.text}`}
+          >
+            {value}
+          </p>
+          {hint && <p className='text-xs text-slate-500'>{hint}</p>}
+        </div>
+        <div
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${toneClass.bg} ${toneClass.text}`}
+        >
+          <Icon className='h-5 w-5' />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SectionCard({
+  title,
+  icon: Icon,
+  children,
+}: {
+  title: string
+  icon: React.ComponentType<{ className?: string }>
+  children: React.ReactNode
+}) {
+  return (
+    <div className='rounded-2xl border border-slate-200/80 bg-white shadow-sm'>
+      <div className='flex items-center gap-3 border-b border-slate-100 px-6 py-4'>
+        <div className='flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600'>
+          <Icon className='h-4 w-4' />
+        </div>
+        <h2 className='text-sm font-semibold uppercase tracking-wide text-slate-500'>
+          {title}
+        </h2>
+      </div>
+      <div className='p-6'>{children}</div>
+    </div>
+  )
+}
+
+function InfoRow({
+  label,
+  value,
+}: {
+  label: string
+  value: React.ReactNode
+}) {
+  return (
+    <div>
+      <p className='text-xs font-semibold uppercase tracking-wide text-slate-500'>
+        {label}
+      </p>
+      <div className='mt-1 text-sm text-slate-900'>{value}</div>
+    </div>
+  )
+}
+
+function formatDateTime(dateString: string) {
+  return new Date(dateString).toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+export default function PaymentDetailsPage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
   const router = useRouter()
   const resolvedParams = use(params)
   const [payRequest, setPayRequest] = useState<PayRequestDetails | null>(null)
@@ -58,12 +334,11 @@ export default function PaymentDetailsPage({ params }: { params: Promise<{ id: s
   const [showModal, setShowModal] = useState(false)
   const [actionType, setActionType] = useState<ActionType>('approve')
   const [actionNote, setActionNote] = useState('')
+  const [noteError, setNoteError] = useState<string | null>(null)
 
   const fetchPayRequestDetails = useCallback(async () => {
     try {
       setLoading(true)
-      // Pour l'instant, on utilise getAllPaymentRequest et on filtre
-      // TODO: Créer une fonction getPaymentRequestById dans le service
       const result = await getPaymentRequestById(resolvedParams.id)
       setPayRequest(result)
     } catch (error) {
@@ -80,16 +355,31 @@ export default function PaymentDetailsPage({ params }: { params: Promise<{ id: s
   const openModal = (action: ActionType) => {
     setActionType(action)
     setActionNote('')
+    setNoteError(null)
     setShowModal(true)
   }
 
   const closeModal = () => {
+    if (updating) return
     setShowModal(false)
     setActionNote('')
+    setNoteError(null)
   }
 
   const handleAction = async () => {
     if (!payRequest) return
+
+    if (
+      (actionType === 'reject' || actionType === 'request_info') &&
+      !actionNote.trim()
+    ) {
+      setNoteError(
+        actionType === 'reject'
+          ? 'Veuillez fournir une raison pour le refus.'
+          : 'Veuillez spécifier quelles informations sont nécessaires.'
+      )
+      return
+    }
 
     try {
       setUpdating(true)
@@ -97,131 +387,43 @@ export default function PaymentDetailsPage({ params }: { params: Promise<{ id: s
       if (actionType === 'approve') {
         await approvePaymentRequest(payRequest.id)
       } else if (actionType === 'reject') {
-        if (!actionNote.trim()) {
-          alert('Veuillez fournir une raison pour le refus')
-          return
-        }
         await rejectPaymentRequest(payRequest.id, actionNote)
       } else if (actionType === 'request_info') {
-        if (!actionNote.trim()) {
-          alert('Veuillez spécifier quelles informations sont nécessaires')
-          return
-        }
         await requestPaymentInfo(payRequest.id, actionNote)
       }
 
       await fetchPayRequestDetails()
-      closeModal()
+      setShowModal(false)
+      setActionNote('')
+      setNoteError(null)
     } catch (error) {
       console.error("Erreur lors de l'action:", error)
-      alert("Une erreur s'est produite lors du traitement de la demande")
+      setNoteError("Une erreur s'est produite lors du traitement de la demande.")
     } finally {
       setUpdating(false)
     }
   }
 
-  const goBack = () => {
-    router.push('/admin/payment')
-  }
-
-  const getPaymentMethodLabel = (method: PaymentMethod) => {
-    const labels: Record<PaymentMethod, string> = {
-      SEPA_VIREMENT: 'Virement SEPA',
-      PRIPEO: 'Pripeo',
-      MOBILE_MONEY: 'Mobile Money',
-      PAYPAL: 'PayPal',
-      MONEYGRAM: 'MoneyGram',
-      TAPTAP: 'Taptap',
-      INTERNATIONAL: 'Virement International',
-      OTHER: 'Autre',
-    }
-    return labels[method] || method
-  }
-
-  const getPaymentRequestLabel = (type: PaymentStatus) => {
-    const labels: Partial<Record<PaymentStatus, string>> = {
-      FULL_TRANSFER_REQ: 'Paiement intégral',
-      MID_TRANSFER_REQ: 'Paiement de 50%',
-      REST_TRANSFER_REQ: 'Solde restant',
-    }
-    return labels[type] || type
-  }
-
-  const getStatusBadge = (type: PaymentStatus) => {
-    switch (type) {
-      case PaymentStatus.FULL_TRANSFER_REQ:
-        return (
-          <span className='inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800'>
-            💰 {getPaymentRequestLabel(type)}
-          </span>
-        )
-      case PaymentStatus.MID_TRANSFER_REQ:
-        return (
-          <span className='inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800'>
-            📊 {getPaymentRequestLabel(type)}
-          </span>
-        )
-      case PaymentStatus.REST_TRANSFER_REQ:
-        return (
-          <span className='inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800'>
-            💳 {getPaymentRequestLabel(type)}
-          </span>
-        )
-      default:
-        return (
-          <span className='inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800'>
-            {getPaymentRequestLabel(type)}
-          </span>
-        )
-    }
-  }
-
-  const getRequestStatusBadge = (status: PaymentReqStatus) => {
-    switch (status) {
-      case PaymentReqStatus.RECEIVED:
-        return (
-          <span className='inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800'>
-            ⏳ Reçu
-          </span>
-        )
-      case PaymentReqStatus.DONE:
-        return (
-          <span className='inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800'>
-            ✅ Terminé
-          </span>
-        )
-      case PaymentReqStatus.REFUSED:
-        return (
-          <span className='inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800'>
-            ❌ Refusé
-          </span>
-        )
-      default:
-        return (
-          <span className='inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800'>
-            {status}
-          </span>
-        )
-    }
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
-
   if (loading) {
     return (
-      <div className='min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6'>
-        <div className='flex items-center justify-center min-h-[calc(100vh-4rem)]'>
-          <div className='text-center'>
-            <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4'></div>
-            <p className='text-gray-600'>Chargement des détails de la demande...</p>
+      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/40'>
+        <div className='mx-auto max-w-6xl space-y-8 p-6'>
+          <div className='space-y-3'>
+            <div className='h-4 w-40 animate-pulse rounded bg-slate-200' />
+            <div className='h-10 w-80 animate-pulse rounded bg-slate-200' />
+            <div className='h-4 w-96 animate-pulse rounded bg-slate-200' />
+          </div>
+          <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
+            {[0, 1, 2, 3].map(i => (
+              <div
+                key={i}
+                className='h-32 animate-pulse rounded-2xl border border-slate-200/80 bg-white'
+              />
+            ))}
+          </div>
+          <div className='grid gap-6 lg:grid-cols-3'>
+            <div className='h-96 animate-pulse rounded-2xl border border-slate-200/80 bg-white lg:col-span-2' />
+            <div className='h-96 animate-pulse rounded-2xl border border-slate-200/80 bg-white' />
           </div>
         </div>
       </div>
@@ -230,485 +432,457 @@ export default function PaymentDetailsPage({ params }: { params: Promise<{ id: s
 
   if (!payRequest) {
     return (
-      <div className='min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6'>
-        <div className='max-w-4xl mx-auto'>
-          <div className='bg-white rounded-xl shadow-sm p-8 text-center'>
-            <div className='text-6xl mb-4'>❌</div>
-            <h2 className='text-xl font-bold text-gray-900 mb-2'>Demande introuvable</h2>
-            <p className='text-gray-600 mt-1'>
-              Cette réservation n&apos;existe pas ou a été supprimée.
+      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/40'>
+        <div className='mx-auto max-w-4xl space-y-8 p-6'>
+          <PageHeader
+            backHref='/admin/payment'
+            backLabel='Retour aux demandes'
+            eyebrow='Espace administrateur'
+            title='Demande introuvable'
+            subtitle='Cette demande de paiement n’existe pas ou a été supprimée.'
+          />
+          <div className='rounded-2xl border border-slate-200/80 bg-white p-12 text-center shadow-sm'>
+            <div className='mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-red-600'>
+              <AlertTriangle className='h-8 w-8' />
+            </div>
+            <h2 className='mt-4 text-lg font-bold text-slate-900'>
+              Demande introuvable
+            </h2>
+            <p className='mt-2 text-sm text-slate-500'>
+              Vérifiez l’identifiant de la demande ou revenez à la liste.
             </p>
-            <button
-              onClick={goBack}
-              className='px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors'
+            <Button
+              onClick={() => router.push('/admin/payment')}
+              className='mt-6'
             >
               Retour à la liste
-            </button>
+            </Button>
           </div>
         </div>
       </div>
     )
   }
 
+  const amount = Number(payRequest.prices || 0)
+  const shortId = payRequest.id.slice(-6).toUpperCase()
+  const actionConfig = ACTION_CONFIG[actionType]
+  const ActionIcon = actionConfig.icon
+  const isPending = payRequest.status === PaymentReqStatus.RECEIVED
+
   return (
-    <div className='min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6'>
-      <div className='max-w-6xl mx-auto'>
-        {/* Header */}
-        <div className='mb-8 flex items-center justify-between'>
-          <div className='flex items-center gap-4'>
-            <button
-              onClick={goBack}
-              className='p-2 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow border border-gray-200'
-            >
-              <svg
-                className='w-5 h-5 text-gray-600'
-                fill='none'
-                stroke='currentColor'
-                viewBox='0 0 24 24'
-              >
-                <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                  strokeWidth={2}
-                  d='M10 19l-7-7m0 0l7-7m-7 7h18'
+    <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/40'>
+      <div className='mx-auto max-w-6xl space-y-8 p-6'>
+        <PageHeader
+          backHref='/admin/payment'
+          backLabel='Retour aux demandes'
+          eyebrow='Espace administrateur'
+          eyebrowIcon={Shield}
+          title={`Demande #${shortId}`}
+          subtitle='Consultez les détails de la demande de paiement et validez, refusez ou demandez des informations complémentaires.'
+          actions={<RequestStatusPill status={payRequest.status} />}
+        />
+
+        {/* KPI summary row */}
+        <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
+          <KpiCard
+            label='Montant'
+            value={formatCurrency(amount)}
+            hint='à verser à l’hôte'
+            icon={Wallet}
+            tone='emerald'
+          />
+          <InfoTile
+            label='Type'
+            value={
+              REQUEST_TYPE_CONFIG[payRequest.PaymentRequest]?.label ??
+              payRequest.PaymentRequest
+            }
+            hint='nature du versement'
+            icon={CreditCard}
+            tone='blue'
+          />
+          <InfoTile
+            label='Méthode'
+            value={PAYMENT_METHOD_LABELS[payRequest.method] ?? payRequest.method}
+            hint='canal de paiement'
+            icon={Banknote}
+            tone='indigo'
+          />
+          <InfoTile
+            label='Statut'
+            value={STATUS_CONFIG[payRequest.status].label}
+            hint={isPending ? 'à traiter en priorité' : 'demande clôturée'}
+            icon={STATUS_CONFIG[payRequest.status].icon}
+            tone={
+              payRequest.status === PaymentReqStatus.DONE
+                ? 'emerald'
+                : payRequest.status === PaymentReqStatus.REFUSED
+                  ? 'red'
+                  : 'amber'
+            }
+          />
+        </div>
+
+        {/* Main grid */}
+        <div className='grid gap-6 lg:grid-cols-3'>
+          {/* Left column */}
+          <div className='space-y-6 lg:col-span-2'>
+            {/* Request info */}
+            <SectionCard title='Informations de la demande' icon={FileText}>
+              <div className='grid gap-5 sm:grid-cols-2'>
+                <InfoRow
+                  label='Type de paiement'
+                  value={<RequestTypePill type={payRequest.PaymentRequest} />}
                 />
-              </svg>
-            </button>
-            <div>
-              <h1 className='text-3xl font-bold text-gray-900'>
-                Détails de la demande de paiement
-              </h1>
-              <p className='text-gray-600 mt-1'>
-                Demande #{payRequest.id.slice(0, 8)}... • Date non disponible
-              </p>
-            </div>
-          </div>
-          <div className='flex items-center gap-3'>{getRequestStatusBadge(payRequest.status)}</div>
-        </div>
-
-        {/* Main Content Grid */}
-        <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
-          {/* Informations principales */}
-          <div className='lg:col-span-2 space-y-6'>
-            {/* Détails de la demande */}
-            <div className='bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden'>
-              <div className='bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200'>
-                <h2 className='text-lg font-semibold text-gray-900'>Informations de la demande</h2>
-              </div>
-              <div className='p-6 space-y-4'>
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                  <div>
-                    <label className='text-sm font-medium text-gray-500'>Type de paiement</label>
-                    <div className='mt-1'>{getStatusBadge(payRequest.PaymentRequest)}</div>
-                  </div>
-                  <div>
-                    <label className='text-sm font-medium text-gray-500'>Montant</label>
-                    <div className='mt-1 text-2xl font-bold text-green-600'>
-                      {Number(payRequest.prices).toLocaleString('fr-FR', {
-                        style: 'currency',
-                        currency: 'EUR',
-                      })}
-                    </div>
-                  </div>
-                  <div>
-                    <label className='text-sm font-medium text-gray-500'>Méthode de paiement</label>
-                    <div className='mt-1 text-gray-900'>
-                      {getPaymentMethodLabel(payRequest.method)}
-                    </div>
-                  </div>
-                  <div>
-                    <label className='text-sm font-medium text-gray-500'>Statut</label>
-                    <div className='mt-1'>{getRequestStatusBadge(payRequest.status)}</div>
-                  </div>
-                </div>
-                {payRequest.notes && (
-                  <div>
-                    <label className='text-sm font-medium text-gray-500'>
-                      Notes de l&apos;hôte
-                    </label>
-                    <div className='mt-1 p-3 bg-gray-50 rounded-lg border'>
-                      <p className='text-gray-900'>{payRequest.notes}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Informations de l'hôte */}
-            <div className='bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden'>
-              <div className='bg-gradient-to-r from-green-50 to-emerald-50 px-6 py-4 border-b border-gray-200'>
-                <h2 className='text-lg font-semibold text-gray-900'>Informations de l&apos;hôte</h2>
-              </div>
-              <div className='p-6'>
-                <div className='flex items-start gap-4'>
-                  <div className='bg-blue-100 p-3 rounded-lg'>
-                    <svg
-                      className='w-6 h-6 text-blue-600'
-                      fill='none'
-                      stroke='currentColor'
-                      viewBox='0 0 24 24'
-                    >
-                      <path
-                        strokeLinecap='round'
-                        strokeLinejoin='round'
-                        strokeWidth={2}
-                        d='M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'
-                      />
-                    </svg>
-                  </div>
-                  <div className='flex-1'>
-                    <h3 className='text-lg font-semibold text-gray-900'>
-                      {payRequest.user.name || 'Sans nom'}
-                    </h3>
-                    <p className='text-gray-600'>{payRequest.user.email}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Informations de la réservation */}
-            <div className='bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden'>
-              <div className='bg-gradient-to-r from-purple-50 to-pink-50 px-6 py-4 border-b border-gray-200'>
-                <h2 className='text-lg font-semibold text-gray-900'>Détails de la réservation</h2>
-              </div>
-              <div className='p-6'>
-                <div className='space-y-4'>
-                  <div>
-                    <label className='text-sm font-medium text-gray-500'>Propriété</label>
-                    <div className='mt-1 text-gray-900 font-medium'>
-                      {payRequest.rent.product.name}
-                    </div>
-                    <div className='text-sm text-gray-600'>{payRequest.rent.product.address}</div>
-                  </div>
-                  <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-                    <div>
-                      <label className='text-sm font-medium text-gray-500'>Check-in</label>
-                      <div className='mt-1 text-gray-900'>
-                        {new Date(payRequest.rent.checkIn).toLocaleDateString('fr-FR')}
-                      </div>
-                    </div>
-                    <div>
-                      <label className='text-sm font-medium text-gray-500'>Check-out</label>
-                      <div className='mt-1 text-gray-900'>
-                        {new Date(payRequest.rent.checkOut).toLocaleDateString('fr-FR')}
-                      </div>
-                    </div>
-                    <div>
-                      <label className='text-sm font-medium text-gray-500'>Prix total</label>
-                      <div className='mt-1 text-gray-900 font-semibold'>
-                        {payRequest.rent.totalPrice.toLocaleString('fr-FR', {
-                          style: 'currency',
-                          currency: 'EUR',
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Historique des actions */}
-            <div className='bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden'>
-              <div className='bg-gradient-to-r from-amber-50 to-orange-50 px-6 py-4 border-b border-gray-200'>
-                <h2 className='text-lg font-semibold text-gray-900'>
-                  Historique des modifications
-                </h2>
-              </div>
-              <div className='p-6'>
-                {payRequest.history && payRequest.history.length > 0 ? (
-                  <div className='space-y-4'>
-                    {payRequest.history.map(entry => (
-                      <div
-                        key={entry.id}
-                        className='flex gap-4 pb-4 border-b border-gray-100 last:border-b-0'
-                      >
-                        <div className='bg-blue-100 p-2 rounded-lg h-fit'>
-                          <svg
-                            className='w-4 h-4 text-blue-600'
-                            fill='none'
-                            stroke='currentColor'
-                            viewBox='0 0 24 24'
-                          >
-                            <path
-                              strokeLinecap='round'
-                              strokeLinejoin='round'
-                              strokeWidth={2}
-                              d='M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'
-                            />
-                          </svg>
-                        </div>
-                        <div className='flex-1'>
-                          <div className='flex items-center justify-between'>
-                            <h4 className='font-medium text-gray-900'>{entry.action}</h4>
-                            <span className='text-sm text-gray-500'>
-                              {formatDate(entry.createdAt)}
-                            </span>
-                          </div>
-                          {entry.note && <p className='text-gray-600 mt-1'>{entry.note}</p>}
-                          {entry.adminUser && (
-                            <p className='text-sm text-gray-500 mt-1'>
-                              Par: {entry.adminUser.name || entry.adminUser.email}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className='text-center py-8 text-gray-500'>
-                    <svg
-                      className='w-12 h-12 mx-auto mb-3 text-gray-300'
-                      fill='none'
-                      stroke='currentColor'
-                      viewBox='0 0 24 24'
-                    >
-                      <path
-                        strokeLinecap='round'
-                        strokeLinejoin='round'
-                        strokeWidth={2}
-                        d='M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'
-                      />
-                    </svg>
-                    <p>Aucun historique de modifications disponible</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Actions sidebar */}
-          <div className='space-y-6'>
-            {/* Actions rapides */}
-            <div className='bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden'>
-              <div className='bg-gradient-to-r from-indigo-50 to-blue-50 px-6 py-4 border-b border-gray-200'>
-                <h2 className='text-lg font-semibold text-gray-900'>Actions</h2>
-              </div>
-              <div className='p-6 space-y-3'>
-                {payRequest.status === PaymentReqStatus.RECEIVED && (
-                  <>
-                    <button
-                      onClick={() => openModal('approve')}
-                      disabled={updating}
-                      className='w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'
-                    >
-                      <span>✅</span>
-                      <span>Approuver la demande</span>
-                    </button>
-                    <button
-                      onClick={() => openModal('reject')}
-                      disabled={updating}
-                      className='w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'
-                    >
-                      <span>❌</span>
-                      <span>Refuser la demande</span>
-                    </button>
-                    <button
-                      onClick={() => openModal('request_info')}
-                      disabled={updating}
-                      className='w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'
-                    >
-                      <span>ℹ️</span>
-                      <span>Demander des infos</span>
-                    </button>
-                  </>
-                )}
-                {payRequest.status === PaymentReqStatus.DONE && (
-                  <div className='p-4 bg-green-50 rounded-lg border border-green-200'>
-                    <div className='flex items-center gap-2 text-green-800'>
-                      <span>✅</span>
-                      <span className='font-medium'>Demande approuvée</span>
-                    </div>
-                    <p className='text-sm text-green-700 mt-1'>
-                      Cette demande de paiement a été approuvée et traitée.
-                    </p>
-                  </div>
-                )}
-                {payRequest.status === PaymentReqStatus.REFUSED && (
-                  <div className='p-4 bg-red-50 rounded-lg border border-red-200'>
-                    <div className='flex items-center gap-2 text-red-800'>
-                      <span>❌</span>
-                      <span className='font-medium'>Demande refusée</span>
-                    </div>
-                    <p className='text-sm text-red-700 mt-1'>
-                      Cette demande de paiement a été refusée.
-                    </p>
-                  </div>
-                )}
-                <button
-                  onClick={goBack}
-                  className='w-full px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center justify-center gap-2'
-                >
-                  <span>↩️</span>
-                  <span>Retour à la liste</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Résumé */}
-            <div className='bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden'>
-              <div className='bg-gradient-to-r from-gray-50 to-slate-50 px-6 py-4 border-b border-gray-200'>
-                <h2 className='text-lg font-semibold text-gray-900'>Résumé</h2>
-              </div>
-              <div className='p-6 space-y-3'>
-                <div className='flex justify-between items-center'>
-                  <span className='text-gray-600'>Créé le:</span>
-                  <span className='font-medium text-gray-900'>Non disponible</span>
-                </div>
-                <div className='flex justify-between items-center'>
-                  <span className='text-gray-600'>Modifié le:</span>
-                  <span className='font-medium text-gray-900'>Non disponible</span>
-                </div>
-                <div className='flex justify-between items-center'>
-                  <span className='text-gray-600'>ID demande:</span>
-                  <span className='font-mono text-sm text-gray-900'>
-                    {payRequest.id.slice(0, 8)}...
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Modal pour les actions */}
-        {showModal && (
-          <div className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50'>
-            <div className='bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-gray-100 overflow-hidden transform transition-all'>
-              {/* Header */}
-              <div
-                className={`p-6 ${
-                  actionType === 'approve'
-                    ? 'bg-gradient-to-r from-green-600 to-green-700'
-                    : actionType === 'reject'
-                      ? 'bg-gradient-to-r from-red-600 to-red-700'
-                      : 'bg-gradient-to-r from-blue-600 to-blue-700'
-                }`}
-              >
-                <div className='flex items-center gap-3'>
-                  <div className='bg-white/20 p-3 rounded-xl'>
-                    <span className='text-2xl'>
-                      {actionType === 'reject' && '❌'}
-                      {actionType === 'request_info' && 'ℹ️'}
-                      {actionType === 'approve' && '✅'}
+                <InfoRow
+                  label='Montant'
+                  value={
+                    <span className='text-2xl font-bold tabular-nums text-emerald-600'>
+                      {formatCurrency(amount)}
                     </span>
+                  }
+                />
+                <InfoRow
+                  label='Méthode de paiement'
+                  value={
+                    PAYMENT_METHOD_LABELS[payRequest.method] ?? payRequest.method
+                  }
+                />
+                <InfoRow
+                  label='Statut'
+                  value={<RequestStatusPill status={payRequest.status} />}
+                />
+              </div>
+              {payRequest.notes && (
+                <div className='mt-6'>
+                  <p className='text-xs font-semibold uppercase tracking-wide text-slate-500'>
+                    Notes de l&apos;hôte
+                  </p>
+                  <div className='mt-2 rounded-xl border border-slate-200 bg-slate-50/60 p-4 text-sm text-slate-700'>
+                    {payRequest.notes}
                   </div>
-                  <div>
-                    <h3 className='text-xl font-bold text-white'>
-                      {actionType === 'reject' && 'Refuser la demande'}
-                      {actionType === 'request_info' && 'Demander des informations'}
-                      {actionType === 'approve' && 'Approuver la demande'}
-                    </h3>
-                    <p className='text-white/80 text-sm mt-1'>Action sur la demande de paiement</p>
+                </div>
+              )}
+            </SectionCard>
+
+            {/* Host info */}
+            <SectionCard title='Hôte' icon={UserIcon}>
+              <div className='flex items-start gap-4'>
+                <div className='flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 text-lg font-bold text-white shadow-sm'>
+                  {(payRequest.user.name || payRequest.user.email)
+                    .charAt(0)
+                    .toUpperCase()}
+                </div>
+                <div className='min-w-0 flex-1'>
+                  <p className='text-base font-semibold text-slate-900'>
+                    {payRequest.user.name || 'Sans nom'}
+                  </p>
+                  <div className='mt-1 flex items-center gap-1.5 text-sm text-slate-600'>
+                    <Mail className='h-3.5 w-3.5 text-slate-400' />
+                    <a
+                      href={`mailto:${payRequest.user.email}`}
+                      className='hover:text-blue-600'
+                    >
+                      {payRequest.user.email}
+                    </a>
                   </div>
                 </div>
               </div>
+            </SectionCard>
 
-              {/* Contenu */}
-              <div className='p-6'>
-                {/* Champ de saisie pour les actions nécessitant une note */}
-                {(actionType === 'reject' || actionType === 'request_info') && (
-                  <div className='mb-6'>
-                    <label className='block text-sm font-semibold text-gray-700 mb-3'>
-                      {actionType === 'reject' ? 'Raison du refus:' : 'Informations demandées:'}
-                    </label>
-                    <textarea
-                      value={actionNote}
-                      onChange={e => setActionNote(e.target.value)}
-                      className='w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none bg-gray-50 focus:bg-white'
-                      rows={4}
-                      placeholder={
-                        actionType === 'reject'
-                          ? 'Expliquez clairement pourquoi cette demande est refusée...'
-                          : 'Spécifiez quelles informations supplémentaires sont nécessaires...'
-                      }
-                    />
-                  </div>
-                )}
-
-                {/* Alerte d'information */}
-                <div
-                  className={`mb-6 p-4 rounded-xl border-l-4 ${
-                    actionType === 'approve'
-                      ? 'bg-green-50 border-green-400'
-                      : actionType === 'reject'
-                        ? 'bg-red-50 border-red-400'
-                        : 'bg-blue-50 border-blue-400'
-                  }`}
-                >
-                  <p
-                    className={`text-sm ${
-                      actionType === 'approve'
-                        ? 'text-green-700'
-                        : actionType === 'reject'
-                          ? 'text-red-700'
-                          : 'text-blue-700'
-                    }`}
-                  >
-                    {actionType === 'approve' &&
-                      'Le paiement sera approuvé et l&apos;utilisateur sera notifié par email.'}
-                    {actionType === 'reject' &&
-                      'Cette action ne peut pas être annulée. L&apos;utilisateur sera notifié par email.'}
-                    {actionType === 'request_info' &&
-                      'L&apos;utilisateur recevra un email avec votre demande d&apos;informations supplémentaires.'}
+            {/* Reservation info */}
+            <SectionCard title='Réservation associée' icon={Home}>
+              <div className='space-y-5'>
+                <div>
+                  <p className='text-xs font-semibold uppercase tracking-wide text-slate-500'>
+                    Hébergement
+                  </p>
+                  <p className='mt-1 text-base font-semibold text-slate-900'>
+                    {payRequest.rent.product.name}
+                  </p>
+                  <p className='mt-1 flex items-center gap-1.5 text-sm text-slate-500'>
+                    <MapPin className='h-3.5 w-3.5' />
+                    {payRequest.rent.product.address}
                   </p>
                 </div>
+                <div className='grid gap-4 sm:grid-cols-3'>
+                  <div className='rounded-xl bg-slate-50 p-3'>
+                    <p className='text-xs font-semibold uppercase tracking-wide text-slate-500'>
+                      Arrivée
+                    </p>
+                    <p className='mt-1 flex items-center gap-1.5 text-sm font-semibold text-slate-900'>
+                      <Calendar className='h-4 w-4 text-blue-600' />
+                      {new Date(payRequest.rent.checkIn).toLocaleDateString(
+                        'fr-FR',
+                        { day: '2-digit', month: 'short', year: 'numeric' }
+                      )}
+                    </p>
+                  </div>
+                  <div className='rounded-xl bg-slate-50 p-3'>
+                    <p className='text-xs font-semibold uppercase tracking-wide text-slate-500'>
+                      Départ
+                    </p>
+                    <p className='mt-1 flex items-center gap-1.5 text-sm font-semibold text-slate-900'>
+                      <Calendar className='h-4 w-4 text-blue-600' />
+                      {new Date(payRequest.rent.checkOut).toLocaleDateString(
+                        'fr-FR',
+                        { day: '2-digit', month: 'short', year: 'numeric' }
+                      )}
+                    </p>
+                  </div>
+                  <div className='rounded-xl bg-slate-50 p-3'>
+                    <p className='text-xs font-semibold uppercase tracking-wide text-slate-500'>
+                      Prix total
+                    </p>
+                    <p className='mt-1 flex items-center gap-1.5 text-sm font-semibold text-slate-900'>
+                      <Wallet className='h-4 w-4 text-emerald-600' />
+                      {formatCurrency(payRequest.rent.totalPrice)}
+                    </p>
+                  </div>
+                </div>
               </div>
+            </SectionCard>
 
-              {/* Footer */}
-              <div className='bg-gray-50 px-6 py-4 flex justify-end space-x-3'>
-                <button
-                  onClick={closeModal}
-                  className='px-6 py-2.5 text-gray-600 hover:text-gray-800 font-medium rounded-xl hover:bg-gray-100 transition-all duration-200 border border-gray-200'
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={handleAction}
-                  disabled={updating}
-                  className={`px-6 py-2.5 text-white font-medium rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg hover:shadow-xl ${
-                    actionType === 'approve'
-                      ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'
-                      : actionType === 'reject'
-                        ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800'
-                        : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800'
-                  }`}
-                >
-                  {updating ? (
-                    <>
-                      <svg
-                        className='w-4 h-4 animate-spin'
-                        fill='none'
-                        stroke='currentColor'
-                        viewBox='0 0 24 24'
-                      >
-                        <path
-                          strokeLinecap='round'
-                          strokeLinejoin='round'
-                          strokeWidth={2}
-                          d='M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15'
-                        />
-                      </svg>
-                      Traitement...
-                    </>
-                  ) : (
-                    <>
-                      <span>
-                        {actionType === 'approve' && '✅'}
-                        {actionType === 'reject' && '❌'}
-                        {actionType === 'request_info' && '📤'}
-                      </span>
-                      {actionType === 'approve'
-                        ? 'Approuver'
-                        : actionType === 'reject'
-                          ? 'Refuser'
-                          : 'Envoyer la demande'}
-                    </>
-                  )}
-                </button>
+            {/* History */}
+            <SectionCard title='Historique des modifications' icon={History}>
+              {payRequest.history && payRequest.history.length > 0 ? (
+                <ul className='space-y-4'>
+                  {payRequest.history.map(entry => (
+                    <li
+                      key={entry.id}
+                      className='flex gap-4 border-b border-slate-100 pb-4 last:border-b-0 last:pb-0'
+                    >
+                      <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600'>
+                        <Clock className='h-4 w-4' />
+                      </div>
+                      <div className='min-w-0 flex-1'>
+                        <div className='flex items-start justify-between gap-3'>
+                          <p className='text-sm font-semibold text-slate-900'>
+                            {entry.action}
+                          </p>
+                          <span className='shrink-0 text-xs text-slate-500'>
+                            {formatDateTime(entry.createdAt)}
+                          </span>
+                        </div>
+                        {entry.note && (
+                          <p className='mt-1 text-sm text-slate-600'>
+                            {entry.note}
+                          </p>
+                        )}
+                        {entry.adminUser && (
+                          <p className='mt-1 text-xs text-slate-500'>
+                            Par {entry.adminUser.name || entry.adminUser.email}
+                          </p>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className='flex flex-col items-center justify-center py-8 text-center'>
+                  <div className='flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400'>
+                    <History className='h-6 w-6' />
+                  </div>
+                  <p className='mt-3 text-sm text-slate-500'>
+                    Aucun historique disponible pour le moment
+                  </p>
+                </div>
+              )}
+            </SectionCard>
+          </div>
+
+          {/* Right column — actions + summary */}
+          <div className='space-y-6'>
+            <SectionCard title='Actions' icon={CheckCircle2}>
+              {isPending ? (
+                <div className='space-y-3'>
+                  <Button
+                    onClick={() => openModal('approve')}
+                    disabled={updating}
+                    className='w-full justify-center gap-2 bg-emerald-600 text-white hover:bg-emerald-700'
+                  >
+                    <CheckCircle2 className='h-4 w-4' />
+                    Approuver la demande
+                  </Button>
+                  <Button
+                    onClick={() => openModal('reject')}
+                    disabled={updating}
+                    variant='outline'
+                    className='w-full justify-center gap-2 border-red-200 text-red-700 hover:bg-red-50'
+                  >
+                    <XCircle className='h-4 w-4' />
+                    Refuser la demande
+                  </Button>
+                  <Button
+                    onClick={() => openModal('request_info')}
+                    disabled={updating}
+                    variant='outline'
+                    className='w-full justify-center gap-2 border-blue-200 text-blue-700 hover:bg-blue-50'
+                  >
+                    <MessageSquare className='h-4 w-4' />
+                    Demander des infos
+                  </Button>
+                </div>
+              ) : payRequest.status === PaymentReqStatus.DONE ? (
+                <div className='rounded-xl border border-emerald-200 bg-emerald-50/60 p-4'>
+                  <div className='flex items-center gap-2 text-emerald-800'>
+                    <CheckCircle2 className='h-4 w-4' />
+                    <span className='text-sm font-semibold'>
+                      Demande approuvée
+                    </span>
+                  </div>
+                  <p className='mt-1 text-xs text-emerald-700'>
+                    Cette demande de paiement a été approuvée et traitée.
+                  </p>
+                </div>
+              ) : (
+                <div className='rounded-xl border border-red-200 bg-red-50/60 p-4'>
+                  <div className='flex items-center gap-2 text-red-800'>
+                    <XCircle className='h-4 w-4' />
+                    <span className='text-sm font-semibold'>Demande refusée</span>
+                  </div>
+                  <p className='mt-1 text-xs text-red-700'>
+                    Cette demande de paiement a été refusée.
+                  </p>
+                </div>
+              )}
+            </SectionCard>
+
+            <SectionCard title='Résumé' icon={FileText}>
+              <dl className='space-y-3 text-sm'>
+                <div className='flex items-center justify-between'>
+                  <dt className='text-slate-500'>ID demande</dt>
+                  <dd className='font-mono text-xs text-slate-900'>
+                    #{shortId}
+                  </dd>
+                </div>
+                <div className='flex items-center justify-between'>
+                  <dt className='text-slate-500'>Créée le</dt>
+                  <dd className='font-medium text-slate-900'>
+                    {payRequest.createdAt
+                      ? formatDateTime(payRequest.createdAt)
+                      : '—'}
+                  </dd>
+                </div>
+                <div className='flex items-center justify-between'>
+                  <dt className='text-slate-500'>Mise à jour</dt>
+                  <dd className='font-medium text-slate-900'>
+                    {payRequest.updatedAt
+                      ? formatDateTime(payRequest.updatedAt)
+                      : '—'}
+                  </dd>
+                </div>
+              </dl>
+            </SectionCard>
+          </div>
+        </div>
+      </div>
+
+      {/* Action modal */}
+      <Dialog open={showModal} onOpenChange={open => !open && closeModal()}>
+        <DialogContent className='sm:max-w-[520px]'>
+          <DialogHeader>
+            <div className='flex items-start gap-3'>
+              <div
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-1 ring-slate-100 ${actionConfig.iconBg} ${actionConfig.iconText}`}
+              >
+                <ActionIcon className='h-5 w-5' />
+              </div>
+              <div className='min-w-0 flex-1 space-y-1'>
+                <DialogTitle className='text-lg'>
+                  {actionConfig.title}
+                </DialogTitle>
+                <DialogDescription className='text-sm text-slate-600'>
+                  {actionConfig.description}
+                </DialogDescription>
               </div>
             </div>
+          </DialogHeader>
+
+          <div className='space-y-4 py-2'>
+            {/* Amount recap */}
+            <div className='flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3'>
+              <div className='min-w-0'>
+                <p className='truncate text-sm font-semibold text-slate-900'>
+                  {payRequest.user.name || payRequest.user.email}
+                </p>
+                <p className='truncate text-xs text-slate-500'>
+                  {payRequest.rent.product.name}
+                </p>
+              </div>
+              <p className='shrink-0 text-lg font-bold tabular-nums text-slate-900'>
+                {formatCurrency(amount)}
+              </p>
+            </div>
+
+            {/* Note textarea for reject / request_info */}
+            {(actionType === 'reject' || actionType === 'request_info') && (
+              <div>
+                <label
+                  htmlFor='action-note'
+                  className='mb-2 block text-sm font-semibold text-slate-700'
+                >
+                  {actionType === 'reject'
+                    ? 'Raison du refus'
+                    : 'Informations demandées'}
+                </label>
+                <textarea
+                  id='action-note'
+                  value={actionNote}
+                  onChange={e => {
+                    setActionNote(e.target.value)
+                    if (noteError) setNoteError(null)
+                  }}
+                  rows={4}
+                  placeholder={
+                    actionType === 'reject'
+                      ? 'Expliquez clairement pourquoi cette demande est refusée…'
+                      : 'Spécifiez quelles informations supplémentaires sont nécessaires…'
+                  }
+                  className='w-full resize-none rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 outline-none ring-offset-0 transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'
+                />
+                {noteError && (
+                  <p className='mt-2 flex items-center gap-1.5 text-xs font-medium text-red-600'>
+                    <AlertTriangle className='h-3.5 w-3.5' />
+                    {noteError}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+
+          <DialogFooter className='gap-2'>
+            <Button
+              variant='outline'
+              onClick={closeModal}
+              disabled={updating}
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={handleAction}
+              disabled={updating}
+              className={`gap-2 ${actionConfig.submitButtonClass}`}
+            >
+              {updating ? (
+                <>
+                  <Loader2 className='h-4 w-4 animate-spin' />
+                  Traitement…
+                </>
+              ) : (
+                <>
+                  {actionType === 'request_info' ? (
+                    <Send className='h-4 w-4' />
+                  ) : (
+                    <ActionIcon className='h-4 w-4' />
+                  )}
+                  {actionConfig.buttonLabel}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
