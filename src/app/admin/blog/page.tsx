@@ -106,7 +106,15 @@ export default function BlogManagementPage() {
       }
 
       const data = await response.json()
-      setPosts(data)
+      // Defensive: the /api/posts contract is an array, but guard against a
+      // wrapped shape (e.g. `{ posts, pagination }`) in case an upstream
+      // change accidentally leaks the paginated object through.
+      const normalized = Array.isArray(data)
+        ? data
+        : Array.isArray((data as { posts?: unknown }).posts)
+          ? ((data as { posts: Post[] }).posts)
+          : []
+      setPosts(normalized)
     } catch (error) {
       console.error('Error fetching posts:', error)
       toast.error('Erreur lors du chargement des articles')
