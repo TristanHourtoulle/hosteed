@@ -1,4 +1,5 @@
 import { UserRole, DayEnum } from '@prisma/client'
+import type { CreateRoomTypeInput } from '@/lib/services/room-type.service'
 
 export interface UserInterface {
   id: string
@@ -104,6 +105,8 @@ export interface CreateProductInput {
   // Nouveaux champs pour les hôtels
   isHotel?: boolean
   hotelInfo?: HotelInfo | null
+  // Hotel multi-room-type (Lot 1): per-establishment room types
+  roomTypes?: CreateRoomTypeInput[]
   // Prix spéciaux
   specialPrices?: SpecialPriceInput[]
   // Données SEO

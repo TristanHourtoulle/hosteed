@@ -9,6 +9,7 @@ import { CreateProductInput } from '@/lib/interface/userInterface'
 import { invalidateProductCache } from '@/lib/cache/invalidation'
 import { create as createHotel, findHotelByManagerId } from '@/lib/services/hotel.service'
 import { createSpecialPrices } from '@/lib/services/specialPrices.service'
+import { syncRoomTypes, type CreateRoomTypeInput } from '@/lib/services/room-type.service'
 
 // Interface pour les données SEO
 export interface SEOData {
@@ -1220,6 +1221,14 @@ export async function createProduct(data: CreateProductInput) {
       }
     }
 
+    // Hotel multi-room-type (Lot 1): create the establishment's room types.
+    if (data.roomTypes && data.roomTypes.length > 0) {
+      const roomTypes: CreateRoomTypeInput[] = data.roomTypes
+      await prisma.$transaction(async tx => {
+        await syncRoomTypes(tx, createdProduct.id, roomTypes)
+      })
+    }
+
     // Récupérer le produit avec toutes ses relations
     const finalProduct = await prisma.product.findUnique({
       where: { id: createdProduct.id },
@@ -2104,6 +2113,8 @@ interface UpdateProductInput {
   }
   isHotel?: boolean
   hotelInfo?: { name: string; availableRooms: number }
+  // Hotel multi-room-type (Lot 1): full room-type list to reconcile
+  roomTypes?: CreateRoomTypeInput[]
   // SEO data
   seoData?: {
     metaTitle?: string
@@ -2399,6 +2410,14 @@ export async function updateProduct(productId: string, data: UpdateProductInput)
         hotel: true,
       },
     })
+
+    // Hotel multi-room-type (Lot 1): reconcile the establishment's room types.
+    if (data.roomTypes !== undefined) {
+      const roomTypes: CreateRoomTypeInput[] = data.roomTypes
+      await prisma.$transaction(async tx => {
+        await syncRoomTypes(tx, productId, roomTypes)
+      })
+    }
 
     // Invalidate cache
     await invalidateProductCache()
