@@ -726,7 +726,13 @@ export async function findAllProductByHostIdPaginated(
         select: { id: true, img: true },
       },
       type: {
-        select: { name: true, id: true },
+        select: { name: true, id: true, isHotelType: true },
+      },
+      // Hotel multi-room-type (Lot 5): expose types (id + name only) so hosts can
+      // scope a promotion to a single room type. Empty for non-hotel products.
+      roomTypes: {
+        select: { id: true, name: true },
+        orderBy: { position: 'asc' as const },
       },
       owner: {
         select: {
@@ -757,7 +763,13 @@ export async function findAllProductByHostIdPaginated(
         select: { id: true, img: true },
       },
       type: {
-        select: { name: true, id: true },
+        select: { name: true, id: true, isHotelType: true },
+      },
+      // Hotel multi-room-type (Lot 5): expose types (id + name only) so hosts can
+      // scope a promotion to a single room type. Empty for non-hotel products.
+      roomTypes: {
+        select: { id: true, name: true },
+        orderBy: { position: 'asc' as const },
       },
       owner: {
         select: {
