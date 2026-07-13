@@ -6,7 +6,7 @@ import { Edit3 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import ErrorAlert, { ErrorDetails } from '@/components/ui/ErrorAlert'
-import { parseCreateProductError, createValidationError } from '@/lib/utils/errorHandler'
+import { parseCreateProductError } from '@/lib/utils/errorHandler'
 
 import { WizardStepper } from '@/app/createProduct/components/wizard/WizardStepper'
 import { WizardNavigation } from '@/app/createProduct/components/wizard/WizardNavigation'
