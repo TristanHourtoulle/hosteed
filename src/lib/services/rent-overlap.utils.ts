@@ -1,12 +1,32 @@
 import { RentStatus, Prisma } from '@prisma/client'
 
 /**
+ * Reservation statuses that occupy inventory and therefore block a concurrent
+ * booking of the same room/unit (overbooking-critical, TRI-1002 / TRI-125):
+ *
+ * - `WAITING`  — pending host approval, still holds the slot.
+ * - `RESERVED` — confirmed upcoming stay.
+ * - `CHECKIN`  — guest is physically in the room right now.
+ *
+ * `CHECKOUT` is intentionally excluded: the guest has departed, so the room is
+ * free (an early checkout releases it immediately, and a completed stay lies in
+ * the past and cannot overlap a future request). `CANCEL` never blocks.
+ *
+ * Mirrors `ACTIVE_RENT_STATUSES` (user.service) and the product deletion guard.
+ */
+export const BLOCKING_RENT_STATUSES = [
+  RentStatus.RESERVED,
+  RentStatus.WAITING,
+  RentStatus.CHECKIN,
+] as const
+
+/**
  * Build a Prisma WHERE clause to detect overlapping reservations.
  * Implements hotel night semantics: checkout day is free (uses dayAfterArrival
  * to avoid false positives when an existing checkout time like 11:00 > normalized midnight).
  *
- * Both RESERVED and WAITING bookings block availability to prevent overbooking
- * during the host approval window.
+ * RESERVED, WAITING and CHECKIN bookings all block availability to prevent
+ * overbooking (host approval window + guests currently staying).
  *
  * @param {string} productId - Product identifier
  * @param {Date} normalizedArrival - Arrival date normalized to UTC midnight
@@ -22,7 +42,7 @@ export function buildOverlapWhereClause(
 ): Prisma.RentWhereInput {
   return {
     productId,
-    status: { in: [RentStatus.RESERVED, RentStatus.WAITING] as const },
+    status: { in: [...BLOCKING_RENT_STATUSES] },
     OR: [
       // Reservation starts during the requested period
       {
@@ -54,8 +74,8 @@ export function buildOverlapWhereClause(
  * to the parent `Rent` of a specific `roomTypeId` so per-type availability can
  * be computed by summing overlapping `RentRoomType.quantity`.
  *
- * Both RESERVED and WAITING bookings block availability (host approval window),
- * mirroring the establishment-level overlap query.
+ * RESERVED, WAITING and CHECKIN bookings all block availability (host approval
+ * window + guests currently staying), mirroring the establishment-level query.
  *
  * @param {string} roomTypeId - Room type identifier
  * @param {Date} normalizedArrival - Arrival date normalized to UTC midnight
@@ -72,7 +92,7 @@ export function buildRoomTypeOverlapWhere(
   return {
     roomTypeId,
     rent: {
-      status: { in: [RentStatus.RESERVED, RentStatus.WAITING] as const },
+      status: { in: [...BLOCKING_RENT_STATUSES] },
       OR: [
         // Reservation starts during the requested period
         {

@@ -23,7 +23,7 @@ import { logger } from '@/lib/logger'
 export interface RoomTypeAvailability {
   roomTypeId: string
   totalQuantity: number
-  /** Sum of overlapping `RentRoomType.quantity` (RESERVED + WAITING). */
+  /** Sum of overlapping `RentRoomType.quantity` (RESERVED + WAITING + CHECKIN). */
   bookedQuantity: number
   availableQuantity: number
   /** True iff `availableQuantity >= requestedQuantity`. */
@@ -268,7 +268,7 @@ export async function assertRoomTypesAvailableInTx(
 
 /**
  * Check product availability between two dates.
- * Both RESERVED and WAITING bookings block availability to prevent overbooking.
+ * RESERVED, WAITING and CHECKIN bookings block availability to prevent overbooking.
  * Results are cached in Redis with a 5-minute TTL for performance.
  *
  * Hotel products with configured room types delegate to per-type availability
