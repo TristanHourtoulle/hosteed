@@ -28,6 +28,9 @@ interface Product {
   id: string
   name: string
   basePrice: string
+  // Hotel multi-room-type (Lot 5): drives the room-type selector in PromotionForm.
+  isHotel?: boolean
+  roomTypes?: { id: string; name: string }[]
   owner?: {
     id: string
     name: string
@@ -65,6 +68,7 @@ export default function HostPromotionsPage() {
   const [showModal, setShowModal] = useState(false)
   const [pendingPromotion, setPendingPromotion] = useState<{
     productId: string
+    roomTypeId: string | null
     discountPercentage: number
     startDate: string
     endDate: string
@@ -119,6 +123,10 @@ export default function HostPromotionsPage() {
               id: p.id,
               name: p.name,
               basePrice: p.basePrice,
+              // Hotel multi-room-type (Lot 5): keep the metadata the PromotionForm
+              // needs to offer a room-type selector for hotel products.
+              isHotel: p.isHotel ?? false,
+              roomTypes: p.roomTypes ?? [],
               owner: p.owner ? {
                 id: p.owner.id,
                 name: p.owner.name,
@@ -169,6 +177,7 @@ export default function HostPromotionsPage() {
     discountPercentage: number
     startDate: string
     endDate: string
+    roomTypeId: string | null
   }) => {
     try {
       setSubmitting(true)
