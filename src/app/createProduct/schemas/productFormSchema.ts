@@ -86,20 +86,38 @@ export const rulesSchema = z.object({
 })
 
 // Field names for each step (used for partial validation via trigger())
+// `availableRooms` is removed for step 0 — hotels now define rooms via the
+// per-type editor (step 2, hotel flow); the deprecated field is derived on submit.
 export const STEP_FIELD_NAMES: Record<number, string[]> = {
-  0: ['name', 'description', 'typeId', 'isHotel', 'hotelName', 'availableRooms'],
+  0: ['name', 'description', 'typeId', 'isHotel', 'hotelName'],
   1: ['address', 'completeAddress', 'phone', 'phoneCountry', 'latitude', 'longitude', 'room', 'bathroom', 'surface', 'minPeople', 'maxPeople', 'arriving', 'leaving', 'autoAccept', 'accessibility', 'petFriendly', 'nearbyPlaces', 'proximityLandmarks', 'transportation'],
   2: ['basePrice', 'priceMGA', 'basePriceMGA'],
   3: ['equipmentIds', 'mealIds', 'securityIds', 'serviceIds', 'includedServiceIds', 'extraIds', 'highlightIds'],
   4: ['smokingAllowed', 'petsAllowed', 'eventsAllowed', 'selfCheckIn', 'selfCheckInType', 'hasStairs', 'hasElevator', 'hasHandicapAccess', 'hasPetsOnProperty', 'additionalNotes'],
 }
 
-export const STEP_LABELS = [
+// Both flows keep 5 steps; only index 2 differs (Tarification vs Types de chambres).
+export const ESTABLISHMENT_STEP_LABELS = [
   'Informations',
   'Localisation',
   'Tarification',
   'Services',
   'Règles & Photos',
-]
+] as const
 
-export const TOTAL_STEPS = STEP_LABELS.length
+export const HOTEL_STEP_LABELS = [
+  'Informations',
+  'Localisation',
+  'Types de chambres',
+  'Services',
+  'Règles & Photos',
+] as const
+
+export const getStepLabels = (isHotel: boolean): readonly string[] =>
+  isHotel ? HOTEL_STEP_LABELS : ESTABLISHMENT_STEP_LABELS
+
+export const getTotalSteps = (isHotel: boolean): number => getStepLabels(isHotel).length
+
+// Backward-compatible non-hotel aliases.
+export const STEP_LABELS: readonly string[] = ESTABLISHMENT_STEP_LABELS
+export const TOTAL_STEPS = ESTABLISHMENT_STEP_LABELS.length

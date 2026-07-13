@@ -125,37 +125,19 @@ export function StepBasicInfo({
             </div>
           </CardHeader>
           <CardContent className="p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <FieldLabel htmlFor="hotelName" required error={getFieldError?.('hotelName')} className="text-amber-800">
-                  Nom de l&apos;hôtel
-                </FieldLabel>
-                <Input
-                  id="hotelName"
-                  name="hotelName"
-                  type="text"
-                  placeholder="Ex: Hôtel des Jardins"
-                  value={formData.hotelName}
-                  onChange={handleInputChange}
-                  className={`bg-white/80 ${hasFieldError?.('hotelName') ? 'border-red-300 focus:border-red-400 focus:ring-red-200' : 'border-amber-200 focus:border-amber-400 focus:ring-amber-200'}`}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <FieldLabel htmlFor="availableRooms" required error={getFieldError?.('availableRooms')} className="text-amber-800">
-                  Nombre de chambres disponibles
-                </FieldLabel>
-                <Input
-                  id="availableRooms"
-                  name="availableRooms"
-                  type="number"
-                  min="1"
-                  placeholder="Ex: 5"
-                  value={formData.availableRooms}
-                  onChange={handleInputChange}
-                  className={`bg-white/80 ${hasFieldError?.('availableRooms') ? 'border-red-300 focus:border-red-400 focus:ring-red-200' : 'border-amber-200 focus:border-amber-400 focus:ring-amber-200'}`}
-                />
-              </div>
+            <div className="space-y-2">
+              <FieldLabel htmlFor="hotelName" required error={getFieldError?.('hotelName')} className="text-amber-800">
+                Nom de l&apos;hôtel
+              </FieldLabel>
+              <Input
+                id="hotelName"
+                name="hotelName"
+                type="text"
+                placeholder="Ex: Hôtel des Jardins"
+                value={formData.hotelName}
+                onChange={handleInputChange}
+                className={`bg-white/80 ${hasFieldError?.('hotelName') ? 'border-red-300 focus:border-red-400 focus:ring-red-200' : 'border-amber-200 focus:border-amber-400 focus:ring-amber-200'}`}
+              />
             </div>
 
             <div className="bg-amber-100 border border-amber-200 rounded-lg p-4">
@@ -168,9 +150,9 @@ export function StepBasicInfo({
                     Fonctionnement Hôtelier
                   </h4>
                   <p className="text-xs text-amber-700 leading-relaxed">
-                    Cette chambre représente un type de chambre dans votre hôtel. Si vous avez{' '}
-                    <span className="font-semibold">{formData.availableRooms || 'X'}</span>{' '}
-                    chambres de ce type, plusieurs clients pourront réserver en même temps.
+                    Vous définirez vos différents types de chambres (lits, capacité, prix, quantité)
+                    à l&apos;étape «&nbsp;Types de chambres&nbsp;». Chaque type peut regrouper
+                    plusieurs chambres identiques réservables simultanément.
                   </p>
                 </div>
               </div>

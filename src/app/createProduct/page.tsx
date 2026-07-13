@@ -17,12 +17,16 @@ import { WizardNavigation } from './components/wizard/WizardNavigation'
 import { StepBasicInfo } from './components/wizard/StepBasicInfo'
 import { StepLocation } from './components/wizard/StepLocation'
 import { StepPricing } from './components/wizard/StepPricing'
+import { StepRoomTypes } from './components/wizard/StepRoomTypes'
 import { StepServices } from './components/wizard/StepServices'
 import { StepRulesAndMedia } from './components/wizard/StepRulesAndMedia'
 
 import { useProductData, useProductForm, useImageUpload } from './hooks'
 import { useProductWizardForm } from './hooks/useProductWizardForm'
+import { getStepLabels } from './schemas/productFormSchema'
+import { buildCreateProductPayload } from './utils/buildCreateProductPayload'
 import type { ImageFile } from './types'
+import type { RoomTypeFormData } from './types/roomType'
 
 export default function CreateProductPage() {
   const router = useRouter()
@@ -33,7 +37,7 @@ export default function CreateProductPage() {
   const productData = useProductData()
   const productForm = useProductForm(productData.types)
   const imageUpload = useImageUpload()
-  const wizard = useProductWizardForm()
+  const wizard = useProductWizardForm(productForm.formData.isHotel)
 
   // UI state
   const [isLoading, setIsLoading] = useState(false)
@@ -48,6 +52,9 @@ export default function CreateProductPage() {
   const [assignToOtherUser, setAssignToOtherUser] = useState(false)
 
   const { formData, setFormData, handleInputChange } = productForm
+
+  const setRoomTypes = (next: RoomTypeFormData[]) =>
+    setFormData(prev => ({ ...prev, roomTypes: next }))
 
   // Upload images to server
   const uploadImagesToServer = async (imageFiles: ImageFile[], productId: string): Promise<string[]> => {
@@ -108,81 +115,12 @@ export default function CreateProductPage() {
     try {
       const finalUserId = assignToOtherUser && userSelected ? userSelected : session.user.id
 
-      const productPayload = {
-        name: formData.name,
-        description: formData.description,
-        address: formData.address,
-        completeAddress: formData.completeAddress || null,
-        longitude: formData.longitude,
-        latitude: formData.latitude,
-        basePrice: formData.basePrice,
-        priceMGA: formData.priceMGA,
-        room: formData.room ? Number(formData.room) : null,
-        bathroom: formData.bathroom ? Number(formData.bathroom) : null,
-        surface: formData.surface ? Number(formData.surface) : null,
-        minPeople: formData.minPeople ? Number(formData.minPeople) : null,
-        maxPeople: formData.maxPeople ? Number(formData.maxPeople) : null,
-        arriving: formData.arriving,
-        leaving: formData.leaving,
-        autoAccept: formData.autoAccept || false,
-        accessibility: formData.accessibility || false,
-        petFriendly: formData.petFriendly || false,
-        phone: formData.phone,
-        phoneCountry: formData.phoneCountry || 'MG',
-        typeId: formData.typeId,
-        userId: [finalUserId],
-        equipments: formData.equipmentIds,
-        services: formData.serviceIds,
-        meals: formData.mealIds,
-        securities: formData.securityIds,
-        includedServices: formData.includedServiceIds,
-        extras: formData.extraIds,
-        highlights: formData.highlightIds,
-        images: [],
-        nearbyPlaces: formData.nearbyPlaces.map(place => ({
-          name: place.name,
-          distance: place.unit === 'minutes à pied'
-            ? 0
-            : place.unit === 'kilomètres'
-              ? (place.distance ? Number(place.distance) * 1000 : 0)
-              : (place.distance ? Number(place.distance) : 0),
-          duration: place.unit === 'minutes à pied' ? (place.distance ? Number(place.distance) : 0) : 0,
-          transport: place.unit === 'minutes à pied' ? 'à pied' : place.unit === 'kilomètres' ? 'voiture' : 'à pied',
-        })),
-        isHotel: formData.isHotel,
-        hotelInfo: formData.isHotel
-          ? { name: formData.hotelName, availableRooms: Number(formData.availableRooms) }
-          : null,
-        specialPrices: productData.specialPrices.map(sp => ({
-          pricesMga: sp.pricesMga,
-          pricesEuro: sp.pricesEuro,
-          day: sp.day,
-          startDate: sp.startDate,
-          endDate: sp.endDate,
-          activate: sp.activate,
-        })),
+      const productPayload = buildCreateProductPayload({
+        formData,
         seoData,
-        transportOptions: formData.transportation
-          ? formData.transportation
-              .split(',')
-              .map((name: string) => ({ name: name.trim(), description: '' }))
-              .filter((t: { name: string }) => t.name.length > 0)
-          : undefined,
-        rules: {
-          smokingAllowed: formData.smokingAllowed || false,
-          petsAllowed: formData.petsAllowed || false,
-          eventsAllowed: formData.eventsAllowed || false,
-          selfCheckIn: formData.selfCheckIn || false,
-          selfCheckInType: (formData.selfCheckInType as string) || undefined,
-        },
-        propertyInfo: {
-          hasStairs: formData.hasStairs || false,
-          hasElevator: formData.hasElevator || false,
-          hasHandicapAccess: formData.hasHandicapAccess || false,
-          hasPetsOnProperty: formData.hasPetsOnProperty || false,
-          additionalNotes: (formData.additionalNotes as string) || undefined,
-        },
-      }
+        userId: finalUserId,
+        specialPrices: productData.specialPrices,
+      })
 
       const result = await createProduct(productPayload)
       if (!result) throw new Error("Erreur lors de la creation de l'annonce")
@@ -255,6 +193,7 @@ export default function CreateProductPage() {
         <WizardStepper
           currentStep={wizard.currentStep}
           stepValidation={wizard.stepValidation}
+          labels={getStepLabels(formData.isHotel)}
         />
 
         {/* Error Alert */}
@@ -306,22 +245,35 @@ export default function CreateProductPage() {
             />
           )}
           {wizard.currentStep === 2 && (
-            <StepPricing
-              key="step-2"
-              formData={formData}
-              handleInputChange={handleInputChange}
-              specialPrices={productData.specialPrices}
-              setSpecialPrices={productData.setSpecialPrices}
-              extras={productData.extras}
-              hasFieldError={wizard.hasFieldError}
-              getFieldError={wizard.getFieldError}
-            />
+            formData.isHotel ? (
+              <StepRoomTypes
+                key="step-2"
+                roomTypes={formData.roomTypes}
+                setRoomTypes={setRoomTypes}
+                meals={productData.meals}
+                includedServices={productData.includedServices}
+                extras={productData.extras}
+                getFieldError={wizard.getFieldError}
+              />
+            ) : (
+              <StepPricing
+                key="step-2"
+                formData={formData}
+                handleInputChange={handleInputChange}
+                specialPrices={productData.specialPrices}
+                setSpecialPrices={productData.setSpecialPrices}
+                extras={productData.extras}
+                hasFieldError={wizard.hasFieldError}
+                getFieldError={wizard.getFieldError}
+              />
+            )
           )}
           {wizard.currentStep === 3 && (
             <StepServices
               key="step-3"
               formData={formData}
               setFormData={setFormData}
+              isHotel={formData.isHotel}
               equipments={productData.equipments}
               meals={productData.meals}
               securities={productData.securities}

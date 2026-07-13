@@ -38,6 +38,8 @@ interface Service {
 interface StepServicesProps {
   formData: FormData
   setFormData: React.Dispatch<React.SetStateAction<FormData>>
+  /** When true, meals / included services / extras move to the per-type editor and are hidden here. */
+  isHotel?: boolean
   equipments: Service[]
   meals: Service[]
   securities: Service[]
@@ -53,6 +55,7 @@ interface StepServicesProps {
 export function StepServices({
   formData,
   setFormData,
+  isHotel = false,
   equipments,
   meals,
   securities,
@@ -101,19 +104,21 @@ export function StepServices({
         itemVariants={itemVariants}
       />
 
-      {/* Meals */}
-      <ServiceSelectionSection
-        title="Services de restauration"
-        description="Sélectionnez les services de repas proposés"
-        icon={UtensilsCrossed}
-        iconColor="text-orange-600"
-        bgColor="bg-orange-50"
-        borderColor="border-orange-500"
-        services={meals}
-        selectedServiceIds={formData.mealIds}
-        onServiceToggle={id => handleCheckboxChange('mealIds', id)}
-        itemVariants={itemVariants}
-      />
+      {/* Meals — establishment-level only; for hotels this lives in the per-type editor */}
+      {!isHotel && (
+        <ServiceSelectionSection
+          title="Services de restauration"
+          description="Sélectionnez les services de repas proposés"
+          icon={UtensilsCrossed}
+          iconColor="text-orange-600"
+          bgColor="bg-orange-50"
+          borderColor="border-orange-500"
+          services={meals}
+          selectedServiceIds={formData.mealIds}
+          onServiceToggle={id => handleCheckboxChange('mealIds', id)}
+          itemVariants={itemVariants}
+        />
+      )}
 
       {/* Security */}
       <ServiceSelectionSection
@@ -159,7 +164,9 @@ export function StepServices({
           </div>
         </CardHeader>
         <CardContent className="p-6 space-y-6">
-          {/* Included Services */}
+          {/* Included Services — hidden for hotels (moved to per-type editor) */}
+          {!isHotel && (
+          <>
           <div className="border-2 border-slate-200 rounded-xl p-4 bg-white/50">
             <div className="flex items-center justify-between mb-4">
               <h4 className="font-medium text-slate-700 flex items-center gap-2">
@@ -260,8 +267,10 @@ export function StepServices({
               ))}
             </div>
           </div>
+          </>
+          )}
 
-          {/* Highlights */}
+          {/* Highlights — establishment-level "points forts" (kept for hotels) */}
           <div className="border-2 border-slate-200 rounded-xl p-4 bg-white/50">
             <div className="flex items-center justify-between mb-4">
               <h4 className="font-medium text-slate-700 flex items-center gap-2">
