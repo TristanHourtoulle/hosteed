@@ -15,12 +15,16 @@ jest.mock('@/lib/logger', () => ({
   logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }))
 
+import { availabilityCacheService } from '@/lib/cache/redis-cache.service'
 import {
   checkRoomTypeAvailable,
   getHotelRoomTypeAvailability,
   assertRoomTypesAvailableInTx,
   checkRentIsAvailable,
 } from '../rent-availability.service'
+
+const getCachedAvailability = availabilityCacheService.getCachedAvailability as jest.Mock
+const cacheAvailability = availabilityCacheService.cacheAvailability as jest.Mock
 
 const A = new Date('2026-08-01T00:00:00.000Z')
 const L = new Date('2026-08-05T00:00:00.000Z')
@@ -204,6 +208,42 @@ describe('assertRoomTypesAvailableInTx', () => {
         L
       )
     ).rejects.toBeInstanceOf(BookingConflictError)
+  })
+})
+
+// ------------------------------------------------------------------
+// Per-type reads bypass the product-level Redis cache (TRI-1003).
+// Locks in the architectural invariant that makes per-type availability
+// immune to product-level cache staleness: the per-type read paths always
+// hit the DB and never read from / write to `availability:{productId}:*`.
+// ------------------------------------------------------------------
+describe('per-type reads bypass the availability cache', () => {
+  it('checkRoomTypeAvailable never touches the product-level cache', async () => {
+    prismaMock.roomType.findUnique.mockResolvedValue({ quantity: 2 })
+    prismaMock.rentRoomType.aggregate.mockResolvedValue({ _sum: { quantity: 0 } })
+    prismaMock.roomTypeBlockedDate.findMany.mockResolvedValue([])
+
+    await checkRoomTypeAvailable('rt-1', A, L)
+
+    expect(getCachedAvailability).not.toHaveBeenCalled()
+    expect(cacheAvailability).not.toHaveBeenCalled()
+  })
+
+  it('getHotelRoomTypeAvailability never touches the product-level cache', async () => {
+    prismaMock.roomType.findMany.mockResolvedValue([
+      { id: 'rt-1', quantity: 2 },
+      { id: 'rt-2', quantity: 4 },
+    ])
+    prismaMock.roomType.findUnique
+      .mockResolvedValueOnce({ quantity: 2 })
+      .mockResolvedValueOnce({ quantity: 4 })
+    prismaMock.rentRoomType.aggregate.mockResolvedValue({ _sum: { quantity: 0 } })
+    prismaMock.roomTypeBlockedDate.findMany.mockResolvedValue([])
+
+    await getHotelRoomTypeAvailability('p-hotel', A, L)
+
+    expect(getCachedAvailability).not.toHaveBeenCalled()
+    expect(cacheAvailability).not.toHaveBeenCalled()
   })
 })
 
