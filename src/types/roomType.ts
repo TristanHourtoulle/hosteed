@@ -40,6 +40,19 @@ export interface SelectedRoomLine {
   availableQuantity: number
 }
 
+/**
+ * Per-type availability as returned by `/api/check-room-availability`.
+ * Dates are ISO strings over the wire (serialized `RoomTypeAvailability`).
+ */
+export interface RoomTypeAvailabilityView {
+  roomTypeId: string
+  totalQuantity: number
+  bookedQuantity: number
+  availableQuantity: number
+  available: boolean
+  blockedRanges: Array<{ startDate: string; endDate: string }>
+}
+
 /** A priced room-type line as displayed in {@link BookingCostSummary}. */
 export interface RoomLineSummary {
   roomTypeId: string
