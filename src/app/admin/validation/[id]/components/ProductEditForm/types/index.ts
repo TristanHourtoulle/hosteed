@@ -1,4 +1,7 @@
 import { ExtraPriceType, ProductValidation } from '@prisma/client'
+import type { RoomTypeWithRelations } from '../../review/roomTypeTypes'
+
+export type { RoomTypeWithRelations } from '../../review/roomTypeTypes'
 
 // ===== RE-EXPORT UNIFIED TYPES =====
 // Import unified form types from central location
@@ -103,6 +106,7 @@ export interface Product {
     additionalNotes?: string
   } | null
   hotel?: { id: string; name: string }[] // Array because it's a one-to-many relation
+  roomTypes?: RoomTypeWithRelations[]
   img?: { img: string }[]
   owner: {
     id: string
