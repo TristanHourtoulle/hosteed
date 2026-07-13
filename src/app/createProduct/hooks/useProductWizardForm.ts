@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react'
-import { TOTAL_STEPS } from '../schemas/productFormSchema'
+import { getTotalSteps } from '../schemas/productFormSchema'
+import { roomTypesStepSchema } from '../schemas/roomTypeSchema'
 import type { ProductFormData } from '@/types/product-form'
+import type { RoomTypeFormData } from '../types/roomType'
 
 export interface FieldError {
   field: string
@@ -32,7 +34,6 @@ function validateStep(step: number, formData: ProductFormData): { isValid: boole
     if (!formData.typeId) errors.push({ field: 'typeId', message: "Le type d'hébergement est requis" })
     if (formData.isHotel) {
       if (!formData.hotelName || !formData.hotelName.trim()) errors.push({ field: 'hotelName', message: "Le nom de l'hôtel est requis" })
-      if (!formData.availableRooms || Number(formData.availableRooms) <= 0) errors.push({ field: 'availableRooms', message: 'Le nombre de chambres doit être supérieur à 0' })
     }
   }
 
@@ -42,8 +43,18 @@ function validateStep(step: number, formData: ProductFormData): { isValid: boole
   }
 
   if (step === 2) {
-    if (!formData.basePrice) errors.push({ field: 'basePrice', message: 'Le prix en EUR est requis' })
-    if (!formData.priceMGA) errors.push({ field: 'priceMGA', message: 'Le prix en MGA est requis' })
+    if (formData.isHotel) {
+      const roomTypes = (formData.roomTypes ?? []) as RoomTypeFormData[]
+      const parsed = roomTypesStepSchema.safeParse({ roomTypes })
+      if (!parsed.success) {
+        for (const issue of parsed.error.issues) {
+          errors.push({ field: issue.path.join('.'), message: issue.message })
+        }
+      }
+    } else {
+      if (!formData.basePrice) errors.push({ field: 'basePrice', message: 'Le prix en EUR est requis' })
+      if (!formData.priceMGA) errors.push({ field: 'priceMGA', message: 'Le prix en MGA est requis' })
+    }
   }
 
   // Steps 3 and 4 have no required fields
@@ -51,10 +62,11 @@ function validateStep(step: number, formData: ProductFormData): { isValid: boole
   return { isValid: errors.length === 0, errors }
 }
 
-export function useProductWizardForm(): UseProductWizardFormReturn {
+export function useProductWizardForm(isHotel = false): UseProductWizardFormReturn {
+  const totalSteps = getTotalSteps(isHotel)
   const [currentStep, setCurrentStep] = useState(0)
   const [stepValidation, setStepValidation] = useState<boolean[]>(
-    Array(TOTAL_STEPS).fill(false)
+    Array(totalSteps).fill(false)
   )
   const [stepErrors, setStepErrors] = useState<FieldError[]>([])
 
@@ -63,22 +75,22 @@ export function useProductWizardForm(): UseProductWizardFormReturn {
   }, [])
 
   const goToStep = useCallback((step: number) => {
-    if (step >= 0 && step < TOTAL_STEPS) {
+    if (step >= 0 && step < totalSteps) {
       setCurrentStep(step)
       setStepErrors([])
       scrollToTop()
     }
-  }, [scrollToTop])
+  }, [scrollToTop, totalSteps])
 
   const nextStep = useCallback(() => {
-    if (currentStep < TOTAL_STEPS - 1) {
+    if (currentStep < totalSteps - 1) {
       setCurrentStep(prev => prev + 1)
       setStepErrors([])
       scrollToTop()
       return true
     }
     return false
-  }, [currentStep, scrollToTop])
+  }, [currentStep, scrollToTop, totalSteps])
 
   const prevStep = useCallback(() => {
     if (currentStep > 0) {
@@ -113,12 +125,12 @@ export function useProductWizardForm(): UseProductWizardFormReturn {
 
   return {
     currentStep,
-    totalSteps: TOTAL_STEPS,
+    totalSteps,
     goToStep,
     nextStep,
     prevStep,
     isFirstStep: currentStep === 0,
-    isLastStep: currentStep === TOTAL_STEPS - 1,
+    isLastStep: currentStep === totalSteps - 1,
     stepValidation,
     stepErrors,
     validateCurrentStep,

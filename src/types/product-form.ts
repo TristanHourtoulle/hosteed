@@ -1,4 +1,5 @@
 import { DayEnum } from '@prisma/client'
+import type { RoomTypeFormData } from '@/app/createProduct/types/roomType'
 
 // ===== INTERFACES DE SUPPORT =====
 
@@ -103,7 +104,8 @@ export interface ProductFormData {
   // ===== CONFIGURATION HÔTEL =====
   isHotel: boolean
   hotelName: string
-  availableRooms: string
+  availableRooms: string        // DEPRECATED for hotels (kept until Lot 6); populated = sum(quantity)
+  roomTypes: RoomTypeFormData[] // Per-type editor state (hotel multi-room-type)
 
   // ===== FLEXIBILITÉ =====
   [key: string]: unknown   // Pour extensions futures
@@ -178,4 +180,5 @@ export const DEFAULT_FORM_DATA: ProductFormData = {
   isHotel: false,
   hotelName: '',
   availableRooms: '',
+  roomTypes: [],
 }
