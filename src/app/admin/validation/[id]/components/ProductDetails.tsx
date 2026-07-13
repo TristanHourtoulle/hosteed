@@ -28,6 +28,8 @@ import {
 } from 'lucide-react'
 import ImageGallery from './ImageGallery'
 import { ExtraPriceType } from '@prisma/client'
+import type { RoomTypeWithRelations } from './review/roomTypeTypes'
+import { RoomTypesSummary } from './review/RoomTypesSummary'
 
 interface Product {
   id: string
@@ -95,6 +97,7 @@ interface Product {
     type: ExtraPriceType
   }[]
   highlights?: { id: string; name: string; description: string | null; icon: string | null }[]
+  roomTypes?: RoomTypeWithRelations[]
 }
 
 interface ProductDetailsProps {
@@ -257,13 +260,22 @@ export function ProductDetails({ product }: ProductDetailsProps) {
               </div>
             </div>
 
-            {product.availableRooms && (
+            {product.roomTypes && product.roomTypes.length > 0 ? (
               <div className='flex items-center'>
                 <Building className='h-4 w-4 text-gray-400 mr-2' />
                 <span className='text-sm'>
-                  {Number(product.availableRooms)} chambre(s) disponible(s) (Hôtel)
+                  {product.roomTypes.length} type(s) de chambre (Hôtel)
                 </span>
               </div>
+            ) : (
+              product.availableRooms && (
+                <div className='flex items-center'>
+                  <Building className='h-4 w-4 text-gray-400 mr-2' />
+                  <span className='text-sm'>
+                    {Number(product.availableRooms)} chambre(s) disponible(s) (Hôtel)
+                  </span>
+                </div>
+              )
             )}
           </div>
 
@@ -336,6 +348,11 @@ export function ProductDetails({ product }: ProductDetailsProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Types de chambres (hôtel multi-type) */}
+      {product.roomTypes && product.roomTypes.length > 0 && (
+        <RoomTypesSummary roomTypes={product.roomTypes} />
+      )}
 
       {/* Équipements */}
       {product.equipments && product.equipments.length > 0 && (

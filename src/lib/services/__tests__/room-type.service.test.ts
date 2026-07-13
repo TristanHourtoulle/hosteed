@@ -1,5 +1,9 @@
 import { BedType } from '@prisma/client'
-import { syncRoomTypes, type CreateRoomTypeInput } from '../room-type.service'
+import {
+  syncRoomTypes,
+  RoomTypeDeletionBlockedError,
+  type CreateRoomTypeInput,
+} from '../room-type.service'
 
 /**
  * `syncRoomTypes` is verified against a mocked Prisma transaction client
@@ -16,7 +20,7 @@ type MockTx = {
 }
 
 function createMockTx(
-  existing: Array<{ id: string; _count: { rentLines: number } }>
+  existing: Array<{ id: string; name?: string; _count: { rentLines: number } }>
 ): MockTx {
   return {
     roomType: {
@@ -83,12 +87,24 @@ describe('syncRoomTypes', () => {
   })
 
   it('refuses to delete a room type that has booking history', async () => {
-    const tx = createMockTx([{ id: 'rt1', _count: { rentLines: 2 } }])
+    const tx = createMockTx([{ id: 'rt1', name: 'Suite', _count: { rentLines: 2 } }])
 
-    await expect(
-      syncRoomTypes(tx as any, 'prod1', [])
-    ).rejects.toThrow(/booking/i)
+    await expect(syncRoomTypes(tx as any, 'prod1', [])).rejects.toThrow(/booking/i)
 
+    expect(tx.roomType.delete).not.toHaveBeenCalled()
+  })
+
+  it('throws a typed RoomTypeDeletionBlockedError carrying the blocked names', async () => {
+    const tx = createMockTx([
+      { id: 'rt1', name: 'Suite', _count: { rentLines: 2 } },
+      { id: 'rt2', name: 'Double', _count: { rentLines: 0 } },
+    ])
+
+    const error = await syncRoomTypes(tx as any, 'prod1', []).catch(e => e)
+
+    expect(error).toBeInstanceOf(RoomTypeDeletionBlockedError)
+    expect(error.roomTypeNames).toEqual(['Suite'])
+    // No delete happens at all when any removal is blocked (all-or-nothing).
     expect(tx.roomType.delete).not.toHaveBeenCalled()
   })
 })

@@ -47,7 +47,27 @@ export interface CreateRoomTypeInput {
 
 type ExistingRoomType = {
   id: string
+  name: string
   _count: { rentLines: number }
+}
+
+/**
+ * Thrown when a room type slated for deletion still has booking history
+ * (`RentRoomType` uses `onDelete: Restrict`). Carries the human-readable room
+ * type names so callers (admin edit PUT) can surface a clear soft-block message
+ * instead of crashing. The message keeps the word "booking" for stable matching.
+ */
+export class RoomTypeDeletionBlockedError extends Error {
+  readonly roomTypeNames: string[]
+
+  constructor(roomTypeNames: string[]) {
+    const list = roomTypeNames.join(', ')
+    super(
+      `Cannot delete room type(s) with existing bookings (RentRoomType): ${list}`
+    )
+    this.name = 'RoomTypeDeletionBlockedError'
+    this.roomTypeNames = roomTypeNames
+  }
 }
 
 function scalarData(roomType: CreateRoomTypeInput, index: number) {
@@ -101,7 +121,7 @@ export async function syncRoomTypes(
 ): Promise<void> {
   const existing: ExistingRoomType[] = await tx.roomType.findMany({
     where: { productId },
-    select: { id: true, _count: { select: { rentLines: true } } },
+    select: { id: true, name: true, _count: { select: { rentLines: true } } },
   })
 
   const incomingIds = new Set(
@@ -109,14 +129,16 @@ export async function syncRoomTypes(
   )
   const existingIds = new Set(existing.map(roomType => roomType.id))
 
-  // Delete room types that are no longer present (guarding booking history).
-  for (const current of existing) {
-    if (incomingIds.has(current.id)) continue
-    if (current._count.rentLines > 0) {
-      throw new Error(
-        `Cannot delete room type ${current.id}: it has existing bookings (RentRoomType).`
-      )
-    }
+  // Determine which existing room types are being removed, then soft-block the
+  // whole operation up-front if any of them carry booking history (so no
+  // partial delete happens before we detect the conflict).
+  const toDelete = existing.filter(current => !incomingIds.has(current.id))
+  const blocked = toDelete.filter(current => current._count.rentLines > 0)
+  if (blocked.length > 0) {
+    throw new RoomTypeDeletionBlockedError(blocked.map(rt => rt.name))
+  }
+
+  for (const current of toDelete) {
     await tx.roomType.delete({ where: { id: current.id } })
   }
 

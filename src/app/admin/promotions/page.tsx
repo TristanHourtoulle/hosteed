@@ -31,9 +31,13 @@ import PromotionBadge from '@/components/promotions/PromotionBadge'
 import { getFullSizeImageUrl } from '@/lib/utils/imageUtils'
 import { ProductPromotion, ProductValidation } from '@prisma/client'
 
+/** Sentinel Select value for an establishment-wide promotion (roomTypeId = null). */
+const ALL_ROOMS = '__ALL__'
+
 interface Promotion {
   id: string
   productId: string
+  roomTypeId?: string | null
   discountPercentage: number
   startDate: string
   endDate: string
@@ -58,6 +62,8 @@ interface Product {
   address: string
   basePrice: string
   validate?: string
+  isHotel?: boolean
+  roomTypes?: { id: string; name: string }[]
   img?: { img: string; id?: string }[]
   owner: {
     id: string
@@ -86,6 +92,7 @@ export default function AdminPromotionsPage() {
   const [overlappingPromotions, setOverlappingPromotions] = useState<OverlappingPromotion[]>([])
   const [pendingPromotion, setPendingPromotion] = useState<{
     productId: string
+    roomTypeId: string | null
     discountPercentage: number
     startDate: string
     endDate: string
@@ -93,6 +100,7 @@ export default function AdminPromotionsPage() {
 
   // Form state
   const [selectedProductId, setSelectedProductId] = useState('')
+  const [selectedRoomTypeId, setSelectedRoomTypeId] = useState(ALL_ROOMS)
   const [discountPercentage, setDiscountPercentage] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -134,6 +142,7 @@ export default function AdminPromotionsPage() {
 
   const resetForm = () => {
     setSelectedProductId('')
+    setSelectedRoomTypeId(ALL_ROOMS)
     setDiscountPercentage('')
     setStartDate('')
     setEndDate('')
@@ -190,6 +199,7 @@ export default function AdminPromotionsPage() {
 
     const promotionData = {
       productId: selectedProductId,
+      roomTypeId: selectedRoomTypeId === ALL_ROOMS ? null : selectedRoomTypeId,
       discountPercentage: discount,
       startDate,
       endDate,
@@ -288,6 +298,7 @@ export default function AdminPromotionsPage() {
   const handleEdit = (promotion: Promotion) => {
     setEditingPromotion(promotion)
     setSelectedProductId(promotion.productId)
+    setSelectedRoomTypeId(promotion.roomTypeId ?? ALL_ROOMS)
     setDiscountPercentage(promotion.discountPercentage.toString())
     setStartDate(format(new Date(promotion.startDate), "yyyy-MM-dd'T'HH:mm"))
     setEndDate(format(new Date(promotion.endDate), "yyyy-MM-dd'T'HH:mm"))
@@ -363,6 +374,7 @@ export default function AdminPromotionsPage() {
                   value={selectedProductId}
                   onValueChange={value => {
                     setSelectedProductId(value)
+                    setSelectedRoomTypeId(ALL_ROOMS)
                     validateDiscount(value, discountPercentage)
                   }}
                   disabled={!!editingPromotion}
@@ -382,6 +394,38 @@ export default function AdminPromotionsPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Type de chambre (hôtel multi-type uniquement) */}
+              {(() => {
+                const selected = products.find(p => p.id === selectedProductId)
+                const roomTypes = selected?.isHotel ? selected.roomTypes ?? [] : []
+                if (roomTypes.length === 0) return null
+                return (
+                  <div>
+                    <Label htmlFor='roomType'>Type de chambre</Label>
+                    <Select
+                      value={selectedRoomTypeId}
+                      onValueChange={setSelectedRoomTypeId}
+                    >
+                      <SelectTrigger className='w-full'>
+                        <SelectValue placeholder="Tout l'établissement" />
+                      </SelectTrigger>
+                      <SelectContent className='max-w-[calc(100vw-2rem)] sm:max-w-lg'>
+                        <SelectItem value={ALL_ROOMS}>Tout l&apos;établissement</SelectItem>
+                        {roomTypes.map(roomType => (
+                          <SelectItem key={roomType.id} value={roomType.id}>
+                            {roomType.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className='mt-1 text-xs text-gray-500'>
+                      Laissez « Tout l&apos;établissement » pour appliquer la promotion à toutes les
+                      chambres.
+                    </p>
+                  </div>
+                )
+              })()}
 
               <div>
                 <Label htmlFor='discount'>

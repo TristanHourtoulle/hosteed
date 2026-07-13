@@ -19,12 +19,17 @@ interface Product {
   id: string
   name: string
   basePrice: string
+  isHotel?: boolean
+  roomTypes?: { id: string; name: string }[]
   owner?: {
     id: string
     name: string
     email: string
   }
 }
+
+/** Sentinel Select value for an establishment-wide promotion (roomTypeId = null). */
+const ALL_ROOMS = '__ALL__'
 
 interface User {
   id: string
@@ -41,6 +46,7 @@ interface PromotionFormProps {
     discountPercentage: number
     startDate: string
     endDate: string
+    roomTypeId: string | null
   }) => Promise<void>
   loading?: boolean
   isAdminOrManager?: boolean
@@ -63,6 +69,7 @@ export default function PromotionForm({
     discountPercentage: '',
     startDate: '',
     endDate: '',
+    roomTypeId: ALL_ROOMS,
   })
 
   const [discountedPrice, setDiscountedPrice] = useState<number | null>(null)
@@ -202,10 +209,12 @@ export default function PromotionForm({
       discountPercentage: discount,
       startDate: formData.startDate,
       endDate: formData.endDate,
+      roomTypeId: formData.roomTypeId === ALL_ROOMS ? null : formData.roomTypeId,
     })
   }
 
   const selectedProductData = selectedProduct || products.find(p => p.id === formData.productId)
+  const roomTypeOptions = selectedProductData?.isHotel ? selectedProductData.roomTypes ?? [] : []
 
   // Vérifier si tous les champs sont remplis
   const isFormValid =
@@ -246,7 +255,9 @@ export default function PromotionForm({
           </Label>
           <Select
             value={formData.productId}
-            onValueChange={value => setFormData({ ...formData, productId: value })}
+            onValueChange={value =>
+              setFormData({ ...formData, productId: value, roomTypeId: ALL_ROOMS })
+            }
           >
             <SelectTrigger id='product' className='w-full'>
               <SelectValue placeholder='Sélectionner un produit' />
@@ -287,6 +298,34 @@ export default function PromotionForm({
           <div className='text-xs sm:text-sm text-blue-700'>
             Prix de base : {selectedProductData.basePrice}€ / nuit
           </div>
+        </div>
+      )}
+
+      {/* Type de chambre (hôtel multi-type uniquement) */}
+      {roomTypeOptions.length > 0 && (
+        <div className='space-y-2'>
+          <Label htmlFor='roomType' className='text-sm sm:text-base'>
+            Type de chambre
+          </Label>
+          <Select
+            value={formData.roomTypeId}
+            onValueChange={value => setFormData({ ...formData, roomTypeId: value })}
+          >
+            <SelectTrigger id='roomType' className='w-full'>
+              <SelectValue placeholder="Tout l'établissement" />
+            </SelectTrigger>
+            <SelectContent className='max-w-[calc(100vw-2rem)] sm:max-w-lg'>
+              <SelectItem value={ALL_ROOMS}>Tout l&apos;établissement</SelectItem>
+              {roomTypeOptions.map(roomType => (
+                <SelectItem key={roomType.id} value={roomType.id}>
+                  {roomType.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className='text-xs text-gray-500'>
+            Laissez « Tout l&apos;établissement » pour appliquer la promotion à toutes les chambres.
+          </p>
         </div>
       )}
 

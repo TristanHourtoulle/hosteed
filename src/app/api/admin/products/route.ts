@@ -51,7 +51,13 @@ export async function GET(request: NextRequest) {
           },
           room: true,
           type: {
+            select: { id: true, name: true, isHotelType: true },
+          },
+          // Hotel multi-room-type (Lot 5): expose types so admins can scope
+          // a promotion to a single room type.
+          roomTypes: {
             select: { id: true, name: true },
+            orderBy: { position: 'asc' },
           },
           owner: {
             select: { id: true, name: true, email: true },
@@ -77,6 +83,7 @@ export async function GET(request: NextRequest) {
       equipmentCount: product._count?.equipments || 0,
       serviceCount: product._count?.servicesList || 0,
       typeName: product.type?.name || null,
+      isHotel: product.type?.isHotelType ?? false,
     }))
 
     if (!rawProducts) {

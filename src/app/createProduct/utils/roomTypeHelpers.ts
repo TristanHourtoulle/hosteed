@@ -1,8 +1,23 @@
 import { BED_TYPE_OPTIONS, type RoomTypeFormData } from '../types/roomType'
 import type { CreateRoomTypeInput } from '@/lib/services/room-type.service'
 
+/**
+ * Prefix used for client-only temporary room-type ids (React key + copy
+ * source). Persisted DB ids are cuids and never carry this prefix, which lets
+ * the admin edit wizard tell "existing row" from "newly added row".
+ */
+export const TEMP_ROOM_TYPE_ID_PREFIX = 'rt-'
+
 let seq = 0
-const genId = () => `rt-${Date.now()}-${seq++}`
+const genId = () => `${TEMP_ROOM_TYPE_ID_PREFIX}${Date.now()}-${seq++}`
+
+/**
+ * True when `id` is a persisted DB id (should be sent to `syncRoomTypes` so the
+ * row is updated), false for client temp ids and empty strings (→ create).
+ */
+export function isPersistedRoomTypeId(id: string | undefined): id is string {
+  return Boolean(id) && !id!.startsWith(TEMP_ROOM_TYPE_ID_PREFIX)
+}
 
 /** Build a fresh, empty room type with the 4 bed counters zeroed. */
 export function createEmptyRoomType(): RoomTypeFormData {
@@ -36,9 +51,15 @@ export function copyRoomType(source: RoomTypeFormData, targetId: string): RoomTy
   }
 }
 
-/** Convert editor state to the `CreateRoomTypeInput[]` shape consumed by `createProduct`. */
+/**
+ * Convert editor state to the `CreateRoomTypeInput[]` shape consumed by
+ * `createProduct`/`updateProduct`. Persisted DB ids are forwarded so
+ * `syncRoomTypes` updates the existing row instead of recreating it; client
+ * temp ids (create flow, or newly added rows in the admin editor) are omitted.
+ */
 export function buildRoomTypesPayload(roomTypes: RoomTypeFormData[]): CreateRoomTypeInput[] {
   return roomTypes.map((rt, index) => ({
+    ...(isPersistedRoomTypeId(rt.id) ? { id: rt.id } : {}),
     name: rt.name,
     quantity: Number(rt.quantity),
     capacity: Number(rt.capacity),
