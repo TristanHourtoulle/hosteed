@@ -785,13 +785,31 @@ export async function calculateHotelBookingPrice(
     throw new Error('At least one room type must be selected')
   }
 
-  // 1. Fetch base prices for all selected room types (snapshot for unitPrice).
+  // 1. Fetch base prices + capacity for all selected room types (snapshot for
+  //    unitPrice and authoritative guest-capacity enforcement).
   const roomTypeIds = lines.map(l => l.roomTypeId)
   const roomTypes = await prisma.roomType.findMany({
     where: { id: { in: roomTypeIds } },
-    select: { id: true, basePrice: true },
+    select: { id: true, basePrice: true, capacity: true },
   })
   const basePriceById = new Map(roomTypes.map(rt => [rt.id, rt.basePrice]))
+
+  // Enforce the guest count against the selected room types' total capacity.
+  // Authoritative — never trust the client. Rule:
+  //   guestCount <= Σ(RoomType.capacity × quantity)
+  // A missing room type contributes 0 seats so tampered ids cannot inflate it.
+  const capacityById = new Map(roomTypes.map(rt => [rt.id, rt.capacity]))
+  const totalCapacity = lines.reduce(
+    (sum, line) => sum + (capacityById.get(line.roomTypeId) ?? 0) * line.quantity,
+    0
+  )
+  if (guestCount > totalCapacity) {
+    throw new Error(
+      `Le nombre de voyageurs (${guestCount}) dépasse la capacité maximale des chambres ` +
+        `sélectionnées (${totalCapacity} personne${totalCapacity > 1 ? 's' : ''} au total). ` +
+        `Veuillez réduire le nombre de voyageurs ou ajouter des chambres.`
+    )
+  }
 
   // 2. Price each line day-by-day.
   const pricedLines: HotelBookingPriceLine[] = []

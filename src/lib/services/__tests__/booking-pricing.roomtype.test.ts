@@ -83,8 +83,8 @@ describe('calculateRoomTypeBookingPrice', () => {
 describe('calculateHotelBookingPrice', () => {
   it('multi-type total = sum of line subtotals (+ extras + commission)', async () => {
     prismaMock.roomType.findMany.mockResolvedValue([
-      { id: 'rt-1', basePrice: '100' },
-      { id: 'rt-2', basePrice: '150' },
+      { id: 'rt-1', basePrice: '100', capacity: 2 },
+      { id: 'rt-2', basePrice: '150', capacity: 3 },
     ])
     prismaMock.roomType.findUnique
       .mockResolvedValueOnce({ basePrice: '100', productId: 'p1' }) // rt-1
@@ -129,5 +129,47 @@ describe('calculateHotelBookingPrice', () => {
     await expect(calculateHotelBookingPrice('p1', [], A, L2, 2, [], 'owner')).rejects.toThrow(
       'At least one room type must be selected'
     )
+  })
+
+  it('rejects when guestCount exceeds the total capacity of the selected room types', async () => {
+    // 1 Double (capacity 2) selected for 8 guests → must be rejected.
+    prismaMock.roomType.findMany.mockResolvedValue([{ id: 'rt-1', basePrice: '100', capacity: 2 }])
+
+    await expect(
+      calculateHotelBookingPrice(
+        'p1',
+        [{ roomTypeId: 'rt-1', quantity: 1 }],
+        A,
+        L2,
+        8,
+        [],
+        'owner'
+      )
+    ).rejects.toThrow(/capacité maximale des chambres sélectionnées \(2 personnes/)
+  })
+
+  it('accepts when guestCount equals the total capacity (capacity × quantity)', async () => {
+    // 2 rooms of capacity 3 = 6 seats; exactly 6 guests is allowed.
+    prismaMock.roomType.findMany.mockResolvedValue([{ id: 'rt-1', basePrice: '100', capacity: 3 }])
+    prismaMock.roomType.findUnique.mockResolvedValue({ basePrice: '100', productId: 'p1' })
+    prismaMock.product.findUnique.mockResolvedValue({ typeId: 't1', extras: [] })
+    calculateTotalRentPriceMock.mockResolvedValue({
+      clientCommission: 0,
+      hostCommission: 0,
+      hostReceives: 400,
+      totalPrice: 400,
+    })
+
+    const result = await calculateHotelBookingPrice(
+      'p1',
+      [{ roomTypeId: 'rt-1', quantity: 2 }],
+      A,
+      L2,
+      6,
+      [],
+      'owner'
+    )
+
+    expect(result.totalAmount).toBe(400)
   })
 })
