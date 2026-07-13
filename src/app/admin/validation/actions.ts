@@ -181,6 +181,21 @@ export async function getProductForValidation(productId: string) {
           icon: true,
         },
       },
+      // Hotel multi-room-type (Lot 5): load room types with their beds,
+      // per-type special prices, per-type catalog links and per-type
+      // promotions so every downstream validation view has the data.
+      roomTypes: {
+        orderBy: { position: 'asc' as const },
+        include: {
+          beds: true,
+          specialPrices: true,
+          promotions: true,
+          mealsList: { select: { id: true } },
+          includedServices: { select: { id: true } },
+          servicesList: { select: { id: true } },
+          extras: { select: { id: true } },
+        },
+      },
     }
 
     const product = await prisma.product.findUnique({
