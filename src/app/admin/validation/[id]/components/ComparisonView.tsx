@@ -1,6 +1,8 @@
 'use client'
 
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer'
+import type { RoomTypeWithRelations } from './review/roomTypeTypes'
+import { buildRoomTypeDiffs } from './review/roomTypeDiff'
 
 interface Product {
   id: string
@@ -37,6 +39,7 @@ interface Product {
     hasPetsOnProperty?: boolean
     additionalNotes?: string
   } | null
+  roomTypes?: RoomTypeWithRelations[]
 }
 
 interface ComparisonViewProps {
@@ -158,7 +161,12 @@ export function ComparisonView({ draft, original }: ComparisonViewProps) {
     })
   }
 
-  if (draft.availableRooms !== original.availableRooms) {
+  const hasRoomTypes =
+    (draft.roomTypes?.length ?? 0) > 0 || (original.roomTypes?.length ?? 0) > 0
+
+  // Legacy single-value hotel field: only surface it for un-migrated hotels
+  // (no room types on either side). Migrated hotels use the room-type diff below.
+  if (!hasRoomTypes && draft.availableRooms !== original.availableRooms) {
     const diff = getFieldDiff(draft.availableRooms, original.availableRooms)
     differences.push({
       label: 'Nombre de chambres disponibles (Hôtel)',
@@ -166,6 +174,8 @@ export function ComparisonView({ draft, original }: ComparisonViewProps) {
       formatter: numberFormatter,
     })
   }
+
+  const roomTypeDiffs = buildRoomTypeDiffs(draft, original)
 
   if (draft.maxPeople !== original.maxPeople) {
     const diff = getFieldDiff(draft.maxPeople, original.maxPeople)
@@ -293,7 +303,7 @@ export function ComparisonView({ draft, original }: ComparisonViewProps) {
     })
   }
 
-  if (differences.length === 0) {
+  if (differences.length === 0 && roomTypeDiffs.length === 0) {
     return (
       <div className='p-8 text-center'>
         <div className='bg-blue-50 p-4 rounded-lg'>
@@ -307,31 +317,86 @@ export function ComparisonView({ draft, original }: ComparisonViewProps) {
     )
   }
 
+  const totalChanges = differences.length + roomTypeDiffs.length
+
   return (
     <div className='space-y-6'>
       <div className='bg-blue-50 p-4 rounded-lg'>
         <h3 className='text-lg font-semibold text-blue-800 mb-2'>Comparaison des modifications</h3>
         <p className='text-sm text-blue-700'>
-          Voici les {differences.length} différence(s) détectée(s) entre l&apos;annonce originale et
-          les modifications proposées.
+          Voici les {totalChanges} différence(s) détectée(s) entre l&apos;annonce originale et les
+          modifications proposées.
         </p>
       </div>
 
-      <div className='space-y-4'>
-        <h4 className='text-lg font-semibold'>Modifications détectées ({differences.length})</h4>
+      {differences.length > 0 && (
+        <div className='space-y-4'>
+          <h4 className='text-lg font-semibold'>Modifications détectées ({differences.length})</h4>
 
-        {differences.map((item, index) => (
-          <DiffField
-            key={index}
-            label={item.label}
-            draftValue={item.diff.draftValue}
-            originalValue={item.diff.originalValue}
-            isDifferent={item.diff.isDifferent}
-            formatter={item.formatter}
-            isMarkdown={item.isMarkdown}
-          />
-        ))}
-      </div>
+          {differences.map((item, index) => (
+            <DiffField
+              key={index}
+              label={item.label}
+              draftValue={item.diff.draftValue}
+              originalValue={item.diff.originalValue}
+              isDifferent={item.diff.isDifferent}
+              formatter={item.formatter}
+              isMarkdown={item.isMarkdown}
+            />
+          ))}
+        </div>
+      )}
+
+      {roomTypeDiffs.length > 0 && (
+        <div className='space-y-4'>
+          <h4 className='text-lg font-semibold'>Types de chambres ({roomTypeDiffs.length})</h4>
+
+          {roomTypeDiffs.map((diff, index) => (
+            <div
+              key={`${diff.kind}-${diff.label}-${index}`}
+              className={`p-4 rounded-lg border-l-4 ${
+                diff.kind === 'added'
+                  ? 'border-green-400 bg-green-50'
+                  : diff.kind === 'removed'
+                    ? 'border-red-400 bg-red-50'
+                    : 'border-orange-400 bg-orange-50'
+              }`}
+            >
+              <div className='flex items-center gap-2 mb-2'>
+                <span className='font-medium text-sm text-gray-700'>{diff.label}</span>
+                <span
+                  className={`text-xs font-semibold uppercase ${
+                    diff.kind === 'added'
+                      ? 'text-green-700'
+                      : diff.kind === 'removed'
+                        ? 'text-red-700'
+                        : 'text-orange-700'
+                  }`}
+                >
+                  {diff.kind === 'added'
+                    ? 'Ajouté'
+                    : diff.kind === 'removed'
+                      ? 'Supprimé'
+                      : 'Modifié'}
+                </span>
+              </div>
+              {diff.fields && diff.fields.length > 0 && (
+                <div className='space-y-1'>
+                  {diff.fields.map(field => (
+                    <div key={field.field} className='grid grid-cols-3 gap-2 text-sm'>
+                      <span className='text-gray-500'>{field.label}</span>
+                      <span className='text-gray-600'>{String(field.from ?? 'Non défini')}</span>
+                      <span className='font-medium text-green-700'>
+                        {String(field.to ?? 'Non défini')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
