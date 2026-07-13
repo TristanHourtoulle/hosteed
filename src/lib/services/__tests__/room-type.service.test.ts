@@ -45,7 +45,6 @@ describe('syncRoomTypes', () => {
   it('creates a room type that has no id', async () => {
     const tx = createMockTx([])
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await syncRoomTypes(tx as any, 'prod1', [newRoomType])
 
     expect(tx.roomType.create).toHaveBeenCalledTimes(1)
@@ -61,7 +60,6 @@ describe('syncRoomTypes', () => {
   it('updates a room type that already exists (id present)', async () => {
     const tx = createMockTx([{ id: 'rt1', _count: { rentLines: 0 } }])
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await syncRoomTypes(tx as any, 'prod1', [{ ...newRoomType, id: 'rt1' }])
 
     expect(tx.roomType.update).toHaveBeenCalledTimes(1)
@@ -78,7 +76,6 @@ describe('syncRoomTypes', () => {
       { id: 'rt2', _count: { rentLines: 0 } },
     ])
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await syncRoomTypes(tx as any, 'prod1', [{ ...newRoomType, id: 'rt1' }])
 
     expect(tx.roomType.delete).toHaveBeenCalledTimes(1)
@@ -89,7 +86,6 @@ describe('syncRoomTypes', () => {
     const tx = createMockTx([{ id: 'rt1', _count: { rentLines: 2 } }])
 
     await expect(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       syncRoomTypes(tx as any, 'prod1', [])
     ).rejects.toThrow(/booking/i)
 
