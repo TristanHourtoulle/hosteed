@@ -583,11 +583,22 @@ export interface HotelBookingPriceLine {
  * booking flow + Stripe (Lot 4). `totalAmount` = Σ line subtotals + extras,
  * then commissions.
  */
+/** A priced extra line, mirroring `calculateCompleteBookingPrice.extrasDetails`. */
+export interface HotelBookingExtraDetail {
+  extraId: string
+  name: string
+  quantity: number
+  pricePerUnit: number
+  total: number
+}
+
 export interface HotelBookingPriceResult {
   lines: HotelBookingPriceLine[]
   /** Rooms subtotal = Σ `lineSubtotal`. */
   subtotal: number
   extrasTotal: number
+  /** Per-extra breakdown (used to persist `RentExtra` rows). */
+  extrasDetails: HotelBookingExtraDetail[]
   totalSavings: number
   clientCommission: number
   hostCommission: number
@@ -881,6 +892,7 @@ export async function calculateHotelBookingPrice(
     lines: pricedLines,
     subtotal: roomsSubtotal,
     extrasTotal,
+    extrasDetails,
     totalSavings,
     clientCommission: commissionCalc.clientCommission,
     hostCommission: commissionCalc.hostCommission,

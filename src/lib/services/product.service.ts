@@ -389,6 +389,12 @@ export async function findProductBySlugOrId(slugOrId: string) {
     extras: { take: 15 },
     highlights: { take: 10 },
     hotel: true,
+    // Per-type inventory for the guest hotel booking flow (Lot 4). Empty for
+    // non-hotel products, so this is a no-op for the classic single-unit path.
+    roomTypes: {
+      orderBy: { position: 'asc' as const },
+      include: { beds: true },
+    },
     rules: true,
     nearbyPlaces: { take: 10 },
     transportOptions: { take: 10 },

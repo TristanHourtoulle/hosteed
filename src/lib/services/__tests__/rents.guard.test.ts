@@ -14,8 +14,10 @@ jest.mock('../rent-availability.service', () => {
 })
 
 const calculateCompleteBookingPriceMock = jest.fn()
+const calculateHotelBookingPriceMock = jest.fn()
 jest.mock('../booking-pricing.service', () => ({
   calculateCompleteBookingPrice: (...args: unknown[]) => calculateCompleteBookingPriceMock(...args),
+  calculateHotelBookingPrice: (...args: unknown[]) => calculateHotelBookingPriceMock(...args),
 }))
 
 jest.mock('@/lib/services/sendTemplatedMail', () => ({ sendTemplatedMail: jest.fn() }))
@@ -57,6 +59,29 @@ const PRICING = {
   summary: {},
 }
 
+const HOTEL_PRICING = {
+  lines: [{ roomTypeId: 'rt-1', quantity: 1, unitPrice: '100', unitPricing: {}, lineSubtotal: 400 }],
+  subtotal: 400,
+  extrasTotal: 0,
+  extrasDetails: [],
+  totalSavings: 0,
+  clientCommission: 0,
+  hostCommission: 0,
+  platformAmount: 0,
+  hostAmount: 400,
+  totalAmount: 400,
+  summary: {
+    numberOfNights: 4,
+    subtotal: 400,
+    totalSavings: 0,
+    extrasTotal: 0,
+    clientCommission: 0,
+    totalAmount: 400,
+    promotionApplied: false,
+    specialPriceApplied: false,
+  },
+}
+
 function baseParams(overrides: Record<string, unknown> = {}) {
   return {
     productId: 'p1',
@@ -78,6 +103,7 @@ beforeEach(() => {
   prismaMock.product.findUnique.mockResolvedValue({ autoAccept: false, ownerId: 'o1' })
   checkRentIsAvailableMock.mockResolvedValue({ available: true })
   calculateCompleteBookingPriceMock.mockResolvedValue(PRICING)
+  calculateHotelBookingPriceMock.mockResolvedValue(HOTEL_PRICING)
 })
 
 describe('createRent transactional guard (TRI-125)', () => {

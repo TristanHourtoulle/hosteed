@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { StripeService } from '@/lib/services/stripe'
-import { calculateCompleteBookingPrice } from '@/lib/services/booking-pricing.service'
+import {
+  calculateCompleteBookingPrice,
+  calculateHotelBookingPrice,
+} from '@/lib/services/booking-pricing.service'
 import { createCheckoutSessionSchema } from '@/lib/zod/payment.schema'
 import { logger } from '@/lib/logger'
 import prisma from '@/lib/prisma'
@@ -55,7 +58,7 @@ export async function POST(req: Request) {
 
     const product = await prisma.product.findUnique({
       where: { id: metadata.productId },
-      select: { ownerId: true },
+      select: { ownerId: true, roomTypes: { select: { id: true } } },
     })
     if (!product) {
       return NextResponse.json(
@@ -64,22 +67,77 @@ export async function POST(req: Request) {
       )
     }
 
+    // Parse the optional hotel selection. Never trust client-supplied prices:
+    // we only accept room-type ids that actually belong to this product and
+    // re-price them server-side from the database.
+    let requestedRoomLines: Array<{ roomTypeId: string; quantity: number }> = []
+    if (metadata.roomTypeLines) {
+      try {
+        const parsed = JSON.parse(metadata.roomTypeLines)
+        if (Array.isArray(parsed)) {
+          const validIds = new Set(product.roomTypes.map(rt => rt.id))
+          requestedRoomLines = parsed
+            .filter(
+              (l): l is { roomTypeId: string; quantity: number } =>
+                l &&
+                typeof l.roomTypeId === 'string' &&
+                validIds.has(l.roomTypeId) &&
+                Number.isFinite(l.quantity) &&
+                l.quantity > 0
+            )
+            .map(l => ({ roomTypeId: l.roomTypeId, quantity: Math.floor(l.quantity) }))
+        }
+      } catch {
+        requestedRoomLines = []
+      }
+    }
+
+    const isHotelBooking = requestedRoomLines.length > 0
+
+    // A hotel booking whose lines are all invalid/tampered has no priceable
+    // rooms — reject rather than silently fall back to the establishment price.
+    if (metadata.roomTypeLines && !isHotelBooking) {
+      return NextResponse.json(
+        { error: { code: 'VAL_004', message: 'No valid room type selected' } },
+        { status: 400 }
+      )
+    }
+
     // Server-side price calculation — never trust client-supplied amounts
-    const pricing = await calculateCompleteBookingPrice(
-      metadata.productId,
-      startDate,
-      endDate,
-      guestCount,
-      selectedExtras,
-      product.ownerId
-    )
+    const pricing = isHotelBooking
+      ? await calculateHotelBookingPrice(
+          metadata.productId,
+          requestedRoomLines,
+          startDate,
+          endDate,
+          guestCount,
+          selectedExtras,
+          product.ownerId
+        )
+      : await calculateCompleteBookingPrice(
+          metadata.productId,
+          startDate,
+          endDate,
+          guestCount,
+          selectedExtras,
+          product.ownerId
+        )
 
     const serverCalculatedAmount = Math.round(pricing.totalAmount)
 
-    // Store server-calculated price in metadata for verify-payment/webhook to use
+    if (serverCalculatedAmount <= 0) {
+      return NextResponse.json(
+        { error: { code: 'VAL_005', message: 'Invalid booking amount' } },
+        { status: 400 }
+      )
+    }
+
+    // Store server-calculated price in metadata for verify-payment/webhook to use.
+    // Re-encode the VALIDATED room lines so the webhook persists only trusted data.
     const enrichedMetadata = {
       ...metadata,
       prices: String(serverCalculatedAmount),
+      ...(isHotelBooking ? { roomTypeLines: JSON.stringify(requestedRoomLines) } : {}),
     }
 
     const result = await StripeService.createCheckoutSession({

@@ -37,8 +37,11 @@ async function loadFixture(): Promise<Fixture | null> {
   return { productId: roomType.productId, userId: user.id, roomTypeId: roomType.id }
 }
 
-// SKIPPED until Lot 4 persists RentRoomType lines in-transaction.
-describe.skip('createRent overbooking concurrency (real DB)', () => {
+// Lot 4 persists RentRoomType lines in-transaction, so this test is now
+// meaningful. It stays gated behind DATABASE_URL_TEST: it runs ONLY when a
+// dedicated test database is provided, never against a shared/CI DB.
+const RUN_DB = !!process.env.DATABASE_URL_TEST
+;(RUN_DB ? describe : describe.skip)('createRent overbooking concurrency (real DB)', () => {
   it('never overbooks a room type under concurrency (2 rooms, 3 racers)', async () => {
     const fx = await loadFixture()
     if (!fx) return

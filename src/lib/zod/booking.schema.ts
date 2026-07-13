@@ -10,6 +10,8 @@ export const reservationFormSchema = z.object({
   phone: z.string().min(1, 'Le téléphone est requis'),
   phoneCountry: z.string(),
   specialRequests: z.string(),
+  /** Hotel selection, JSON-encoded `[{roomTypeId,quantity}]` (optional). */
+  roomTypeLines: z.string().optional(),
 })
 
 export type ReservationFormData = z.infer<typeof reservationFormSchema>

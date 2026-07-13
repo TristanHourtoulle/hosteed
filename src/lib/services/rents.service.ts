@@ -13,8 +13,37 @@ import {
   type RequestedRoomTypeLine,
 } from './rent-availability.service'
 import { buildOverlapWhereClause, normalizeDates } from './rent-overlap.utils'
-import { calculateCompleteBookingPrice } from './booking-pricing.service'
+import {
+  calculateCompleteBookingPrice,
+  calculateHotelBookingPrice,
+} from './booking-pricing.service'
 import { logger } from '@/lib/logger'
+
+/** Normalized pricing fields written onto a `Rent`, shared by both booking modes. */
+interface RentPricingFields {
+  basePricePerNight: number
+  numberOfNights: number
+  subtotal: number
+  totalSavings: number
+  promotionApplied: boolean
+  specialPriceApplied: boolean
+  extrasTotal: number
+  clientCommission: number
+  hostCommission: number
+  platformAmount: number
+  hostAmount: number
+  totalAmount: number
+  extrasDetails: Array<{
+    extraId: string
+    name: string
+    quantity: number
+    pricePerUnit: number
+    total: number
+  }>
+  /** Per-type unit prices (basePrice snapshots) for `RentRoomType` rows. */
+  roomLineUnitPrices?: Record<string, string>
+  pricingSnapshot: Prisma.InputJsonValue
+}
 
 export interface FormattedRent {
   id: string
@@ -289,18 +318,88 @@ export async function createRent(params: {
 
   const shouldAutoAccept = productSettings?.autoAccept || false
 
-  // Calculate complete pricing
-  const pricingDetails = await calculateCompleteBookingPrice(
-    params.productId,
-    params.arrivingDate,
-    params.leavingDate,
-    params.peopleNumber,
-    params.selectedExtras || [],
-    productSettings?.ownerId
-  )
-
   const isHotelBooking =
     Array.isArray(params.selectedRoomTypes) && params.selectedRoomTypes.length > 0
+
+  // Calculate complete pricing (server-side authority). Hotel bookings price
+  // each selected room type; single-unit bookings keep the legacy path.
+  const now = new Date().toISOString()
+  let pricingFields: RentPricingFields
+  if (isHotelBooking) {
+    const hotelPricing = await calculateHotelBookingPrice(
+      params.productId,
+      params.selectedRoomTypes!,
+      params.arrivingDate,
+      params.leavingDate,
+      params.peopleNumber,
+      params.selectedExtras || [],
+      productSettings?.ownerId
+    )
+    const nights = hotelPricing.summary.numberOfNights
+    pricingFields = {
+      basePricePerNight: nights > 0 ? hotelPricing.subtotal / nights : hotelPricing.subtotal,
+      numberOfNights: nights,
+      subtotal: hotelPricing.subtotal,
+      totalSavings: hotelPricing.totalSavings,
+      promotionApplied: hotelPricing.summary.promotionApplied,
+      specialPriceApplied: hotelPricing.summary.specialPriceApplied,
+      extrasTotal: hotelPricing.extrasTotal,
+      clientCommission: hotelPricing.clientCommission,
+      hostCommission: hotelPricing.hostCommission,
+      platformAmount: hotelPricing.platformAmount,
+      hostAmount: hotelPricing.hostAmount,
+      totalAmount: hotelPricing.totalAmount,
+      extrasDetails: hotelPricing.extrasDetails,
+      roomLineUnitPrices: Object.fromEntries(
+        hotelPricing.lines.map(l => [l.roomTypeId, l.unitPrice])
+      ),
+      pricingSnapshot: JSON.parse(
+        JSON.stringify({
+          roomTypeLines: hotelPricing.lines.map(l => ({
+            roomTypeId: l.roomTypeId,
+            quantity: l.quantity,
+            unitPrice: l.unitPrice,
+            lineSubtotal: l.lineSubtotal,
+          })),
+          extrasDetails: hotelPricing.extrasDetails,
+          summary: hotelPricing.summary,
+          calculatedAt: now,
+        })
+      ),
+    }
+  } else {
+    const pricingDetails = await calculateCompleteBookingPrice(
+      params.productId,
+      params.arrivingDate,
+      params.leavingDate,
+      params.peopleNumber,
+      params.selectedExtras || [],
+      productSettings?.ownerId
+    )
+    pricingFields = {
+      basePricePerNight: pricingDetails.basePricing.averageNightlyPrice,
+      numberOfNights: pricingDetails.basePricing.numberOfNights,
+      subtotal: pricingDetails.basePricing.subtotal,
+      totalSavings: pricingDetails.basePricing.totalSavings,
+      promotionApplied: pricingDetails.basePricing.promotionApplied,
+      specialPriceApplied: pricingDetails.basePricing.specialPriceApplied,
+      extrasTotal: pricingDetails.extrasTotal,
+      clientCommission: pricingDetails.clientCommission,
+      hostCommission: pricingDetails.hostCommission,
+      platformAmount: pricingDetails.platformAmount,
+      hostAmount: pricingDetails.hostAmount,
+      totalAmount: pricingDetails.totalAmount,
+      extrasDetails: pricingDetails.extrasDetails,
+      pricingSnapshot: JSON.parse(
+        JSON.stringify({
+          dailyBreakdown: pricingDetails.basePricing.dailyBreakdown,
+          extrasDetails: pricingDetails.extrasDetails,
+          summary: pricingDetails.summary,
+          calculatedAt: now,
+        })
+      ),
+    }
+  }
 
   // Atomic check-then-create: prevents race condition double bookings.
   // Wrapped in a P2034-only serialization-abort retry (TRI-125).
@@ -316,8 +415,8 @@ export async function createRent(params: {
         if (isHotelBooking) {
           // Per-type race-safe guard: counts RentRoomType.quantity per room type
           // inside the Serializable transaction (overbooking-critical, TRI-125).
-          // TODO(Lot 4): create the RentRoomType lines inside this same `tx` right
-          // after `tx.rent.create` so their quantities accumulate for the guard.
+          // The RentRoomType lines are created below, inside this same `tx`, so
+          // their quantities accumulate for concurrent bookings' guards.
           await assertRoomTypesAvailableInTx(
             tx,
             params.selectedRoomTypes!,
@@ -367,27 +466,20 @@ export async function createRent(params: {
             options: {
               connect: params.options.map(optionId => ({ id: optionId })),
             },
-            basePricePerNight: pricingDetails.basePricing.averageNightlyPrice,
-            numberOfNights: pricingDetails.basePricing.numberOfNights,
-            subtotal: pricingDetails.basePricing.subtotal,
-            discountAmount: pricingDetails.basePricing.totalSavings,
-            promotionApplied: pricingDetails.basePricing.promotionApplied,
-            specialPriceApplied: pricingDetails.basePricing.specialPriceApplied,
-            totalSavings: pricingDetails.basePricing.totalSavings,
-            extrasTotal: pricingDetails.extrasTotal,
-            clientCommission: pricingDetails.clientCommission,
-            hostCommission: pricingDetails.hostCommission,
-            platformAmount: pricingDetails.platformAmount,
-            hostAmount: pricingDetails.hostAmount,
-            totalAmount: pricingDetails.totalAmount,
-            pricingSnapshot: JSON.parse(
-              JSON.stringify({
-                dailyBreakdown: pricingDetails.basePricing.dailyBreakdown,
-                extrasDetails: pricingDetails.extrasDetails,
-                summary: pricingDetails.summary,
-                calculatedAt: new Date().toISOString(),
-              })
-            ),
+            basePricePerNight: pricingFields.basePricePerNight,
+            numberOfNights: pricingFields.numberOfNights,
+            subtotal: pricingFields.subtotal,
+            discountAmount: pricingFields.totalSavings,
+            promotionApplied: pricingFields.promotionApplied,
+            specialPriceApplied: pricingFields.specialPriceApplied,
+            totalSavings: pricingFields.totalSavings,
+            extrasTotal: pricingFields.extrasTotal,
+            clientCommission: pricingFields.clientCommission,
+            hostCommission: pricingFields.hostCommission,
+            platformAmount: pricingFields.platformAmount,
+            hostAmount: pricingFields.hostAmount,
+            totalAmount: pricingFields.totalAmount,
+            pricingSnapshot: pricingFields.pricingSnapshot,
           },
           include: {
             product: {
@@ -409,10 +501,27 @@ export async function createRent(params: {
           },
         })
 
+        // Persist RentRoomType lines inside the SAME transaction so overlapping
+        // quantities accumulate for concurrent per-type availability guards.
+        // `unitPrice` snapshots `HotelBookingPriceResult.lines[].unitPrice`
+        // (the RoomType.basePrice at booking time).
+        if (isHotelBooking) {
+          const unitPriceById = pricingFields.roomLineUnitPrices ?? {}
+
+          await tx.rentRoomType.createMany({
+            data: params.selectedRoomTypes!.map(line => ({
+              rentId: rent.id,
+              roomTypeId: line.roomTypeId,
+              quantity: line.quantity,
+              unitPrice: unitPriceById[line.roomTypeId] ?? '0',
+            })),
+          })
+        }
+
         // Create RentExtra entries inside the same transaction
         if (params.selectedExtras && params.selectedExtras.length > 0) {
           for (const extra of params.selectedExtras) {
-            const extraDetail = pricingDetails.extrasDetails.find(e => e.extraId === extra.extraId)
+            const extraDetail = pricingFields.extrasDetails.find(e => e.extraId === extra.extraId)
             if (extraDetail) {
               await tx.rentExtra.create({
                 data: {

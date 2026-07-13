@@ -6,7 +6,12 @@
 export type JestPrisma = {
   product: { findUnique: jest.Mock; findFirst: jest.Mock }
   roomType: { findUnique: jest.Mock; findMany: jest.Mock }
-  rentRoomType: { aggregate: jest.Mock; count: jest.Mock; findMany: jest.Mock }
+  rentRoomType: {
+    aggregate: jest.Mock
+    count: jest.Mock
+    findMany: jest.Mock
+    createMany: jest.Mock
+  }
   roomTypeBlockedDate: {
     findFirst: jest.Mock
     findMany: jest.Mock
@@ -27,7 +32,12 @@ export function makePrismaMock(): JestPrisma {
   return {
     product: { findUnique: jest.fn(), findFirst: jest.fn() },
     roomType: { findUnique: jest.fn(), findMany: jest.fn() },
-    rentRoomType: { aggregate: jest.fn(), count: jest.fn(), findMany: jest.fn() },
+    rentRoomType: {
+      aggregate: jest.fn(),
+      count: jest.fn(),
+      findMany: jest.fn(),
+      createMany: jest.fn(),
+    },
     roomTypeBlockedDate: {
       findFirst: jest.fn(),
       findMany: jest.fn(),
