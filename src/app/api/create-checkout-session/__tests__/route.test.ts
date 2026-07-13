@@ -53,7 +53,10 @@ beforeEach(() => {
   authMock.mockResolvedValue({ user: { id: 'u1' } })
   productFindUniqueMock.mockResolvedValue({
     ownerId: 'o1',
-    roomTypes: [{ id: 'rt-1' }, { id: 'rt-2' }],
+    roomTypes: [
+      { id: 'rt-1', capacity: 2 },
+      { id: 'rt-2', capacity: 3 },
+    ],
   })
   createCheckoutSessionMock.mockResolvedValue({ success: true, url: 'http://stripe/session' })
   calculateCompleteBookingPriceMock.mockResolvedValue({ totalAmount: 250 })
@@ -81,6 +84,22 @@ describe('POST /api/create-checkout-session', () => {
     )
 
     expect(res.status).toBe(400)
+    expect(createCheckoutSessionMock).not.toHaveBeenCalled()
+  })
+
+  it('rejects a hotel booking whose guest count exceeds the selected capacity', async () => {
+    // 1 room of capacity 2 selected for 8 guests → must be rejected server-side.
+    const res = await POST(
+      makeRequest({
+        peopleNumber: '8',
+        roomTypeLines: JSON.stringify([{ roomTypeId: 'rt-1', quantity: 1 }]),
+      })
+    )
+
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error.message).toMatch(/capacité maximale des chambres sélectionnées \(2 personnes/)
+    expect(calculateHotelBookingPriceMock).not.toHaveBeenCalled()
     expect(createCheckoutSessionMock).not.toHaveBeenCalled()
   })
 

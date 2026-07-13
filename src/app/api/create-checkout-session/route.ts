@@ -58,7 +58,7 @@ export async function POST(req: Request) {
 
     const product = await prisma.product.findUnique({
       where: { id: metadata.productId },
-      select: { ownerId: true, roomTypes: { select: { id: true } } },
+      select: { ownerId: true, roomTypes: { select: { id: true, capacity: true } } },
     })
     if (!product) {
       return NextResponse.json(
@@ -101,6 +101,32 @@ export async function POST(req: Request) {
         { error: { code: 'VAL_004', message: 'No valid room type selected' } },
         { status: 400 }
       )
+    }
+
+    // Enforce guest count against the selected room types' total capacity
+    // (authoritative). Rule: guestCount <= Σ(RoomType.capacity × quantity).
+    // Mirrors the guard inside calculateHotelBookingPrice, but returns a clean
+    // 400 with the max capacity instead of a swallowed 500.
+    if (isHotelBooking) {
+      const capacityById = new Map(product.roomTypes.map(rt => [rt.id, rt.capacity]))
+      const totalCapacity = requestedRoomLines.reduce(
+        (sum, l) => sum + (capacityById.get(l.roomTypeId) ?? 0) * l.quantity,
+        0
+      )
+      if (guestCount > totalCapacity) {
+        return NextResponse.json(
+          {
+            error: {
+              code: 'VAL_006',
+              message:
+                `Le nombre de voyageurs (${guestCount}) dépasse la capacité maximale des ` +
+                `chambres sélectionnées (${totalCapacity} personne${totalCapacity > 1 ? 's' : ''} ` +
+                `au total). Veuillez réduire le nombre de voyageurs ou ajouter des chambres.`,
+            },
+          },
+          { status: 400 }
+        )
+      }
     }
 
     // Server-side price calculation — never trust client-supplied amounts
