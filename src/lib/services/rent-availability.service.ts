@@ -195,9 +195,7 @@ export async function getHotelRoomTypeAvailability(
     }))
   }
 
-  return Promise.all(
-    types.map(t => resolveRoomTypeAvailability(prisma, t.id, arrival, leaving, 1))
-  )
+  return Promise.all(types.map(t => resolveRoomTypeAvailability(prisma, t.id, arrival, leaving, 1)))
 }
 
 /**
@@ -431,10 +429,7 @@ export async function checkRentIsAvailable(
             }
           )
         } catch (cacheError) {
-          logger.warn(
-            { productId, error: cacheError },
-            'Failed to cache single unit availability'
-          )
+          logger.warn({ productId, error: cacheError }, 'Failed to cache single unit availability')
         }
 
         if (existingRent) {

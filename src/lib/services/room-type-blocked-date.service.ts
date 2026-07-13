@@ -44,9 +44,7 @@ export async function createRoomTypeBlockedDate(
  * @param {string} roomTypeId - Room type identifier
  * @returns {Promise<RoomTypeBlockedDate[]>} Blocked ranges (ascending by startDate)
  */
-export async function listRoomTypeBlockedDates(
-  roomTypeId: string
-): Promise<RoomTypeBlockedDate[]> {
+export async function listRoomTypeBlockedDates(roomTypeId: string): Promise<RoomTypeBlockedDate[]> {
   return prisma.roomTypeBlockedDate.findMany({
     where: { roomTypeId },
     orderBy: { startDate: 'asc' },
@@ -72,10 +70,7 @@ export async function deleteRoomTypeBlockedDate(id: string): Promise<void> {
  * @returns {Promise<void>} Resolves if authorized; throws otherwise
  * @throws {BookingValidationError} When the room type is unknown or not owned by the user
  */
-export async function assertRoomTypeOwnedBy(
-  roomTypeId: string,
-  userId: string
-): Promise<void> {
+export async function assertRoomTypeOwnedBy(roomTypeId: string, userId: string): Promise<void> {
   const roomType = await prisma.roomType.findUnique({
     where: { id: roomTypeId },
     select: { product: { select: { ownerId: true } } },

@@ -7,11 +7,14 @@ import { findAllUserByRoles } from '@/lib/services/user.service'
 import { availabilityCacheService } from '@/lib/cache/redis-cache.service'
 import { invalidateProductCache } from '@/lib/cache/invalidation'
 import { BookingConflictError, BookingValidationError } from '@/lib/errors/booking.errors'
-import { checkRentIsAvailable } from './rent-availability.service'
+import {
+  checkRentIsAvailable,
+  assertRoomTypesAvailableInTx,
+  type RequestedRoomTypeLine,
+} from './rent-availability.service'
 import { buildOverlapWhereClause, normalizeDates } from './rent-overlap.utils'
 import { calculateCompleteBookingPrice } from './booking-pricing.service'
 import { logger } from '@/lib/logger'
-
 
 export interface FormattedRent {
   id: string
@@ -177,6 +180,37 @@ export async function findAllRentByProduct(id: string): Promise<RentWithDates | 
 }
 
 /**
+ * Run a booking transaction with a bounded serialization-abort retry (TRI-125).
+ *
+ * Under `Serializable`, concurrent conflicting transactions abort with Prisma
+ * `P2034` (write conflict / deadlock). Without a retry, legitimate bookings are
+ * lost. This retries ONLY on `P2034` (bounded, jittered backoff) and re-throws
+ * every other error — notably {@link BookingConflictError} — immediately, so a
+ * genuine overbooking conflict is never retried.
+ *
+ * @template T
+ * @param {() => Promise<T>} fn - Thunk that opens the `$transaction`
+ * @returns {Promise<T>} The transaction result
+ */
+async function runBookingTransaction<T>(fn: () => Promise<T>): Promise<T> {
+  const MAX_ATTEMPTS = 3
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fn()
+    } catch (error) {
+      const isSerializationAbort =
+        error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034'
+      if (isSerializationAbort && attempt < MAX_ATTEMPTS) {
+        const backoffMs = 15 * attempt + Math.random() * 15
+        await new Promise(resolve => setTimeout(resolve, backoffMs))
+        continue
+      }
+      throw error
+    }
+  }
+}
+
+/**
  * Create a new rent with atomic availability check using a Prisma serializable transaction.
  * Prevents race condition double bookings by re-checking availability inside the transaction.
  *
@@ -205,6 +239,12 @@ export async function createRent(params: {
   stripeId: string
   prices: number
   selectedExtras?: Array<{ extraId: string; quantity: number }>
+  /**
+   * Hotel multi-room-type selection (Lot 3/4). When present and non-empty the
+   * booking is guarded per room type; when absent the legacy single-unit /
+   * count-based establishment guard is used (behavior unchanged).
+   */
+  selectedRoomTypes?: RequestedRoomTypeLine[]
 }): Promise<RentWithRelations> {
   if (
     !params.productId ||
@@ -259,120 +299,148 @@ export async function createRent(params: {
     productSettings?.ownerId
   )
 
-  // Atomic check-then-create: prevents race condition double bookings
-  const createdRent = await prisma.$transaction(async (tx) => {
-    // Re-check availability inside transaction (definitive check with row-level isolation)
-    const { normalizedArrival, normalizedLeaving, dayAfterArrival } = normalizeDates(
-      params.arrivingDate,
-      params.leavingDate
-    )
+  const isHotelBooking =
+    Array.isArray(params.selectedRoomTypes) && params.selectedRoomTypes.length > 0
 
-    const productInfo = await tx.product.findUnique({
-      where: { id: params.productId },
-      select: { availableRooms: true },
-    })
+  // Atomic check-then-create: prevents race condition double bookings.
+  // Wrapped in a P2034-only serialization-abort retry (TRI-125).
+  const createdRent = await runBookingTransaction(() =>
+    prisma.$transaction(
+      async tx => {
+        // Re-check availability inside transaction (definitive check with row-level isolation)
+        const { normalizedArrival, normalizedLeaving, dayAfterArrival } = normalizeDates(
+          params.arrivingDate,
+          params.leavingDate
+        )
 
-    const overlapWhere = buildOverlapWhereClause(
-      params.productId,
-      normalizedArrival,
-      normalizedLeaving,
-      dayAfterArrival
-    )
+        if (isHotelBooking) {
+          // Per-type race-safe guard: counts RentRoomType.quantity per room type
+          // inside the Serializable transaction (overbooking-critical, TRI-125).
+          // TODO(Lot 4): create the RentRoomType lines inside this same `tx` right
+          // after `tx.rent.create` so their quantities accumulate for the guard.
+          await assertRoomTypesAvailableInTx(
+            tx,
+            params.selectedRoomTypes!,
+            params.arrivingDate,
+            params.leavingDate
+          )
+        } else {
+          // Legacy establishment-level guard — unchanged behavior.
+          const productInfo = await tx.product.findUnique({
+            where: { id: params.productId },
+            select: { availableRooms: true },
+          })
 
-    if (productInfo?.availableRooms && productInfo.availableRooms > 1) {
-      const conflictCount = await tx.rent.count({ where: overlapWhere })
-      if (conflictCount >= productInfo.availableRooms) {
-        throw new BookingConflictError('Aucune chambre disponible pour cette période')
-      }
-    } else {
-      const conflict = await tx.rent.findFirst({ where: overlapWhere })
-      if (conflict) {
-        throw new BookingConflictError('Il existe déjà une réservation sur cette période')
-      }
-    }
+          const overlapWhere = buildOverlapWhereClause(
+            params.productId,
+            normalizedArrival,
+            normalizedLeaving,
+            dayAfterArrival
+          )
 
-    // Create rent inside the transaction
-    const rent = await tx.rent.create({
-      data: {
-        productId: params.productId,
-        userId: params.userId,
-        arrivingDate: params.arrivingDate,
-        leavingDate: params.leavingDate,
-        numberPeople: BigInt(params.peopleNumber),
-        notes: BigInt(0),
-        accepted: shouldAutoAccept,
-        confirmed: shouldAutoAccept,
-        prices: BigInt(params.prices),
-        stripeId: params.stripeId || null,
-        options: {
-          connect: params.options.map(optionId => ({ id: optionId })),
-        },
-        basePricePerNight: pricingDetails.basePricing.averageNightlyPrice,
-        numberOfNights: pricingDetails.basePricing.numberOfNights,
-        subtotal: pricingDetails.basePricing.subtotal,
-        discountAmount: pricingDetails.basePricing.totalSavings,
-        promotionApplied: pricingDetails.basePricing.promotionApplied,
-        specialPriceApplied: pricingDetails.basePricing.specialPriceApplied,
-        totalSavings: pricingDetails.basePricing.totalSavings,
-        extrasTotal: pricingDetails.extrasTotal,
-        clientCommission: pricingDetails.clientCommission,
-        hostCommission: pricingDetails.hostCommission,
-        platformAmount: pricingDetails.platformAmount,
-        hostAmount: pricingDetails.hostAmount,
-        totalAmount: pricingDetails.totalAmount,
-        pricingSnapshot: JSON.parse(JSON.stringify({
-          dailyBreakdown: pricingDetails.basePricing.dailyBreakdown,
-          extrasDetails: pricingDetails.extrasDetails,
-          summary: pricingDetails.summary,
-          calculatedAt: new Date().toISOString(),
-        })),
-      },
-      include: {
-        product: {
+          if (productInfo?.availableRooms && productInfo.availableRooms > 1) {
+            const conflictCount = await tx.rent.count({ where: overlapWhere })
+            if (conflictCount >= productInfo.availableRooms) {
+              throw new BookingConflictError('Aucune chambre disponible pour cette période')
+            }
+          } else {
+            const conflict = await tx.rent.findFirst({ where: overlapWhere })
+            if (conflict) {
+              throw new BookingConflictError('Il existe déjà une réservation sur cette période')
+            }
+          }
+        }
+
+        // Create rent inside the transaction
+        const rent = await tx.rent.create({
+          data: {
+            productId: params.productId,
+            userId: params.userId,
+            arrivingDate: params.arrivingDate,
+            leavingDate: params.leavingDate,
+            numberPeople: BigInt(params.peopleNumber),
+            notes: BigInt(0),
+            accepted: shouldAutoAccept,
+            confirmed: shouldAutoAccept,
+            prices: BigInt(params.prices),
+            stripeId: params.stripeId || null,
+            options: {
+              connect: params.options.map(optionId => ({ id: optionId })),
+            },
+            basePricePerNight: pricingDetails.basePricing.averageNightlyPrice,
+            numberOfNights: pricingDetails.basePricing.numberOfNights,
+            subtotal: pricingDetails.basePricing.subtotal,
+            discountAmount: pricingDetails.basePricing.totalSavings,
+            promotionApplied: pricingDetails.basePricing.promotionApplied,
+            specialPriceApplied: pricingDetails.basePricing.specialPriceApplied,
+            totalSavings: pricingDetails.basePricing.totalSavings,
+            extrasTotal: pricingDetails.extrasTotal,
+            clientCommission: pricingDetails.clientCommission,
+            hostCommission: pricingDetails.hostCommission,
+            platformAmount: pricingDetails.platformAmount,
+            hostAmount: pricingDetails.hostAmount,
+            totalAmount: pricingDetails.totalAmount,
+            pricingSnapshot: JSON.parse(
+              JSON.stringify({
+                dailyBreakdown: pricingDetails.basePricing.dailyBreakdown,
+                extrasDetails: pricingDetails.extrasDetails,
+                summary: pricingDetails.summary,
+                calculatedAt: new Date().toISOString(),
+              })
+            ),
+          },
           include: {
-            img: true,
-            type: true,
-            owner: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
+            product: {
+              include: {
+                img: true,
+                type: true,
+                owner: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                  },
+                },
               },
             },
+            user: true,
+            options: true,
+            extras: true,
           },
-        },
-        user: true,
-        options: true,
-        extras: true,
-      },
-    })
+        })
 
-    // Create RentExtra entries inside the same transaction
-    if (params.selectedExtras && params.selectedExtras.length > 0) {
-      for (const extra of params.selectedExtras) {
-        const extraDetail = pricingDetails.extrasDetails.find(e => e.extraId === extra.extraId)
-        if (extraDetail) {
-          await tx.rentExtra.create({
-            data: {
-              rentId: rent.id,
-              extraId: extra.extraId,
-              quantity: extra.quantity,
-              totalPrice: extraDetail.total,
-            },
-          })
+        // Create RentExtra entries inside the same transaction
+        if (params.selectedExtras && params.selectedExtras.length > 0) {
+          for (const extra of params.selectedExtras) {
+            const extraDetail = pricingDetails.extrasDetails.find(e => e.extraId === extra.extraId)
+            if (extraDetail) {
+              await tx.rentExtra.create({
+                data: {
+                  rentId: rent.id,
+                  extraId: extra.extraId,
+                  quantity: extra.quantity,
+                  totalPrice: extraDetail.total,
+                },
+              })
+            }
+          }
         }
-      }
-    }
 
-    return rent
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
+        return rent
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    )
+  )
 
   // Invalidate availability cache after booking creation
   try {
     await availabilityCacheService.invalidateAvailability(params.productId)
     await invalidateProductCache(params.productId)
   } catch (cacheError) {
-    logger.warn({ productId: params.productId, error: cacheError }, 'Failed to invalidate cache after booking creation')
+    logger.warn(
+      { productId: params.productId, error: cacheError },
+      'Failed to invalidate cache after booking creation'
+    )
   }
 
   // Send notifications (non-blocking)
@@ -390,7 +458,10 @@ export async function createRent(params: {
     },
   })
   if (!request) {
-    logger.error({ rentId: createdRent.id }, 'Product not found for notification after rent creation')
+    logger.error(
+      { rentId: createdRent.id },
+      'Product not found for notification after rent creation'
+    )
     return createdRent
   }
 
@@ -416,11 +487,16 @@ export async function createRent(params: {
     return createdRent
   }
 
-  await sendTemplatedMail(createdRent.product.owner.email, 'Nouvelle réservation !', 'new-book.html', {
-    bookId: createdRent.id,
-    name: createdRent.product.owner.name || '',
-    bookUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
-  })
+  await sendTemplatedMail(
+    createdRent.product.owner.email,
+    'Nouvelle réservation !',
+    'new-book.html',
+    {
+      bookId: createdRent.id,
+      name: createdRent.product.owner.name || '',
+      bookUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
+    }
+  )
 
   if (product.autoAccept) {
     await sendTemplatedMail(

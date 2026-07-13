@@ -157,12 +157,7 @@ describe('assertRoomTypesAvailableInTx', () => {
     tx.roomTypeBlockedDate.findMany.mockResolvedValue([])
 
     await expect(
-      assertRoomTypesAvailableInTx(
-        tx as never,
-        [{ roomTypeId: 'rt-1', quantity: 1 }],
-        A,
-        L
-      )
+      assertRoomTypesAvailableInTx(tx as never, [{ roomTypeId: 'rt-1', quantity: 1 }], A, L)
     ).rejects.toBeInstanceOf(BookingConflictError)
   })
 

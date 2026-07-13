@@ -126,8 +126,8 @@ describe('calculateHotelBookingPrice', () => {
   })
 
   it('throws if selections is empty', async () => {
-    await expect(
-      calculateHotelBookingPrice('p1', [], A, L2, 2, [], 'owner')
-    ).rejects.toThrow('At least one room type must be selected')
+    await expect(calculateHotelBookingPrice('p1', [], A, L2, 2, [], 'owner')).rejects.toThrow(
+      'At least one room type must be selected'
+    )
   })
 })
