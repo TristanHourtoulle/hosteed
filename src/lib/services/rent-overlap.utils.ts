@@ -48,6 +48,84 @@ export function buildOverlapWhereClause(
 }
 
 /**
+ * Build a Prisma WHERE clause to detect overlapping `RentRoomType` lines for a
+ * single room type. Reuses the same hotel-night semantics as
+ * {@link buildOverlapWhereClause} (checkout day is free) but scopes the overlap
+ * to the parent `Rent` of a specific `roomTypeId` so per-type availability can
+ * be computed by summing overlapping `RentRoomType.quantity`.
+ *
+ * Both RESERVED and WAITING bookings block availability (host approval window),
+ * mirroring the establishment-level overlap query.
+ *
+ * @param {string} roomTypeId - Room type identifier
+ * @param {Date} normalizedArrival - Arrival date normalized to UTC midnight
+ * @param {Date} normalizedLeaving - Leaving date normalized to UTC midnight
+ * @param {Date} dayAfterArrival - Day after arrival (for hotel night semantics)
+ * @returns {Prisma.RentRoomTypeWhereInput} Prisma where clause for per-type overlap detection
+ */
+export function buildRoomTypeOverlapWhere(
+  roomTypeId: string,
+  normalizedArrival: Date,
+  normalizedLeaving: Date,
+  dayAfterArrival: Date
+): Prisma.RentRoomTypeWhereInput {
+  return {
+    roomTypeId,
+    rent: {
+      status: { in: [RentStatus.RESERVED, RentStatus.WAITING] as const },
+      OR: [
+        // Reservation starts during the requested period
+        {
+          arrivingDate: {
+            gte: normalizedArrival,
+            lt: normalizedLeaving,
+          },
+        },
+        // Reservation ends during the requested period (checkout day is free)
+        {
+          leavingDate: {
+            gte: dayAfterArrival,
+            lt: normalizedLeaving,
+          },
+        },
+        // Reservation spans the entire requested period
+        {
+          arrivingDate: { lt: normalizedArrival },
+          leavingDate: { gt: normalizedLeaving },
+        },
+      ],
+    },
+  }
+}
+
+/**
+ * Build a Prisma WHERE clause to detect a `RoomTypeBlockedDate` range overlapping
+ * the requested period. Uses the standard half-open interval overlap test:
+ * two ranges [aStart, aEnd) and [bStart, bEnd) overlap iff
+ * `aStart < bEnd && aEnd > bStart`.
+ *
+ * A single overlapping blocked range makes the entire room type unavailable for
+ * that period (host closed the type), mirroring `unAvailableProduct` semantics.
+ *
+ * @param {string} roomTypeId - Room type identifier
+ * @param {Date} normalizedArrival - Requested arrival date normalized to UTC midnight
+ * @param {Date} normalizedLeaving - Requested leaving date normalized to UTC midnight
+ * @returns {Prisma.RoomTypeBlockedDateWhereInput} Prisma where clause for blocked-date overlap
+ */
+export function buildBlockedDateOverlapWhere(
+  roomTypeId: string,
+  normalizedArrival: Date,
+  normalizedLeaving: Date
+): Prisma.RoomTypeBlockedDateWhereInput {
+  return {
+    roomTypeId,
+    // ranges overlap iff blockedStart < requestedEnd AND blockedEnd > requestedStart
+    startDate: { lt: normalizedLeaving },
+    endDate: { gt: normalizedArrival },
+  }
+}
+
+/**
  * Normalize a date to UTC midnight and compute the day-after-arrival
  * for hotel night semantics.
  *
