@@ -82,6 +82,7 @@ export const useProductEditForm = ({ product, types }: UseProductEditFormProps) 
     isHotel: !!(product.hotel && product.hotel.length > 0), // ✅ Check if array has items
     hotelName: product.hotel && product.hotel.length > 0 ? product.hotel[0].name : '', // ✅ Take first hotel
     availableRooms: product.availableRooms?.toString() || '',
+    roomTypes: [],
   })
 
   const [seoData, setSeoData] = useState<SEOData>({

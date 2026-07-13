@@ -92,6 +92,7 @@ function buildInitialFormData(product: Product): ProductFormData {
     hotelName:
       product.hotel && product.hotel.length > 0 ? product.hotel[0].name : '',
     availableRooms: product.availableRooms?.toString() || '',
+    roomTypes: [],
   }
 }
 
