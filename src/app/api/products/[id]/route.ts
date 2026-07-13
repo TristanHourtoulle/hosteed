@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { findProductById, updateProduct } from '@/lib/services/product.service'
+import { RoomTypeDeletionBlockedError } from '@/lib/services/room-type.service'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 
@@ -109,6 +110,18 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
 
     return NextResponse.json(serializedProduct)
   } catch (error) {
+    // Soft-block: a room type slated for deletion still has bookings. Surface a
+    // clear, actionable message with a 409 instead of a generic 500 crash.
+    if (error instanceof RoomTypeDeletionBlockedError) {
+      const names = error.roomTypeNames.filter(Boolean)
+      const detail = names.length > 0 ? ` : ${names.join(', ')}` : ''
+      return NextResponse.json(
+        {
+          error: `Impossible de supprimer un type de chambre ayant des réservations existantes${detail}. Retirez d'abord les réservations concernées ou conservez ce type.`,
+        },
+        { status: 409 }
+      )
+    }
     console.error('Error updating product:', error)
     return NextResponse.json({ error: 'Failed to update product' }, { status: 500 })
   }
