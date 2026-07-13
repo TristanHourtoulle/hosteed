@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
 
     const data: CreatePromotionInput = {
       productId: promotionData.productId,
+      roomTypeId: (promotionData.roomTypeId as string | null | undefined) ?? null,
       discountPercentage: parseFloat(promotionData.discountPercentage),
       startDate: new Date(promotionData.startDate),
       endDate: new Date(promotionData.endDate),

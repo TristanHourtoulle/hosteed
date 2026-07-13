@@ -8,6 +8,12 @@ import { invalidateProductCache } from '@/lib/cache/invalidation'
 
 export interface CreatePromotionInput {
   productId: string
+  /**
+   * Hotel multi-room-type (Lot 5): when set, the promotion applies to that one
+   * room type only; when null/undefined it applies to the whole establishment
+   * (existing behavior, unchanged for non-hotel products).
+   */
+  roomTypeId?: string | null
   discountPercentage: number
   startDate: Date
   endDate: Date
@@ -49,27 +55,35 @@ export async function findOverlappingPromotions(
   productId: string,
   startDate: Date,
   endDate: Date,
-  excludePromotionId?: string
+  excludePromotionId?: string,
+  roomTypeId?: string | null
 ): Promise<ProductPromotion[]> {
+  const dateOverlap = {
+    OR: [
+      // La nouvelle promotion commence pendant une promotion existante
+      { AND: [{ startDate: { lte: startDate } }, { endDate: { gte: startDate } }] },
+      // La nouvelle promotion se termine pendant une promotion existante
+      { AND: [{ startDate: { lte: endDate } }, { endDate: { gte: endDate } }] },
+      // La nouvelle promotion englobe une promotion existante
+      { AND: [{ startDate: { gte: startDate } }, { endDate: { lte: endDate } }] },
+    ],
+  }
+
+  // Room-type scoping (Lot 5): a per-type promotion only conflicts with another
+  // promotion of the same type or an establishment-wide (null) one. An
+  // establishment-wide check (roomTypeId null/undefined) conflicts with any
+  // promotion, so no room-type filter is added.
+  const and: Array<Record<string, unknown>> = [dateOverlap]
+  if (roomTypeId) {
+    and.push({ OR: [{ roomTypeId }, { roomTypeId: null }] })
+  }
+
   const overlapping = await prisma.productPromotion.findMany({
     where: {
       productId,
       isActive: true,
       id: excludePromotionId ? { not: excludePromotionId } : undefined,
-      OR: [
-        // La nouvelle promotion commence pendant une promotion existante
-        {
-          AND: [{ startDate: { lte: startDate } }, { endDate: { gte: startDate } }],
-        },
-        // La nouvelle promotion se termine pendant une promotion existante
-        {
-          AND: [{ startDate: { lte: endDate } }, { endDate: { gte: endDate } }],
-        },
-        // La nouvelle promotion englobe une promotion existante
-        {
-          AND: [{ startDate: { gte: startDate } }, { endDate: { lte: endDate } }],
-        },
-      ],
+      AND: and,
     },
     include: {
       product: {
@@ -87,8 +101,14 @@ export async function findOverlappingPromotions(
  * Crée une promotion (vérifie d'abord les chevauchements)
  */
 export async function createPromotion(data: CreatePromotionInput): Promise<CreatePromotionResult> {
-  // 1. Vérifier les promotions qui se chevauchent
-  const overlapping = await findOverlappingPromotions(data.productId, data.startDate, data.endDate)
+  // 1. Vérifier les promotions qui se chevauchent (scoped to the room type)
+  const overlapping = await findOverlappingPromotions(
+    data.productId,
+    data.startDate,
+    data.endDate,
+    undefined,
+    data.roomTypeId ?? null
+  )
 
   if (overlapping.length > 0) {
     return {
@@ -117,6 +137,7 @@ export async function createPromotion(data: CreatePromotionInput): Promise<Creat
   const promotion = await prisma.productPromotion.create({
     data: {
       productId: data.productId,
+      roomTypeId: data.roomTypeId ?? null,
       discountPercentage: data.discountPercentage,
       startDate: data.startDate,
       endDate: data.endDate,
@@ -148,6 +169,7 @@ export async function confirmPromotionWithOverlap(
     const newPromotion = await tx.productPromotion.create({
       data: {
         productId: data.productId,
+        roomTypeId: data.roomTypeId ?? null,
         discountPercentage: data.discountPercentage,
         startDate: data.startDate,
         endDate: data.endDate,
@@ -193,7 +215,8 @@ export async function updatePromotion(
       data.productId || current.productId,
       data.startDate || current.startDate,
       data.endDate || current.endDate,
-      id // Exclure la promotion actuelle
+      id, // Exclure la promotion actuelle
+      data.roomTypeId !== undefined ? data.roomTypeId : current.roomTypeId
     )
 
     if (overlapping.length > 0) {
