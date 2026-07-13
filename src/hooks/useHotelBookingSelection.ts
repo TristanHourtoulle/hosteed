@@ -131,7 +131,8 @@ export function useHotelBookingSelection({
       roomTypeId: line.roomTypeId,
       name: nameById.get(line.roomTypeId) ?? line.roomTypeId,
       quantity: line.quantity,
-      unitPricePerNight: line.unitPricing?.averageNightlyPrice ?? Number.parseFloat(line.unitPrice) || 0,
+      unitPricePerNight:
+        line.unitPricing?.averageNightlyPrice ?? (Number.parseFloat(line.unitPrice) || 0),
       lineSubtotal: line.lineSubtotal,
     }))
   }, [pricing, nameById])

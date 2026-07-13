@@ -16,6 +16,8 @@ interface RoomTypesSectionProps {
   currency?: 'EUR' | 'MGA'
   /** Compact heading variant for the booking card. */
   heading?: boolean
+  /** Informational catalog without steppers (left column display). */
+  readOnly?: boolean
 }
 
 /**
@@ -30,6 +32,7 @@ export function RoomTypesSection({
   onSelectionChange,
   currency = 'EUR',
   heading = true,
+  readOnly = false,
 }: RoomTypesSectionProps) {
   const availabilityById = new Map(
     (availabilities ?? []).map(a => [a.roomTypeId, a])
@@ -63,6 +66,7 @@ export function RoomTypesSection({
             selectedQuantity={selection[roomType.id] ?? 0}
             onQuantityChange={handleQuantityChange}
             currency={currency}
+            readOnly={readOnly}
           />
         ))}
       </div>

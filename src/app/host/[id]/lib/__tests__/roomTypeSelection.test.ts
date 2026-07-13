@@ -130,6 +130,12 @@ describe('selectionToLines / parseReservationRoomTypes', () => {
       { roomTypeId: 'b', quantity: 2 },
     ])
   })
+
+  it('encodes parsed lines as compact checkout metadata (roomTypeLines)', () => {
+    // Mirrors the reservation page submit: JSON-encoded [{roomTypeId,quantity}].
+    const lines = parseReservationRoomTypes('A:1')
+    expect(JSON.stringify(lines)).toBe('[{"roomTypeId":"A","quantity":1}]')
+  })
 })
 
 describe('isDateBlocked', () => {

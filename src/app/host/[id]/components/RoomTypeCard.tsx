@@ -13,6 +13,8 @@ interface RoomTypeCardProps {
   selectedQuantity: number
   onQuantityChange: (roomTypeId: string, quantity: number) => void
   currency?: 'EUR' | 'MGA'
+  /** Informational display without the quantity stepper. */
+  readOnly?: boolean
 }
 
 /**
@@ -27,6 +29,7 @@ export function RoomTypeCard({
   selectedQuantity,
   onQuantityChange,
   currency = 'EUR',
+  readOnly = false,
 }: RoomTypeCardProps) {
   const [showCalendar, setShowCalendar] = useState(false)
 
@@ -106,33 +109,35 @@ export function RoomTypeCard({
           </span>
         )}
 
-        <div className='flex items-center gap-3'>
-          <Button
-            type='button'
-            variant='outline'
-            size='icon'
-            className='rounded-full h-8 w-8'
-            aria-label={`Retirer une chambre ${roomType.name}`}
-            disabled={selectedQuantity <= 0}
-            onClick={() => onQuantityChange(roomType.id, selectedQuantity - 1)}
-          >
-            <Minus className='h-4 w-4' />
-          </Button>
-          <span className='w-6 text-center font-medium' aria-live='polite'>
-            {selectedQuantity}
-          </span>
-          <Button
-            type='button'
-            variant='outline'
-            size='icon'
-            className='rounded-full h-8 w-8'
-            aria-label={`Ajouter une chambre ${roomType.name}`}
-            disabled={!canIncrement}
-            onClick={() => onQuantityChange(roomType.id, selectedQuantity + 1)}
-          >
-            <Plus className='h-4 w-4' />
-          </Button>
-        </div>
+        {!readOnly && (
+          <div className='flex items-center gap-3'>
+            <Button
+              type='button'
+              variant='outline'
+              size='icon'
+              className='rounded-full h-8 w-8'
+              aria-label={`Retirer une chambre ${roomType.name}`}
+              disabled={selectedQuantity <= 0}
+              onClick={() => onQuantityChange(roomType.id, selectedQuantity - 1)}
+            >
+              <Minus className='h-4 w-4' />
+            </Button>
+            <span className='w-6 text-center font-medium' aria-live='polite'>
+              {selectedQuantity}
+            </span>
+            <Button
+              type='button'
+              variant='outline'
+              size='icon'
+              className='rounded-full h-8 w-8'
+              aria-label={`Ajouter une chambre ${roomType.name}`}
+              disabled={!canIncrement}
+              onClick={() => onQuantityChange(roomType.id, selectedQuantity + 1)}
+            >
+              <Plus className='h-4 w-4' />
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   )

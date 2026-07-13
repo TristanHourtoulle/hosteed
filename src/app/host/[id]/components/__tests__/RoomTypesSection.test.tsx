@@ -1,6 +1,7 @@
 /**
  * @jest-environment jsdom
  */
+import { useState } from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { RoomTypesSection } from '../RoomTypesSection'
 import type { RoomTypeView, RoomTypeAvailabilityView } from '@/types/roomType'
@@ -52,10 +53,8 @@ function ControlledSection({
   availabilities?: RoomTypeAvailabilityView[]
   onChange: (s: RoomTypeSelection) => void
 }) {
-  let selection: RoomTypeSelection = {}
   function Wrapper() {
-    const [sel, setSel] = require('react').useState<RoomTypeSelection>({})
-    selection = sel
+    const [sel, setSel] = useState<RoomTypeSelection>({})
     return (
       <RoomTypesSection
         roomTypes={roomTypes}
@@ -68,7 +67,6 @@ function ControlledSection({
       />
     )
   }
-  void selection
   return <Wrapper />
 }
 
