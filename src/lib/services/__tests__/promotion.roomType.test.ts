@@ -12,12 +12,14 @@ const productPromotion = {
   updateMany: jest.fn(),
 }
 const productFindUnique = jest.fn()
+const roomTypeFindUnique = jest.fn()
 
 jest.mock('@/lib/prisma', () => ({
   __esModule: true,
   default: {
     productPromotion,
     product: { findUnique: (...a: unknown[]) => productFindUnique(...a) },
+    roomType: { findUnique: (...a: unknown[]) => roomTypeFindUnique(...a) },
     $transaction: (fn: (tx: unknown) => unknown) => fn({ productPromotion }),
   },
 }))
@@ -41,6 +43,8 @@ beforeEach(() => {
     basePrice: '100',
     type: { commission: null },
   })
+  // Per-type commission validation reads the room type base price.
+  roomTypeFindUnique.mockResolvedValue({ basePrice: '100' })
 })
 
 describe('createPromotion with roomTypeId', () => {

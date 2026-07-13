@@ -118,9 +118,11 @@ export async function createPromotion(data: CreatePromotionInput): Promise<Creat
   }
 
   // 2. Vérifier que la promotion ne fait pas perdre d'argent à la plateforme
+  // (per-type base price when scoped to a room type)
   const { isValid, maxAllowedPercentage } = await validatePromotionCommission(
     data.productId,
-    data.discountPercentage
+    data.discountPercentage,
+    data.roomTypeId ?? null
   )
 
   if (!isValid) {
@@ -360,10 +362,15 @@ export interface ValidatePromotionCommissionResult {
 /**
  * Valider qu'une promotion ne fait pas perdre d'argent à la plateforme.
  * Retourne également le pourcentage maximum autorisé pour ce produit.
+ *
+ * Hotel multi-room-type (Lot 5): when `roomTypeId` is provided, the commission
+ * is validated against that room type's own base price (per-type pricing),
+ * falling back to the establishment base price if the room type is missing.
  */
 export async function validatePromotionCommission(
   productId: string,
-  discountPercentage: number
+  discountPercentage: number,
+  roomTypeId?: string | null
 ): Promise<ValidatePromotionCommissionResult> {
   const product = await prisma.product.findUnique({
     where: { id: productId },
@@ -380,7 +387,17 @@ export async function validatePromotionCommission(
     throw new Error('Produit non trouvé')
   }
 
-  const basePrice = parseFloat(product.basePrice)
+  let basePrice = parseFloat(product.basePrice)
+  if (roomTypeId) {
+    const roomType = await prisma.roomType.findUnique({
+      where: { id: roomTypeId },
+      select: { basePrice: true },
+    })
+    if (roomType) {
+      basePrice = parseFloat(roomType.basePrice)
+    }
+  }
+
   const commission = product.type.commission
 
   if (!commission) {
