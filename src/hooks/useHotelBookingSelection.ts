@@ -39,6 +39,10 @@ export interface UseHotelBookingSelectionResult {
   isPricingLoading: boolean
   roomLines: RoomLineSummary[]
   totalRooms: number
+  /** Total seats offered by the current selection: Σ(capacity × quantity). */
+  selectedCapacity: number
+  /** `true` when `guestCount` exceeds `selectedCapacity` (rooms selected). */
+  exceedsCapacity: boolean
   canReserve: boolean
   reservationHref: string
 }
@@ -137,8 +141,24 @@ export function useHotelBookingSelection({
     }))
   }, [pricing, nameById])
 
+  // Total seats offered by the current selection. Mirrors the server-side rule
+  // enforced by `calculateHotelBookingPrice`: guestCount <= Σ(capacity × qty).
+  const capacityById = useMemo(
+    () => new Map(roomTypes.map(rt => [rt.id, rt.capacity])),
+    [roomTypes]
+  )
+  const selectedCapacity = useMemo(
+    () =>
+      requestLines.reduce(
+        (sum, l) => sum + (capacityById.get(l.roomTypeId) ?? 0) * l.quantity,
+        0
+      ),
+    [requestLines, capacityById]
+  )
+  const exceedsCapacity = totalRooms > 0 && guestCount > selectedCapacity
+
   const allSelectedAvailable = lines.every(l => l.quantity <= l.availableQuantity)
-  const canReserve = totalRooms > 0 && nights > 0 && allSelectedAvailable
+  const canReserve = totalRooms > 0 && nights > 0 && allSelectedAvailable && !exceedsCapacity
 
   const checkIn = dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : ''
   const checkOut = dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : ''
@@ -160,6 +180,8 @@ export function useHotelBookingSelection({
     isPricingLoading,
     roomLines,
     totalRooms,
+    selectedCapacity,
+    exceedsCapacity,
     canReserve,
     reservationHref,
   }

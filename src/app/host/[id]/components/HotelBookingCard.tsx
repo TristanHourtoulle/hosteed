@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Users, Minus, Plus, Calendar as CalendarIcon, Star } from 'lucide-react'
+import { Users, Minus, Plus, Calendar as CalendarIcon, Star, AlertTriangle } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/shadcnui/popover'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Calendar } from '@/components/ui/shadcnui/calendar'
@@ -52,6 +52,8 @@ export default function HotelBookingCard({
     pricing,
     roomLines,
     totalRooms,
+    selectedCapacity,
+    exceedsCapacity,
     canReserve,
     reservationHref,
   } = useHotelBookingSelection({
@@ -199,6 +201,21 @@ export default function HotelBookingCard({
           />
         )}
 
+        {/* Capacity feedback: the selected room types cannot host every guest. */}
+        {exceedsCapacity && (
+          <div
+            role='alert'
+            className='flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg'
+          >
+            <AlertTriangle className='h-4 w-4 text-red-600 flex-shrink-0 mt-0.5' />
+            <p className='text-sm text-red-800'>
+              Les chambres sélectionnées accueillent au maximum {selectedCapacity} voyageur
+              {selectedCapacity > 1 ? 's' : ''}. Réduisez le nombre de voyageurs ou ajoutez des
+              chambres.
+            </p>
+          </div>
+        )}
+
         <Link
           href={canReserve ? reservationHref : '#'}
           aria-disabled={!canReserve}
@@ -215,7 +232,9 @@ export default function HotelBookingCard({
             ? 'Sélectionnez des dates'
             : totalRooms === 0
               ? 'Sélectionnez une chambre'
-              : 'Réserver'}
+              : exceedsCapacity
+                ? 'Capacité insuffisante'
+                : 'Réserver'}
         </Link>
 
         <div className='p-3 bg-green-50 border border-green-200 rounded-lg'>

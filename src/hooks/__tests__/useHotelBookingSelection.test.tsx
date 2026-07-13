@@ -70,13 +70,13 @@ beforeEach(() => {
   )
 })
 
-function setup() {
+function setup(guestCount = 2) {
   return renderHook(
     () =>
       useHotelBookingSelection({
         productId: 'p1',
         roomTypes,
-        guestCount: 2,
+        guestCount,
         initialDateRange: DATE_RANGE,
       }),
     { wrapper: TestQueryProvider }
@@ -108,5 +108,22 @@ describe('useHotelBookingSelection', () => {
   it('disables reservation when no room type is selected', () => {
     const { result } = setup()
     expect(result.current.canReserve).toBe(false)
+  })
+
+  it('flags exceeded capacity and blocks reservation until enough rooms are added', () => {
+    // guestCount 3, each room seats 2.
+    const { result } = setup(3)
+
+    act(() => result.current.setQuantity('A', 1))
+    // 1 room = 2 seats < 3 guests → over capacity.
+    expect(result.current.selectedCapacity).toBe(2)
+    expect(result.current.exceedsCapacity).toBe(true)
+    expect(result.current.canReserve).toBe(false)
+
+    act(() => result.current.setQuantity('A', 2))
+    // 2 rooms = 4 seats >= 3 guests → within capacity.
+    expect(result.current.selectedCapacity).toBe(4)
+    expect(result.current.exceedsCapacity).toBe(false)
+    expect(result.current.canReserve).toBe(true)
   })
 })
