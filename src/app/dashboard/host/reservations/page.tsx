@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 import { findRentByHostUserId } from '@/lib/services/rents.service'
 import { approveRent } from '@/lib/services/rent-lifecycle.service'
@@ -42,28 +43,29 @@ export default function RentsPage() {
   const [filteredRents, setFilteredRents] = useState<Rent[]>([])
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState<string>('ALL')
+  const [pendingRentIds, setPendingRentIds] = useState<Set<string>>(new Set())
+
+  const fetchRents = useCallback(async () => {
+    try {
+      if (session?.user?.id) {
+        const data = await findRentByHostUserId(session.user.id)
+        if (data) {
+          setRents(data)
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des locations:', error)
+      toast.error('Erreur lors du chargement des locations')
+    } finally {
+      setLoading(false)
+    }
+  }, [session?.user?.id])
 
   useEffect(() => {
-    const fetchRents = async () => {
-      try {
-        if (session?.user?.id) {
-          const data = await findRentByHostUserId(session.user.id)
-          if (data) {
-            setRents(data)
-            setFilteredRents(data)
-          }
-        }
-      } catch (error) {
-        console.error('Erreur lors du chargement des locations:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
     if (isAuthenticated) {
       fetchRents()
     }
-  }, [session, isAuthenticated])
+  }, [isAuthenticated, fetchRents])
 
   useEffect(() => {
     if (filterStatus === 'ALL') {
@@ -104,6 +106,10 @@ export default function RentsPage() {
   }
 
   const handleApproveReservation = async (rentId: string, stripeId: string | null) => {
+    if (pendingRentIds.has(rentId)) {
+      return
+    }
+    setPendingRentIds(prev => new Set(prev).add(rentId))
     try {
       if (!stripeId) {
         throw new Error('Aucun paiement associé à cette réservation')
@@ -112,8 +118,19 @@ export default function RentsPage() {
       if (!result?.success) {
         throw new Error('Erreur lors de la capture du paiement')
       }
+      toast.success('Réservation approuvée')
+      await fetchRents()
     } catch (error) {
       console.error("Erreur lors de l'approbation de la réservation:", error)
+      toast.error(
+        error instanceof Error ? error.message : "Erreur lors de l'approbation de la réservation"
+      )
+    } finally {
+      setPendingRentIds(prev => {
+        const next = new Set(prev)
+        next.delete(rentId)
+        return next
+      })
     }
   }
 
@@ -220,9 +237,10 @@ export default function RentsPage() {
                             rent.payment == PaymentStatus.NOT_PAID && (
                               <button
                                 onClick={() => handleApproveReservation(rent.id, rent.stripeId)}
-                                className='px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors'
+                                disabled={pendingRentIds.has(rent.id)}
+                                className='px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
                               >
-                                Approuver
+                                {pendingRentIds.has(rent.id) ? 'Approbation…' : 'Approuver'}
                               </button>
                             )}
                         </div>
