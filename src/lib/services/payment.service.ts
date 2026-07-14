@@ -52,7 +52,7 @@ export async function getPayablePricesPerRent(rentId: string): Promise<PayablePr
     if (product.contract && rent.payment === PaymentStatus.CLIENT_PAID) {
       availablePrice = price
     } else if (
-      rent.status === (RentStatus.CHECKIN || RentStatus.RESERVED) &&
+      (rent.status === RentStatus.CHECKIN || rent.status === RentStatus.RESERVED) &&
       (rent.payment === PaymentStatus.CLIENT_PAID ||
         rent.payment === PaymentStatus.MID_TRANSFER_DONE ||
         rent.payment === PaymentStatus.MID_TRANSFER_REQ)

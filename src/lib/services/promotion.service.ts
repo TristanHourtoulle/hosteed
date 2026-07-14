@@ -408,27 +408,30 @@ export async function validatePromotionCommission(
     return { isValid: true, maxAllowedPercentage: 99 }
   }
 
+  // Commission rates are stored as fractions (e.g. 0.15 for 15%), consistent
+  // with how the admin form persists them (parseFloat(input) / 100) and how
+  // commission.service.ts consumes them (basePrice * rate).
   const totalRate = commission.hostCommissionRate + commission.clientCommissionRate
   const totalFixed = commission.hostCommissionFixed + commission.clientCommissionFixed
 
   // Calcul du pourcentage maximum autorisé :
-  // discountedPrice × totalRate / 100 + totalFixed >= 1
-  // basePrice × (1 - maxDiscount/100) >= (1 - totalFixed) / (totalRate / 100)
+  // discountedPrice × totalRate + totalFixed >= 1
+  // basePrice × (1 - maxDiscount/100) >= (1 - totalFixed) / totalRate
   let maxAllowedPercentage: number
   if (totalRate === 0) {
     // Aucune commission en pourcentage : seul le fixe compte
     maxAllowedPercentage = totalFixed >= 1 ? 99 : 0
   } else {
-    const minDiscountedPrice = (1 - totalFixed) / (totalRate / 100)
+    const minDiscountedPrice = (1 - totalFixed) / totalRate
     maxAllowedPercentage = Math.floor((1 - minDiscountedPrice / basePrice) * 100)
     maxAllowedPercentage = Math.max(0, Math.min(99, maxAllowedPercentage))
   }
 
   const discountedPrice = basePrice * (1 - discountPercentage / 100)
   const platformRevenue =
-    (discountedPrice * commission.hostCommissionRate) / 100 +
+    discountedPrice * commission.hostCommissionRate +
     commission.hostCommissionFixed +
-    (discountedPrice * commission.clientCommissionRate) / 100 +
+    discountedPrice * commission.clientCommissionRate +
     commission.clientCommissionFixed
 
   return {

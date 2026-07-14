@@ -17,9 +17,10 @@ jest.mock('@/lib/prisma', () => ({
 
 import { validatePromotionCommission } from '../promotion.service'
 
-// 10% platform rate, no fixed fees. Break-even needs discountedPrice >= 10€.
+// 10% platform rate (stored as a fraction), no fixed fees.
+// Break-even needs discountedPrice >= 10€.
 const commission = {
-  hostCommissionRate: 10,
+  hostCommissionRate: 0.1,
   clientCommissionRate: 0,
   hostCommissionFixed: 0,
   clientCommissionFixed: 0,

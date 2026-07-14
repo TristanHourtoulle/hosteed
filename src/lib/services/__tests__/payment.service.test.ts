@@ -105,6 +105,7 @@ describe('getPayablePricesPerRent', () => {
 
   it('falls back to legacy commission math when hostAmount is null', async () => {
     // price = 100 - 100 * (20/100) = 80
+    // Default status is RESERVED, so only half becomes available (see below).
     rentFindUniqueMock.mockResolvedValue(
       makeRent({ hostAmount: null, prices: '100', payment: PaymentStatus.CLIENT_PAID })
     )
@@ -113,8 +114,27 @@ describe('getPayablePricesPerRent', () => {
 
     expect(result.totalPricesPayable).toBe(80)
     expect(result.commission).toBe(20)
-    // non-contract + CLIENT_PAID => full price available
-    expect(result.availablePrice).toBe(80)
+    // RESERVED + CLIENT_PAID (non-contract) => half is available
+    expect(result.availablePrice).toBe(40) // 80 / 2
+  })
+
+  it('returns half availablePrice for a RESERVED + CLIENT_PAID non-contract rent', async () => {
+    // Regression guard: RESERVED must match the CHECKIN/RESERVED half branch.
+    // The previous `status === (CHECKIN || RESERVED)` bug let RESERVED fall
+    // through to the full-payout branch, over-paying the host.
+    rentFindUniqueMock.mockResolvedValue(
+      makeRent({
+        hostAmount: 80,
+        hostCommission: 20,
+        status: RentStatus.RESERVED,
+        payment: PaymentStatus.CLIENT_PAID,
+        product: { name: 'Villa', commission: 20, contract: false },
+      })
+    )
+
+    const result = await getPayablePricesPerRent('rent-1')
+
+    expect(result.availablePrice).toBe(40) // 80 / 2, not the full 80
   })
 
   it('computes pendingPrice as half for MID_TRANSFER_REQ', async () => {
@@ -138,8 +158,7 @@ describe('getPayablePricesPerRent', () => {
   })
 
   it('returns half availablePrice for a CHECKIN + CLIENT_PAID rent', async () => {
-    // Documents the current (buggy) status check: only CHECKIN matches the
-    // `RentStatus.CHECKIN || RentStatus.RESERVED` expression.
+    // CHECKIN + CLIENT_PAID (non-contract) => half is available.
     rentFindUniqueMock.mockResolvedValue(
       makeRent({ status: RentStatus.CHECKIN, payment: PaymentStatus.CLIENT_PAID })
     )

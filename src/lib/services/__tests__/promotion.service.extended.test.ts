@@ -118,7 +118,7 @@ describe('validatePromotionCommission edge cases', () => {
       basePrice: '100',
       type: {
         commission: {
-          hostCommissionRate: 10, // 10% (rate interpreted as percentage here)
+          hostCommissionRate: 0.1, // 10%, stored as a fraction
           clientCommissionRate: 0,
           hostCommissionFixed: 0,
           clientCommissionFixed: 0,
@@ -154,14 +154,14 @@ describe('createPromotion flows', () => {
       basePrice: '100',
       type: {
         commission: {
-          hostCommissionRate: 1,
+          hostCommissionRate: 0.01, // 1%, stored as a fraction
           clientCommissionRate: 0,
           hostCommissionFixed: 0,
           clientCommissionFixed: 0,
         },
       },
     })
-    // 99% discount → discountedPrice 1 → revenue 0.01 < 1 → invalid
+    // 99% discount → discountedPrice 1 → revenue 1 * 0.01 = 0.01 < 1 → invalid
     await expect(
       createPromotion({
         productId: 'p1',
