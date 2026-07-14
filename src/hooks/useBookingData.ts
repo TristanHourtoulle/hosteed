@@ -71,15 +71,14 @@ export function useBookingPricing(params: BookingPricingParams) {
   const { productId, startDate, endDate, guestCount, extrasCost, ownerId, typeId } = params
 
   return useQuery<BookingPricingResult | null>({
-    queryKey: [
-      'booking-pricing',
+    queryKey: CACHE_TAGS.bookingPricing(
       productId,
       startDate?.toISOString(),
       endDate?.toISOString(),
       guestCount,
       extrasCost,
-      ownerId,
-    ],
+      ownerId
+    ),
     queryFn: async () => {
       if (!startDate || !endDate) return null
 

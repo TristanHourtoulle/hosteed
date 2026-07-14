@@ -11,7 +11,11 @@ export const invalidateClientCache = {
   products: async (productId?: string) => {
     await Promise.all(
       [
+        // Full product family: list, search (prefix), host listings (prefix),
+        // and the specific product detail when an id is available.
         queryClient.invalidateQueries({ queryKey: CACHE_TAGS.products }),
+        queryClient.invalidateQueries({ queryKey: ['products-search'] }),
+        queryClient.invalidateQueries({ queryKey: ['host-products'] }),
         productId && queryClient.invalidateQueries({ queryKey: CACHE_TAGS.product(productId) }),
       ].filter(Boolean)
     )

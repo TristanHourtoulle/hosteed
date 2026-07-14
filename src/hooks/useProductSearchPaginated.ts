@@ -288,7 +288,7 @@ export function useProductSearchPaginated() {
     isLoading: productsLoading,
     error: productsError,
   } = useQuery<ProductSearchResult | null>({
-    queryKey: ['products-search', searchParams_backend],
+    queryKey: CACHE_TAGS.productsSearch(searchParams_backend),
     queryFn: async () => {
       // Build search URL with all parameters
       const searchURL = new URL('/api/products/search', window.location.origin)

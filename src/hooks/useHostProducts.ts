@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { ProductValidation } from '@prisma/client'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
 
 interface ProductPromotion {
   id: string
@@ -53,7 +54,7 @@ async function fetchHostProducts(
 
 export function useHostProducts(page: number = 1, limit: number = 20, enabled: boolean = true) {
   return useQuery({
-    queryKey: ['host-products', page, limit],
+    queryKey: CACHE_TAGS.hostProducts(page, limit),
     queryFn: () => fetchHostProducts(page, limit),
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes

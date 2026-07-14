@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import type { DateRange } from 'react-day-picker'
 import { calculateHotelBookingPrice } from '@/lib/services/booking-pricing.service'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
 import { useRoomTypeAvailability, availabilityCapsById } from './useRoomTypeAvailability'
 import {
   setRoomTypeQuantity,
@@ -121,14 +122,13 @@ export function useHotelBookingSelection({
     requestLines.length > 0 && nights > 0 && !!arrivalDate && !!leavingDate && !exceedsCapacity
 
   const { data: pricing, isFetching: isPricingLoading } = useQuery<HotelBookingPriceResult | null>({
-    queryKey: [
-      'hotel-booking-pricing',
+    queryKey: CACHE_TAGS.hotelPricing(
       productId,
       encodedSelection,
       arrivalDate?.toISOString() ?? '',
       leavingDate?.toISOString() ?? '',
-      guestCount,
-    ],
+      guestCount
+    ),
     queryFn: async () => {
       try {
         return await calculateHotelBookingPrice(
