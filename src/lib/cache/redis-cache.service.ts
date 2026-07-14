@@ -273,17 +273,13 @@ class RedisCache {
         return
       }
 
-      // ✅ FIXED: Validate value before serialization
+      // Validate value before serialization. Empty arrays ARE cached here on
+      // purpose: legitimately-empty results (e.g. a user with no favorites) must
+      // cache normally to avoid a permanent cache miss. The never-cache-empty
+      // guard lives solely in StaticDataCacheService.getStaticDataWithCache,
+      // where an empty list signals a transient/cold-start state.
       if (value === null || value === undefined) {
         console.warn(`[REDIS] Attempting to cache null/undefined value for key: ${key}`)
-        return
-      }
-
-      // ✅ FIXED: Never cache empty arrays. An empty result is almost always a
-      // transient/cold-start state (e.g. a not-yet-populated type dropdown) and
-      // caching it poisons the cache with an empty list until the TTL expires.
-      if (Array.isArray(value) && value.length === 0) {
-        console.warn(`[REDIS] Skipping cache of empty array for key: ${key}`)
         return
       }
 
@@ -830,30 +826,38 @@ export class StaticDataCacheService {
   async getStaticDataWithCache<T>(type: string, fetchFunction: () => Promise<T>): Promise<T> {
     const cacheKey = `static:${type}`
 
+    // Read from cache in isolation. A cache-layer failure must fall through to a
+    // single fetchFunction call below — it must NOT trigger a retry that would
+    // call fetchFunction (i.e. hit the database) a second time.
+    let cached: T | null = null
     try {
-      // Try to get from cache first
-      const cached = await this.cache.get<T>(cacheKey)
-      if (cached !== null && cached !== undefined) {
-        return cached
-      }
-
-      // Cache miss - fetch from database
-      const data = await fetchFunction()
-
-      // Cache the result. Never cache empty arrays: an empty static list is
-      // almost always a transient/cold-start state and caching it would poison
-      // the cache (e.g. an empty type dropdown) until the TTL expires.
-      const isEmptyArray = Array.isArray(data) && data.length === 0
-      if (data !== null && data !== undefined && !isEmptyArray) {
-        await this.cache.set(cacheKey, data, this.getTTLForType(type))
-      }
-
-      return data
+      cached = await this.cache.get<T>(cacheKey)
     } catch (error) {
-      console.error(`Error in static data cache for ${type}:`, error)
-      // Fallback to direct database call
-      return await fetchFunction()
+      console.error(`Error reading static data cache for ${type}:`, error)
     }
+    if (cached !== null && cached !== undefined) {
+      return cached
+    }
+
+    // Cache miss - fetch from the database exactly once. If this throws (e.g. a
+    // DB outage), let it propagate: retrying here would issue a duplicate query
+    // and still surface the same error.
+    const data = await fetchFunction()
+
+    // Cache the result. Never cache empty arrays: an empty static list is almost
+    // always a transient/cold-start state and caching it would poison the cache
+    // (e.g. an empty type dropdown) until the TTL expires. This is the sole
+    // never-cache-empty guard — the generic set() caches empty results normally.
+    const isEmptyArray = Array.isArray(data) && data.length === 0
+    if (data !== null && data !== undefined && !isEmptyArray) {
+      try {
+        await this.cache.set(cacheKey, data, this.getTTLForType(type))
+      } catch (error) {
+        console.error(`Error writing static data cache for ${type}:`, error)
+      }
+    }
+
+    return data
   }
 
   /**
