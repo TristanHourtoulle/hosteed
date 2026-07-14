@@ -250,7 +250,6 @@ export async function checkRentIsAvailable(
         ],
       },
     })
-    console.log(existingUnavailable)
 
     if (existingUnavailable.length > 0) {
       return {

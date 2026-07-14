@@ -5,13 +5,11 @@
  * writes (asserting the cache is invalidated with the correct key), and the
  * error degradation contract.
  *
- * NOTE ON INVALIDATION FATALITY: meals/services/security wrap the cache call in
- * a best-effort `safeInvalidateStaticData` helper, so a cache failure does NOT
- * mask a committed write (covered here + in static-data-invalidation.nonfatal).
- * `equipments.service` was NOT given that wrapper: its invalidation runs inside
- * the write try-block, so a cache failure is (currently) fatal — the write is
- * mis-reported as `null`. The equipments tests below pin that *current*
- * behaviour; see the flagged bug in the task report.
+ * NOTE ON INVALIDATION FATALITY: meals/services/security/equipments all wrap the
+ * cache call in a best-effort `safeInvalidateStaticData` helper, so a cache
+ * failure does NOT mask a committed write (covered here + in
+ * static-data-invalidation.nonfatal). equipments was brought to parity: its
+ * invalidation is now non-fatal, so a cache failure still returns the entity.
  */
 
 const prismaMock = {
@@ -203,27 +201,27 @@ describe('equipments.service', () => {
     expect(invalidate).toHaveBeenCalledWith('equipments')
   })
 
-  // --- Divergence from meals/services/security (see file header + report) ---
-  // equipments has no safeInvalidate wrapper, so a cache failure is fatal:
-  // the committed write is mis-reported as null. Pinned as CURRENT behaviour.
-  it('createEquipment returns null when cache invalidation throws (BUG: invalidation is fatal)', async () => {
+  // --- Invalidation is non-fatal to the write (TRI-1016 parity, see file header) ---
+  // equipments now wraps the cache call in safeInvalidateStaticData, so a cache
+  // failure must NOT mask a committed write: the entity is still returned.
+  it('createEquipment returns the created entity even if cache invalidation throws', async () => {
     prismaMock.equipment.create.mockResolvedValue({ id: 'e1', name: 'Wifi', icon: 'wifi' })
     invalidate.mockRejectedValueOnce(new Error('redis down'))
 
-    expect(await createEquipment('Wifi', 'wifi')).toBeNull()
+    expect(await createEquipment('Wifi', 'wifi')).toEqual({ id: 'e1', name: 'Wifi', icon: 'wifi' })
   })
 
-  it('updateEquipment returns null when cache invalidation throws (BUG: invalidation is fatal)', async () => {
+  it('updateEquipment returns the updated entity even if cache invalidation throws', async () => {
     prismaMock.equipment.update.mockResolvedValue({ id: 'e1', name: 'AC', icon: 'ac' })
     invalidate.mockRejectedValueOnce(new Error('redis down'))
 
-    expect(await updateEquipment('e1', 'AC', 'ac')).toBeNull()
+    expect(await updateEquipment('e1', 'AC', 'ac')).toEqual({ id: 'e1', name: 'AC', icon: 'ac' })
   })
 
-  it('deleteEquipement returns null when cache invalidation throws (BUG: invalidation is fatal)', async () => {
+  it('deleteEquipement returns true even if cache invalidation throws', async () => {
     prismaMock.equipment.delete.mockResolvedValue({ id: 'e1' })
     invalidate.mockRejectedValueOnce(new Error('redis down'))
 
-    expect(await deleteEquipement('e1')).toBeNull()
+    expect(await deleteEquipement('e1')).toBe(true)
   })
 })

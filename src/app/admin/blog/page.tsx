@@ -54,20 +54,9 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { normalizePostsResponse, type BlogPostSummary } from './normalizePostsResponse'
 
-interface Post {
-  id: string
-  title: string
-  slug?: string
-  createdAt: string
-  updatedAt: string
-  author: {
-    id: string
-    name: string | null
-    email: string
-    roles: string
-  }
-}
+type Post = BlogPostSummary
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -107,7 +96,12 @@ export default function BlogManagementPage() {
       if (!response.ok) {
         throw new Error('Erreur lors du chargement des articles')
       }
-      return response.json()
+      // The /api/posts endpoint returns an array for the author-scoped query
+      // (getPostsByAuthor) but a paginated object ({ posts, pagination }) for the
+      // ADMIN "all posts" query (getPost). Normalize to always return an array so
+      // downstream .filter/.map/.length never crash (regression from TRI-1017).
+      const json: unknown = await response.json()
+      return normalizePostsResponse(json)
     },
     enabled: !!isAuthorized && !!userId,
   })
