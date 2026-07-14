@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
 import { isFullAdmin } from '@/hooks/useAdminAuth'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
+import { useMutationWithCache } from '@/hooks/useMutationWithCache'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -74,6 +77,73 @@ interface FormData {
   isActive: boolean
 }
 
+interface CommissionsData {
+  commissions: Commission[]
+  unassignedTypes: PropertyType[]
+}
+
+interface SaveCommissionVars {
+  id?: string
+  payload: {
+    title: string
+    description: string | null
+    hostCommissionRate: number
+    hostCommissionFixed: number
+    clientCommissionRate: number
+    clientCommissionFixed: number
+    typeRentId: string
+    isActive: boolean
+  }
+}
+
+/** Error carrying a server-provided message, so handlers can surface it. */
+class ApiError extends Error {}
+
+async function fetchCommissionsData(): Promise<CommissionsData> {
+  const response = await fetch('/api/admin/commissions?includeUnassigned=true', {
+    cache: 'no-store',
+    headers: { 'Cache-Control': 'no-cache' },
+  })
+  if (!response.ok) {
+    throw new Error('Erreur lors du chargement des commissions')
+  }
+  const json = await response.json()
+  return {
+    commissions: json.commissions ?? [],
+    unassignedTypes: json.unassignedTypes ?? [],
+  }
+}
+
+async function saveCommission({ id, payload }: SaveCommissionVars): Promise<void> {
+  const url = id ? `/api/admin/commissions/${id}` : '/api/admin/commissions'
+  const method = id ? 'PUT' : 'POST'
+  const response = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new ApiError(error.error || 'Une erreur est survenue')
+  }
+}
+
+async function deleteCommission(id: string): Promise<void> {
+  const response = await fetch(`/api/admin/commissions/${id}`, { method: 'DELETE' })
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new ApiError(error.error || 'Une erreur est survenue')
+  }
+}
+
+async function toggleCommissionStatus(id: string): Promise<void> {
+  const response = await fetch(`/api/admin/commissions/${id}`, { method: 'PATCH' })
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new ApiError(error.error || 'Une erreur est survenue')
+  }
+}
+
 export default function CommissionsPage() {
   const {
     session,
@@ -81,12 +151,8 @@ export default function CommissionsPage() {
     isAuthenticated,
   } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
-  const [commissions, setCommissions] = useState<Commission[]>([])
-  const [unassignedTypes, setUnassignedTypes] = useState<PropertyType[]>([])
-  const [loading, setLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingCommission, setEditingCommission] = useState<Commission | null>(null)
-  const [saving, setSaving] = useState(false)
   const [formData, setFormData] = useState<FormData>({
     title: '',
     description: '',
@@ -105,33 +171,25 @@ export default function CommissionsPage() {
     }
   }, [isAuthenticated, session, router])
 
-  useEffect(() => {
-    fetchCommissions()
-  }, [])
+  const { data, isLoading } = useQuery({
+    queryKey: CACHE_TAGS.adminCommissions(),
+    queryFn: fetchCommissionsData,
+  })
+  const commissions = data?.commissions ?? []
+  const unassignedTypes = data?.unassignedTypes ?? []
 
-  const fetchCommissions = async () => {
-    try {
-      const response = await fetch('/api/admin/commissions?includeUnassigned=true', {
-        cache: 'no-store', // Force fresh data
-        headers: {
-          'Cache-Control': 'no-cache',
-        },
-      })
-      if (response.ok) {
-        const data = await response.json()
-        console.log('📊 Fetched commissions:', data.commissions.length)
-        setCommissions([...data.commissions]) // Force new array reference
-        setUnassignedTypes(data.unassignedTypes || [])
-      } else {
-        toast.error('Erreur lors du chargement des commissions')
-      }
-    } catch (error) {
-      console.error('Error fetching commissions:', error)
-      toast.error('Erreur lors du chargement des commissions')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const saveMutation = useMutationWithCache<void, SaveCommissionVars>({
+    mutationFn: saveCommission,
+    invalidateKeys: [CACHE_TAGS.adminCommissions()],
+  })
+  const deleteMutation = useMutationWithCache<void, string>({
+    mutationFn: deleteCommission,
+    invalidateKeys: [CACHE_TAGS.adminCommissions()],
+  })
+  const toggleMutation = useMutationWithCache<void, string>({
+    mutationFn: toggleCommissionStatus,
+    invalidateKeys: [CACHE_TAGS.adminCommissions()],
+  })
 
   const openCreateDialog = () => {
     setEditingCommission(null)
@@ -197,45 +255,25 @@ export default function CommissionsPage() {
       return
     }
 
-    setSaving(true)
+    const payload = {
+      title: formData.title,
+      description: formData.description || null,
+      hostCommissionRate: hostRate,
+      hostCommissionFixed: hostFixed,
+      clientCommissionRate: clientRate,
+      clientCommissionFixed: clientFixed,
+      typeRentId: formData.typeRentId,
+      isActive: formData.isActive,
+    }
+
     try {
-      const url = editingCommission
-        ? `/api/admin/commissions/${editingCommission.id}`
-        : '/api/admin/commissions'
-
-      const method = editingCommission ? 'PUT' : 'POST'
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: formData.title,
-          description: formData.description || null,
-          hostCommissionRate: hostRate,
-          hostCommissionFixed: hostFixed,
-          clientCommissionRate: clientRate,
-          clientCommissionFixed: clientFixed,
-          typeRentId: formData.typeRentId,
-          isActive: formData.isActive,
-        }),
-      })
-
-      if (response.ok) {
-        toast.success(
-          editingCommission ? 'Commission mise à jour avec succès' : 'Commission créée avec succès'
-        )
-        setIsDialogOpen(false)
-        fetchCommissions()
-      } else {
-        const error = await response.json()
-        toast.error(error.error || 'Une erreur est survenue')
-      }
-    } catch {
-      toast.error('Erreur lors de la sauvegarde')
-    } finally {
-      setSaving(false)
+      await saveMutation.mutateAsync({ id: editingCommission?.id, payload })
+      toast.success(
+        editingCommission ? 'Commission mise à jour avec succès' : 'Commission créée avec succès'
+      )
+      setIsDialogOpen(false)
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : 'Erreur lors de la sauvegarde')
     }
   }
 
@@ -245,41 +283,23 @@ export default function CommissionsPage() {
     }
 
     try {
-      const response = await fetch(`/api/admin/commissions/${id}`, {
-        method: 'DELETE',
-      })
-
-      if (response.ok) {
-        toast.success('Commission supprimée avec succès')
-        fetchCommissions()
-      } else {
-        const error = await response.json()
-        toast.error(error.error || 'Une erreur est survenue')
-      }
-    } catch {
-      toast.error('Erreur lors de la suppression')
+      await deleteMutation.mutateAsync(id)
+      toast.success('Commission supprimée avec succès')
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : 'Erreur lors de la suppression')
     }
   }
 
   const handleToggleStatus = async (id: string) => {
     try {
-      const response = await fetch(`/api/admin/commissions/${id}`, {
-        method: 'PATCH',
-      })
-
-      if (response.ok) {
-        toast.success('Statut mis à jour')
-        fetchCommissions()
-      } else {
-        const error = await response.json()
-        toast.error(error.error || 'Une erreur est survenue')
-      }
-    } catch {
-      toast.error('Erreur lors de la mise à jour')
+      await toggleMutation.mutateAsync(id)
+      toast.success('Statut mis à jour')
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : 'Erreur lors de la mise à jour')
     }
   }
 
-  if (isAuthLoading || loading) {
+  if (isAuthLoading || isLoading) {
     return (
       <div className='min-h-screen flex items-center justify-center'>
         <div className='flex flex-col items-center gap-4'>
@@ -568,9 +588,9 @@ export default function CommissionsPage() {
               <Button type='button' variant='outline' onClick={() => setIsDialogOpen(false)}>
                 Annuler
               </Button>
-              <Button type='submit' disabled={saving}>
+              <Button type='submit' disabled={saveMutation.isPending}>
                 <Save className='w-4 h-4 mr-2' />
-                {saving ? 'Enregistrement...' : 'Enregistrer'}
+                {saveMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
               </Button>
             </DialogFooter>
           </form>

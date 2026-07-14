@@ -1,6 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
+import { useMutationWithCache } from '@/hooks/useMutationWithCache'
 import { Card, CardContent } from '@/components/ui/shadcnui/card'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Input } from '@/components/ui/shadcnui/input'
@@ -80,10 +83,75 @@ interface OverlappingPromotion {
   product?: { name: string }
 }
 
+interface PromotionData {
+  productId: string
+  roomTypeId: string | null
+  discountPercentage: number
+  startDate: string
+  endDate: string
+}
+
+type SubmitResult = { status: 'ok' } | { status: 'overlap'; overlapping: OverlappingPromotion[] }
+
+/** Error carrying a server-provided message, so handlers can surface it. */
+class ApiError extends Error {}
+
+async function fetchPromotions(): Promise<Promotion[]> {
+  const response = await fetch('/api/promotions')
+  if (!response.ok) {
+    throw new Error('Erreur lors du chargement des promotions')
+  }
+  return response.json()
+}
+
+async function fetchValidatedProducts(): Promise<Product[]> {
+  const response = await fetch('/api/admin/products?limit=1000')
+  if (!response.ok) {
+    throw new Error('Erreur lors du chargement des hébergements')
+  }
+  const data = await response.json()
+  // Keep only validated products (validate = 'Approve' in DB).
+  return (data.products as Product[]).filter(p => p.validate === ProductValidation.Approve)
+}
+
+async function submitPromotion({
+  editingId,
+  promotionData,
+}: {
+  editingId?: string
+  promotionData: PromotionData
+}): Promise<SubmitResult> {
+  const url = editingId ? `/api/promotions/${editingId}` : '/api/promotions'
+  const method = editingId ? 'PUT' : 'POST'
+  const res = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(promotionData),
+  })
+
+  if (res.status === 409) {
+    const { overlappingPromotions } = await res.json()
+    return { status: 'overlap', overlapping: overlappingPromotions }
+  }
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new ApiError(
+      errorData.error || (editingId ? 'Erreur lors de la mise à jour' : 'Erreur lors de la création')
+    )
+  }
+
+  return { status: 'ok' }
+}
+
+async function deletePromotion(id: string): Promise<void> {
+  const res = await fetch(`/api/promotions/${id}`, { method: 'DELETE' })
+  if (!res.ok) {
+    throw new ApiError('Erreur lors de la suppression')
+  }
+}
+
 export default function AdminPromotionsPage() {
-  const [promotions, setPromotions] = useState<Promotion[]>([])
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingPromotion, setEditingPromotion] = useState<Promotion | null>(null)
 
@@ -107,38 +175,47 @@ export default function AdminPromotionsPage() {
   const [maxAllowedDiscount, setMaxAllowedDiscount] = useState<number | null>(null)
   const [discountValidationError, setDiscountValidationError] = useState<string | null>(null)
 
-  useEffect(() => {
-    fetchData()
-  }, [])
+  const promotionsQuery = useQuery({
+    queryKey: CACHE_TAGS.adminPromotions(),
+    queryFn: fetchPromotions,
+  })
+  const productsQuery = useQuery({
+    queryKey: CACHE_TAGS.adminProducts({ scope: 'promotions', limit: 1000 }),
+    queryFn: fetchValidatedProducts,
+  })
+  const promotions = promotionsQuery.data ?? []
+  const products = productsQuery.data ?? []
+  const loading = promotionsQuery.isLoading || productsQuery.isLoading
 
-  const fetchData = async () => {
-    setLoading(true)
-    try {
-      // Fetch all promotions
-      const promotionsRes = await fetch('/api/promotions')
-      if (promotionsRes.ok) {
-        const data = await promotionsRes.json()
-        setPromotions(data)
+  const submitMutation = useMutationWithCache<
+    SubmitResult,
+    { editingId?: string; promotionData: PromotionData }
+  >({
+    mutationFn: submitPromotion,
+    // Only invalidate when the promotion was actually persisted.
+    invalidateKeys: result => (result.status === 'ok' ? [CACHE_TAGS.adminPromotions()] : []),
+  })
+  const confirmOverlapMutation = useMutationWithCache<void, PromotionData>({
+    mutationFn: async promotionData => {
+      const res = await fetch('/api/promotions/confirm-overlap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          promotionData,
+          overlappingIds: overlappingPromotions.map(p => p.id),
+        }),
+      })
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}))
+        throw new ApiError(error.error || 'Erreur lors de la création')
       }
-
-      // Fetch all products from admin API
-      const productsRes = await fetch('/api/admin/products?limit=1000')
-      if (productsRes.ok) {
-        const data = await productsRes.json()
-
-        // Filter only validated products (validate = 'Approve' in DB)
-        const validatedProducts = data.products.filter(
-          (p: Product) => p.validate === ProductValidation.Approve
-        )
-        setProducts(validatedProducts)
-      }
-    } catch (error) {
-      console.error('Error fetching data:', error)
-      toast.error('Erreur lors du chargement des données')
-    } finally {
-      setLoading(false)
-    }
-  }
+    },
+    invalidateKeys: [CACHE_TAGS.adminPromotions()],
+  })
+  const deleteMutation = useMutationWithCache<void, string>({
+    mutationFn: deletePromotion,
+    invalidateKeys: [CACHE_TAGS.adminPromotions()],
+  })
 
   const resetForm = () => {
     setSelectedProductId('')
@@ -197,7 +274,7 @@ export default function AdminPromotionsPage() {
       return
     }
 
-    const promotionData = {
+    const promotionData: PromotionData = {
       productId: selectedProductId,
       roomTypeId: selectedRoomTypeId === ALL_ROOMS ? null : selectedRoomTypeId,
       discountPercentage: discount,
@@ -206,60 +283,25 @@ export default function AdminPromotionsPage() {
     }
 
     try {
-      if (editingPromotion) {
-        // Update existing promotion
-        const res = await fetch(`/api/promotions/${editingPromotion.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(promotionData),
-        })
+      const result = await submitMutation.mutateAsync({
+        editingId: editingPromotion?.id,
+        promotionData,
+      })
 
-        if (res.status === 409) {
-          const { overlappingPromotions: overlapping } = await res.json()
-          setPendingPromotion(promotionData)
-          setOverlappingPromotions(overlapping)
-          setShowOverlapModal(true)
-          return
-        }
-
-        if (!res.ok) {
-          const errorData = await res.json()
-          toast.error(errorData.error || 'Erreur lors de la mise à jour')
-          return
-        }
-
-        toast.success('Promotion mise à jour avec succès')
-      } else {
-        // Create new promotion
-        const res = await fetch('/api/promotions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(promotionData),
-        })
-
-        if (res.status === 409) {
-          const { overlappingPromotions: overlapping } = await res.json()
-          setPendingPromotion(promotionData)
-          setOverlappingPromotions(overlapping)
-          setShowOverlapModal(true)
-          return
-        }
-
-        if (!res.ok) {
-          const errorData = await res.json()
-          toast.error(errorData.error || 'Erreur lors de la création')
-          return
-        }
-
-        toast.success('Promotion créée avec succès')
+      if (result.status === 'overlap') {
+        setPendingPromotion(promotionData)
+        setOverlappingPromotions(result.overlapping)
+        setShowOverlapModal(true)
+        return
       }
 
+      toast.success(
+        editingPromotion ? 'Promotion mise à jour avec succès' : 'Promotion créée avec succès'
+      )
       setIsDialogOpen(false)
       resetForm()
-      fetchData()
     } catch (error) {
-      console.error('Error submitting promotion:', error)
-      toast.error('Une erreur est survenue')
+      toast.error(error instanceof ApiError ? error.message : 'Une erreur est survenue')
     }
   }
 
@@ -267,31 +309,15 @@ export default function AdminPromotionsPage() {
     if (!pendingPromotion) return
 
     try {
-      const res = await fetch('/api/promotions/confirm-overlap', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          promotionData: pendingPromotion,
-          overlappingIds: overlappingPromotions.map(p => p.id),
-        }),
-      })
-
-      if (!res.ok) {
-        const error = await res.json()
-        toast.error(error.error || 'Erreur lors de la création')
-        return
-      }
-
+      await confirmOverlapMutation.mutateAsync(pendingPromotion)
       toast.success('Promotion créée avec succès')
       setShowOverlapModal(false)
       setIsDialogOpen(false)
       resetForm()
       setPendingPromotion(null)
       setOverlappingPromotions([])
-      fetchData()
     } catch (error) {
-      console.error('Error confirming overlap:', error)
-      toast.error('Une erreur est survenue')
+      toast.error(error instanceof ApiError ? error.message : 'Une erreur est survenue')
     }
   }
 
@@ -309,20 +335,10 @@ export default function AdminPromotionsPage() {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette promotion ?')) return
 
     try {
-      const res = await fetch(`/api/promotions/${id}`, {
-        method: 'DELETE',
-      })
-
-      if (!res.ok) {
-        toast.error('Erreur lors de la suppression')
-        return
-      }
-
+      await deleteMutation.mutateAsync(id)
       toast.success('Promotion supprimée avec succès')
-      fetchData()
     } catch (error) {
-      console.error('Error deleting promotion:', error)
-      toast.error('Une erreur est survenue')
+      toast.error(error instanceof ApiError ? error.message : 'Une erreur est survenue')
     }
   }
 
