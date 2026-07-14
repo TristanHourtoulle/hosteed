@@ -1,5 +1,6 @@
 'use server'
 import prisma from '@/lib/prisma'
+import { invalidateStaticDataCache } from '@/lib/cache/invalidation'
 
 export async function findAllMeals() {
   try {
@@ -27,11 +28,16 @@ export async function findMealById(id: string) {
 
 export async function createMeal(name: string) {
   try {
-    return await prisma.meals.create({
+    const result = await prisma.meals.create({
       data: {
         name,
       },
     })
+
+    // Invalider le cache après création
+    await invalidateStaticDataCache('meals')
+
+    return result
   } catch (error) {
     console.error("Erreur lors de la création d'un repas", error)
     return null
@@ -40,7 +46,7 @@ export async function createMeal(name: string) {
 
 export async function updateMeal(id: string, name: string) {
   try {
-    return await prisma.meals.update({
+    const result = await prisma.meals.update({
       where: {
         id,
       },
@@ -48,6 +54,11 @@ export async function updateMeal(id: string, name: string) {
         name,
       },
     })
+
+    // Invalider le cache après modification
+    await invalidateStaticDataCache('meals')
+
+    return result
   } catch (error) {
     console.error("Erreur lors de la mise à jour d'un repas", error)
     return null
@@ -61,6 +72,10 @@ export async function deleteMeal(id: string) {
         id,
       },
     })
+
+    // Invalider le cache après suppression
+    await invalidateStaticDataCache('meals')
+
     if (req) return true
   } catch (error) {
     console.error("Erreur lors de la suppresion d'un repas", error)

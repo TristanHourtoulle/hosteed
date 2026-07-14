@@ -1,5 +1,6 @@
 'use server'
 import prisma from '@/lib/prisma'
+import { invalidateStaticDataCache } from '@/lib/cache/invalidation'
 
 export async function findAllServices(limit?: number) {
   try {
@@ -27,11 +28,16 @@ export async function findAllServicesForQuery() {
 
 export async function createService(name: string) {
   try {
-    return await prisma.services.create({
+    const result = await prisma.services.create({
       data: {
         name,
       },
     })
+
+    // Invalider le cache après création
+    await invalidateStaticDataCache('services')
+
+    return result
   } catch (error) {
     console.error("Erreur lors de la création d'un service", error)
     return null
@@ -45,6 +51,10 @@ export async function deleteService(id: string) {
         id,
       },
     })
+
+    // Invalider le cache après suppression
+    await invalidateStaticDataCache('services')
+
     if (req) return true
   } catch (error) {
     console.error("Erreur lors de la suppresion d'un service", error)

@@ -1,6 +1,24 @@
 import prisma from '@/lib/prisma'
 import ical from 'ical'
 import { nanoid } from 'nanoid'
+import { availabilityCacheService } from '@/lib/cache/redis-cache.service'
+
+/**
+ * Best-effort availability cache invalidation for a set of products.
+ * A cache failure must never bubble out of a successful calendar mutation.
+ */
+async function safeInvalidateAvailability(productIds: Iterable<string>): Promise<void> {
+  const unique = Array.from(new Set(productIds))
+  await Promise.all(
+    unique.map(async productId => {
+      try {
+        await availabilityCacheService.invalidateAvailability(productId)
+      } catch (cacheError) {
+        console.error('Failed to invalidate availability cache:', cacheError)
+      }
+    })
+  )
+}
 
 /**
  * Service pour gérer les calendriers externes centralisés (niveau host)
@@ -121,6 +139,9 @@ export async function deleteExternalCalendar(calendarId: string) {
       },
     },
   })
+
+  // Removing synced blocks frees availability for every mapped product
+  await safeInvalidateAvailability(calendar.eventMappings.flatMap(m => m.productIds))
 
   // Supprimer le calendrier (les mappings seront supprimés en cascade)
   return await prisma.externalCalendar.delete({
@@ -307,6 +328,10 @@ export async function applyEventMappings(externalCalendarId: string) {
     })
   }
 
+  // Re-applying mappings deletes old blocks and creates new ones: availability
+  // changes for every product referenced by any mapping.
+  await safeInvalidateAvailability(calendar.eventMappings.flatMap(m => m.productIds))
+
   return {
     blocksCreated: blocksToCreate.length,
     eventsProcessed: calendar.eventMappings.length,
@@ -338,6 +363,9 @@ export async function deleteEventMapping(externalCalendarId: string, eventUid: s
       },
     },
   })
+
+  // Removing this mapping's blocks frees availability for its products
+  await safeInvalidateAvailability(mapping.productIds)
 
   // Supprimer le mapping
   return await prisma.calendarEventMapping.delete({
