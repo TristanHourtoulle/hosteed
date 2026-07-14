@@ -58,4 +58,69 @@ describe('GET /api/admin/products (cache)', () => {
     expect(res.status).toBe(403)
     expect(findManyMock).not.toHaveBeenCalled()
   })
+
+  it('allows a HOST_MANAGER session', async () => {
+    authMock.mockResolvedValue({ user: { roles: 'HOST_MANAGER' } })
+
+    const res = await GET(makeRequest())
+
+    expect(res.status).toBe(200)
+    expect(findManyMock).toHaveBeenCalled()
+  })
+
+  it('returns 403 when there is no session at all', async () => {
+    authMock.mockResolvedValue(null)
+
+    const res = await GET(makeRequest())
+
+    expect(res.status).toBe(403)
+  })
+})
+
+describe('GET /api/admin/products (response shape)', () => {
+  it('converts BigInt room, derives counts and hotel flag, and shapes pagination', async () => {
+    findManyMock.mockResolvedValue([
+      {
+        id: 'p1',
+        name: 'Villa',
+        room: BigInt(4),
+        type: { id: 't1', name: 'Hotel', isHotelType: true },
+        _count: { equipments: 3, servicesList: 2 },
+      },
+    ])
+    countMock.mockResolvedValue(21)
+
+    const res = await GET(new NextRequest('http://localhost/api/admin/products?page=1&limit=20'))
+    const body = await res.json()
+
+    expect(body.products[0].room).toBe(4)
+    expect(body.products[0].equipmentCount).toBe(3)
+    expect(body.products[0].serviceCount).toBe(2)
+    expect(body.products[0].typeName).toBe('Hotel')
+    expect(body.products[0].isHotel).toBe(true)
+    expect(body.pagination).toEqual({
+      currentPage: 1,
+      totalPages: 2,
+      itemsPerPage: 20,
+      totalItems: 21,
+      hasNext: true,
+      hasPrev: false,
+    })
+  })
+
+  it('applies a case-insensitive server-side search across name/description/address', async () => {
+    await GET(new NextRequest('http://localhost/api/admin/products?search=beach'))
+
+    const where = findManyMock.mock.calls[0][0].where
+    expect(where.OR).toEqual([
+      { name: { contains: 'beach', mode: 'insensitive' } },
+      { description: { contains: 'beach', mode: 'insensitive' } },
+      { address: { contains: 'beach', mode: 'insensitive' } },
+    ])
+  })
+
+  it('caps the limit at 50', async () => {
+    await GET(new NextRequest('http://localhost/api/admin/products?limit=999'))
+    expect(findManyMock.mock.calls[0][0].take).toBe(50)
+  })
 })
