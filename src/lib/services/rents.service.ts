@@ -596,64 +596,82 @@ export async function createRent(params: {
     return createdRent
   }
 
-  await sendTemplatedMail(
-    createdRent.product.owner.email,
-    'Nouvelle réservation !',
-    'new-book.html',
-    {
-      bookId: createdRent.id,
-      name: createdRent.product.owner.name || '',
-      bookUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
-    }
-  )
-
-  if (product.autoAccept) {
+  // Post-commit notifications are non-fatal: the Rent + RentRoomType rows are
+  // already persisted, so an email provider failure (Brevo 401/timeout/5xx) MUST
+  // NOT reject `createRent` — that would report a successful booking as failed to
+  // the webhook/caller and risk a retry → double booking/charge (TRI-1022).
+  try {
     await sendTemplatedMail(
-      createdRent.user.email,
-      'Réservation en confirmé 🏨',
-      'confirmation-reservation.html',
+      createdRent.product.owner.email,
+      'Nouvelle réservation !',
+      'new-book.html',
       {
-        name: createdRent.user.name || '',
-        listing_title: createdRent.product.name,
-        listing_adress: createdRent.product.address,
-        check_in: createdRent.product.arriving,
-        check_out: createdRent.product.leaving,
-        categories: createdRent.product.type.name,
-        phone_number: createdRent.product.phone,
-        arriving_date: createdRent.arrivingDate.toDateString(),
-        leaving_date: createdRent.leavingDate.toDateString(),
-        reservationUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
-        complete_address: createdRent.product.completeAddress || '',
-        proximity_landmarks:
-          createdRent.product.proximityLandmarks &&
-          createdRent.product.proximityLandmarks.length > 0
-            ? createdRent.product.proximityLandmarks.join(', ')
-            : '',
+        bookId: createdRent.id,
+        name: createdRent.product.owner.name || '',
+        bookUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
       }
     )
-  } else {
-    await sendTemplatedMail(
-      createdRent.user.email,
-      'Réservation en attente 🏨',
-      'waiting-approve.html',
-      {
-        name: createdRent.user.name || '',
-        listing_title: createdRent.product.name,
-        listing_adress: createdRent.product.address,
-        check_in: createdRent.product.arriving,
-        check_out: createdRent.product.leaving,
-        categories: createdRent.product.type.name,
-        phone_number: createdRent.product.phone,
-        arriving_date: createdRent.arrivingDate.toDateString(),
-        leaving_date: createdRent.leavingDate.toDateString(),
-        reservationUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
-        complete_address: createdRent.product.completeAddress || '',
-        proximity_landmarks:
-          createdRent.product.proximityLandmarks &&
-          createdRent.product.proximityLandmarks.length > 0
-            ? createdRent.product.proximityLandmarks.join(', ')
-            : '',
-      }
+  } catch (error) {
+    logger.warn(
+      { rentId: createdRent.id, error },
+      'Owner notification email failed to send after booking creation'
+    )
+  }
+
+  try {
+    if (product.autoAccept) {
+      await sendTemplatedMail(
+        createdRent.user.email,
+        'Réservation en confirmé 🏨',
+        'confirmation-reservation.html',
+        {
+          name: createdRent.user.name || '',
+          listing_title: createdRent.product.name,
+          listing_adress: createdRent.product.address,
+          check_in: createdRent.product.arriving,
+          check_out: createdRent.product.leaving,
+          categories: createdRent.product.type.name,
+          phone_number: createdRent.product.phone,
+          arriving_date: createdRent.arrivingDate.toDateString(),
+          leaving_date: createdRent.leavingDate.toDateString(),
+          reservationUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
+          complete_address: createdRent.product.completeAddress || '',
+          proximity_landmarks:
+            createdRent.product.proximityLandmarks &&
+            createdRent.product.proximityLandmarks.length > 0
+              ? createdRent.product.proximityLandmarks.join(', ')
+              : '',
+        }
+      )
+    } else {
+      await sendTemplatedMail(
+        createdRent.user.email,
+        'Réservation en attente 🏨',
+        'waiting-approve.html',
+        {
+          name: createdRent.user.name || '',
+          listing_title: createdRent.product.name,
+          listing_adress: createdRent.product.address,
+          check_in: createdRent.product.arriving,
+          check_out: createdRent.product.leaving,
+          categories: createdRent.product.type.name,
+          phone_number: createdRent.product.phone,
+          arriving_date: createdRent.arrivingDate.toDateString(),
+          leaving_date: createdRent.leavingDate.toDateString(),
+          reservationUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
+          complete_address: createdRent.product.completeAddress || '',
+          proximity_landmarks:
+            createdRent.product.proximityLandmarks &&
+            createdRent.product.proximityLandmarks.length > 0
+              ? createdRent.product.proximityLandmarks.join(', ')
+              : '',
+        }
+      )
+    }
+  } catch (error) {
+    logger.warn(
+      { rentId: createdRent.id, error },
+      'Guest notification email failed to send after booking creation'
     )
   }
 
