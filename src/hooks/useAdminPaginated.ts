@@ -84,7 +84,7 @@ export function useAdminProductsPaginated() {
   } = useQuery<AdminProductsResult>({
     queryKey: ['admin-products', searchParams],
     queryFn: async () => {
-      const response = await fetch(`/api/admin/products?${searchParams}`)
+      const response = await fetch(`/api/admin/products?${searchParams}`, { cache: 'no-store' })
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
@@ -159,7 +159,7 @@ export function useAdminUsersPaginated() {
   } = useQuery<AdminUsersResult>({
     queryKey: ['admin-users', searchParams],
     queryFn: async () => {
-      const response = await fetch(`/api/admin/users?${searchParams}`)
+      const response = await fetch(`/api/admin/users?${searchParams}`, { cache: 'no-store' })
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
@@ -248,7 +248,7 @@ export function useAdminReservationsPaginated() {
   } = useQuery<AdminReservationsResult>({
     queryKey: ['admin-reservations', searchParams],
     queryFn: async () => {
-      const response = await fetch(`/api/admin/reservations?${searchParams}`)
+      const response = await fetch(`/api/admin/reservations?${searchParams}`, { cache: 'no-store' })
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }

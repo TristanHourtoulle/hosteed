@@ -13,7 +13,7 @@ export function useFavoritesOptimized(productId: string) {
     queryKey: CACHE_TAGS.favoriteStatus(userId || '', productId),
     queryFn: async () => {
       if (!userId) return false
-      const response = await fetch(`/api/favorites/${productId}`)
+      const response = await fetch(`/api/favorites/${productId}`, { cache: 'no-store' })
       if (!response.ok) return false
       const data = await response.json()
       return data.isFavorite
@@ -103,7 +103,7 @@ export function useUserFavorites() {
     queryKey: CACHE_TAGS.favorites(userId || ''),
     queryFn: async () => {
       if (!userId) return []
-      const response = await fetch('/api/favorites')
+      const response = await fetch('/api/favorites', { cache: 'no-store' })
       if (!response.ok) throw new Error('Failed to fetch favorites')
       return response.json()
     },
