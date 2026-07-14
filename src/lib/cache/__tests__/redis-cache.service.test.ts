@@ -43,13 +43,14 @@ beforeEach(() => {
   mockRedis.del.mockResolvedValue(1)
 })
 
-describe('RedisCache.set - never cache empty results', () => {
-  it('does not cache an empty array', async () => {
+describe('RedisCache.set - generic set caches all non-null values', () => {
+  it('caches an empty array (never-cache-empty is scoped to the static path, not generic set)', async () => {
     const cache = makeCache()
 
-    await cache.set('static:meals', [], 300)
+    await cache.set('favorites:user1', [], 300)
 
-    expect(mockRedis.setex).not.toHaveBeenCalled()
+    expect(mockRedis.setex).toHaveBeenCalledTimes(1)
+    expect(mockRedis.setex).toHaveBeenCalledWith('favorites:user1', 300, JSON.stringify([]))
   })
 
   it('caches a non-empty array', async () => {
@@ -91,6 +92,28 @@ describe('StaticDataCacheService.getStaticDataWithCache - never cache empty resu
 
     expect(result).toEqual([{ id: '1' }])
     expect(mockRedis.setex).toHaveBeenCalledTimes(1)
+  })
+
+  it('calls fetchFunction exactly once and propagates the error when it throws (no duplicate DB hit on outage)', async () => {
+    const cache = makeCache()
+    const service = new StaticDataCacheService(cache)
+    const dbError = new Error('DB outage')
+    const fetchFn = jest.fn().mockRejectedValue(dbError)
+
+    await expect(service.getStaticDataWithCache('meals', fetchFn)).rejects.toThrow('DB outage')
+    expect(fetchFn).toHaveBeenCalledTimes(1)
+  })
+
+  it('still falls back to fetchFunction (one call) when the cache read itself fails', async () => {
+    const cache = makeCache()
+    const service = new StaticDataCacheService(cache)
+    mockRedis.get.mockRejectedValueOnce(new Error('cache read failed'))
+    const fetchFn = jest.fn().mockResolvedValue([{ id: '1' }])
+
+    const result = await service.getStaticDataWithCache('meals', fetchFn)
+
+    expect(result).toEqual([{ id: '1' }])
+    expect(fetchFn).toHaveBeenCalledTimes(1)
   })
 })
 
