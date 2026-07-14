@@ -38,6 +38,8 @@ export interface UseHotelBookingSelectionResult {
   nights: number
   pricing: HotelBookingPriceResult | null
   isPricingLoading: boolean
+  /** `true` when the server-authoritative pricing query failed (genuine error). */
+  isPricingError: boolean
   roomLines: RoomLineSummary[]
   totalRooms: number
   /** Total seats offered by the current selection: Σ(capacity × quantity). */
@@ -121,7 +123,11 @@ export function useHotelBookingSelection({
   const pricingEnabled =
     requestLines.length > 0 && nights > 0 && !!arrivalDate && !!leavingDate && !exceedsCapacity
 
-  const { data: pricing, isFetching: isPricingLoading } = useQuery<HotelBookingPriceResult | null>({
+  const {
+    data: pricing,
+    isFetching: isPricingLoading,
+    isError: isPricingError,
+  } = useQuery<HotelBookingPriceResult | null>({
     queryKey: CACHE_TAGS.hotelPricing(
       productId,
       encodedSelection,
@@ -129,24 +135,21 @@ export function useHotelBookingSelection({
       leavingDate?.toISOString() ?? '',
       guestCount
     ),
-    queryFn: async () => {
-      try {
-        return await calculateHotelBookingPrice(
-          productId,
-          requestLines,
-          arrivalDate!,
-          leavingDate!,
-          guestCount,
-          selectedExtras,
-          ownerId
-        )
-      } catch {
-        // Defense in depth: a race or tampered state must never surface as an
-        // unhandled server-action rejection (500). Consumers treat null as
-        // "no price yet".
-        return null
-      }
-    },
+    // Over-capacity is already gated out via `pricingEnabled`, so the server
+    // action's capacity rejection is not hit in normal flow. Any error that does
+    // reach here (DB unreachable, room type deleted mid-session, pricing bug) is
+    // a genuine failure: let React Query surface it via `isError` rather than
+    // swallowing it into an indistinguishable "no price" + disabled Reserve.
+    queryFn: () =>
+      calculateHotelBookingPrice(
+        productId,
+        requestLines,
+        arrivalDate!,
+        leavingDate!,
+        guestCount,
+        selectedExtras,
+        ownerId
+      ),
     enabled: pricingEnabled,
     staleTime: 1000 * 60,
   })
@@ -189,6 +192,7 @@ export function useHotelBookingSelection({
     nights,
     pricing: pricing ?? null,
     isPricingLoading,
+    isPricingError,
     roomLines,
     totalRooms,
     selectedCapacity,

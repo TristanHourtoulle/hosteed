@@ -144,6 +144,21 @@ describe('useHotelBookingSelection', () => {
     expect(result.current.isPricingLoading).toBe(false)
   })
 
+  it('surfaces the error instead of a silent null when pricing rejects', async () => {
+    // A genuine failure (DB unreachable, room type deleted mid-session, pricing
+    // bug) must be observable, not swallowed into an indistinguishable "no price".
+    calculateHotelBookingPriceMock.mockRejectedValue(new Error('pricing service unreachable'))
+
+    const { result } = setup()
+
+    act(() => result.current.setQuantity('A', 1))
+
+    await waitFor(() => expect(result.current.isPricingError).toBe(true))
+    expect(calculateHotelBookingPriceMock).toHaveBeenCalled()
+    expect(result.current.pricing).toBeNull()
+    expect(result.current.isPricingLoading).toBe(false)
+  })
+
   it('calls the pricing server action once guests fit within selected capacity', async () => {
     // Two rooms (capacity 2 each = 4) still under 5 guests -> disabled.
     const { result } = setup(5)
