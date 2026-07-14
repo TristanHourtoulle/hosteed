@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import { useQuery } from '@tanstack/react-query'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
 import { useAuth } from '@/hooks/useAuth'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
@@ -25,10 +27,112 @@ import {
   useProductData,
   useProductForm,
   useImageUpload,
-  useProductLoader,
 } from '@/app/createProduct/hooks'
 import { useProductWizardForm } from '@/app/createProduct/hooks/useProductWizardForm'
-import type { ImageFile, SpecialPrice } from '@/app/createProduct/types'
+import type { FormData, ImageFile, SpecialPrice } from '@/app/createProduct/types'
+
+interface ProductImage {
+  id: string
+  img: string
+}
+
+interface LoadedProduct {
+  formData: FormData
+  images: ImageFile[]
+  specialPrices: SpecialPrice[]
+}
+
+/**
+ * Fetch an existing product and transform it into the wizard form shape.
+ * Cached under `CACHE_TAGS.product(id)` so the submit-time products
+ * invalidation refetches it.
+ */
+async function fetchProductForEdit(productId: string): Promise<LoadedProduct> {
+  const response = await fetch(`/api/products/${productId}`)
+  if (!response.ok) {
+    throw new Error('Produit non trouvé')
+  }
+
+  const product = await response.json()
+
+  const formData: FormData = {
+    name: product.name || '',
+    description: product.description || '',
+    address: product.address || '',
+    completeAddress: product.completeAddress || '',
+    placeId: product.placeId || '',
+    latitude: product.latitude || 0,
+    longitude: product.longitude || 0,
+    phone: product.phone || '',
+    phoneCountry: product.phoneCountry || 'MG',
+    typeId: product.typeId || '',
+    typeRentId: product.typeId || '', // Sync with typeId
+    arriving: product.arriving?.toString() || '15',
+    leaving: product.leaving?.toString() || '12',
+    basePrice: product.basePrice || '',
+    priceMGA: product.priceMGA || '',
+    basePriceMGA: product.priceMGA || '', // Sync with priceMGA
+    specialPrices: product.specialPrices || [],
+    autoAccept: product.autoAccept || false,
+    equipmentIds: product.equipments?.map((e: { id: string }) => e.id) || [],
+    mealIds: product.mealsList?.map((m: { id: string }) => m.id) || [],
+    securityIds: product.securities?.map((s: { id: string }) => s.id) || [],
+    serviceIds: product.servicesList?.map((s: { id: string }) => s.id) || [],
+    includedServiceIds: product.includedServices?.map((s: { id: string }) => s.id) || [],
+    extraIds: product.extras?.map((e: { id: string }) => e.id) || [],
+    highlightIds: product.highlights?.map((h: { id: string }) => h.id) || [],
+    nearbyPlaces:
+      product.nearbyPlaces?.map((p: { name: string; distance: number }) => ({
+        name: p.name,
+        distance: p.distance?.toString() || '',
+        unit: p.distance && p.distance < 1000 ? 'mètres' : 'kilomètres',
+      })) || [],
+    proximityLandmarks: product.proximityLandmarks || [],
+    transportation:
+      product.transportOptions?.map((t: { name: string }) => t.name).join(', ') || '',
+    room: product.room?.toString() || '',
+    bathroom: product.bathroom?.toString() || '',
+    surface: product.surface?.toString() || '',
+    minPeople: product.minPeople?.toString() || '',
+    maxPeople: product.maxPeople?.toString() || '',
+    accessibility: product.accessibility || false,
+    petFriendly: product.petFriendly || false,
+    // Rules (rules is an array from Prisma, take first element)
+    smokingAllowed: product.rules?.[0]?.smokingAllowed || false,
+    petsAllowed: product.rules?.[0]?.petsAllowed || false,
+    eventsAllowed: product.rules?.[0]?.eventsAllowed || false,
+    selfCheckIn: product.rules?.[0]?.selfCheckIn || false,
+    selfCheckInType: product.rules?.[0]?.selfCheckInType || '',
+    // Property info
+    hasStairs: product.propertyInfo?.hasStairs || false,
+    hasElevator: product.propertyInfo?.hasElevator || false,
+    hasHandicapAccess: product.propertyInfo?.hasHandicapAccess || false,
+    hasPetsOnProperty: product.propertyInfo?.hasPetsOnProperty || false,
+    additionalNotes: product.propertyInfo?.additionalNotes || '',
+    isHotel: !!product.hotel,
+    hotelName: product.hotel?.name || '',
+    availableRooms: product.availableRooms?.toString() || '',
+    roomTypes: [],
+  }
+
+  // Transform images to ImageFile format.
+  // Mark existing images with isExisting flag to prevent re-upload.
+  const images: ImageFile[] =
+    product.img?.map((img: ProductImage, index: number) => ({
+      id: img.id,
+      file: null, // No file object for existing images
+      preview: img.img, // URL of the existing image
+      url: img.img, // Keep original URL
+      isExisting: true, // Flag to prevent re-upload
+      order: index,
+    })) || []
+
+  return {
+    formData,
+    images,
+    specialPrices: product.specialPrices || [],
+  }
+}
 
 export default function EditProductPage() {
   const params = useParams()
@@ -36,14 +140,32 @@ export default function EditProductPage() {
   const router = useRouter()
   const { session, isLoading: isAuthLoading } = useAuth({ required: true, redirectTo: '/auth' })
 
-  // Load existing product data
-  const {
-    formData: loadedFormData,
-    images: loadedImages,
-    specialPrices: loadedSpecialPrices,
-    isLoading: isLoadingProduct,
-    error: loadError,
-  } = useProductLoader(productId)
+  // Load existing product data (cached under CACHE_TAGS.product(id))
+  const productQuery = useQuery({
+    queryKey: CACHE_TAGS.product(productId),
+    queryFn: () => fetchProductForEdit(productId),
+    enabled: !!productId,
+  })
+  const loadedFormData = productQuery.data?.formData
+  const loadedImages = useMemo(() => productQuery.data?.images ?? [], [productQuery.data])
+  const loadedSpecialPrices = useMemo(
+    () => productQuery.data?.specialPrices ?? [],
+    [productQuery.data]
+  )
+  const isLoadingProduct = productQuery.isLoading
+  const loadError = productQuery.error
+    ? productQuery.error instanceof Error
+      ? productQuery.error.message
+      : 'Erreur inconnue'
+    : null
+
+  // Preserve the loader's error behavior: notify then return to the dashboard.
+  useEffect(() => {
+    if (productQuery.error) {
+      toast.error('Erreur lors du chargement du produit')
+      router.push('/dashboard/host')
+    }
+  }, [productQuery.error, router])
 
   // Data & form hooks
   const productData = useProductData()
