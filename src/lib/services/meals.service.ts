@@ -2,6 +2,18 @@
 import prisma from '@/lib/prisma'
 import { invalidateStaticDataCache } from '@/lib/cache/invalidation'
 
+/**
+ * Best-effort static-data cache invalidation. A cache failure must never
+ * bubble out of (and be mis-reported as the failure of) a successful DB write.
+ */
+async function safeInvalidateStaticData(type: 'meals'): Promise<void> {
+  try {
+    await invalidateStaticDataCache(type)
+  } catch (cacheError) {
+    console.error('Failed to invalidate static-data cache:', cacheError)
+  }
+}
+
 export async function findAllMeals() {
   try {
     const result = await prisma.meals.findMany()
@@ -34,8 +46,8 @@ export async function createMeal(name: string) {
       },
     })
 
-    // Invalider le cache après création
-    await invalidateStaticDataCache('meals')
+    // Invalider le cache après création (best-effort, ne doit jamais masquer l'écriture)
+    await safeInvalidateStaticData('meals')
 
     return result
   } catch (error) {
@@ -55,8 +67,8 @@ export async function updateMeal(id: string, name: string) {
       },
     })
 
-    // Invalider le cache après modification
-    await invalidateStaticDataCache('meals')
+    // Invalider le cache après modification (best-effort, ne doit jamais masquer l'écriture)
+    await safeInvalidateStaticData('meals')
 
     return result
   } catch (error) {
@@ -73,8 +85,8 @@ export async function deleteMeal(id: string) {
       },
     })
 
-    // Invalider le cache après suppression
-    await invalidateStaticDataCache('meals')
+    // Invalider le cache après suppression (best-effort, ne doit jamais masquer l'écriture)
+    await safeInvalidateStaticData('meals')
 
     if (req) return true
   } catch (error) {
