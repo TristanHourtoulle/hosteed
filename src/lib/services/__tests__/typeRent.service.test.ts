@@ -65,6 +65,17 @@ describe('findAllTypeRent', () => {
       ProductValidation.Approve
     )
   })
+
+  it('exposes productCount on returned types (shared mapping with the form variant)', async () => {
+    findManyMock.mockResolvedValue([typeWithProducts])
+
+    const result = (await findAllTypeRent()) as unknown as Array<{
+      id: string
+      productCount: number
+    }>
+
+    expect(result.find(type => type.id === 'type-with')?.productCount).toBe(3)
+  })
 })
 
 describe('findAllTypeRentForForm', () => {
