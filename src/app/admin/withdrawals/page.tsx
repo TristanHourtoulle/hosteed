@@ -14,7 +14,10 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
+import { useMutationWithCache } from '@/hooks/useMutationWithCache'
 import { toast } from 'sonner'
 import {
   WithdrawalStatus,
@@ -54,6 +57,134 @@ type HostBalance = {
   amount100Percent: number
 }
 
+type PaymentDetails = {
+  accountHolderName: string
+  iban: string
+  cardNumber: string
+  cardEmail: string
+  mobileNumber: string
+  paypalUsername: string
+  paypalEmail: string
+  paypalPhone: string
+  paypalIban: string
+  moneygramFullName: string
+  moneygramPhone: string
+}
+
+interface CreateWithdrawalVars {
+  hostId: string
+  amount: number
+  withdrawalType: 'PARTIAL_50' | 'FULL_100'
+  paymentMethod: PaymentMethod
+  paymentDetails: PaymentDetails
+  notes: string
+}
+
+/** Error carrying a server-provided message, so handlers can surface it. */
+class ApiError extends Error {}
+
+async function fetchWithdrawals(
+  filter: WithdrawalStatus | 'ALL'
+): Promise<WithdrawalRequest[]> {
+  const url =
+    filter === 'ALL' ? '/api/admin/withdrawals' : `/api/admin/withdrawals?status=${filter}`
+  const response = await fetch(url, {
+    cache: 'no-store',
+    headers: { 'Cache-Control': 'no-cache' },
+  })
+  if (!response.ok) {
+    throw new Error('Erreur lors du chargement des demandes')
+  }
+  const data = await response.json()
+  return data.requests
+}
+
+async function fetchHosts(): Promise<Host[]> {
+  const response = await fetch('/api/admin/hosts', {
+    cache: 'no-store',
+    headers: { 'Cache-Control': 'no-cache' },
+  })
+  if (!response.ok) {
+    throw new Error('Erreur lors du chargement des hôtes')
+  }
+  const data = await response.json()
+  return data.hosts
+}
+
+async function fetchHostBalance(hostId: string): Promise<HostBalance> {
+  const response = await fetch(`/api/admin/withdrawals/balance/${hostId}`, {
+    cache: 'no-store',
+    headers: { 'Cache-Control': 'no-cache' },
+  })
+  if (!response.ok) {
+    throw new Error('Erreur lors du chargement du solde')
+  }
+  return response.json()
+}
+
+async function approveWithdrawal(requestId: string): Promise<void> {
+  const response = await fetch(`/api/admin/withdrawals/${requestId}/approve`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ adminNotes: 'Approuvé' }),
+  })
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new ApiError(error.error || "Erreur lors de l'approbation")
+  }
+}
+
+async function rejectWithdrawal({
+  requestId,
+  reason,
+}: {
+  requestId: string
+  reason: string
+}): Promise<void> {
+  const response = await fetch(`/api/admin/withdrawals/${requestId}/reject`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rejectionReason: reason }),
+  })
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new ApiError(error.error || 'Erreur lors du refus')
+  }
+}
+
+async function markWithdrawalPaid(requestId: string): Promise<void> {
+  const response = await fetch(`/api/admin/withdrawals/${requestId}/mark-paid`, {
+    method: 'PUT',
+  })
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new ApiError(error.error || 'Erreur')
+  }
+}
+
+async function validatePaymentAccount(accountId: string): Promise<void> {
+  const response = await fetch(
+    `/api/admin/withdrawals/payment-accounts/${accountId}/validate`,
+    { method: 'PUT' }
+  )
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new ApiError(error.error || 'Erreur')
+  }
+}
+
+async function createWithdrawalForHost(vars: CreateWithdrawalVars): Promise<void> {
+  const response = await fetch('/api/admin/withdrawals/create-for-host', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(vars),
+  })
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new ApiError(error.error || 'Erreur lors de la création')
+  }
+}
+
 export default function AdminWithdrawalsPage() {
   const {
     session,
@@ -62,12 +193,8 @@ export default function AdminWithdrawalsPage() {
   } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
 
-  const [requests, setRequests] = useState<WithdrawalRequest[]>([])
-  const [hosts, setHosts] = useState<Host[]>([])
-  const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<WithdrawalStatus | 'ALL'>('ALL')
   const [selectedHost, setSelectedHost] = useState<string>('')
-  const [hostBalance, setHostBalance] = useState<HostBalance | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
 
   // Form state for withdrawal creation
@@ -79,7 +206,7 @@ export default function AdminWithdrawalsPage() {
   })
 
   // Payment details for each method
-  const [paymentDetails, setPaymentDetails] = useState({
+  const [paymentDetails, setPaymentDetails] = useState<PaymentDetails>({
     accountHolderName: '',
     iban: '',
     cardNumber: '',
@@ -93,323 +220,166 @@ export default function AdminWithdrawalsPage() {
     moneygramPhone: '',
   })
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      // Vérifier les permissions
-      if (!session?.user.roles || !['ADMIN', 'HOST_MANAGER'].includes(session.user.roles)) {
-        toast.error('Accès non autorisé')
-        router.push('/dashboard')
-        return
-      }
+  const canAccess =
+    isAuthenticated &&
+    !!session?.user.roles &&
+    ['ADMIN', 'HOST_MANAGER'].includes(session.user.roles)
 
-      fetchRequests()
-      fetchHosts()
+  // Redirect unauthorized users.
+  useEffect(() => {
+    if (
+      isAuthenticated &&
+      (!session?.user.roles || !['ADMIN', 'HOST_MANAGER'].includes(session.user.roles))
+    ) {
+      toast.error('Accès non autorisé')
+      router.push('/dashboard')
     }
   }, [isAuthenticated, router, session])
 
-  const fetchRequests = async () => {
-    console.log('🔄 [fetchRequests] Début du chargement des demandes')
-    console.log('📊 [fetchRequests] Filtre actuel:', filter)
-    console.log('📋 [fetchRequests] Nombre de demandes avant:', requests.length)
+  const requestsQuery = useQuery({
+    queryKey: [...CACHE_TAGS.adminWithdrawals(), filter],
+    queryFn: () => fetchWithdrawals(filter),
+    enabled: canAccess,
+  })
+  const hostsQuery = useQuery({
+    queryKey: CACHE_TAGS.adminHosts(),
+    queryFn: fetchHosts,
+    enabled: canAccess,
+  })
+  const balanceQuery = useQuery({
+    queryKey: CACHE_TAGS.adminHostBalance(selectedHost),
+    queryFn: () => fetchHostBalance(selectedHost),
+    enabled: canAccess && !!selectedHost,
+  })
 
-    try {
-      setLoading(true)
-      const url =
-        filter === 'ALL' ? '/api/admin/withdrawals' : `/api/admin/withdrawals?status=${filter}`
+  const requests = requestsQuery.data ?? []
+  const hosts = hostsQuery.data ?? []
+  const hostBalance = balanceQuery.data ?? null
+  const loading = requestsQuery.isLoading
 
-      console.log('🌐 [fetchRequests] URL appelée:', url)
-
-      const response = await fetch(url, {
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache',
-        },
-      })
-
-      console.log('📡 [fetchRequests] Réponse reçue, status:', response.status)
-
-      if (response.ok) {
-        const data = await response.json()
-        console.log('✅ [fetchRequests] Données reçues:', data.requests.length, 'demandes')
-        console.log(
-          '📝 [fetchRequests] Détails des demandes:',
-          data.requests.map((r: WithdrawalRequest) => ({ id: r.id, status: r.status }))
-        )
-        setRequests(data.requests)
-        console.log('💾 [fetchRequests] State mis à jour')
-      } else {
-        console.error('❌ [fetchRequests] Erreur HTTP:', response.status)
-      }
-    } catch (error) {
-      console.error('❌ [fetchRequests] Erreur lors du chargement:', error)
-      toast.error('Erreur lors du chargement des demandes')
-    } finally {
-      setLoading(false)
-      console.log('🏁 [fetchRequests] Chargement terminé')
-    }
-  }
-
-  const fetchHosts = async () => {
-    try {
-      const response = await fetch('/api/admin/hosts', {
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache',
-        },
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setHosts(data.hosts)
-      }
-    } catch (error) {
-      console.error('Error fetching hosts:', error)
-    }
-  }
-
-  const fetchHostBalance = async (hostId: string) => {
-    try {
-      const response = await fetch(`/api/admin/withdrawals/balance/${hostId}`, {
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache',
-        },
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setHostBalance(data)
-      }
-    } catch (error) {
-      console.error('Error fetching host balance:', error)
-      toast.error('Erreur lors du chargement du solde')
-    }
-  }
+  const approveMutation = useMutationWithCache<void, string>({
+    mutationFn: approveWithdrawal,
+    invalidateKeys: [CACHE_TAGS.adminWithdrawals()],
+  })
+  const rejectMutation = useMutationWithCache<void, { requestId: string; reason: string }>({
+    mutationFn: rejectWithdrawal,
+    invalidateKeys: [CACHE_TAGS.adminWithdrawals()],
+  })
+  const markPaidMutation = useMutationWithCache<void, string>({
+    mutationFn: markWithdrawalPaid,
+    invalidateKeys: [CACHE_TAGS.adminWithdrawals()],
+  })
+  const validateAccountMutation = useMutationWithCache<void, string>({
+    mutationFn: validatePaymentAccount,
+    invalidateKeys: [CACHE_TAGS.adminWithdrawals()],
+  })
+  const createMutation = useMutationWithCache<void, CreateWithdrawalVars>({
+    mutationFn: createWithdrawalForHost,
+    invalidateKeys: (_data, vars) => [
+      CACHE_TAGS.adminWithdrawals(),
+      CACHE_TAGS.adminHostBalance(vars.hostId),
+    ],
+  })
 
   const handleApprove = async (requestId: string) => {
-    console.log("✅ [handleApprove] Début de l'approbation pour:", requestId)
     if (!confirm('Approuver cette demande de retrait ?')) {
-      console.log("⏸️ [handleApprove] Annulé par l'utilisateur")
       return
     }
-
     try {
-      console.log('📤 [handleApprove] Envoi de la requête PUT...')
-      const response = await fetch(`/api/admin/withdrawals/${requestId}/approve`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminNotes: 'Approuvé' }),
-      })
-
-      console.log('📥 [handleApprove] Réponse reçue, status:', response.status)
-
-      if (response.ok) {
-        console.log('✅ [handleApprove] Approbation réussie')
-        toast.success('Demande approuvée')
-        console.log('🔄 [handleApprove] Appel de fetchRequests()...')
-        await fetchRequests()
-        console.log('✅ [handleApprove] fetchRequests() terminé')
-      } else {
-        const error = await response.json()
-        console.error('❌ [handleApprove] Erreur:', error)
-        toast.error(error.error || "Erreur lors de l'approbation")
-      }
+      await approveMutation.mutateAsync(requestId)
+      toast.success('Demande approuvée')
     } catch (error) {
-      console.error('❌ [handleApprove] Exception:', error)
-      toast.error("Erreur lors de l'approbation")
+      toast.error(error instanceof ApiError ? error.message : "Erreur lors de l'approbation")
     }
   }
 
   const handleReject = async (requestId: string) => {
-    console.log('❌ [handleReject] Début du rejet pour:', requestId)
     const reason = prompt('Raison du refus :')
     if (!reason) {
-      console.log("⏸️ [handleReject] Annulé par l'utilisateur")
       return
     }
-
     try {
-      console.log('📤 [handleReject] Envoi de la requête PUT...')
-      const response = await fetch(`/api/admin/withdrawals/${requestId}/reject`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rejectionReason: reason }),
-      })
-
-      console.log('📥 [handleReject] Réponse reçue, status:', response.status)
-
-      if (response.ok) {
-        console.log('✅ [handleReject] Rejet réussi')
-        toast.success('Demande rejetée')
-        console.log('🔄 [handleReject] Appel de fetchRequests()...')
-        await fetchRequests()
-        console.log('✅ [handleReject] fetchRequests() terminé')
-      } else {
-        const error = await response.json()
-        console.error('❌ [handleReject] Erreur:', error)
-        toast.error(error.error || 'Erreur lors du refus')
-      }
+      await rejectMutation.mutateAsync({ requestId, reason })
+      toast.success('Demande rejetée')
     } catch (error) {
-      console.error('❌ [handleReject] Exception:', error)
-      toast.error('Erreur lors du refus')
+      toast.error(error instanceof ApiError ? error.message : 'Erreur lors du refus')
     }
   }
 
   const handleMarkPaid = async (requestId: string) => {
-    console.log('💰 [handleMarkPaid] Début du marquage comme payé pour:', requestId)
     if (!confirm('Marquer cette demande comme payée ?')) {
-      console.log("⏸️ [handleMarkPaid] Annulé par l'utilisateur")
       return
     }
-
     try {
-      console.log('📤 [handleMarkPaid] Envoi de la requête PUT...')
-      const response = await fetch(`/api/admin/withdrawals/${requestId}/mark-paid`, {
-        method: 'PUT',
-      })
-
-      console.log('📥 [handleMarkPaid] Réponse reçue, status:', response.status)
-
-      if (response.ok) {
-        console.log('✅ [handleMarkPaid] Marquage réussi')
-        toast.success('Demande marquée comme payée')
-        console.log('🔄 [handleMarkPaid] Appel de fetchRequests()...')
-        await fetchRequests()
-        console.log('✅ [handleMarkPaid] fetchRequests() terminé')
-      } else {
-        const error = await response.json()
-        console.error('❌ [handleMarkPaid] Erreur:', error)
-        toast.error(error.error || 'Erreur')
-      }
+      await markPaidMutation.mutateAsync(requestId)
+      toast.success('Demande marquée comme payée')
     } catch (error) {
-      console.error('❌ [handleMarkPaid] Exception:', error)
-      toast.error('Erreur')
+      toast.error(error instanceof ApiError ? error.message : 'Erreur')
     }
   }
 
   const handleValidateAccount = async (accountId: string) => {
-    console.log('🏦 [handleValidateAccount] Début de la validation pour:', accountId)
     if (!confirm('Valider ce compte de paiement ?')) {
-      console.log("⏸️ [handleValidateAccount] Annulé par l'utilisateur")
       return
     }
-
     try {
-      console.log('📤 [handleValidateAccount] Envoi de la requête PUT...')
-      const response = await fetch(
-        `/api/admin/withdrawals/payment-accounts/${accountId}/validate`,
-        {
-          method: 'PUT',
-        }
-      )
-
-      console.log('📥 [handleValidateAccount] Réponse reçue, status:', response.status)
-
-      if (response.ok) {
-        console.log('✅ [handleValidateAccount] Validation réussie')
-        toast.success('Compte validé')
-        console.log('🔄 [handleValidateAccount] Appel de fetchRequests()...')
-        await fetchRequests()
-        console.log('✅ [handleValidateAccount] fetchRequests() terminé')
-      } else {
-        const error = await response.json()
-        console.error('❌ [handleValidateAccount] Erreur:', error)
-        toast.error(error.error || 'Erreur')
-      }
+      await validateAccountMutation.mutateAsync(accountId)
+      toast.success('Compte validé')
     } catch (error) {
-      console.error('❌ [handleValidateAccount] Exception:', error)
-      toast.error('Erreur')
+      toast.error(error instanceof ApiError ? error.message : 'Erreur')
     }
   }
 
   const handleCreateWithdrawal = async () => {
-    console.log('➕ [handleCreateWithdrawal] Début de la création de demande')
-    console.log('👤 [handleCreateWithdrawal] Hôte sélectionné:', selectedHost)
-    console.log('💵 [handleCreateWithdrawal] Montant:', withdrawalForm.amount)
-
     if (!selectedHost) {
-      console.log("❌ [handleCreateWithdrawal] Pas d'hôte sélectionné")
       toast.error('Veuillez sélectionner un hôte')
       return
     }
 
     if (!withdrawalForm.amount || parseFloat(withdrawalForm.amount) <= 0) {
-      console.log('❌ [handleCreateWithdrawal] Montant invalide')
       toast.error('Veuillez saisir un montant valide')
       return
     }
 
     if (!hostBalance || parseFloat(withdrawalForm.amount) > hostBalance.availableBalance) {
-      console.log('❌ [handleCreateWithdrawal] Montant dépasse le solde disponible')
       toast.error('Le montant dépasse le solde disponible')
       return
     }
 
     try {
-      console.log('📤 [handleCreateWithdrawal] Envoi de la requête POST...')
-      const response = await fetch('/api/admin/withdrawals/create-for-host', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          hostId: selectedHost,
-          amount: parseFloat(withdrawalForm.amount),
-          withdrawalType: withdrawalForm.withdrawalType,
-          paymentMethod: withdrawalForm.paymentMethod,
-          paymentDetails: paymentDetails,
-          notes: withdrawalForm.notes || `Demande créée par ${session?.user?.name || 'admin'}`,
-        }),
+      await createMutation.mutateAsync({
+        hostId: selectedHost,
+        amount: parseFloat(withdrawalForm.amount),
+        withdrawalType: withdrawalForm.withdrawalType,
+        paymentMethod: withdrawalForm.paymentMethod,
+        paymentDetails,
+        notes: withdrawalForm.notes || `Demande créée par ${session?.user?.name || 'admin'}`,
       })
-
-      console.log('📥 [handleCreateWithdrawal] Réponse reçue, status:', response.status)
-
-      if (response.ok) {
-        console.log('✅ [handleCreateWithdrawal] Création réussie')
-        toast.success('Demande de retrait créée avec succès')
-        setShowCreateModal(false)
-        setWithdrawalForm({
-          amount: '',
-          withdrawalType: 'PARTIAL_50',
-          paymentMethod: 'SEPA_VIREMENT',
-          notes: '',
-        })
-        setPaymentDetails({
-          accountHolderName: '',
-          iban: '',
-          cardNumber: '',
-          cardEmail: '',
-          mobileNumber: '',
-          paypalUsername: '',
-          paypalEmail: '',
-          paypalPhone: '',
-          paypalIban: '',
-          moneygramFullName: '',
-          moneygramPhone: '',
-        })
-        console.log('🔄 [handleCreateWithdrawal] Appel de fetchRequests()...')
-        await fetchRequests()
-        console.log('🔄 [handleCreateWithdrawal] Appel de fetchHostBalance()...')
-        await fetchHostBalance(selectedHost)
-        console.log('✅ [handleCreateWithdrawal] Mise à jour terminée')
-      } else {
-        const error = await response.json()
-        console.error('❌ [handleCreateWithdrawal] Erreur:', error)
-        toast.error(error.error || 'Erreur lors de la création')
-      }
+      toast.success('Demande de retrait créée avec succès')
+      setShowCreateModal(false)
+      setWithdrawalForm({
+        amount: '',
+        withdrawalType: 'PARTIAL_50',
+        paymentMethod: 'SEPA_VIREMENT',
+        notes: '',
+      })
+      setPaymentDetails({
+        accountHolderName: '',
+        iban: '',
+        cardNumber: '',
+        cardEmail: '',
+        mobileNumber: '',
+        paypalUsername: '',
+        paypalEmail: '',
+        paypalPhone: '',
+        paypalIban: '',
+        moneygramFullName: '',
+        moneygramPhone: '',
+      })
     } catch (error) {
-      console.error('❌ [handleCreateWithdrawal] Exception:', error)
-      toast.error('Erreur lors de la création')
+      toast.error(error instanceof ApiError ? error.message : 'Erreur lors de la création')
     }
   }
-
-  useEffect(() => {
-    fetchRequests()
-  }, [filter])
-
-  useEffect(() => {
-    if (selectedHost) {
-      fetchHostBalance(selectedHost)
-    } else {
-      setHostBalance(null)
-    }
-  }, [selectedHost])
 
   const getStatusBadge = (status: WithdrawalStatus) => {
     const styles = {
