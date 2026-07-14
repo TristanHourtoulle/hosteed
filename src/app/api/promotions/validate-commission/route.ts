@@ -20,8 +20,12 @@ export async function POST(request: NextRequest) {
     console.log('✅ [API validate-commission] User authenticated:', session.user.id)
 
     const body = await request.json()
-    const { productId, discountPercentage } = body
-    console.log('📥 [API validate-commission] Request body:', { productId, discountPercentage })
+    const { productId, discountPercentage, roomTypeId } = body
+    console.log('📥 [API validate-commission] Request body:', {
+      productId,
+      discountPercentage,
+      roomTypeId,
+    })
 
     if (!productId || discountPercentage === undefined) {
       console.log('❌ [API validate-commission] Missing parameters')
@@ -31,10 +35,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const parsedDiscount = parseFloat(discountPercentage)
-    console.log('🔍 [API validate-commission] Calling validatePromotionCommission with:', { productId, parsedDiscount })
+    if (roomTypeId != null && typeof roomTypeId !== 'string') {
+      return NextResponse.json({ error: 'roomTypeId invalide' }, { status: 400 })
+    }
 
-    const { isValid, maxAllowedPercentage } = await validatePromotionCommission(productId, parsedDiscount)
+    const parsedDiscount = parseFloat(discountPercentage)
+    console.log('🔍 [API validate-commission] Calling validatePromotionCommission with:', {
+      productId,
+      parsedDiscount,
+      roomTypeId,
+    })
+
+    const { isValid, maxAllowedPercentage } = await validatePromotionCommission(
+      productId,
+      parsedDiscount,
+      (roomTypeId as string | null | undefined) ?? null
+    )
     console.log('📊 [API validate-commission] Validation result:', { isValid, maxAllowedPercentage })
 
     const response = {

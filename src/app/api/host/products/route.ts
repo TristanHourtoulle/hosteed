@@ -41,7 +41,18 @@ export async function GET(request: NextRequest) {
       return obj
     }
 
-    const serializedProducts = result.products.map(product => convertBigIntToNumber(product))
+    // Hotel multi-room-type (Lot 5): surface `isHotel` (derived from the product
+    // type) and a lean `roomTypes` list so the shared PromotionForm can let hosts
+    // scope a promotion to a single room type. Mirrors /api/admin/products.
+    const serializedProducts = result.products.map(product => {
+      const serialized = convertBigIntToNumber(product) as Record<string, unknown>
+      const type = serialized.type as { isHotelType?: boolean } | null | undefined
+      return {
+        ...serialized,
+        isHotel: type?.isHotelType ?? false,
+        roomTypes: serialized.roomTypes ?? [],
+      }
+    })
 
     const response = NextResponse.json({
       products: serializedProducts,

@@ -20,6 +20,11 @@ interface Product {
   originalProductId?: string | null
   img?: { img: string }[]
   promotions?: ProductPromotion[]
+  // Hotel multi-room-type (Lot 5): lets the shared PromotionForm scope a
+  // promotion to a single room type. `isHotel` is derived from the product
+  // type; `roomTypes` is empty for non-hotel products.
+  isHotel?: boolean
+  roomTypes?: { id: string; name: string }[]
 }
 
 interface HostProductsResponse {

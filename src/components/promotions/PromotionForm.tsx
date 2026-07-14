@@ -118,9 +118,13 @@ export default function PromotionForm({
         setDiscountedPrice(newPrice)
         setSavings(saved)
 
-        // Vérifier la commission
+        // Vérifier la commission (per-type base price when scoped to a room type)
         console.log('🔍 [PromotionForm] Calling checkCommission...')
-        checkCommission(formData.productId, discount)
+        checkCommission(
+          formData.productId,
+          discount,
+          formData.roomTypeId === ALL_ROOMS ? null : formData.roomTypeId
+        )
       } else {
         console.log('⚠️ [PromotionForm] Invalid values - resetting price calculations')
         setDiscountedPrice(null)
@@ -130,15 +134,19 @@ export default function PromotionForm({
     } else {
       console.log('⚠️ [PromotionForm] No product or discount percentage - skipping calculations')
     }
-  }, [formData.discountPercentage, formData.productId, products, selectedProduct])
+  }, [formData.discountPercentage, formData.productId, formData.roomTypeId, products, selectedProduct])
 
-  const checkCommission = async (productId: string, discount: number) => {
+  const checkCommission = async (
+    productId: string,
+    discount: number,
+    roomTypeId: string | null
+  ) => {
     if (!productId || !discount) return
 
-    console.log('🔍 [PromotionForm] checkCommission called with:', { productId, discount })
+    console.log('🔍 [PromotionForm] checkCommission called with:', { productId, discount, roomTypeId })
     setCheckingCommission(true)
     try {
-      const requestBody = { productId, discountPercentage: discount }
+      const requestBody = { productId, discountPercentage: discount, roomTypeId }
       console.log('📤 [PromotionForm] Sending request to /api/promotions/validate-commission:', requestBody)
 
       const res = await fetch('/api/promotions/validate-commission', {
