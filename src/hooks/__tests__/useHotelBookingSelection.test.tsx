@@ -126,4 +126,39 @@ describe('useHotelBookingSelection', () => {
     expect(result.current.exceedsCapacity).toBe(false)
     expect(result.current.canReserve).toBe(true)
   })
+
+  it('does not call the pricing server action when guests exceed selected capacity', async () => {
+    // Each room type has capacity 2. Selecting one room (capacity 2) for 5
+    // guests exceeds capacity, so the pricing query must stay disabled.
+    const { result } = setup(5)
+
+    act(() => result.current.setQuantity('A', 1))
+
+    // Give React Query a chance to (wrongly) fire before asserting it did not.
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0))
+    })
+
+    expect(calculateHotelBookingPriceMock).not.toHaveBeenCalled()
+    expect(result.current.pricing).toBeNull()
+    expect(result.current.isPricingLoading).toBe(false)
+  })
+
+  it('calls the pricing server action once guests fit within selected capacity', async () => {
+    // Two rooms (capacity 2 each = 4) still under 5 guests -> disabled.
+    const { result } = setup(5)
+
+    act(() => result.current.setQuantity('A', 1))
+    act(() => result.current.setQuantity('B', 1))
+
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0))
+    })
+    expect(calculateHotelBookingPriceMock).not.toHaveBeenCalled()
+
+    // Three rooms (capacity 6) now covers 5 guests -> enabled.
+    act(() => result.current.setQuantity('A', 2))
+    await waitFor(() => expect(result.current.pricing?.totalAmount).toBe(300))
+    expect(calculateHotelBookingPriceMock).toHaveBeenCalled()
+  })
 })
