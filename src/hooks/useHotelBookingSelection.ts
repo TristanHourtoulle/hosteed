@@ -95,9 +95,28 @@ export function useHotelBookingSelection({
   const encodedSelection = useMemo(() => encodeRoomTypeSelection(selection), [selection])
   const totalRooms = totalSelectedRooms(selection)
 
-  const pricingEnabled = requestLines.length > 0 && nights > 0 && !!arrivalDate && !!leavingDate
+  // Total guest capacity of the current selection (Σ quantity × per-type capacity).
+  const capacityById = useMemo(
+    () => new Map(roomTypes.map(rt => [rt.id, rt.capacity])),
+    [roomTypes]
+  )
+  const selectedCapacity = useMemo(
+    () =>
+      requestLines.reduce(
+        (sum, line) => sum + line.quantity * (capacityById.get(line.roomTypeId) ?? 0),
+        0
+      ),
+    [requestLines, capacityById]
+  )
+  // The Reserve button is already disabled in this state; mirror that here so
+  // the server-authoritative pricing action is never invoked with a guest count
+  // the client already knows is invalid (the action throws on over-capacity).
+  const exceedsCapacity = totalRooms > 0 && guestCount > selectedCapacity
 
-  const { data: pricing, isFetching: isPricingLoading } = useQuery<HotelBookingPriceResult>({
+  const pricingEnabled =
+    requestLines.length > 0 && nights > 0 && !!arrivalDate && !!leavingDate && !exceedsCapacity
+
+  const { data: pricing, isFetching: isPricingLoading } = useQuery<HotelBookingPriceResult | null>({
     queryKey: [
       'hotel-booking-pricing',
       productId,
@@ -106,16 +125,24 @@ export function useHotelBookingSelection({
       leavingDate?.toISOString() ?? '',
       guestCount,
     ],
-    queryFn: () =>
-      calculateHotelBookingPrice(
-        productId,
-        requestLines,
-        arrivalDate!,
-        leavingDate!,
-        guestCount,
-        selectedExtras,
-        ownerId
-      ),
+    queryFn: async () => {
+      try {
+        return await calculateHotelBookingPrice(
+          productId,
+          requestLines,
+          arrivalDate!,
+          leavingDate!,
+          guestCount,
+          selectedExtras,
+          ownerId
+        )
+      } catch {
+        // Defense in depth: a race or tampered state must never surface as an
+        // unhandled server-action rejection (500). Consumers treat null as
+        // "no price yet".
+        return null
+      }
+    },
     enabled: pricingEnabled,
     staleTime: 1000 * 60,
   })
