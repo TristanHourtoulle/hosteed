@@ -40,7 +40,9 @@ async function fetchHostProducts(
   page: number = 1,
   limit: number = 20
 ): Promise<HostProductsResponse> {
-  const response = await fetch(`/api/host/products?page=${page}&limit=${limit}`)
+  const response = await fetch(`/api/host/products?page=${page}&limit=${limit}`, {
+    cache: 'no-store',
+  })
 
   if (!response.ok) {
     throw new Error('Erreur lors du chargement des produits')
