@@ -630,6 +630,9 @@ Meilleurs spots :
       categories: BigInt(1),
       validate: 'Approve',
       userManager: BigInt(1),
+      owner: {
+        connect: { id: adminUser.id },
+      },
       type: {
         connect: { id: typeRent.id },
       },
