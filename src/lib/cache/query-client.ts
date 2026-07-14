@@ -53,6 +53,41 @@ export const CACHE_TAGS = {
     ['hotel-booking-pricing', productId, encodedSelection, arrival, leaving, guestCount] as const,
   bulkFavorites: (userId: string | undefined, productIds: string[]) =>
     ['bulk-favorites', userId, ...productIds] as const,
+
+  // --- Page-migration query keys (TRI-1017 foundation) ---
+  // Host dashboard datasets
+  hostPromotions: (hostId: string) => ['host', 'promotions', hostId] as const,
+  hostProductsList: () => ['host', 'products', 'list'] as const,
+  hostReservations: (hostId: string) => ['host', 'reservations', hostId] as const,
+  hostUnavailability: (productId?: string) =>
+    ['host', 'unavailability', productId ?? 'all'] as const,
+
+  // Shared promotions endpoint (/api/promotions)
+  promotions: () => ['promotions'] as const,
+
+  // Admin dashboard datasets
+  adminProducts: (params?: unknown) => ['admin', 'products', params ?? null] as const,
+  adminCommissions: () => ['admin', 'commissions'] as const,
+  adminCommissionSettings: () => ['admin', 'commission-settings'] as const,
+  adminHomepage: () => ['admin', 'homepage'] as const,
+  adminUserRatings: () => ['admin', 'user-ratings'] as const,
+  adminTypeRent: (id: string) => ['admin', 'typeRent', id] as const,
+  adminTypeRentProducts: (id: string) => ['admin', 'typeRent', id, 'products'] as const,
+  adminBlog: () => ['admin', 'blog'] as const,
+  adminBlogPost: (id: string) => ['admin', 'blog', id] as const,
+  adminUsers: () => ['admin', 'users'] as const,
+  adminUser: (id: string) => ['admin', 'users', id] as const,
+  adminUnverifiedUsers: () => ['admin', 'users', 'unverified'] as const,
+  adminPromotions: () => ['admin', 'promotions'] as const,
+  adminIncludedServices: () => ['admin', 'included-services'] as const,
+  adminWithdrawals: () => ['admin', 'withdrawals'] as const,
+  adminHosts: () => ['admin', 'hosts'] as const,
+  adminHostBalance: (hostId: string) =>
+    ['admin', 'withdrawals', 'balance', hostId] as const,
+  adminHighlights: () => ['admin', 'highlights'] as const,
+  adminExtras: () => ['admin', 'extras'] as const,
+  adminReviews: () => ['admin', 'reviews'] as const,
+
   staticData: {
     equipments: ['static', 'equipments'] as const,
     meals: ['static', 'meals'] as const,
