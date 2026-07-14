@@ -3,10 +3,11 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Edit3 } from 'lucide-react'
-import { toast } from 'sonner'
 
 import ErrorAlert, { ErrorDetails } from '@/components/ui/ErrorAlert'
 import { parseCreateProductError } from '@/lib/utils/errorHandler'
+import { useMutationWithCache } from '@/hooks/useMutationWithCache'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
 
 import { WizardStepper } from '@/app/createProduct/components/wizard/WizardStepper'
 import { WizardNavigation } from '@/app/createProduct/components/wizard/WizardNavigation'
@@ -48,7 +49,6 @@ export function ProductEditWizard({ product, onSave, onCancel }: ProductEditForm
   const wizard = useProductWizardForm(productForm.formData.isHotel)
 
   // UI state
-  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<ErrorDetails | null>(null)
   const [seoData, setSeoData] = useState<{
     metaTitle?: string
@@ -117,12 +117,10 @@ export function ProductEditWizard({ product, onSave, onCancel }: ProductEditForm
     wizard.nextStep()
   }
 
-  // Form submission - PUT instead of POST
-  const handleSubmit = async () => {
-    setIsLoading(true)
-    setError(null)
-
-    try {
+  // Form submission - PUT instead of POST, wrapped so the product cache and the
+  // validation datasets are invalidated on success.
+  const saveMutation = useMutationWithCache<Product, void>({
+    mutationFn: async (): Promise<Product> => {
       // Separate existing images from new uploads
       const existingImageUrls = imageUpload.selectedFiles
         .filter(img => img.isExisting && img.url)
@@ -174,14 +172,27 @@ export function ProductEditWizard({ product, onSave, onCancel }: ProductEditForm
         }
       }
 
-      toast.success('Annonce mise à jour avec succes!')
-      onSave(updatedProduct as unknown as Product)
-    } catch (err) {
-      console.error('Error updating product:', err)
+      return updatedProduct as unknown as Product
+    },
+    invalidateKeys: [
+      CACHE_TAGS.product(product.id),
+      CACHE_TAGS.productValidation(product.id),
+      CACHE_TAGS.productsValidation,
+    ],
+    successMessage: 'Annonce mise à jour avec succes!',
+    onSuccess: updatedProduct => {
+      onSave(updatedProduct)
+    },
+    onError: err => {
       setError(parseCreateProductError(err))
-    } finally {
-      setIsLoading(false)
-    }
+    },
+  })
+
+  const isLoading = saveMutation.isPending
+
+  const handleSubmit = () => {
+    setError(null)
+    saveMutation.mutate()
   }
 
   return (

@@ -3,6 +3,7 @@
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, use } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
@@ -37,6 +38,8 @@ import {
 } from 'lucide-react'
 import { findTypeById, updateTypeRent } from '@/lib/services/typeRent.service'
 import { TypeRentInterface } from '@/lib/interface/typeRentInterface'
+import { useMutationWithCache } from '@/hooks/useMutationWithCache'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
 import DeleteTypeModal from '../components/DeleteTypeModal'
 import { ProductValidation } from '@prisma/client'
 
@@ -58,9 +61,6 @@ export default function TypeRentDetailPage({ params }: { params: Promise<{ id: s
   const { id } = use(params)
   const { data: session } = useSession()
   const router = useRouter()
-  const [typeRent, setTypeRent] = useState<TypeRentInterface | null>(null)
-  const [products, setProducts] = useState<ExtendedProduct[]>([])
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
 
@@ -69,7 +69,6 @@ export default function TypeRentDetailPage({ params }: { params: Promise<{ id: s
   const [editTypeName, setEditTypeName] = useState('')
   const [editTypeDescription, setEditTypeDescription] = useState('')
   const [editIsHotelType, setEditIsHotelType] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // États pour la suppression
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
@@ -82,34 +81,41 @@ export default function TypeRentDetailPage({ params }: { params: Promise<{ id: s
     }
   }, [session, isAdmin, router])
 
-  useEffect(() => {
-    if (!isAdmin) return
+  const {
+    data: typeRentData,
+    isLoading: isTypeLoading,
+    isError: isTypeError,
+  } = useQuery({
+    queryKey: CACHE_TAGS.adminTypeRent(id),
+    queryFn: () => findTypeById(id),
+    enabled: isAdmin,
+  })
 
-    const fetchData = async () => {
-      try {
-        // Récupérer le type de logement
-        const type = await findTypeById(id)
-        if (!type) {
-          setError('Type de logement introuvable')
-          return
-        }
-        setTypeRent(type)
-
-        // Récupérer les produits associés avec plus de détails
-        const response = await fetch(`/api/admin/typeRent/${id}/products`)
-        if (response.ok) {
-          const productsData = await response.json()
-          setProducts(productsData)
-        }
-      } catch (err) {
-        setError('Erreur lors du chargement des données')
-        console.error(err)
-      } finally {
-        setLoading(false)
+  const { data: productsData, isLoading: isProductsLoading } = useQuery({
+    queryKey: CACHE_TAGS.adminTypeRentProducts(id),
+    queryFn: async (): Promise<ExtendedProduct[]> => {
+      const response = await fetch(`/api/admin/typeRent/${id}/products`)
+      if (!response.ok) {
+        throw new Error('Erreur lors du chargement des logements')
       }
-    }
-    fetchData()
-  }, [id, isAdmin])
+      return response.json()
+    },
+    enabled: isAdmin,
+  })
+
+  const typeRent: TypeRentInterface | null = typeRentData ?? null
+  const products: ExtendedProduct[] = productsData ?? []
+  const loading = !isAdmin || isTypeLoading || isProductsLoading
+  const loadError = isTypeError ? 'Erreur lors du chargement des données' : null
+
+  const updateTypeMutation = useMutationWithCache<
+    TypeRentInterface | null,
+    { name: string; description: string; isHotelType: boolean }
+  >({
+    mutationFn: ({ name, description, isHotelType }) =>
+      updateTypeRent(id, name, description, isHotelType),
+    invalidateKeys: [CACHE_TAGS.adminTypeRent(id)],
+  })
 
   const handleEditType = () => {
     if (typeRent) {
@@ -120,31 +126,31 @@ export default function TypeRentDetailPage({ params }: { params: Promise<{ id: s
     }
   }
 
-  const handleUpdateType = async () => {
+  const handleUpdateType = () => {
     if (!typeRent || !editTypeName.trim() || !editTypeDescription.trim()) return
 
-    setIsSubmitting(true)
-    try {
-      const updatedType = await updateTypeRent(
-        typeRent.id,
-        editTypeName,
-        editTypeDescription,
-        editIsHotelType
-      )
-
-      if (updatedType) {
-        setTypeRent(updatedType)
-        setIsEditDialogOpen(false)
-      } else {
-        setError('Erreur lors de la modification du type de logement')
+    updateTypeMutation.mutate(
+      {
+        name: editTypeName,
+        description: editTypeDescription,
+        isHotelType: editIsHotelType,
+      },
+      {
+        onSuccess: updatedType => {
+          if (updatedType) {
+            setIsEditDialogOpen(false)
+          } else {
+            setError('Erreur lors de la modification du type de logement')
+          }
+        },
+        onError: () => {
+          setError('Erreur lors de la modification du type de logement')
+        },
       }
-    } catch (err) {
-      console.error('Erreur lors de la modification:', err)
-      setError('Erreur lors de la modification du type de logement')
-    } finally {
-      setIsSubmitting(false)
-    }
+    )
   }
+
+  const isSubmitting = updateTypeMutation.isPending
 
   const handleDeleteSuccess = () => {
     router.push('/admin/typeRent')
@@ -198,12 +204,14 @@ export default function TypeRentDetailPage({ params }: { params: Promise<{ id: s
     )
   }
 
-  if (error || !typeRent) {
+  if (error || loadError || !typeRent) {
     return (
       <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-8'>
         <div className='max-w-7xl mx-auto'>
           <Alert variant='destructive'>
-            <AlertDescription>{error || 'Type de logement introuvable'}</AlertDescription>
+            <AlertDescription>
+              {error || loadError || 'Type de logement introuvable'}
+            </AlertDescription>
           </Alert>
           <Button variant='outline' className='mt-4' asChild>
             <Link href='/admin/typeRent'>
