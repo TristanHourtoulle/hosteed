@@ -1,6 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
+import { useMutationWithCache } from '@/hooks/useMutationWithCache'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -36,43 +39,104 @@ interface PropertyHighlight {
   }
 }
 
+interface HighlightFormData {
+  name: string
+  description: string
+  icon: string
+}
+
+async function fetchHighlights(): Promise<PropertyHighlight[]> {
+  const response = await fetch('/api/admin/highlights', {
+    cache: 'no-store',
+    headers: {
+      'Cache-Control': 'no-cache',
+    },
+  })
+  if (!response.ok) {
+    throw new Error('Erreur lors du chargement des points forts')
+  }
+  return response.json()
+}
+
 export default function HighlightsPage() {
-  const [highlights, setHighlights] = useState<PropertyHighlight[]>([])
-  const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingHighlight, setEditingHighlight] = useState<PropertyHighlight | null>(null)
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<HighlightFormData>({
     name: '',
     description: '',
     icon: '',
   })
 
-  useEffect(() => {
-    fetchHighlights()
-  }, [])
+  const {
+    data: highlights = [],
+    isLoading: loading,
+    isError,
+  } = useQuery({
+    queryKey: CACHE_TAGS.adminHighlights(),
+    queryFn: fetchHighlights,
+  })
 
-  const fetchHighlights = async () => {
-    try {
-      const response = await fetch('/api/admin/highlights', {
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache',
-        },
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setHighlights(data)
-      } else {
-        toast.error('Erreur lors du chargement des points forts')
-      }
-    } catch {
+  useEffect(() => {
+    if (isError) {
       toast.error('Erreur lors du chargement des points forts')
-    } finally {
-      setLoading(false)
     }
+  }, [isError])
+
+  const resetForm = () => {
+    setFormData({ name: '', description: '', icon: '' })
+    setEditingHighlight(null)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const saveHighlight = useMutationWithCache<
+    unknown,
+    { id?: string; body: HighlightFormData }
+  >({
+    mutationFn: async ({ id, body }) => {
+      const url = id ? `/api/admin/highlights/${id}` : '/api/admin/highlights'
+      const method = id ? 'PUT' : 'POST'
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        throw new Error(error.error || 'Une erreur est survenue')
+      }
+      return response.json().catch(() => null)
+    },
+    invalidateKeys: [CACHE_TAGS.adminHighlights()],
+    onSuccess: (_data, variables) => {
+      toast.success(
+        variables.id ? 'Point fort mis à jour avec succès' : 'Point fort créé avec succès'
+      )
+      setDialogOpen(false)
+      resetForm()
+    },
+    onError: error => {
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de la sauvegarde')
+    },
+  })
+
+  const deleteHighlight = useMutationWithCache<unknown, string>({
+    mutationFn: async id => {
+      const response = await fetch(`/api/admin/highlights/${id}`, {
+        method: 'DELETE',
+      })
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        throw new Error(error.error || 'Erreur lors de la suppression')
+      }
+      return response.json().catch(() => null)
+    },
+    invalidateKeys: [CACHE_TAGS.adminHighlights()],
+    successMessage: 'Point fort supprimé avec succès',
+    onError: error => {
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de la suppression')
+    },
+  })
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!formData.name.trim()) {
@@ -80,35 +144,7 @@ export default function HighlightsPage() {
       return
     }
 
-    try {
-      const url = editingHighlight
-        ? `/api/admin/highlights/${editingHighlight.id}`
-        : '/api/admin/highlights'
-
-      const method = editingHighlight ? 'PUT' : 'POST'
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      })
-
-      if (response.ok) {
-        toast.success(
-          editingHighlight ? 'Point fort mis à jour avec succès' : 'Point fort créé avec succès'
-        )
-        setDialogOpen(false)
-        resetForm()
-        fetchHighlights()
-      } else {
-        const error = await response.json()
-        toast.error(error.error || 'Une erreur est survenue')
-      }
-    } catch {
-      toast.error('Erreur lors de la sauvegarde')
-    }
+    saveHighlight.mutate({ id: editingHighlight?.id, body: formData })
   }
 
   const handleEdit = (highlight: PropertyHighlight) => {
@@ -121,31 +157,12 @@ export default function HighlightsPage() {
     setDialogOpen(true)
   }
 
-  const handleDelete = async (highlight: PropertyHighlight) => {
+  const handleDelete = (highlight: PropertyHighlight) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce point fort ?')) {
       return
     }
 
-    try {
-      const response = await fetch(`/api/admin/highlights/${highlight.id}`, {
-        method: 'DELETE',
-      })
-
-      if (response.ok) {
-        toast.success('Point fort supprimé avec succès')
-        fetchHighlights()
-      } else {
-        const error = await response.json()
-        toast.error(error.error || 'Erreur lors de la suppression')
-      }
-    } catch {
-      toast.error('Erreur lors de la suppression')
-    }
-  }
-
-  const resetForm = () => {
-    setFormData({ name: '', description: '', icon: '' })
-    setEditingHighlight(null)
+    deleteHighlight.mutate(highlight.id)
   }
 
   const handleDialogOpenChange = (open: boolean) => {
@@ -234,7 +251,9 @@ export default function HighlightsPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button type='submit'>{editingHighlight ? 'Mettre à jour' : 'Créer'}</Button>
+                <Button type='submit' disabled={saveHighlight.isPending}>
+                  {editingHighlight ? 'Mettre à jour' : 'Créer'}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
