@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
+import { useMutationWithCache } from '@/hooks/useMutationWithCache'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { motion } from 'framer-motion'
@@ -140,8 +143,35 @@ export default function CreateAdminReviewPage() {
     isLoading: isAuthLoading,
     isAuthenticated,
   } = useAuth({ required: true, redirectTo: '/auth' })
-  const [products, setProducts] = useState<Array<{ id: string; name: string }>>([])
-  const [loading, setLoading] = useState(true)
+  const isAdminOrManager =
+    isAuthenticated &&
+    !!session?.user?.roles &&
+    ['ADMIN', 'HOST_MANAGER'].includes(session.user.roles)
+
+  const { data: products = [], isLoading: loading } = useQuery<Array<{ id: string; name: string }>>({
+    queryKey: CACHE_TAGS.adminProducts('reviews-create-all'),
+    enabled: isAdminOrManager,
+    queryFn: async () => {
+      const allProducts: Array<{ id: string; name: string }> = []
+      let page = 1
+      let hasNext = true
+
+      while (hasNext) {
+        const response = await fetch(`/api/admin/products?page=${page}&limit=50`, {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache' },
+        })
+        if (!response.ok) break
+
+        const data = await response.json()
+        allProducts.push(...(data.products || []))
+        hasNext = data.pagination?.hasNext ?? false
+        page++
+      }
+
+      return allProducts
+    },
+  })
 
   const [formData, setFormData] = useState<AdminReviewFormData>({
     productId: '',
@@ -161,7 +191,6 @@ export default function CreateAdminReviewPage() {
   })
 
   const [errors, setErrors] = useState<FormErrors>({})
-  const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
     if (
@@ -169,40 +198,30 @@ export default function CreateAdminReviewPage() {
       (!session?.user?.roles || !['ADMIN', 'HOST_MANAGER'].includes(session.user.roles))
     ) {
       router.push('/admin')
-      return
     }
-
-    const fetchAllProducts = async () => {
-      if (!isAuthenticated) return
-
-      try {
-        const allProducts: Array<{ id: string; name: string }> = []
-        let page = 1
-        let hasNext = true
-
-        while (hasNext) {
-          const response = await fetch(`/api/admin/products?page=${page}&limit=50`, {
-            cache: 'no-store',
-            headers: { 'Cache-Control': 'no-cache' },
-          })
-          if (!response.ok) break
-
-          const data = await response.json()
-          allProducts.push(...(data.products || []))
-          hasNext = data.pagination?.hasNext ?? false
-          page++
-        }
-
-        setProducts(allProducts)
-      } catch {
-        toast.error('Erreur lors du chargement des hébergements')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchAllProducts()
   }, [isAuthenticated, session, router])
+
+  const createReviewMutation = useMutationWithCache<void, AdminReviewFormData>({
+    mutationFn: async data => {
+      const response = await fetch('/api/admin/reviews/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      const result = await response.json()
+      if (!result.success) {
+        throw new Error(result.error || "Erreur lors de la création de l'avis")
+      }
+    },
+    invalidateKeys: [CACHE_TAGS.adminReviews()],
+    successMessage: 'Avis administratif créé avec succès',
+    onSuccess: () => {
+      router.push('/admin/reviews')
+    },
+    onError: err => {
+      toast.error(err instanceof Error ? err.message : 'Une erreur est survenue lors de la création')
+    },
+  })
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {}
@@ -225,32 +244,12 @@ export default function CreateAdminReviewPage() {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!validateForm() || !session?.user?.id) return
 
-    setIsSubmitting(true)
-    try {
-      const response = await fetch('/api/admin/reviews/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      })
-
-      const result = await response.json()
-
-      if (result.success) {
-        toast.success('Avis administratif créé avec succès')
-        router.push('/admin/reviews')
-      } else {
-        toast.error(result.error || "Erreur lors de la création de l'avis")
-      }
-    } catch {
-      toast.error('Une erreur est survenue lors de la création')
-    } finally {
-      setIsSubmitting(false)
-    }
+    createReviewMutation.mutate(formData)
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -533,10 +532,10 @@ export default function CreateAdminReviewPage() {
                 </Button>
                 <Button
                   type='submit'
-                  disabled={isSubmitting}
+                  disabled={createReviewMutation.isPending}
                   className='px-8 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg'
                 >
-                  {isSubmitting ? (
+                  {createReviewMutation.isPending ? (
                     <>
                       <div className='animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2'></div>
                       Création en cours...

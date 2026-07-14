@@ -7,6 +7,8 @@ import { isFullAdmin } from '@/hooks/useAdminAuth'
 import { createUser } from '@/lib/services/user.service'
 import { User } from '@prisma/client'
 import { useAdminUsersPaginated } from '@/hooks/useAdminPaginated'
+import { useMutationWithCache } from '@/hooks/useMutationWithCache'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
 import Pagination from '@/components/ui/Pagination'
 import Link from 'next/link'
 import { motion, Variants } from 'framer-motion'
@@ -107,7 +109,6 @@ export default function UsersPage() {
 
   const [error, setError] = useState<string | null>(null)
 
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [newUserName, setNewUserName] = useState('')
   const [newUserSurname, setnewUserSurname] = useState('')
@@ -118,12 +119,74 @@ export default function UsersPage() {
   const [isEditRoleDialogOpen, setIsEditRoleDialogOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [newRole, setNewRole] = useState('')
-  const [isUpdatingRole, setIsUpdatingRole] = useState(false)
 
   // États pour la suppression d'utilisateur
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deletionInfo, setDeletionInfo] = useState<unknown>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
+
+  // Server mutations (React Query): keep the paginated list coherent via
+  // refetch() and invalidate the shared admin-user cache tags.
+  const createUserMutation = useMutationWithCache<
+    unknown,
+    { name: string; lastname: string; email: string; password: string }
+  >({
+    mutationFn: ({ name, lastname, email, password }) =>
+      createUser({ email, password, name, lastname }, true),
+    invalidateKeys: [CACHE_TAGS.adminUsers()],
+    onSuccess: async () => {
+      await refetch()
+    },
+  })
+
+  const updateRoleMutation = useMutationWithCache<void, { userId: string; role: string }>({
+    mutationFn: async ({ userId, role }) => {
+      const response = await fetch(`/api/admin/users/${userId}/role`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role }),
+      })
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Erreur lors de la modification du rôle')
+      }
+    },
+    invalidateKeys: (_data, { userId }) => [CACHE_TAGS.adminUsers(), CACHE_TAGS.adminUser(userId)],
+    onSuccess: async () => {
+      await refetch()
+    },
+  })
+
+  const deleteUserMutation = useMutationWithCache<void, string>({
+    mutationFn: async userId => {
+      const response = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' })
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.error || 'Erreur lors de la suppression')
+      }
+    },
+    invalidateKeys: (_data, userId) => [CACHE_TAGS.adminUsers(), CACHE_TAGS.adminUser(userId)],
+    onSuccess: async () => {
+      await refetch()
+    },
+  })
+
+  const verifyEmailMutation = useMutationWithCache<void, User>({
+    mutationFn: async user => {
+      const response = await fetch(`/api/admin/users/${user.id}`, { method: 'PATCH' })
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.error || 'Erreur lors de la verification')
+      }
+    },
+    invalidateKeys: (_data, user) => [
+      CACHE_TAGS.adminUsers(),
+      CACHE_TAGS.adminUser(user.id),
+      CACHE_TAGS.adminUnverifiedUsers(),
+    ],
+    onSuccess: async () => {
+      await refetch()
+    },
+  })
 
   const handleAddOption = async () => {
     if (
@@ -134,21 +197,15 @@ export default function UsersPage() {
     )
       return
 
-    setIsSubmitting(true)
     try {
-      const newOption = await createUser(
-        {
-          email: newUserEmail,
-          password: newUserPassword,
-          name: newUserSurname,
-          lastname: newUserName,
-        },
-        true
-      )
+      const newOption = await createUserMutation.mutateAsync({
+        email: newUserEmail,
+        password: newUserPassword,
+        name: newUserSurname,
+        lastname: newUserName,
+      })
 
       if (newOption) {
-        // Refresh the paginated data instead of manually updating state
-        await refetch()
         setNewUserName('')
         setnewUserEmail('')
         setnewUserSurname('')
@@ -157,11 +214,8 @@ export default function UsersPage() {
       } else {
         setError("Erreur lors de la création de l'utilisateur")
       }
-    } catch (err) {
-      console.error('Erreur lors de la création:', err)
+    } catch {
       setError("Erreur lors de la création de l'utilisateurs")
-    } finally {
-      setIsSubmitting(false)
     }
   }
 
@@ -174,43 +228,23 @@ export default function UsersPage() {
   const handleUpdateRole = async () => {
     if (!editingUser || !newRole || editingUser.roles === newRole) return
 
-    setIsUpdatingRole(true)
     try {
-      const response = await fetch(`/api/admin/users/${editingUser.id}/role`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ role: newRole }),
+      await updateRoleMutation.mutateAsync({ userId: editingUser.id, role: newRole })
+      setIsEditRoleDialogOpen(false)
+      setEditingUser(null)
+      setNewRole('')
+
+      // Notification toast de succès
+      toast.success('Rôle mis à jour avec succès !', {
+        description: `Un email de notification a été envoyé à ${editingUser.name || editingUser.email} pour l'informer du changement de rôle.`,
+        duration: 5000,
       })
-
-      if (response.ok) {
-        // Refresh the paginated data instead of manually updating state
-        await refetch()
-        setIsEditRoleDialogOpen(false)
-        setEditingUser(null)
-        setNewRole('')
-
-        // Notification toast de succès
-        toast.success('Rôle mis à jour avec succès !', {
-          description: `Un email de notification a été envoyé à ${editingUser.name || editingUser.email} pour l'informer du changement de rôle.`,
-          duration: 5000,
-        })
-      } else {
-        const errorData = await response.json()
-        setError(errorData.error || 'Erreur lors de la modification du rôle')
-        toast.error('Erreur lors de la modification du rôle', {
-          description: errorData.error || 'Une erreur est survenue',
-        })
-      }
     } catch (err) {
-      console.error('Erreur lors de la modification du rôle:', err)
-      setError('Erreur lors de la modification du rôle')
+      const message = err instanceof Error ? err.message : 'Erreur lors de la modification du rôle'
+      setError(message)
       toast.error('Erreur lors de la modification du rôle', {
-        description: 'Une erreur technique est survenue',
+        description: message,
       })
-    } finally {
-      setIsUpdatingRole(false)
     }
   }
 
@@ -233,39 +267,22 @@ export default function UsersPage() {
     const info = deletionInfo as { user: { id: string } } | null
     if (!info) return
 
-    setIsDeleting(true)
     try {
-      const response = await fetch(`/api/admin/users/${info.user.id}`, { method: 'DELETE' })
-
-      if (response.ok) {
-        toast.success('Utilisateur supprime avec succes')
-        setDeleteDialogOpen(false)
-        setDeletionInfo(null)
-        await refetch()
-      } else {
-        const data = await response.json()
-        toast.error(data.error || 'Erreur lors de la suppression')
-      }
-    } catch {
-      toast.error('Erreur technique lors de la suppression')
-    } finally {
-      setIsDeleting(false)
+      await deleteUserMutation.mutateAsync(info.user.id)
+      toast.success('Utilisateur supprime avec succes')
+      setDeleteDialogOpen(false)
+      setDeletionInfo(null)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur technique lors de la suppression')
     }
   }
 
   const handleForceVerifyEmail = async (user: User) => {
     try {
-      const response = await fetch(`/api/admin/users/${user.id}`, { method: 'PATCH' })
-
-      if (response.ok) {
-        toast.success(`Email de ${user.name || user.email} verifie avec succes`)
-        await refetch()
-      } else {
-        const data = await response.json()
-        toast.error(data.error || 'Erreur lors de la verification')
-      }
-    } catch {
-      toast.error('Erreur technique lors de la verification')
+      await verifyEmailMutation.mutateAsync(user)
+      toast.success(`Email de ${user.name || user.email} verifie avec succes`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur technique lors de la verification')
     }
   }
 
@@ -496,17 +513,17 @@ export default function UsersPage() {
                   <Button
                     variant='outline'
                     onClick={() => setIsAddDialogOpen(false)}
-                    disabled={isSubmitting}
+                    disabled={createUserMutation.isPending}
                     className='rounded-xl'
                   >
                     Annuler
                   </Button>
                   <Button
                     onClick={handleAddOption}
-                    disabled={!newUserName.trim() || isSubmitting}
+                    disabled={!newUserName.trim() || createUserMutation.isPending}
                     className='bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 rounded-xl'
                   >
-                    {isSubmitting ? (
+                    {createUserMutation.isPending ? (
                       <>
                         <Loader2 className='h-4 w-4 mr-2 animate-spin' />
                         Création...
@@ -730,17 +747,19 @@ export default function UsersPage() {
                   setEditingUser(null)
                   setNewRole('')
                 }}
-                disabled={isUpdatingRole}
+                disabled={updateRoleMutation.isPending}
                 className='rounded-xl'
               >
                 Annuler
               </Button>
               <Button
                 onClick={handleUpdateRole}
-                disabled={!newRole || isUpdatingRole || editingUser?.roles === newRole}
+                disabled={
+                  !newRole || updateRoleMutation.isPending || editingUser?.roles === newRole
+                }
                 className='bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 rounded-xl'
               >
-                {isUpdatingRole ? (
+                {updateRoleMutation.isPending ? (
                   <>
                     <Loader2 className='h-4 w-4 mr-2 animate-spin' />
                     Modification...
@@ -765,7 +784,7 @@ export default function UsersPage() {
           }}
           onConfirm={handleDeleteConfirm}
           deletionInfo={deletionInfo as Parameters<typeof ConfirmDeleteUserDialog>[0]['deletionInfo']}
-          isLoading={isDeleting}
+          isLoading={deleteUserMutation.isPending}
         />
       </div>
     </div>

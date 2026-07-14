@@ -22,6 +22,8 @@ import {
 } from '@/components/ui/shadcnui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Mail, Loader2, CheckCircle, XCircle, Users, User as UserIcon } from 'lucide-react'
+import { useMutationWithCache } from '@/hooks/useMutationWithCache'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
 
 interface EmailVerificationPanelProps {
   users: User[]
@@ -40,7 +42,6 @@ export function EmailVerificationPanel({ users, refreshUsers }: EmailVerificatio
   const [mode, setMode] = useState<'all' | 'selected' | 'single'>('all')
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
   const [singleUser, setSingleUser] = useState<string>('')
-  const [isLoading, setIsLoading] = useState(false)
   const [results, setResults] = useState<SendResult[]>([])
   const [summary, setSummary] = useState<{
     total: number
@@ -48,8 +49,41 @@ export function EmailVerificationPanel({ users, refreshUsers }: EmailVerificatio
     failures: number
   } | null>(null)
 
-  // Filtrer les utilisateurs non vérifiés
+  // Filtrer les utilisateurs non vérifiés (source: liste adminUsers du parent)
   const unverifiedUsers = users.filter(user => !user.emailVerified)
+
+  // Server mutation (React Query): renvoie les emails de vérification et
+  // invalide les caches des utilisateurs non vérifiés + de la liste admin.
+  const sendVerificationMutation = useMutationWithCache<
+    {
+      results?: SendResult[]
+      summary?: { total: number; success: number; failures: number } | null
+    },
+    string[]
+  >({
+    mutationFn: async userIds => {
+      const response = await fetch('/api/admin/users/send-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userIds, mode }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || "Erreur lors de l'envoi des emails")
+      }
+      return data
+    },
+    invalidateKeys: [CACHE_TAGS.adminUnverifiedUsers(), CACHE_TAGS.adminUsers()],
+    onSuccess: data => {
+      setResults(data.results || [])
+      setSummary(data.summary || null)
+      // Rafraîchir la liste des utilisateurs après envoi
+      setTimeout(() => {
+        refreshUsers()
+      }, 1000)
+    },
+    errorMessage: "Erreur lors de l'envoi des emails",
+  })
 
   const handleUserSelection = (userId: string, checked: boolean) => {
     if (checked) {
@@ -67,71 +101,25 @@ export function EmailVerificationPanel({ users, refreshUsers }: EmailVerificatio
     }
   }
 
-  const handleSendEmails = async () => {
-    setIsLoading(true)
+  const handleSendEmails = () => {
     setResults([])
     setSummary(null)
 
-    try {
-      let userIds: string[] = []
+    let userIds: string[] = []
 
-      if (mode === 'all') {
-        userIds = unverifiedUsers.map(user => user.id)
-      } else if (mode === 'selected') {
-        userIds = selectedUsers
-      } else if (mode === 'single') {
-        userIds = [singleUser]
-      }
-
-      if (userIds.length === 0) {
-        console.error('Aucun utilisateur sélectionné')
-        return
-      }
-
-      const response = await fetch('/api/admin/users/send-verification', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userIds,
-          mode,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        setResults(data.results || [])
-        setSummary(data.summary || null)
-
-        // Afficher un toast de succès
-        const successCount = data.summary?.success || 0
-        const failureCount = data.summary?.failures || 0
-
-        if (successCount > 0) {
-          console.log(`${successCount} email(s) envoyé(s) avec succès`)
-        }
-        if (failureCount > 0) {
-          console.warn(`${failureCount} échec(s) lors de l'envoi`)
-        }
-
-        // Rafraîchir la liste des utilisateurs après envoi
-        setTimeout(() => {
-          refreshUsers()
-        }, 1000)
-      } else {
-        console.error('Erreur:', data.error)
-        // Afficher un toast d'erreur
-        console.error("Erreur lors de l'envoi des emails")
-      }
-    } catch (error) {
-      console.error("Erreur lors de l'envoi des emails:", error)
-      // Afficher un toast d'erreur
-      console.error("Erreur de connexion lors de l'envoi des emails")
-    } finally {
-      setIsLoading(false)
+    if (mode === 'all') {
+      userIds = unverifiedUsers.map(user => user.id)
+    } else if (mode === 'selected') {
+      userIds = selectedUsers
+    } else if (mode === 'single') {
+      userIds = [singleUser]
     }
+
+    if (userIds.length === 0) {
+      return
+    }
+
+    sendVerificationMutation.mutate(userIds)
   }
 
   const resetForm = () => {
@@ -305,17 +293,17 @@ export function EmailVerificationPanel({ users, refreshUsers }: EmailVerificatio
           <Button
             onClick={handleSendEmails}
             disabled={
-              isLoading ||
+              sendVerificationMutation.isPending ||
               (mode === 'selected' && selectedUsers.length === 0) ||
               (mode === 'single' && !singleUser)
             }
           >
-            {isLoading ? (
+            {sendVerificationMutation.isPending ? (
               <Loader2 className='h-4 w-4 animate-spin mr-2' />
             ) : (
               <Mail className='h-4 w-4 mr-2' />
             )}
-            {isLoading ? 'Envoi en cours...' : 'Envoyer les emails'}
+            {sendVerificationMutation.isPending ? 'Envoi en cours...' : 'Envoyer les emails'}
           </Button>
         </DialogFooter>
       </DialogContent>
