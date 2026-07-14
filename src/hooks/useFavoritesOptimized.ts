@@ -119,7 +119,7 @@ export function useBulkFavoriteStatus(productIds: string[]) {
   const userId = session?.user?.id
 
   return useQuery({
-    queryKey: ['bulk-favorites', userId, ...productIds],
+    queryKey: CACHE_TAGS.bulkFavorites(userId, productIds),
     queryFn: async () => {
       if (!userId || productIds.length === 0) return {}
 

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
 import type { RoomTypeAvailabilityView } from '@/types/roomType'
 
 interface RoomTypeAvailabilityParams {
@@ -29,7 +30,7 @@ export function useRoomTypeAvailability({
   const leavingISO = leavingDate ? leavingDate.toISOString() : ''
 
   return useQuery<RoomTypeAvailabilityView[]>({
-    queryKey: ['room-type-availability', productId ?? '', arrivalISO, leavingISO],
+    queryKey: CACHE_TAGS.roomTypeAvailability(productId ?? '', arrivalISO, leavingISO),
     queryFn: async () => {
       const params = new URLSearchParams({ productId: productId! })
       if (arrivalISO && leavingISO) {

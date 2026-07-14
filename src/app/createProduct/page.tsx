@@ -2,13 +2,13 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Home } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { createProduct } from '@/lib/services/product.service'
+import { invalidateClientCache } from '@/lib/cache/client-invalidation'
 import ErrorAlert, { ErrorDetails } from '@/components/ui/ErrorAlert'
 import { parseCreateProductError, createValidationError } from '@/lib/utils/errorHandler'
 
@@ -30,7 +30,6 @@ import type { RoomTypeFormData } from './types/roomType'
 
 export default function CreateProductPage() {
   const router = useRouter()
-  const queryClient = useQueryClient()
   const { session, isLoading: isAuthLoading } = useAuth({ required: true, redirectTo: '/auth' })
 
   // Data & form hooks
@@ -142,7 +141,7 @@ export default function CreateProductPage() {
         )
       }
 
-      await queryClient.invalidateQueries({ queryKey: ['host-products'] })
+      await invalidateClientCache.products(result.id)
       toast.success('Annonce créée avec succès!')
       router.push('/dashboard/host')
     } catch (err) {

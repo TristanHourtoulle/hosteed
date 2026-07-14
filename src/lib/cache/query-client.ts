@@ -29,6 +29,30 @@ export const CACHE_TAGS = {
   userRatings: (userId: string) => ['user-ratings', userId] as const,
   userStats: (userId: string) => ['user-stats', userId] as const,
   validationStats: ['validation-stats'] as const,
+  hostProducts: (page: number, limit: number) => ['host-products', page, limit] as const,
+  rentStatistics: (userId: string | undefined) => ['rent-statistics', userId] as const,
+  productsSearch: (params: unknown) => ['products-search', params] as const,
+  roomTypeAvailability: (productId: string, arrival: string, leaving: string) =>
+    ['room-type-availability', productId, arrival, leaving] as const,
+  bookingPricing: (
+    productId: string,
+    startDate: string | undefined,
+    endDate: string | undefined,
+    guestCount: number,
+    extrasCost: number,
+    ownerId: string | undefined
+  ) =>
+    ['booking-pricing', productId, startDate, endDate, guestCount, extrasCost, ownerId] as const,
+  hotelPricing: (
+    productId: string,
+    encodedSelection: string,
+    arrival: string,
+    leaving: string,
+    guestCount: number
+  ) =>
+    ['hotel-booking-pricing', productId, encodedSelection, arrival, leaving, guestCount] as const,
+  bulkFavorites: (userId: string | undefined, productIds: string[]) =>
+    ['bulk-favorites', userId, ...productIds] as const,
   staticData: {
     equipments: ['static', 'equipments'] as const,
     meals: ['static', 'meals'] as const,

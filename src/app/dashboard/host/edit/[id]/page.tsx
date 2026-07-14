@@ -11,6 +11,7 @@ import { toast } from 'sonner'
 
 import ErrorAlert, { ErrorDetails } from '@/components/ui/ErrorAlert'
 import { parseCreateProductError, createValidationError } from '@/lib/utils/errorHandler'
+import { invalidateClientCache } from '@/lib/cache/client-invalidation'
 
 import { WizardStepper } from '@/app/createProduct/components/wizard/WizardStepper'
 import { WizardNavigation } from '@/app/createProduct/components/wizard/WizardNavigation'
@@ -273,6 +274,7 @@ export default function EditProductPage() {
         )
       }
 
+      await invalidateClientCache.products(productId)
       toast.success('Annonce modifiée avec succès!')
       setTimeout(() => router.push('/dashboard/host'), 1500)
     } catch (err) {
