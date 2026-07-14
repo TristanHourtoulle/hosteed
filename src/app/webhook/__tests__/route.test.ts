@@ -183,6 +183,37 @@ describe('checkout.session.completed', () => {
     expect(rentUpdateMock).not.toHaveBeenCalled()
   })
 
+  it('relies on the DB unique index: a race that passes findFirst is stopped by the constraint', async () => {
+    // Two concurrent deliveries can both see "no existing rent" in the
+    // non-atomic findFirst fast-path. The real guarantee is the unique index on
+    // Rent.stripeId (migration 20260714120000_rent_stripeid_unique): the losing
+    // insert fails with Prisma P2002, so no duplicate Rent is ever committed.
+    mockConstructEvent.mockReturnValue({
+      type: 'checkout.session.completed',
+      data: {
+        object: {
+          id: 'cs_1',
+          status: 'complete',
+          payment_intent: 'pi_race',
+          metadata: completedSessionMetadata(),
+        },
+      },
+    })
+    rentFindFirstMock.mockResolvedValue(null) // fast-path check passes for both racers
+    const uniqueViolation = Object.assign(new Error('Unique constraint failed'), {
+      code: 'P2002',
+    })
+    createRentMock.mockRejectedValue(uniqueViolation)
+
+    const res = await POST(makeRequest())
+
+    // The constraint prevented a duplicate; the handler surfaces the failure
+    // instead of double-booking.
+    expect(res.status).toBe(500)
+    expect(createRentMock).toHaveBeenCalledTimes(1)
+    expect(rentUpdateMock).not.toHaveBeenCalled()
+  })
+
   it('returns 400 when required metadata is missing', async () => {
     mockConstructEvent.mockReturnValue({
       type: 'checkout.session.completed',
