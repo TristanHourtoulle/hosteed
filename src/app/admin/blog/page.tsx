@@ -1,7 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
+import { useMutationWithCache } from '@/hooks/useMutationWithCache'
 import { useBlogAuth } from '@/hooks/useMultiRoleAuth'
 import {
   Card,
@@ -81,79 +84,66 @@ const itemVariants = {
 
 export default function BlogManagementPage() {
   const { isAuthorized, isLoading, session } = useBlogAuth()
-  const [posts, setPosts] = useState<Post[]>([])
-  const [filteredPosts, setFilteredPosts] = useState<Post[]>([])
   const [searchTerm, setSearchTerm] = useState('')
-  const [isLoadingPosts, setIsLoadingPosts] = useState(true)
-  const [deletingPostId, setDeletingPostId] = useState<string | null>(null)
 
-  const fetchPosts = useCallback(async () => {
-    if (!session?.user?.id) return
+  const userId = session?.user?.id
+  const isAdminRole = session?.user?.roles === 'ADMIN'
 
-    try {
-      setIsLoadingPosts(true)
+  const {
+    data: posts = [],
+    isLoading: isLoadingPosts,
+    isError,
+  } = useQuery<Post[]>({
+    queryKey: CACHE_TAGS.adminBlog(),
+    queryFn: async () => {
       // For BLOGWRITER: fetch only their posts, for ADMIN: fetch all posts
-      const authorParam = session.user.roles === 'ADMIN' ? '' : `?authorId=${session.user.id}`
+      const authorParam = isAdminRole ? '' : `?authorId=${userId}`
       const response = await fetch(`/api/posts${authorParam}`, {
         cache: 'no-store',
         headers: {
           'Cache-Control': 'no-cache',
         },
       })
-
       if (!response.ok) {
         throw new Error('Erreur lors du chargement des articles')
       }
+      return response.json()
+    },
+    enabled: !!isAuthorized && !!userId,
+  })
 
-      const data = await response.json()
-      setPosts(data)
-    } catch (error) {
-      console.error('Error fetching posts:', error)
+  useEffect(() => {
+    if (isError) {
       toast.error('Erreur lors du chargement des articles')
-    } finally {
-      setIsLoadingPosts(false)
     }
-  }, [session])
+  }, [isError])
 
-  useEffect(() => {
-    if (isAuthorized && session?.user?.id) {
-      fetchPosts()
-    }
-  }, [isAuthorized, session, fetchPosts])
-
-  useEffect(() => {
-    if (searchTerm) {
-      const filtered = posts.filter(post =>
-        post.title.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-      setFilteredPosts(filtered)
-    } else {
-      setFilteredPosts(posts)
-    }
+  const filteredPosts = useMemo(() => {
+    if (!searchTerm) return posts
+    return posts.filter(post => post.title.toLowerCase().includes(searchTerm.toLowerCase()))
   }, [searchTerm, posts])
 
-  const handleDeletePost = async (postId: string) => {
-    try {
-      setDeletingPostId(postId)
+  const deletePost = useMutationWithCache<{ message?: string }, string>({
+    mutationFn: async postId => {
       const response = await fetch(`/api/posts/${postId}`, {
         method: 'DELETE',
       })
-
       if (!response.ok) {
         throw new Error('Erreur lors de la suppression')
       }
-
-      const result = await response.json()
+      return response.json()
+    },
+    invalidateKeys: [CACHE_TAGS.adminBlog()],
+    onSuccess: result => {
       toast.success(result.message || 'Article supprimé avec succès')
-
-      // Remove from local state
-      setPosts(posts.filter(post => post.id !== postId))
-    } catch (error) {
-      console.error('Error deleting post:', error)
+    },
+    onError: () => {
       toast.error("Erreur lors de la suppression de l'article")
-    } finally {
-      setDeletingPostId(null)
-    }
+    },
+  })
+
+  const handleDeletePost = (postId: string) => {
+    deletePost.mutate(postId)
   }
 
   const formatDate = (dateString: string) => {
@@ -372,10 +362,14 @@ export default function BlogManagementPage() {
                                   <AlertDialogCancel>Annuler</AlertDialogCancel>
                                   <AlertDialogAction
                                     onClick={() => handleDeletePost(post.id)}
-                                    disabled={deletingPostId === post.id}
+                                    disabled={
+                                      deletePost.isPending && deletePost.variables === post.id
+                                    }
                                     className='bg-red-600 hover:bg-red-700'
                                   >
-                                    {deletingPostId === post.id ? 'Suppression...' : 'Supprimer'}
+                                    {deletePost.isPending && deletePost.variables === post.id
+                                      ? 'Suppression...'
+                                      : 'Supprimer'}
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>

@@ -1,6 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
+import { useMutationWithCache } from '@/hooks/useMutationWithCache'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -36,43 +39,99 @@ interface IncludedService {
   }
 }
 
+interface ServiceFormData {
+  name: string
+  description: string
+  icon: string
+}
+
+async function fetchServices(): Promise<IncludedService[]> {
+  const response = await fetch('/api/admin/included-services', {
+    cache: 'no-store',
+    headers: {
+      'Cache-Control': 'no-cache',
+    },
+  })
+  if (!response.ok) {
+    throw new Error('Erreur lors du chargement des services')
+  }
+  return response.json()
+}
+
 export default function IncludedServicesPage() {
-  const [services, setServices] = useState<IncludedService[]>([])
-  const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingService, setEditingService] = useState<IncludedService | null>(null)
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ServiceFormData>({
     name: '',
     description: '',
     icon: '',
   })
 
-  useEffect(() => {
-    fetchServices()
-  }, [])
+  const {
+    data: services = [],
+    isLoading: loading,
+    isError,
+  } = useQuery({
+    queryKey: CACHE_TAGS.adminIncludedServices(),
+    queryFn: fetchServices,
+  })
 
-  const fetchServices = async () => {
-    try {
-      const response = await fetch('/api/admin/included-services', {
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache',
-        },
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setServices(data)
-      } else {
-        toast.error('Erreur lors du chargement des services')
-      }
-    } catch {
+  useEffect(() => {
+    if (isError) {
       toast.error('Erreur lors du chargement des services')
-    } finally {
-      setLoading(false)
     }
+  }, [isError])
+
+  const resetForm = () => {
+    setFormData({ name: '', description: '', icon: '' })
+    setEditingService(null)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const saveService = useMutationWithCache<unknown, { id?: string; body: ServiceFormData }>({
+    mutationFn: async ({ id, body }) => {
+      const url = id ? `/api/admin/included-services/${id}` : '/api/admin/included-services'
+      const method = id ? 'PUT' : 'POST'
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        throw new Error(error.error || 'Une erreur est survenue')
+      }
+      return response.json().catch(() => null)
+    },
+    invalidateKeys: [CACHE_TAGS.adminIncludedServices()],
+    onSuccess: (_data, variables) => {
+      toast.success(variables.id ? 'Service mis à jour avec succès' : 'Service créé avec succès')
+      setDialogOpen(false)
+      resetForm()
+    },
+    onError: error => {
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de la sauvegarde')
+    },
+  })
+
+  const deleteService = useMutationWithCache<unknown, string>({
+    mutationFn: async id => {
+      const response = await fetch(`/api/admin/included-services/${id}`, {
+        method: 'DELETE',
+      })
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        throw new Error(error.error || 'Erreur lors de la suppression')
+      }
+      return response.json().catch(() => null)
+    },
+    invalidateKeys: [CACHE_TAGS.adminIncludedServices()],
+    successMessage: 'Service supprimé avec succès',
+    onError: error => {
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de la suppression')
+    },
+  })
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!formData.name.trim()) {
@@ -80,35 +139,7 @@ export default function IncludedServicesPage() {
       return
     }
 
-    try {
-      const url = editingService
-        ? `/api/admin/included-services/${editingService.id}`
-        : '/api/admin/included-services'
-
-      const method = editingService ? 'PUT' : 'POST'
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      })
-
-      if (response.ok) {
-        toast.success(
-          editingService ? 'Service mis à jour avec succès' : 'Service créé avec succès'
-        )
-        setDialogOpen(false)
-        resetForm()
-        fetchServices()
-      } else {
-        const error = await response.json()
-        toast.error(error.error || 'Une erreur est survenue')
-      }
-    } catch {
-      toast.error('Erreur lors de la sauvegarde')
-    }
+    saveService.mutate({ id: editingService?.id, body: formData })
   }
 
   const handleEdit = (service: IncludedService) => {
@@ -121,31 +152,12 @@ export default function IncludedServicesPage() {
     setDialogOpen(true)
   }
 
-  const handleDelete = async (service: IncludedService) => {
+  const handleDelete = (service: IncludedService) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce service ?')) {
       return
     }
 
-    try {
-      const response = await fetch(`/api/admin/included-services/${service.id}`, {
-        method: 'DELETE',
-      })
-
-      if (response.ok) {
-        toast.success('Service supprimé avec succès')
-        fetchServices()
-      } else {
-        const error = await response.json()
-        toast.error(error.error || 'Erreur lors de la suppression')
-      }
-    } catch {
-      toast.error('Erreur lors de la suppression')
-    }
-  }
-
-  const resetForm = () => {
-    setFormData({ name: '', description: '', icon: '' })
-    setEditingService(null)
+    deleteService.mutate(service.id)
   }
 
   const handleDialogOpenChange = (open: boolean) => {
@@ -234,7 +246,9 @@ export default function IncludedServicesPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button type='submit'>{editingService ? 'Mettre à jour' : 'Créer'}</Button>
+                <Button type='submit' disabled={saveService.isPending}>
+                  {editingService ? 'Mettre à jour' : 'Créer'}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>

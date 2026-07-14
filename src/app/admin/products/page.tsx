@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
+import { useMutationWithCache } from '@/hooks/useMutationWithCache'
 import { useAuth } from '@/hooks/useAuth'
 import { isAdmin } from '@/hooks/useAdminAuth'
 import { Input } from '@/components/ui/shadcnui/input'
@@ -60,9 +62,7 @@ export default function ProductsPage() {
 
   const [selectedProducts, setSelectedProducts] = useState<string[]>([])
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false)
-  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
 
   useEffect(() => {
     if (isAuthenticated && (!session?.user?.roles || !isAdmin(session.user.roles))) {
@@ -109,48 +109,53 @@ export default function ProductsPage() {
     }
   }, [selectedProducts.length, products])
 
-  const handleDeleteSingle = useCallback(async () => {
-    if (!deleteTarget) return
-    setIsDeleting(true)
-    try {
-      const response = await fetch(`/api/admin/products/${deleteTarget.id}`, {
+  const deleteProduct = useMutationWithCache<{ message?: string }, string>({
+    mutationFn: async id => {
+      const response = await fetch(`/api/admin/products/${id}`, {
         method: 'DELETE',
       })
-      const data = await response.json()
+      const data = await response.json().catch(() => ({}))
       if (!response.ok) {
-        toast.error(data.error || 'Erreur lors de la suppression')
-        return
+        throw new Error(data.error || 'Erreur lors de la suppression')
       }
+      return data
+    },
+    invalidateKeys: [CACHE_TAGS.adminProducts()],
+    onSuccess: data => {
       toast.success(data.message)
       setDeleteTarget(null)
       refetch()
-    } catch {
-      toast.error('Erreur réseau lors de la suppression')
-    } finally {
-      setIsDeleting(false)
-    }
-  }, [deleteTarget, refetch])
+    },
+    onError: error => {
+      toast.error(
+        error instanceof Error ? error.message : 'Erreur réseau lors de la suppression'
+      )
+    },
+  })
 
-  const handleBulkDelete = useCallback(async () => {
-    if (selectedProducts.length === 0) return
-    setIsBulkDeleting(true)
-    try {
+  const bulkDeleteProducts = useMutationWithCache<
+    { deletedCount?: number; blockedProducts?: unknown[] },
+    string[]
+  >({
+    mutationFn: async ids => {
       const response = await fetch('/api/admin/products/bulk', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: selectedProducts }),
+        body: JSON.stringify({ ids }),
       })
-      const data = await response.json()
+      const data = await response.json().catch(() => ({}))
       if (!response.ok) {
-        toast.error(data.error || 'Erreur lors de la suppression')
-        return
+        throw new Error(data.error || 'Erreur lors de la suppression')
       }
-
+      return data
+    },
+    invalidateKeys: [CACHE_TAGS.adminProducts()],
+    onSuccess: data => {
       const messages: string[] = []
-      if (data.deletedCount > 0) {
+      if (data.deletedCount && data.deletedCount > 0) {
         messages.push(`${data.deletedCount} hébergement(s) supprimé(s)`)
       }
-      if (data.blockedProducts?.length > 0) {
+      if (data.blockedProducts && data.blockedProducts.length > 0) {
         messages.push(`${data.blockedProducts.length} ignoré(s) (réservations actives)`)
       }
       toast.success(messages.join('. '))
@@ -158,12 +163,26 @@ export default function ProductsPage() {
       setShowBulkDeleteDialog(false)
       setSelectedProducts([])
       refetch()
-    } catch {
-      toast.error('Erreur réseau lors de la suppression')
-    } finally {
-      setIsBulkDeleting(false)
-    }
-  }, [selectedProducts, refetch])
+    },
+    onError: error => {
+      toast.error(
+        error instanceof Error ? error.message : 'Erreur réseau lors de la suppression'
+      )
+    },
+  })
+
+  const isDeleting = deleteProduct.isPending
+  const isBulkDeleting = bulkDeleteProducts.isPending
+
+  const handleDeleteSingle = useCallback(() => {
+    if (!deleteTarget) return
+    deleteProduct.mutate(deleteTarget.id)
+  }, [deleteTarget, deleteProduct])
+
+  const handleBulkDelete = useCallback(() => {
+    if (selectedProducts.length === 0) return
+    bulkDeleteProducts.mutate(selectedProducts)
+  }, [selectedProducts, bulkDeleteProducts])
 
   if (isAuthLoading || loading) {
     return (
