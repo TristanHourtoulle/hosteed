@@ -44,6 +44,41 @@ export async function findAllTypeRent(): Promise<TypeRent[]> {
   }
 }
 
+/**
+ * Returns ALL rent types, including those with zero approved products.
+ * Unlike `findAllTypeRent`, this variant does NOT hide empty categories, so it
+ * is safe to populate the product creation wizard dropdown on a fresh database.
+ * Intended for form/admin contexts only.
+ */
+export async function findAllTypeRentForForm(): Promise<TypeRent[]> {
+  try {
+    const result = await prisma.typeRent.findMany({
+      include: {
+        _count: {
+          select: {
+            products: {
+              where: {
+                validate: ProductValidation.Approve, // Only count approved products
+              },
+            },
+          },
+        },
+      },
+    })
+
+    // Add productCount and sort by count (descending), WITHOUT filtering empties
+    return result
+      .map(type => ({
+        ...type,
+        productCount: type._count.products,
+      }))
+      .sort((a, b) => b._count.products - a._count.products) as unknown as TypeRent[]
+  } catch (error) {
+    console.error('Erreur lors de la recherche des types de location:', error)
+    return []
+  }
+}
+
 export async function createTypeRent(
   name: string,
   description: string,
