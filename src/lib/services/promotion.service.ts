@@ -372,30 +372,34 @@ export async function validatePromotionCommission(
   discountPercentage: number,
   roomTypeId?: string | null
 ): Promise<ValidatePromotionCommissionResult> {
-  const product = await prisma.product.findUnique({
-    where: { id: productId },
-    include: {
-      type: {
-        include: {
-          commission: true,
+  // The product and room-type lookups are independent, so run them concurrently
+  // when a roomTypeId is supplied to avoid a sequential round-trip.
+  const [product, roomType] = await Promise.all([
+    prisma.product.findUnique({
+      where: { id: productId },
+      include: {
+        type: {
+          include: {
+            commission: true,
+          },
         },
       },
-    },
-  })
+    }),
+    roomTypeId
+      ? prisma.roomType.findUnique({
+          where: { id: roomTypeId },
+          select: { basePrice: true },
+        })
+      : Promise.resolve(null),
+  ])
 
   if (!product) {
     throw new Error('Produit non trouvé')
   }
 
   let basePrice = parseFloat(product.basePrice)
-  if (roomTypeId) {
-    const roomType = await prisma.roomType.findUnique({
-      where: { id: roomTypeId },
-      select: { basePrice: true },
-    })
-    if (roomType) {
-      basePrice = parseFloat(roomType.basePrice)
-    }
+  if (roomType) {
+    basePrice = parseFloat(roomType.basePrice)
   }
 
   const commission = product.type.commission
