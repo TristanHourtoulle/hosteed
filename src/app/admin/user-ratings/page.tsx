@@ -1,6 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
+import { useMutationWithCache } from '@/hooks/useMutationWithCache'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcnui/card'
 import { Badge } from '@/components/ui/shadcnui/badge'
@@ -31,12 +34,15 @@ interface PendingRating {
 }
 
 export default function AdminUserRatingsPage() {
-  const [pendingRatings, setPendingRatings] = useState<PendingRating[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [actionError, setActionError] = useState('')
 
-  const fetchPendingRatings = async () => {
-    try {
+  const {
+    data: pendingRatings = [],
+    isLoading: loading,
+    error: queryError,
+  } = useQuery<PendingRating[]>({
+    queryKey: CACHE_TAGS.adminUserRatings(),
+    queryFn: async () => {
       const response = await fetch('/api/admin/user-ratings', {
         cache: 'no-store',
         headers: {
@@ -49,40 +55,41 @@ export default function AdminUserRatingsPage() {
         throw new Error(data.error || 'Erreur lors du chargement')
       }
 
-      setPendingRatings(data.pendingRatings)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Une erreur est survenue')
-    } finally {
-      setLoading(false)
+      return data.pendingRatings as PendingRating[]
+    },
+  })
+
+  const validateRatingMutation = useMutationWithCache<void, { ratingId: string; approved: boolean }>(
+    {
+      mutationFn: async ({ ratingId, approved }) => {
+        const response = await fetch(`/api/admin/user-ratings/${ratingId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ approved }),
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Erreur lors de la validation')
+        }
+      },
+      invalidateKeys: [CACHE_TAGS.adminUserRatings()],
+      onError: err => {
+        setActionError(err instanceof Error ? err.message : 'Erreur lors de la validation')
+      },
     }
+  )
+
+  const handleValidateRating = (ratingId: string, approved: boolean) => {
+    setActionError('')
+    validateRatingMutation.mutate({ ratingId, approved })
   }
 
-  useEffect(() => {
-    fetchPendingRatings()
-  }, [])
-
-  const handleValidateRating = async (ratingId: string, approved: boolean) => {
-    try {
-      const response = await fetch(`/api/admin/user-ratings/${ratingId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ approved }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Erreur lors de la validation')
-      }
-
-      // Supprimer la note de la liste après validation
-      setPendingRatings(prev => prev.filter(rating => rating.id !== ratingId))
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur lors de la validation')
-    }
-  }
+  const error =
+    actionError || (queryError instanceof Error ? queryError.message : queryError ? 'Une erreur est survenue' : '')
 
   if (loading) {
     return (

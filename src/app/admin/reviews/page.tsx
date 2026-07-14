@@ -1,6 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
+import { useMutationWithCache } from '@/hooks/useMutationWithCache'
 import { motion, Variants } from 'framer-motion'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/shadcnui/tabs'
 import { Input } from '@/components/ui/shadcnui/input'
@@ -73,85 +76,75 @@ export default function ReviewsPage() {
     isAuthenticated,
   } = useAuth({ required: true, redirectTo: '/auth' })
   const [searchTerm, setSearchTerm] = useState('')
-  const [reviews, setReviews] = useState<Review[]>([])
-  const [adminReviews, setAdminReviews] = useState<Review[]>([])
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const fetchReviews = async () => {
-      try {
-        const data = await findAllReviews()
-        let allReviews = data ? (data as Review[]) : []
-        let fetchedAdminReviews: Review[] = []
+  const isAdminOrManager =
+    session?.user?.roles && ['ADMIN', 'HOST_MANAGER'].includes(session.user.roles)
 
-        if (
-          isAuthenticated &&
-          session?.user?.roles &&
-          ['ADMIN', 'HOST_MANAGER'].includes(session.user.roles)
-        ) {
-          const adminResponse = await fetch('/api/admin/reviews')
-          if (adminResponse.ok) {
-            const adminData = await adminResponse.json()
-            if (adminData.success) {
-              fetchedAdminReviews = adminData.reviews
-              setAdminReviews(fetchedAdminReviews)
-            }
+  const { data, isLoading: loading } = useQuery<{ reviews: Review[]; adminReviews: Review[] }>({
+    queryKey: CACHE_TAGS.adminReviews(),
+    enabled: isAuthenticated,
+    queryFn: async () => {
+      const result = await findAllReviews()
+      let allReviews = result ? (result as Review[]) : []
+      let fetchedAdminReviews: Review[] = []
+
+      if (isAdminOrManager) {
+        const adminResponse = await fetch('/api/admin/reviews')
+        if (adminResponse.ok) {
+          const adminData = await adminResponse.json()
+          if (adminData.success) {
+            fetchedAdminReviews = adminData.reviews
           }
         }
-
-        // Exclude admin reviews from the regular list to avoid duplicates
-        if (fetchedAdminReviews.length > 0) {
-          const adminIds = new Set(fetchedAdminReviews.map((r: Review) => r.id))
-          allReviews = allReviews.filter(r => !adminIds.has(r.id))
-        }
-
-        setReviews(allReviews)
-      } catch {
-        toast.error('Erreur lors du chargement des avis')
-      } finally {
-        setLoading(false)
       }
-    }
 
-    if (isAuthenticated) {
-      fetchReviews()
-    }
-  }, [isAuthenticated, session])
+      // Exclude admin reviews from the regular list to avoid duplicates
+      if (fetchedAdminReviews.length > 0) {
+        const adminIds = new Set(fetchedAdminReviews.map((r: Review) => r.id))
+        allReviews = allReviews.filter(r => !adminIds.has(r.id))
+      }
 
-  const handleApprove = async (id: string) => {
-    try {
+      return { reviews: allReviews, adminReviews: fetchedAdminReviews }
+    },
+  })
+
+  const reviews = data?.reviews ?? []
+  const adminReviews = data?.adminReviews ?? []
+
+  const approveMutation = useMutationWithCache<void, string>({
+    mutationFn: async id => {
       await approveReview(id)
-      setReviews(reviews.map(review => (review.id === id ? { ...review, approved: true } : review)))
-      toast.success('Avis approuvé avec succès')
-    } catch {
-      toast.error("Erreur lors de l'approbation de l'avis")
-    }
-  }
+    },
+    invalidateKeys: [CACHE_TAGS.adminReviews()],
+    successMessage: 'Avis approuvé avec succès',
+    errorMessage: "Erreur lors de l'approbation de l'avis",
+  })
+  const handleApprove = (id: string) => approveMutation.mutate(id)
 
-  const handleReject = async (id: string) => {
-    try {
+  const rejectMutation = useMutationWithCache<void, string>({
+    mutationFn: async id => {
       await deleteReview(id)
-      setReviews(reviews.filter(review => review.id !== id))
-      toast.success('Avis rejeté et supprimé')
-    } catch {
-      toast.error('Erreur lors du rejet de l\'avis')
-    }
-  }
+    },
+    invalidateKeys: [CACHE_TAGS.adminReviews()],
+    successMessage: 'Avis rejeté et supprimé',
+    errorMessage: "Erreur lors du rejet de l'avis",
+  })
+  const handleReject = (id: string) => rejectMutation.mutate(id)
 
-  const handleDelete = async (id: string) => {
-    try {
+  const deleteMutation = useMutationWithCache<void, string>({
+    mutationFn: async id => {
       const response = await fetch(`/api/admin/reviews/${id}`, { method: 'DELETE' })
-      if (response.ok) {
-        setReviews(prev => prev.filter(review => review.id !== id))
-        setAdminReviews(prev => prev.filter(review => review.id !== id))
-        toast.success('Avis supprimé avec succès')
-      } else {
-        toast.error('Impossible de supprimer cet avis')
+      if (!response.ok) {
+        throw new Error('Impossible de supprimer cet avis')
       }
-    } catch {
-      toast.error('Erreur lors de la suppression')
-    }
-  }
+    },
+    invalidateKeys: [CACHE_TAGS.adminReviews()],
+    successMessage: 'Avis supprimé avec succès',
+    onError: err => {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la suppression')
+    },
+  })
+  const handleDelete = (id: string) => deleteMutation.mutate(id)
 
   const filteredReviews = reviews.filter(
     review =>
@@ -174,9 +167,6 @@ export default function ReviewsPage() {
   const pendingCount = reviews.filter(r => !r.approved).length
   const approvedCount = reviews.filter(r => r.approved).length
   const adminCount = adminReviews.length
-
-  const isAdminOrManager =
-    session?.user?.roles && ['ADMIN', 'HOST_MANAGER'].includes(session.user.roles)
 
   if (isAuthLoading || loading) {
     return (
