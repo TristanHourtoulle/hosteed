@@ -2,6 +2,7 @@ import { Users, Bed, Bath, Home } from 'lucide-react'
 import Image from 'next/image'
 import { getProfileImageUrl } from '@/lib/utils'
 import { User } from '@prisma/client'
+import type { RoomTypeView } from '@/types/roomType'
 
 interface Product {
   id: string
@@ -11,13 +12,29 @@ interface Product {
   maxPeople?: number
   sizeRoom?: number
   owner: User
+  roomTypes?: RoomTypeView[]
 }
 
 interface PropertyOverviewProps {
   product: Product
+  /**
+   * When true, the stats row is derived from `product.roomTypes` instead of the
+   * product-level fields, which are meaningless for a hotel (nothing books the
+   * whole property — guests book a room type).
+   */
+  isHotel?: boolean
 }
 
-export default function PropertyOverview({ product }: PropertyOverviewProps) {
+export default function PropertyOverview({ product, isHotel = false }: PropertyOverviewProps) {
+  const roomTypes = product.roomTypes ?? []
+  const showHotelStats = isHotel && roomTypes.length > 0
+  const roomTypeCount = roomTypes.length
+  const totalRooms = roomTypes.reduce((sum, roomType) => sum + roomType.quantity, 0)
+  const maxCapacityPerRoom = roomTypes.reduce(
+    (max, roomType) => Math.max(max, roomType.capacity),
+    0
+  )
+
   return (
     <div className='border-b border-gray-200 pb-8'>
       <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4'>
@@ -29,9 +46,7 @@ export default function PropertyOverview({ product }: PropertyOverviewProps) {
         </div>
         <div className='relative w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden flex-shrink-0'>
           {(() => {
-            const imageUrl = product.owner?.image
-              ? getProfileImageUrl(product.owner.image)
-              : null
+            const imageUrl = product.owner?.image ? getProfileImageUrl(product.owner.image) : null
             return imageUrl ? (
               <Image
                 src={imageUrl}
@@ -55,33 +70,60 @@ export default function PropertyOverview({ product }: PropertyOverviewProps) {
 
       {/* Property Stats */}
       <div className='flex flex-wrap items-center gap-4 sm:gap-6 text-gray-600'>
-        {product.maxPeople && (
-          <div className='flex items-center gap-2 min-w-0'>
-            <Users className='h-4 w-4 flex-shrink-0' />
-            <span className='text-sm sm:text-base'>{product.maxPeople} voyageurs</span>
-          </div>
-        )}
-        {product.room && (
-          <div className='flex items-center gap-2 min-w-0'>
-            <Bed className='h-4 w-4 flex-shrink-0' />
-            <span className='text-sm sm:text-base'>
-              {product.room} chambre{product.room > 1 ? 's' : ''}
-            </span>
-          </div>
-        )}
-        {product.bathroom && (
-          <div className='flex items-center gap-2 min-w-0'>
-            <Bath className='h-4 w-4 flex-shrink-0' />
-            <span className='text-sm sm:text-base'>
-              {product.bathroom} salle{product.bathroom > 1 ? 's' : ''} de bain
-            </span>
-          </div>
-        )}
-        {product.sizeRoom && (
-          <div className='flex items-center gap-2 min-w-0'>
-            <Home className='h-4 w-4 flex-shrink-0' />
-            <span className='text-sm sm:text-base'>{product.sizeRoom}m²</span>
-          </div>
+        {showHotelStats ? (
+          <>
+            <div className='flex items-center gap-2 min-w-0'>
+              <Home className='h-4 w-4 flex-shrink-0' />
+              <span className='text-sm sm:text-base'>
+                {roomTypeCount} type{roomTypeCount > 1 ? 's' : ''} de chambre
+                {roomTypeCount > 1 ? 's' : ''}
+              </span>
+            </div>
+            <div className='flex items-center gap-2 min-w-0'>
+              <Bed className='h-4 w-4 flex-shrink-0' />
+              <span className='text-sm sm:text-base'>
+                {totalRooms} chambre{totalRooms > 1 ? 's' : ''}
+              </span>
+            </div>
+            <div className='flex items-center gap-2 min-w-0'>
+              <Users className='h-4 w-4 flex-shrink-0' />
+              <span className='text-sm sm:text-base'>
+                Jusqu&apos;à {maxCapacityPerRoom} voyageur{maxCapacityPerRoom > 1 ? 's' : ''} par
+                chambre
+              </span>
+            </div>
+          </>
+        ) : (
+          <>
+            {product.maxPeople && (
+              <div className='flex items-center gap-2 min-w-0'>
+                <Users className='h-4 w-4 flex-shrink-0' />
+                <span className='text-sm sm:text-base'>{product.maxPeople} voyageurs</span>
+              </div>
+            )}
+            {product.room && (
+              <div className='flex items-center gap-2 min-w-0'>
+                <Bed className='h-4 w-4 flex-shrink-0' />
+                <span className='text-sm sm:text-base'>
+                  {product.room} chambre{product.room > 1 ? 's' : ''}
+                </span>
+              </div>
+            )}
+            {product.bathroom && (
+              <div className='flex items-center gap-2 min-w-0'>
+                <Bath className='h-4 w-4 flex-shrink-0' />
+                <span className='text-sm sm:text-base'>
+                  {product.bathroom} salle{product.bathroom > 1 ? 's' : ''} de bain
+                </span>
+              </div>
+            )}
+            {product.sizeRoom && (
+              <div className='flex items-center gap-2 min-w-0'>
+                <Home className='h-4 w-4 flex-shrink-0' />
+                <span className='text-sm sm:text-base'>{product.sizeRoom}m²</span>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
