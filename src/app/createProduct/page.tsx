@@ -25,6 +25,12 @@ import { useProductData, useProductForm, useImageUpload } from './hooks'
 import { useProductWizardForm } from './hooks/useProductWizardForm'
 import { getStepLabels } from './schemas/productFormSchema'
 import { buildCreateProductPayload } from './utils/buildCreateProductPayload'
+import { buildRoomTypesPayload } from './utils/roomTypeHelpers'
+import {
+  hasPendingRoomTypeImages,
+  uploadRoomTypeImages,
+} from './utils/uploadRoomTypeImages'
+import { computePhotoBudget } from '@/lib/photos/photoBudget'
 import type { ImageFile } from './types'
 import type { RoomTypeFormData } from './types/roomType'
 
@@ -35,8 +41,6 @@ export default function CreateProductPage() {
   // Data & form hooks
   const productData = useProductData()
   const productForm = useProductForm(productData.types)
-  const imageUpload = useImageUpload()
-  const wizard = useProductWizardForm(productForm.formData.isHotel)
 
   // UI state
   const [isLoading, setIsLoading] = useState(false)
@@ -51,6 +55,17 @@ export default function CreateProductPage() {
   const [assignToOtherUser, setAssignToOtherUser] = useState(false)
 
   const { formData, setFormData, handleInputChange } = productForm
+
+  // The 20-photo cap is per listing, not per section: what the room types have
+  // already taken is what the establishment can no longer have. Lifting the
+  // budget here keeps both steps reading from one tally.
+  const establishmentPhotoAllowance = computePhotoBudget({
+    establishmentCount: 0,
+    roomTypeCounts: formData.roomTypes.map(roomType => roomType.images.length),
+  }).remaining
+
+  const imageUpload = useImageUpload(undefined, { maxImages: establishmentPhotoAllowance })
+  const wizard = useProductWizardForm(formData.isHotel)
 
   const setRoomTypes = (next: RoomTypeFormData[]) =>
     setFormData(prev => ({ ...prev, roomTypes: next }))
@@ -123,6 +138,30 @@ export default function CreateProductPage() {
 
       const result = await createProduct(productPayload)
       if (!result) throw new Error("Erreur lors de la creation de l'annonce")
+
+      // Room-type photos need the product id (upload folder + payload target),
+      // so they can only be persisted once the listing exists. The urls ride
+      // inside each room type's own payload entry, which is why no mapping of
+      // upload results back to server-generated room-type ids is ever needed.
+      if (formData.isHotel && hasPendingRoomTypeImages(formData.roomTypes)) {
+        const withUrls = await uploadRoomTypeImages(formData.roomTypes, result.id)
+        setRoomTypes(withUrls)
+
+        const roomTypesResponse = await fetch(`/api/products/${result.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ roomTypes: buildRoomTypesPayload(withUrls) }),
+        })
+
+        if (!roomTypesResponse.ok) {
+          const errorBody = await roomTypesResponse.json().catch(() => ({}))
+          throw new Error(
+            errorBody.error ||
+              `Échec de l'enregistrement des photos des types de chambre (HTTP ${roomTypesResponse.status})`
+          )
+        }
+      }
 
       const imageUrls = await uploadImagesToServer(imageUpload.selectedFiles, result.id)
 
@@ -252,6 +291,7 @@ export default function CreateProductPage() {
                 meals={productData.meals}
                 includedServices={productData.includedServices}
                 extras={productData.extras}
+                establishmentPhotoCount={imageUpload.selectedFiles.length}
                 getFieldError={wizard.getFieldError}
               />
             ) : (

@@ -4,6 +4,14 @@ import type { RoomTypeWithRelations } from '@/types/room-type-db'
 import type { DayEnum } from '@prisma/client'
 
 /**
+ * `CreateRoomTypeInput` carrying the room type's photo urls. The field is
+ * declared here rather than widening the service input, so this lot and the
+ * service-side one (TRI-1029) can land independently; once both are in, the
+ * intersection is a redundant no-op.
+ */
+export type RoomTypeInputWithImages = CreateRoomTypeInput & { imageUrls?: string[] }
+
+/**
  * Prefix used for client-only temporary room-type ids (React key + copy
  * source). Persisted DB ids are cuids and never carry this prefix, which lets
  * the admin edit wizard tell "existing row" from "newly added row".
@@ -37,6 +45,7 @@ export function createEmptyRoomType(): RoomTypeFormData {
     mealIds: [],
     includedServiceIds: [],
     extraIds: [],
+    images: [],
   }
 }
 
@@ -81,10 +90,27 @@ export function mapDbRoomTypeToForm(roomType: RoomTypeWithRelations): RoomTypeFo
     mealIds: (roomType.mealsList ?? []).map(m => m.id),
     includedServiceIds: (roomType.includedServices ?? []).map(s => s.id),
     extraIds: (roomType.extras ?? []).map(e => e.id),
+    // Persisted photos: no File to re-upload, the stored full-size url is both
+    // the preview source and the value sent back on save.
+    images: (roomType.images ?? []).map(image => ({
+      id: image.id,
+      file: null,
+      preview: image.img,
+      url: image.img,
+      isExisting: true,
+    })),
   }
 }
 
-/** Copy every editable field from `source` into a fresh type, preserving `targetId`. */
+/**
+ * Copy every editable field from `source` into a fresh type, preserving
+ * `targetId`.
+ *
+ * Photos are deliberately excluded: they are drawn from the listing's shared
+ * 20-photo budget, so copying them would silently double-charge it (and a copy
+ * of a 5-photo type would eat a quarter of the allowance in one click). The
+ * host re-uploads photos for the new type if they want any.
+ */
 export function copyRoomType(source: RoomTypeFormData, targetId: string): RoomTypeFormData {
   return {
     ...source,
@@ -94,6 +120,7 @@ export function copyRoomType(source: RoomTypeFormData, targetId: string): RoomTy
     mealIds: [...source.mealIds],
     includedServiceIds: [...source.includedServiceIds],
     extraIds: [...source.extraIds],
+    images: [],
   }
 }
 
@@ -102,8 +129,14 @@ export function copyRoomType(source: RoomTypeFormData, targetId: string): RoomTy
  * `createProduct`/`updateProduct`. Persisted DB ids are forwarded so
  * `syncRoomTypes` updates the existing row instead of recreating it; client
  * temp ids (create flow, or newly added rows in the admin editor) are omitted.
+ *
+ * Photo urls ride inside each room type's own entry (`imageUrls`), so the
+ * caller never has to match an upload result back to a server-generated room
+ * type id — the temp-id/cuid distinction stays confined to `id`. Only images
+ * that already resolved to a url are forwarded; ones still holding a `File`
+ * must be uploaded by the caller first.
  */
-export function buildRoomTypesPayload(roomTypes: RoomTypeFormData[]): CreateRoomTypeInput[] {
+export function buildRoomTypesPayload(roomTypes: RoomTypeFormData[]): RoomTypeInputWithImages[] {
   return roomTypes.map((rt, index) => ({
     ...(isPersistedRoomTypeId(rt.id) ? { id: rt.id } : {}),
     name: rt.name,
@@ -128,6 +161,7 @@ export function buildRoomTypesPayload(roomTypes: RoomTypeFormData[]): CreateRoom
     mealIds: rt.mealIds,
     includedServiceIds: rt.includedServiceIds,
     extraIds: rt.extraIds,
+    imageUrls: rt.images.map(image => image.url).filter((url): url is string => Boolean(url)),
   }))
 }
 

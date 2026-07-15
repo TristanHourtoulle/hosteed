@@ -35,6 +35,16 @@ export interface RoomTypeSpecialPriceView {
   activate: boolean
 }
 
+/**
+ * A persisted room-type photo. Only the full-size URL is stored (`img`); the
+ * thumb/medium variants are derived from it by `getFullSizeImageUrl` & co.
+ */
+export interface RoomTypeImageView {
+  id: string
+  img: string
+  position?: number
+}
+
 export interface RoomTypeWithRelations {
   id: string
   name: string
@@ -46,6 +56,8 @@ export interface RoomTypeWithRelations {
   priceMGA: string
   position: number
   beds: RoomTypeBedView[]
+  /** Optional: only the read paths that hydrate an editor select these. */
+  images?: RoomTypeImageView[]
   promotions?: RoomTypePromotionView[]
   specialPrices?: RoomTypeSpecialPriceView[]
   mealsList?: { id: string }[]

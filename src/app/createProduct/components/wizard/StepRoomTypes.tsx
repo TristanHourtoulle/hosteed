@@ -4,6 +4,8 @@ import { motion } from 'framer-motion'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { RoomTypeCard } from './roomTypes/RoomTypeCard'
+import { PhotoBudgetBanner } from '@/components/ui/PhotoBudgetBanner'
+import { computePhotoBudget } from '@/lib/photos/photoBudget'
 import { createEmptyRoomType, copyRoomType } from '../../utils/roomTypeHelpers'
 import type { RoomTypeFormData } from '../../types/roomType'
 
@@ -19,6 +21,12 @@ interface StepRoomTypesProps {
   meals: { id: string; name: string }[]
   includedServices: { id: string; name: string; description: string | null }[]
   extras: { id: string; name: string; priceEUR: number; priceMGA: number }[]
+  /**
+   * Photos already attached to the establishment itself. Room-type photos draw
+   * from the same 20-photo budget, and this step runs *before* the photo step,
+   * so the tally has to account for both sides to be truthful.
+   */
+  establishmentPhotoCount?: number
   /** Field errors keyed by path (e.g. "roomTypes.0.basePrice"). */
   getFieldError?: (field: string) => string | undefined
 }
@@ -29,8 +37,13 @@ export function StepRoomTypes({
   meals,
   includedServices,
   extras,
+  establishmentPhotoCount = 0,
   getFieldError,
 }: StepRoomTypesProps) {
+  const budget = computePhotoBudget({
+    establishmentCount: establishmentPhotoCount,
+    roomTypeCounts: roomTypes.map(rt => rt.images.length),
+  })
   const updateAt = (i: number, next: RoomTypeFormData) =>
     setRoomTypes(roomTypes.map((rt, idx) => (idx === i ? next : rt)))
 
@@ -62,6 +75,8 @@ export function StepRoomTypes({
       exit="exit"
       className="space-y-6"
     >
+      <PhotoBudgetBanner used={budget.used} remaining={budget.remaining} max={budget.max} />
+
       <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-4">
         <p className="text-sm text-indigo-800">
           Définissez chaque type de chambre de votre établissement. Chaque type regroupe plusieurs
@@ -80,6 +95,7 @@ export function StepRoomTypes({
           includedServices={includedServices}
           extras={extras}
           canRemove={roomTypes.length > 1}
+          photosRemaining={budget.remaining}
           errors={errorsFor(i)}
           onChange={next => updateAt(i, next)}
           onRemove={() => removeAt(i)}

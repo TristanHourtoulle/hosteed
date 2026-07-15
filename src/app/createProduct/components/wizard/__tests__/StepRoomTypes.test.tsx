@@ -6,12 +6,21 @@ import { render, screen, fireEvent, within } from '@testing-library/react'
 import { StepRoomTypes } from '../StepRoomTypes'
 import { createEmptyRoomType } from '../../../utils/roomTypeHelpers'
 import type { RoomTypeFormData } from '../../../types/roomType'
+import type { ImageFile } from '@/types/product-form'
+
+jest.mock('sonner', () => ({ toast: { error: jest.fn(), success: jest.fn() } }))
 
 const meals = [{ id: 'm1', name: 'Petit-déjeuner' }]
 const includedServices = [{ id: 's1', name: 'Wifi', description: null }]
 const extras = [{ id: 'e1', name: 'Parking', priceEUR: 10, priceMGA: 50000 }]
 
-function Harness({ initial }: { initial: RoomTypeFormData[] }) {
+function Harness({
+  initial,
+  establishmentPhotoCount = 0,
+}: {
+  initial: RoomTypeFormData[]
+  establishmentPhotoCount?: number
+}) {
   const [roomTypes, setRoomTypes] = useState(initial)
   return (
     <StepRoomTypes
@@ -20,8 +29,23 @@ function Harness({ initial }: { initial: RoomTypeFormData[] }) {
       meals={meals}
       includedServices={includedServices}
       extras={extras}
+      establishmentPhotoCount={establishmentPhotoCount}
     />
   )
+}
+
+function photos(count: number): ImageFile[] {
+  return Array.from({ length: count }, (_, i) => ({
+    id: `img-${i}`,
+    file: null,
+    preview: `/uploads/products/p1/img_${i}_full_1_a.webp`,
+    url: `/uploads/products/p1/img_${i}_full_1_a.webp`,
+    isExisting: true,
+  }))
+}
+
+function typeWithPhotos(count: number): RoomTypeFormData {
+  return { ...createEmptyRoomType(), images: photos(count) }
 }
 
 describe('StepRoomTypes', () => {
@@ -61,5 +85,58 @@ describe('StepRoomTypes', () => {
     // After copy, the second card's EUR price input holds the copied value.
     const priceInput = within(secondCard as HTMLElement).getByLabelText(/Prix.*EUR/i) as HTMLInputElement
     expect(priceInput.value).toBe('120')
+  })
+})
+
+describe('StepRoomTypes photo budget banner', () => {
+  it('counts establishment photos and every room type against the shared cap', () => {
+    render(
+      <Harness initial={[typeWithPhotos(2), typeWithPhotos(3)]} establishmentPhotoCount={4} />
+    )
+    const banner = screen.getByTestId('photo-budget-banner')
+    // 4 establishment + 2 + 3 = 9 used, 11 of 20 left.
+    expect(within(banner).getByText(/9\s*\/\s*20/)).toBeInTheDocument()
+    expect(banner).toHaveTextContent(/11/)
+    expect(banner).toHaveAttribute('data-tone', 'ok')
+  })
+
+  it('re-computes the banner when a room type is added', () => {
+    render(<Harness initial={[typeWithPhotos(2)]} establishmentPhotoCount={1} />)
+    expect(screen.getByTestId('photo-budget-banner')).toHaveTextContent(/3\s*\/\s*20/)
+    fireEvent.click(screen.getByRole('button', { name: /Ajouter un autre type de chambre/i }))
+    // A new type carries no photo, so the tally is unchanged.
+    expect(screen.getByTestId('photo-budget-banner')).toHaveTextContent(/3\s*\/\s*20/)
+  })
+
+  it('warns when 3 or fewer photos remain', () => {
+    render(<Harness initial={[typeWithPhotos(2)]} establishmentPhotoCount={16} />)
+    expect(screen.getByTestId('photo-budget-banner')).toHaveAttribute('data-tone', 'warning')
+  })
+
+  it('turns red and disables every room-type dropzone once the budget is spent', () => {
+    render(<Harness initial={[typeWithPhotos(4)]} establishmentPhotoCount={16} />)
+
+    const banner = screen.getByTestId('photo-budget-banner')
+    expect(banner).toHaveAttribute('data-tone', 'full')
+    expect(banner).toHaveTextContent(/20\s*\/\s*20/)
+
+    expect(screen.getByRole('button', { name: /Parcourir/i })).toBeDisabled()
+    expect(screen.getByTestId('room-type-photo-dropzone-0')).toHaveAttribute(
+      'data-disabled',
+      'true'
+    )
+    // The reason is stated inline, next to the dropzone - no modal, no toast.
+    expect(screen.getByTestId('room-type-photo-dropzone-0')).toHaveTextContent(
+      /limite de 20 photos/i
+    )
+  })
+
+  it('keeps the dropzone enabled while photos remain', () => {
+    render(<Harness initial={[typeWithPhotos(1)]} establishmentPhotoCount={1} />)
+    expect(screen.getByRole('button', { name: /Parcourir/i })).toBeEnabled()
+    expect(screen.getByTestId('room-type-photo-dropzone-0')).toHaveAttribute(
+      'data-disabled',
+      'false'
+    )
   })
 })

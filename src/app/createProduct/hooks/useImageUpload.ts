@@ -1,54 +1,40 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
-import imageCompression from 'browser-image-compression'
 import { ImageFile } from '../types'
 import { validateImages } from '../utils/validators'
-import { generateImageId } from '../utils/formHelpers'
+import { createImageFiles } from '../utils/imageFileFactory'
 import { MAX_IMAGES } from '../utils/constants'
+
+export interface UseImageUploadOptions {
+  /**
+   * Cap for this uploader. Defaults to `MAX_IMAGES` — the whole listing budget
+   * — which is the correct cap whenever nothing else draws from it (every
+   * non-hotel listing). Hotels pass the establishment's remaining share, since
+   * room-type photos spend the same allowance.
+   * @see src/lib/photos/photoBudget.ts
+   */
+  maxImages?: number
+}
 
 /**
  * Custom hook for managing image uploads, compression, and reordering
  */
-export const useImageUpload = (initialImages?: ImageFile[]) => {
+export const useImageUpload = (
+  initialImages?: ImageFile[],
+  options: UseImageUploadOptions = {}
+) => {
+  const maxImages = options.maxImages ?? MAX_IMAGES
   const [selectedFiles, setSelectedFiles] = useState<ImageFile[]>(initialImages || [])
   const [dragActive, setDragActive] = useState(false)
   const [isUploadingImages, setIsUploadingImages] = useState(false)
-
-  /**
-   * Compress images before upload
-   */
-  const compressImages = async (files: File[]): Promise<File[]> => {
-    const options = {
-      maxSizeMB: 1,
-      maxWidthOrHeight: 1920,
-      useWebWorker: true,
-    }
-
-    const compressedFiles = await Promise.all(
-      files.map(async file => {
-        try {
-          const compressedFile = await imageCompression(file, options)
-          return new File([compressedFile], file.name, {
-            type: file.type,
-            lastModified: Date.now(),
-          })
-        } catch (error) {
-          console.error('Error compressing image:', error)
-          return file
-        }
-      })
-    )
-
-    return compressedFiles
-  }
 
   /**
    * Handle file selection and compression
    */
   const handleFileSelect = async (files: File[]) => {
     // Check max images limit
-    if (selectedFiles.length + files.length > MAX_IMAGES) {
-      toast.error(`Vous ne pouvez télécharger que ${MAX_IMAGES} images maximum`)
+    if (selectedFiles.length + files.length > maxImages) {
+      toast.error(`Vous ne pouvez télécharger que ${maxImages} images maximum`)
       return
     }
 
@@ -64,27 +50,7 @@ export const useImageUpload = (initialImages?: ImageFile[]) => {
     setIsUploadingImages(true)
 
     try {
-      // Compress images
-      const compressedFiles = await compressImages(files)
-
-      // Create image files with previews
-      const newImageFiles: ImageFile[] = await Promise.all(
-        compressedFiles.map(async file => {
-          const preview = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader()
-            reader.onload = () => resolve(reader.result as string)
-            reader.onerror = reject
-            reader.readAsDataURL(file)
-          })
-
-          return {
-            file,
-            preview,
-            id: generateImageId(),
-            isExisting: false, // Mark as new image
-          }
-        })
-      )
+      const newImageFiles = await createImageFiles(files)
 
       setSelectedFiles(prev => [...prev, ...newImageFiles])
       toast.success(`${newImageFiles.length} image(s) ajoutée(s)`)

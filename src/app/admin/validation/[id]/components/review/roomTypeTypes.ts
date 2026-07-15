@@ -5,6 +5,7 @@
  */
 export type {
   RoomTypeBedView,
+  RoomTypeImageView,
   RoomTypePromotionView,
   RoomTypeSpecialPriceView,
   RoomTypeWithRelations,

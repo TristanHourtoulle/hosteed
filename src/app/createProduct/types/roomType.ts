@@ -1,4 +1,4 @@
-import type { SpecialPrice } from '@/types/product-form'
+import type { ImageFile, SpecialPrice } from '@/types/product-form'
 
 /**
  * Bed types offered per room type. Mirrors the Prisma `BedType` enum
@@ -52,4 +52,11 @@ export interface RoomTypeFormData {
   mealIds: string[] // included meals for this type
   includedServiceIds: string[] // included services for this type
   extraIds: string[] // paid extras for this type
+  /**
+   * Photos of this room type. Drawn from the listing's shared 20-photo budget
+   * (establishment photos + every room type's photos), never from a per-type
+   * allowance. Optional: a room type may legitimately have none.
+   * @see src/lib/photos/photoBudget.ts
+   */
+  images: ImageFile[]
 }

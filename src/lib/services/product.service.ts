@@ -210,6 +210,9 @@ export async function findProductById(id: string) {
             mealsList: true,
             includedServices: true,
             extras: true,
+            // Per-type photos (TRI-1031). The editor round-trips these urls back
+            // on save, so omitting them here would silently wipe them.
+            images: { orderBy: { position: 'asc' as const } },
           },
         },
         rules: true, // Inclure les règles

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { BedDouble, Euro, Plus, Trash2 } from 'lucide-react'
+import { BedDouble, Camera, Euro, Plus, Trash2 } from 'lucide-react'
 import { DayEnum } from '@prisma/client'
 import { FieldLabel } from '../FieldLabel'
 import { ServiceSelectionSection } from '../../index'
@@ -13,6 +13,7 @@ import { ROOM_TYPE_NAMES, type RoomTypeFormData, type RoomTypeName } from '../..
 import type { SpecialPrice } from '@/types/product-form'
 import { BedCounterGroup } from './BedCounterGroup'
 import { CopyFromTypeSelect } from './CopyFromTypeSelect'
+import { RoomTypePhotoUploader } from './RoomTypePhotoUploader'
 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -27,6 +28,8 @@ interface RoomTypeCardProps {
   includedServices: { id: string; name: string; description: string | null }[]
   extras: { id: string; name: string; priceEUR: number; priceMGA: number }[]
   canRemove: boolean
+  /** Photos still addable to the listing as a whole (shared 20-photo budget). */
+  photosRemaining: number
   errors?: Record<string, string>
   onChange: (next: RoomTypeFormData) => void
   onRemove: () => void
@@ -41,6 +44,7 @@ export function RoomTypeCard({
   includedServices,
   extras,
   canRemove,
+  photosRemaining,
   errors,
   onChange,
   onRemove,
@@ -309,6 +313,27 @@ export function RoomTypeCard({
           onServiceToggle={id => toggleId('extraIds', id)}
           itemVariants={itemVariants}
         />
+
+        {/* Photos of this room type - drawn from the listing's shared budget */}
+        <div className="space-y-3 pt-2 border-t border-slate-100">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-pink-50 rounded-lg">
+              <Camera className="h-4 w-4 text-pink-600" />
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-slate-800">Photos de ce type de chambre</h4>
+              <p className="text-xs text-slate-500">
+                Facultatif. Ces photos comptent dans le total de l&apos;annonce.
+              </p>
+            </div>
+          </div>
+          <RoomTypePhotoUploader
+            index={index}
+            images={value.images}
+            onChange={images => patch({ images })}
+            remaining={photosRemaining}
+          />
+        </div>
       </CardContent>
 
       <CreateSpecialPriceModal
