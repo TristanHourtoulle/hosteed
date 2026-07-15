@@ -1244,6 +1244,7 @@ model RoomType {
   position  Int     @default(0)
 
   beds          RoomTypeBed[]
+  images        RoomTypeImage[]
   specialPrices RoomTypeSpecialPrice[]
   blockedDates  RoomTypeBlockedDate[]
   rentLines     RentRoomType[]
@@ -1261,6 +1262,22 @@ model RoomType {
 
   @@index([productId])
   @@index([productId, position])
+}
+
+// Room-type photos live in their own table rather than as a nullable roomTypeId
+// on Images: the Images <-> Product side is an implicit many-to-many join table,
+// so a hybrid ownership model could not be enforced, and the existing
+// `img: { deleteMany: {} }` call sites would be able to sweep room photos away.
+model RoomTypeImage {
+  id         String   @id @default(cuid())
+  roomTypeId String
+  roomType   RoomType @relation(fields: [roomTypeId], references: [id], onDelete: Cascade)
+  img        String // full-size URL — mirrors the Images.img convention
+  position   Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  @@index([roomTypeId])
+  @@index([roomTypeId, position])
 }
 
 model RoomTypeBed {
