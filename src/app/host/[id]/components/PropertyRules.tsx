@@ -11,9 +11,17 @@ interface Rules {
 interface PropertyRulesProps {
   maxPeople?: number
   rules: Rules
+  /**
+   * When true, the product-level `maxPeople` bullet is hidden: it describes a
+   * single bookable unit, which is meaningless for a hotel (capacity is defined
+   * per room type).
+   */
+  isHotel?: boolean
 }
 
-export default function PropertyRules({ maxPeople, rules }: PropertyRulesProps) {
+export default function PropertyRules({ maxPeople, rules, isHotel = false }: PropertyRulesProps) {
+  const showMaxPeople = !isHotel && Boolean(maxPeople)
+
   // Ne pas afficher la section si pas de données valides (valeurs par défaut)
   const hasValidRules =
     rules &&
@@ -24,8 +32,8 @@ export default function PropertyRules({ maxPeople, rules }: PropertyRulesProps) 
       rules.eventsAllowed ||
       rules.selfCheckIn)
 
-  // Si pas de maxPeople et pas de règles valides, ne rien afficher
-  if (!maxPeople && !hasValidRules) return null
+  // Si pas de maxPeople affichable et pas de règles valides, ne rien afficher
+  if (!showMaxPeople && !hasValidRules) return null
 
   return (
     <div className='border-b border-gray-200 pb-8'>
@@ -53,11 +61,11 @@ export default function PropertyRules({ maxPeople, rules }: PropertyRulesProps) 
           </div>
         )}
 
-        {(maxPeople || hasValidRules) && (
+        {(showMaxPeople || hasValidRules) && (
           <div>
             <h4 className='font-medium text-gray-900 mb-3'>Pendant le séjour</h4>
             <ul className='space-y-1 text-sm text-gray-600'>
-              {maxPeople && <li>• Maximum {maxPeople} voyageurs</li>}
+              {showMaxPeople && <li>• Maximum {maxPeople} voyageurs</li>}
               {hasValidRules && (
                 <>
                   <li>• {rules.smokingAllowed ? 'Fumeur autorisé' : 'Interdiction de fumer'}</li>

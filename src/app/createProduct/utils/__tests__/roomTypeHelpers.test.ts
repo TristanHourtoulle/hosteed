@@ -3,9 +3,11 @@ import {
   copyRoomType,
   buildRoomTypesPayload,
   deriveHotelBasePrice,
+  mapDbRoomTypeToForm,
   sumRoomQuantities,
 } from '../roomTypeHelpers'
 import type { RoomTypeFormData } from '../../types/roomType'
+import type { RoomTypeWithRelations } from '@/types/room-type-db'
 
 function filledType(overrides: Partial<RoomTypeFormData> = {}): RoomTypeFormData {
   return {
@@ -37,6 +39,15 @@ function filledType(overrides: Partial<RoomTypeFormData> = {}): RoomTypeFormData
     mealIds: ['m1'],
     includedServiceIds: ['s1'],
     extraIds: ['e1'],
+    images: [
+      {
+        id: 'img-1',
+        file: null,
+        preview: '/uploads/products/p1/img_0_full_1_a.webp',
+        url: '/uploads/products/p1/img_0_full_1_a.webp',
+        isExisting: true,
+      },
+    ],
     ...overrides,
   }
 }
@@ -49,6 +60,10 @@ describe('createEmptyRoomType', () => {
     expect(empty.name).toBe('')
     expect(empty.quantity).toBe('1')
     expect(empty.specialPrices).toEqual([])
+  })
+
+  it('starts with no photos', () => {
+    expect(createEmptyRoomType().images).toEqual([])
   })
 
   it('generates unique ids', () => {
@@ -72,6 +87,56 @@ describe('copyRoomType', () => {
     expect(result.beds).toEqual(source.beds)
     expect(result.mealIds).not.toBe(source.mealIds)
     expect(result.specialPrices).not.toBe(source.specialPrices)
+  })
+
+  // Photos are deliberately NOT copied: they are drawn from the listing's
+  // shared 20-photo budget, so duplicating them would double-charge it.
+  it('never copies photos', () => {
+    const source = filledType()
+    expect(copyRoomType(source, 'rt-target').images).toEqual([])
+  })
+})
+
+describe('mapDbRoomTypeToForm photos', () => {
+  const dbRoomType: RoomTypeWithRelations = {
+    id: 'rt1',
+    name: 'Double',
+    quantity: 2,
+    capacity: 2,
+    surface: 18,
+    smoking: false,
+    basePrice: '80',
+    priceMGA: '400000',
+    position: 0,
+    beds: [{ bedType: 'DOUBLE', count: 1 }],
+    images: [
+      { id: 'i1', img: '/uploads/products/p1/a_full_1_x.webp', position: 0 },
+      { id: 'i2', img: '/uploads/products/p1/b_full_1_y.webp', position: 1 },
+    ],
+  }
+
+  it('maps persisted photos as existing image files keyed on their url', () => {
+    const form = mapDbRoomTypeToForm(dbRoomType)
+    expect(form.images).toEqual([
+      {
+        id: 'i1',
+        file: null,
+        preview: '/uploads/products/p1/a_full_1_x.webp',
+        url: '/uploads/products/p1/a_full_1_x.webp',
+        isExisting: true,
+      },
+      {
+        id: 'i2',
+        file: null,
+        preview: '/uploads/products/p1/b_full_1_y.webp',
+        url: '/uploads/products/p1/b_full_1_y.webp',
+        isExisting: true,
+      },
+    ])
+  })
+
+  it('yields an empty list when the room type has no photos', () => {
+    expect(mapDbRoomTypeToForm({ ...dbRoomType, images: undefined }).images).toEqual([])
   })
 })
 
@@ -106,6 +171,25 @@ describe('buildRoomTypesPayload', () => {
     expect(payload[0].mealIds).toEqual(['m1'])
     expect(payload[0].includedServiceIds).toEqual(['s1'])
     expect(payload[0].extraIds).toEqual(['e1'])
+  })
+
+  it('forwards the urls of already-persisted photos', () => {
+    const payload = buildRoomTypesPayload([filledType()])
+    expect(payload[0].imageUrls).toEqual(['/uploads/products/p1/img_0_full_1_a.webp'])
+  })
+
+  it('sends an empty url list for a type without photos', () => {
+    const payload = buildRoomTypesPayload([filledType({ images: [] })])
+    expect(payload[0].imageUrls).toEqual([])
+  })
+
+  it('ignores photos still pending upload (no url yet)', () => {
+    const pending = filledType({
+      images: [
+        { id: 'new-1', file: null, preview: 'data:image/png;base64,AAA', isExisting: false },
+      ],
+    })
+    expect(buildRoomTypesPayload([pending])[0].imageUrls).toEqual([])
   })
 })
 

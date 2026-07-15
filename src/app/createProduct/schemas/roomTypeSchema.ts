@@ -37,6 +37,14 @@ export const roomTypeSchema = z.object({
   mealIds: z.array(z.string()),
   includedServiceIds: z.array(z.string()),
   extraIds: z.array(z.string()),
+  // Photos are optional and deliberately have no `.min(1)`: the 20-photo cap is
+  // shared with the establishment, so requiring at least one photo per room
+  // type would be unsatisfiable past 20 types (and hostile well before that).
+  // `z.any()` because an ImageFile wraps a browser `File`, which Zod cannot
+  // meaningfully introspect here; shape is enforced by the TS type. Defaulted
+  // rather than required so an absent list can never block the wizard with an
+  // error the host has no way to act on.
+  images: z.array(z.any()).default([]),
 })
 
 export const roomTypesStepSchema = z.object({

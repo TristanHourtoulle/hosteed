@@ -1,11 +1,14 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { Users, Maximize2, BedDouble, Minus, Plus, CalendarOff, Cigarette } from 'lucide-react'
 import { Button } from '@/components/ui/shadcnui/button'
 import { formatCurrency } from '@/lib/utils/formatNumber'
+import { getFullSizeImageUrl } from '@/lib/utils/imageUtils'
 import type { RoomTypeView, RoomTypeAvailabilityView } from '@/types/roomType'
 import { RoomTypeAvailabilityCalendar } from './RoomTypeAvailabilityCalendar'
+import { RoomTypePhotosLightbox } from './RoomTypePhotosLightbox'
 
 interface RoomTypeCardProps {
   roomType: RoomTypeView
@@ -22,6 +25,10 @@ interface RoomTypeCardProps {
  * {price}/nuit" price, an optional blocked-date calendar, and a quantity
  * stepper. The `+` button is capped at the type's `availableQuantity`; when
  * no rooms are available the card shows a sold-out state.
+ *
+ * When the type has its own photos, a thumbnail opens a lightbox limited to
+ * that type. Types without photos render without a thumbnail slot and never
+ * fall back to establishment photos, which would misrepresent the room.
  */
 export function RoomTypeCard({
   roomType,
@@ -32,7 +39,11 @@ export function RoomTypeCard({
   readOnly = false,
 }: RoomTypeCardProps) {
   const [showCalendar, setShowCalendar] = useState(false)
+  const [showPhotos, setShowPhotos] = useState(false)
 
+  const images = roomType.images ?? []
+  const hasPhotos = images.length > 0
+  const cover = images[0]
   const availableQuantity = availability?.availableQuantity ?? roomType.quantity
   const isSoldOut = availableQuantity <= 0
   const canIncrement = selectedQuantity < availableQuantity
@@ -47,7 +58,29 @@ export function RoomTypeCard({
   return (
     <div className='border border-gray-200 rounded-xl p-4 space-y-3'>
       <div className='flex items-start justify-between gap-3'>
-        <div className='min-w-0'>
+        {cover && (
+          <button
+            type='button'
+            onClick={() => setShowPhotos(true)}
+            aria-label={`Voir les photos de ${roomType.name}`}
+            className='group relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg cursor-pointer'
+          >
+            <Image
+              src={getFullSizeImageUrl(cover.img)}
+              alt={roomType.name}
+              fill
+              unoptimized
+              sizes='96px'
+              className='object-cover transition-transform group-hover:scale-105'
+            />
+            {images.length > 1 && (
+              <span className='absolute bottom-1 right-1 rounded-md bg-black/60 px-1.5 py-0.5 text-xs font-medium text-white'>
+                +{images.length - 1}
+              </span>
+            )}
+          </button>
+        )}
+        <div className={hasPhotos ? 'min-w-0 flex-1' : 'min-w-0'}>
           <h4 className='font-semibold text-gray-900'>{roomType.name}</h4>
           <div className='mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600'>
             <span className='inline-flex items-center gap-1'>
@@ -139,6 +172,14 @@ export function RoomTypeCard({
           </div>
         )}
       </div>
+
+      {showPhotos && hasPhotos && (
+        <RoomTypePhotosLightbox
+          roomTypeName={roomType.name}
+          images={images}
+          onClose={() => setShowPhotos(false)}
+        />
+      )}
     </div>
   )
 }

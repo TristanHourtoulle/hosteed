@@ -36,6 +36,9 @@ yarn-error.log*
 .env*
 !.env.example
 
+# redis (local runtime artifacts)
+*.rdb
+
 # vercel
 .vercel
 

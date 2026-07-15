@@ -15,12 +15,17 @@ import { useHotelBookingSelection } from '@/hooks/useHotelBookingSelection'
 import type { RoomTypeView } from '@/types/roomType'
 
 interface HotelBookingCardProps {
+  /**
+   * `minPeople` / `maxPeople` are deliberately absent: they are wizard-typed
+   * PRODUCT-level fields describing a single bookable unit, which is meaningless
+   * for a hotel (nothing books the whole property — guests book room types).
+   * The authoritative guest bound is the selected rooms' capacity, owned by
+   * {@link useHotelBookingSelection} and enforced server-side.
+   */
   product: {
     id: string
     name: string
     owner?: { id?: string }
-    minPeople?: number
-    maxPeople?: number
     reviews?: { id: string }[]
   }
   roomTypes: RoomTypeView[]
@@ -40,7 +45,7 @@ export default function HotelBookingCard({
   globalGrade,
   today,
 }: HotelBookingCardProps) {
-  const [guests, setGuests] = useState(product.minPeople || 1)
+  const [guests, setGuests] = useState(1)
 
   const {
     selection,
@@ -146,8 +151,8 @@ export default function HotelBookingCard({
                   size='icon'
                   className='rounded-full h-8 w-8'
                   aria-label='Retirer un voyageur'
-                  disabled={guests <= (product.minPeople || 1)}
-                  onClick={() => setGuests(g => Math.max(product.minPeople || 1, g - 1))}
+                  disabled={guests <= 1}
+                  onClick={() => setGuests(g => Math.max(1, g - 1))}
                 >
                   <Minus className='h-4 w-4' />
                 </Button>
@@ -158,10 +163,9 @@ export default function HotelBookingCard({
                   size='icon'
                   className='rounded-full h-8 w-8'
                   aria-label='Ajouter un voyageur'
-                  disabled={!!product.maxPeople && guests >= product.maxPeople}
-                  onClick={() =>
-                    setGuests(g => (product.maxPeople ? Math.min(product.maxPeople, g + 1) : g + 1))
-                  }
+                  // Unbounded on purpose: the selected rooms' capacity is the
+                  // real limit and is surfaced by the over-capacity alert below.
+                  onClick={() => setGuests(g => g + 1)}
                 >
                   <Plus className='h-4 w-4' />
                 </Button>

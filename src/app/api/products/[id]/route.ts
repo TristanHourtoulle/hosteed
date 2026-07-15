@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
 import { findProductById, updateProduct } from '@/lib/services/product.service'
 import { RoomTypeDeletionBlockedError } from '@/lib/services/room-type.service'
+import { PhotoBudgetExceededError } from '@/lib/photos/photoBudget'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/prisma'
+import { canManageProduct } from '@/lib/permissions/product-permissions'
 
 /**
  * Convert BigInt values to numbers for JSON serialization
@@ -88,9 +90,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
       return NextResponse.json({ error: 'Product not found' }, { status: 404 })
     }
 
-    const isOwner = existing.ownerId === session.user.id
-    const canManageAny = ['ADMIN', 'HOST_MANAGER'].includes(session.user.roles as string)
-    if (!isOwner && !canManageAny) {
+    if (!canManageProduct(session.user, existing.ownerId)) {
       console.warn(
         `[PUT /api/products/${id}] forbidden: user=${session.user.id} role=${session.user.roles} owner=${existing.ownerId}`
       )
@@ -121,6 +121,11 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
         },
         { status: 409 }
       )
+    }
+    // Le budget global de photos de l'annonce est dépassé : requête invalide,
+    // rien n'a été écrit.
+    if (error instanceof PhotoBudgetExceededError) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
     }
     console.error('Error updating product:', error)
     return NextResponse.json({ error: 'Failed to update product' }, { status: 500 })

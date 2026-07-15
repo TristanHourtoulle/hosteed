@@ -1,3 +1,5 @@
+import { MAX_LISTING_PHOTOS } from '@/lib/photos/photoBudget'
+
 // Animation variants for Framer Motion
 export const containerVariants = {
   hidden: { opacity: 0 },
@@ -23,7 +25,12 @@ export const itemVariants = {
 // Image upload constants
 export const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 export const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg']
-export const MAX_IMAGES = 20
+/**
+ * Establishment photo cap. Aliased from the global listing budget: the same
+ * allowance is shared with room-type photos, so this must never diverge.
+ * @see src/lib/photos/photoBudget.ts
+ */
+export const MAX_IMAGES = MAX_LISTING_PHOTOS
 
 // Form validation constants
 export const MIN_PRICE = 0

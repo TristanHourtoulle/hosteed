@@ -180,6 +180,7 @@ export async function findProductById(id: string) {
         },
         owner: {
           select: {
+            id: true, // Needed by the host edit page to apply the owner/HOST_MANAGER/ADMIN rule
             name: true,
             email: true,
             image: true,
@@ -198,6 +199,22 @@ export async function findProductById(id: string) {
           take: 10, // ✅ Limite les points forts
         },
         hotel: true, // Inclure les informations hôtel
+        // Per-type inventory. Empty for non-hotel products, so this is a no-op
+        // for the classic single-unit path. The relations mirror what the
+        // room-types wizard step hydrates from (TRI-1028).
+        roomTypes: {
+          orderBy: { position: 'asc' as const },
+          include: {
+            beds: true,
+            specialPrices: true,
+            mealsList: true,
+            includedServices: true,
+            extras: true,
+            // Per-type photos (TRI-1031). The editor round-trips these urls back
+            // on save, so omitting them here would silently wipe them.
+            images: { orderBy: { position: 'asc' as const } },
+          },
+        },
         rules: true, // Inclure les règles
         nearbyPlaces: {
           take: 10, // ✅ Limite les lieux à proximité
@@ -393,7 +410,7 @@ export async function findProductBySlugOrId(slugOrId: string) {
     // non-hotel products, so this is a no-op for the classic single-unit path.
     roomTypes: {
       orderBy: { position: 'asc' as const },
-      include: { beds: true },
+      include: { beds: true, images: { orderBy: { position: 'asc' as const } } },
     },
     rules: true,
     nearbyPlaces: { take: 10 },
