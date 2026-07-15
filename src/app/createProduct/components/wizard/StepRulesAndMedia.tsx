@@ -16,6 +16,8 @@ import {
 import { ProductRulesForm } from '../ProductRulesForm'
 import { ProductPropertyInfoForm } from '../ProductPropertyInfoForm'
 import SortableImageGrid from '@/components/ui/SortableImageGrid'
+import { PhotoBudgetBanner } from '@/components/ui/PhotoBudgetBanner'
+import { computePhotoBudget } from '@/lib/photos/photoBudget'
 import ImageGalleryPreview from '@/components/ui/ImageGalleryPreview'
 import SEOFieldsCard from '@/components/ui/SEOFieldsCard'
 import { UserCombobox } from '@/components/ui/UserCombobox'
@@ -78,6 +80,17 @@ export function StepRulesAndMedia({
 }: StepRulesAndMediaProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [showGalleryPreview, setShowGalleryPreview] = useState(false)
+
+  // Establishment photos and every room type's photos share one 20-photo
+  // allowance. For hotels this step runs *after* the room-types step, so part
+  // of the budget may already be spent before the host ever gets here — hence
+  // the banner. `roomTypes` is empty for non-hotel listings, which makes this
+  // the plain "photos of this listing" tally.
+  const photoBudget = computePhotoBudget({
+    establishmentCount: imageUpload.selectedFiles.length,
+    roomTypeCounts: formData.roomTypes.map(roomType => roomType.images.length),
+  })
+  const isPhotoBudgetSpent = photoBudget.remaining <= 0
   const [newPlace, setNewPlace] = useState<NearbyPlace>({
     name: '',
     distance: '',
@@ -242,7 +255,7 @@ export function StepRulesAndMedia({
             <div>
               <CardTitle className="text-lg">Photos de l&apos;hébergement</CardTitle>
               <p className="text-slate-500 text-sm mt-0.5">
-                Ajoutez des photos attrayantes (maximum {MAX_IMAGES})
+                Ajoutez des photos attrayantes (maximum {MAX_IMAGES} pour l&apos;annonce)
                 {imageUpload.selectedFiles.length > 0 && (
                   <span className="ml-2 font-medium text-blue-600">
                     {imageUpload.selectedFiles.length} photo{imageUpload.selectedFiles.length > 1 ? 's' : ''} sélectionnée{imageUpload.selectedFiles.length > 1 ? 's' : ''}
@@ -253,16 +266,33 @@ export function StepRulesAndMedia({
           </div>
         </CardHeader>
         <CardContent className="p-6 space-y-6">
+          <PhotoBudgetBanner
+            used={photoBudget.used}
+            remaining={photoBudget.remaining}
+            max={photoBudget.max}
+          />
+
           <div
+            data-testid="establishment-photo-dropzone"
+            data-disabled={isPhotoBudgetSpent}
             className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-              imageUpload.dragActive
-                ? 'border-pink-400 bg-pink-50'
-                : 'border-slate-300 hover:border-pink-300 hover:bg-pink-25'
+              isPhotoBudgetSpent
+                ? 'border-slate-200 bg-slate-50 opacity-70 cursor-not-allowed'
+                : imageUpload.dragActive
+                  ? 'border-pink-400 bg-pink-50'
+                  : 'border-slate-300 hover:border-pink-300 hover:bg-pink-25'
             }`}
-            onDragEnter={e => imageUpload.handleDrag(e, true)}
-            onDragLeave={e => imageUpload.handleDrag(e, false)}
-            onDragOver={e => imageUpload.handleDrag(e, true)}
-            onDrop={imageUpload.handleDrop}
+            onDragEnter={e => !isPhotoBudgetSpent && imageUpload.handleDrag(e, true)}
+            onDragLeave={e => !isPhotoBudgetSpent && imageUpload.handleDrag(e, false)}
+            onDragOver={e => !isPhotoBudgetSpent && imageUpload.handleDrag(e, true)}
+            onDrop={e => {
+              if (isPhotoBudgetSpent) {
+                e.preventDefault()
+                e.stopPropagation()
+                return
+              }
+              void imageUpload.handleDrop(e)
+            }}
           >
             <input
               ref={fileInputRef}
@@ -270,6 +300,7 @@ export function StepRulesAndMedia({
               multiple
               accept="image/*"
               onChange={handleFiles}
+              disabled={isPhotoBudgetSpent}
               className="hidden"
             />
             <div className="space-y-4">
@@ -279,10 +310,21 @@ export function StepRulesAndMedia({
               <div>
                 <p className="text-sm font-medium text-slate-700">
                   Glissez vos photos ici ou{' '}
-                  <button type="button" onClick={() => fileInputRef.current?.click()} className="text-pink-600 hover:text-pink-700 underline">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isPhotoBudgetSpent}
+                    className="text-pink-600 hover:text-pink-700 underline disabled:cursor-not-allowed disabled:text-slate-400 disabled:no-underline"
+                  >
                     parcourez
                   </button>
                 </p>
+                {isPhotoBudgetSpent && (
+                  <p className="text-xs font-medium text-red-600 mt-1">
+                    Limite de {photoBudget.max} photos atteinte pour cette annonce : supprimez une
+                    photo ici ou dans un type de chambre pour en ajouter une autre.
+                  </p>
+                )}
                 <p className="text-xs text-slate-500 mt-1">
                   PNG, JPG, JPEG, WEBP (compressées automatiquement)
                   {imageUpload.isUploadingImages && (

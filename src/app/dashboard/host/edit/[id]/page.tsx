@@ -21,6 +21,11 @@ import { StepBasicInfo } from '@/app/createProduct/components/wizard/StepBasicIn
 import { StepLocation } from '@/app/createProduct/components/wizard/StepLocation'
 import { StepPricing } from '@/app/createProduct/components/wizard/StepPricing'
 import { StepRoomTypes } from '@/app/createProduct/components/wizard/StepRoomTypes'
+import {
+  hasPendingRoomTypeImages,
+  uploadRoomTypeImages,
+} from '@/app/createProduct/utils/uploadRoomTypeImages'
+import { computePhotoBudget } from '@/lib/photos/photoBudget'
 import { StepServices } from '@/app/createProduct/components/wizard/StepServices'
 import { StepRulesAndMedia } from '@/app/createProduct/components/wizard/StepRulesAndMedia'
 import { getStepLabels } from '@/app/createProduct/schemas/productFormSchema'
@@ -124,7 +129,13 @@ export default function EditProductPage() {
   // Data & form hooks
   const productData = useProductData()
   const productForm = useProductForm(productData.types, loadedFormData)
-  const imageUpload = useImageUpload(loadedImages)
+  // Establishment photos and room-type photos share the listing's 20-photo
+  // budget: the establishment's own cap is whatever the room types left.
+  const establishmentPhotoAllowance = computePhotoBudget({
+    establishmentCount: 0,
+    roomTypeCounts: productForm.formData.roomTypes.map(roomType => roomType.images.length),
+  }).remaining
+  const imageUpload = useImageUpload(loadedImages, { maxImages: establishmentPhotoAllowance })
   const wizard = useProductWizardForm(productForm.formData.isHotel)
 
   // UI state
@@ -244,7 +255,19 @@ export default function EditProductPage() {
     }
 
     try {
-      const updateData = buildHostUpdatePayload(formData, specialPrices, seoData)
+      // Room-type photos must be persisted before the PUT: their urls travel
+      // inside the room-type payload that `syncRoomTypes` reconciles.
+      let roomTypesForPayload = formData.roomTypes
+      if (formData.isHotel && hasPendingRoomTypeImages(formData.roomTypes)) {
+        roomTypesForPayload = await uploadRoomTypeImages(formData.roomTypes, productId)
+        setRoomTypes(roomTypesForPayload)
+      }
+
+      const updateData = buildHostUpdatePayload(
+        { ...formData, roomTypes: roomTypesForPayload },
+        specialPrices,
+        seoData
+      )
 
       const response = await fetch(`/api/products/${productId}`, {
         method: 'PUT',
@@ -441,6 +464,7 @@ export default function EditProductPage() {
                 meals={productData.meals}
                 includedServices={productData.includedServices}
                 extras={productData.extras}
+                establishmentPhotoCount={imageUpload.selectedFiles.length}
                 getFieldError={wizard.getFieldError}
               />
             ) : (

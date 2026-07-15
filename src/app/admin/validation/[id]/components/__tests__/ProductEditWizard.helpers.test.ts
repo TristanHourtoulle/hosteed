@@ -109,6 +109,7 @@ describe('buildUpdatePayload room types', () => {
       mealIds: [],
       includedServiceIds: [],
       extraIds: [],
+      images: [],
     })
     const payload = buildUpdatePayload(formData, seo, makeHotelProduct([dbDoubleRoom]))
     expect(payload.roomTypes?.[0].id).toBe('rt1')
@@ -119,5 +120,72 @@ describe('buildUpdatePayload room types', () => {
   it('omits roomTypes for non-hotel products', () => {
     const formData = buildInitialFormData(makeProduct({}))
     expect(buildUpdatePayload(formData, seo, makeProduct({})).roomTypes).toBeUndefined()
+  })
+})
+
+describe('room-type photos round-trip', () => {
+  const seo = { metaTitle: '', metaDescription: '', keywords: '', slug: '' }
+  const roomWithPhotos: RoomTypeWithRelations = {
+    ...dbDoubleRoom,
+    images: [
+      { id: 'i1', img: '/uploads/products/p1/a_full_1_x.webp', position: 0 },
+      { id: 'i2', img: '/uploads/products/p1/b_full_1_y.webp', position: 1 },
+    ],
+  }
+
+  it('hydrates persisted photos into the form', () => {
+    const fd = buildInitialFormData(makeHotelProduct([roomWithPhotos]))
+    expect(fd.roomTypes[0].images).toHaveLength(2)
+    expect(fd.roomTypes[0].images[0]).toMatchObject({
+      url: '/uploads/products/p1/a_full_1_x.webp',
+      isExisting: true,
+      file: null,
+    })
+  })
+
+  it('keeps the DB id and round-trips the photo urls back into the payload', () => {
+    const fd = buildInitialFormData(makeHotelProduct([roomWithPhotos]))
+    const payload = buildUpdatePayload(fd, seo, makeHotelProduct([roomWithPhotos]))
+    expect(payload.roomTypes?.[0].id).toBe('rt1')
+    expect(payload.roomTypes?.[0].imageUrls).toEqual([
+      '/uploads/products/p1/a_full_1_x.webp',
+      '/uploads/products/p1/b_full_1_y.webp',
+    ])
+  })
+
+  it('sends imageUrls with no id for a newly added room type', () => {
+    const fd = buildInitialFormData(makeHotelProduct([roomWithPhotos]))
+    fd.roomTypes.push({
+      id: 'rt-1700000000-9',
+      name: 'Suite',
+      quantity: '1',
+      capacity: '2',
+      surface: '',
+      smoking: false,
+      basePrice: '150',
+      priceMGA: '700000',
+      beds: [{ bedType: 'KING', count: 1 }],
+      specialPrices: [],
+      mealIds: [],
+      includedServiceIds: [],
+      extraIds: [],
+      images: [
+        {
+          id: 'i9',
+          file: null,
+          preview: '/uploads/products/p1/c_full_1_z.webp',
+          url: '/uploads/products/p1/c_full_1_z.webp',
+          isExisting: true,
+        },
+      ],
+    })
+    const payload = buildUpdatePayload(fd, seo, makeHotelProduct([roomWithPhotos]))
+    expect(payload.roomTypes?.[1].id).toBeUndefined()
+    expect(payload.roomTypes?.[1].imageUrls).toEqual(['/uploads/products/p1/c_full_1_z.webp'])
+  })
+
+  it('still omits roomTypes entirely for a non-hotel product', () => {
+    const fd = buildInitialFormData(makeProduct({}))
+    expect(buildUpdatePayload(fd, seo, makeProduct({})).roomTypes).toBeUndefined()
   })
 })

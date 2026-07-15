@@ -22,6 +22,11 @@ import { useProductData, useProductForm, useImageUpload } from '@/app/createProd
 import { useProductWizardForm } from '@/app/createProduct/hooks/useProductWizardForm'
 import { getStepLabels } from '@/app/createProduct/schemas/productFormSchema'
 import { generateImageId } from '@/app/createProduct/utils/formHelpers'
+import {
+  hasPendingRoomTypeImages,
+  uploadRoomTypeImages,
+} from '@/app/createProduct/utils/uploadRoomTypeImages'
+import { computePhotoBudget } from '@/lib/photos/photoBudget'
 import type { ImageFile } from '@/types/product-form'
 import type { RoomTypeFormData } from '@/app/createProduct/types/roomType'
 
@@ -45,7 +50,13 @@ export function ProductEditWizard({ product, onSave, onCancel }: ProductEditForm
   const initialFormData = buildInitialFormData(product)
   const productForm = useProductForm(productData.types, initialFormData)
   const existingImages = buildExistingImages(product)
-  const imageUpload = useImageUpload(existingImages)
+  // Establishment photos and room-type photos share the listing's 20-photo
+  // budget: the establishment's own cap is whatever the room types left.
+  const establishmentPhotoAllowance = computePhotoBudget({
+    establishmentCount: 0,
+    roomTypeCounts: productForm.formData.roomTypes.map(roomType => roomType.images.length),
+  }).remaining
+  const imageUpload = useImageUpload(existingImages, { maxImages: establishmentPhotoAllowance })
   const wizard = useProductWizardForm(productForm.formData.isHotel)
 
   // UI state
@@ -137,8 +148,20 @@ export function ProductEditWizard({ product, onSave, onCancel }: ProductEditForm
 
       const allImageUrls = [...existingImageUrls, ...newImageUrls]
 
+      // Room-type photos must be persisted before the PUT: their urls travel
+      // inside the room-type payload that `syncRoomTypes` reconciles.
+      let roomTypesForPayload = formData.roomTypes
+      if (formData.isHotel && hasPendingRoomTypeImages(formData.roomTypes)) {
+        roomTypesForPayload = await uploadRoomTypeImages(formData.roomTypes, product.id)
+        setRoomTypes(roomTypesForPayload)
+      }
+
       // Prepare update payload (hydrated room types are reconciled server-side)
-      const updateData = buildUpdatePayload(formData, seoData, product)
+      const updateData = buildUpdatePayload(
+        { ...formData, roomTypes: roomTypesForPayload },
+        seoData,
+        product
+      )
 
       // PUT to update the product
       const response = await fetch(`/api/products/${product.id}`, {
@@ -281,6 +304,7 @@ export function ProductEditWizard({ product, onSave, onCancel }: ProductEditForm
                 meals={productData.meals}
                 includedServices={productData.includedServices}
                 extras={productData.extras}
+                establishmentPhotoCount={imageUpload.selectedFiles.length}
                 getFieldError={wizard.getFieldError}
               />
             ) : (

@@ -194,6 +194,9 @@ export async function getProductForValidation(productId: string) {
           includedServices: { select: { id: true } },
           servicesList: { select: { id: true } },
           extras: { select: { id: true } },
+          // Per-type photos (TRI-1031). The admin editor round-trips these urls
+          // back on save, so omitting them here would silently wipe them.
+          images: { orderBy: { position: 'asc' as const } },
         },
       },
     }
