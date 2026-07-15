@@ -369,7 +369,14 @@ export default function TypeRentDetailPage({ params }: { params: Promise<{ id: s
                             <Euro className='h-4 w-4 text-slate-400' />
                             <span className='font-medium'>{product.basePrice || '0'}</span>
                           </div>
-                          {product.maxPeople && (
+                          {/*
+                            Every product listed here shares this rent type, so
+                            `isHotelType` settles it: `maxPeople` is a
+                            product-level field describing a single bookable
+                            unit and is meaningless for a hotel, whose capacity
+                            is defined per room type.
+                          */}
+                          {!typeRent.isHotelType && product.maxPeople && (
                             <div className='flex items-center gap-1'>
                               <Users className='h-4 w-4 text-slate-400' />
                               <span>{product.maxPeople.toString()} pers.</span>

@@ -17,6 +17,12 @@ interface ProductCharacteristicsCardProps {
 
 /** Product characteristics: type, rooms, capacity, times, flags. */
 export function ProductCharacteristicsCard({ product }: ProductCharacteristicsCardProps) {
+  // This card is a staff inspection view of the raw product record, so the
+  // product-level fields stay visible for a hotel (admins need to see what the
+  // host typed) — but they are labelled as unused, since a hotel's rooms and
+  // capacity are defined per room type.
+  const isHotel = product.type?.isHotelType ?? false
+
   const booleanField = (label: string, value: boolean) => (
     <div className='flex items-center gap-2'>
       {value ? (
@@ -38,6 +44,14 @@ export function ProductCharacteristicsCard({ product }: ProductCharacteristicsCa
           </h2>
         </div>
         <CardContent className='p-6 space-y-5'>
+          {isHotel && (
+            <p className='text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2'>
+              Hôtel : les champs chambres, salles de bain et nombre de personnes ci-dessous sont
+              saisis au niveau du produit et ne sont pas utilisés. La capacité réelle est définie
+              par type de chambre.
+            </p>
+          )}
+
           <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
             <div>
               <p className='text-xs text-gray-500 uppercase tracking-wide'>Type</p>
