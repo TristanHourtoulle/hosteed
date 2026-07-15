@@ -1,4 +1,5 @@
 import { BedType, DayEnum, Prisma } from '@prisma/client'
+import { assertPhotoBudget } from '@/lib/photos/photoBudget'
 
 /**
  * Room-type service (hotel multi-room-type — Lot 1 / TRI-994).
@@ -43,12 +44,25 @@ export interface CreateRoomTypeInput {
   includedServiceIds?: string[]
   serviceIds?: string[]
   extraIds?: string[]
+  /**
+   * Full-size photo URLs for this room type, in display order. Reconciled by
+   * URL, so an untouched URL keeps its row. `undefined` means "leave this room
+   * type's photos alone" — callers that don't manage photos stay unaffected.
+   */
+  imageUrls?: string[]
+}
+
+type ExistingRoomTypeImage = {
+  id: string
+  img: string
+  position: number
 }
 
 type ExistingRoomType = {
   id: string
   name: string
   _count: { rentLines: number }
+  images: ExistingRoomTypeImage[]
 }
 
 /**
@@ -102,6 +116,54 @@ function connectData(ids: string[] | undefined) {
   return (ids ?? []).map(id => ({ id }))
 }
 
+function imageCreateData(roomType: CreateRoomTypeInput) {
+  return (roomType.imageUrls ?? []).map((img, index) => ({ img, position: index }))
+}
+
+/**
+ * Photos this room type will hold once the sync is applied: the incoming list
+ * when photos are managed, the rows already stored otherwise.
+ */
+function projectedImageCount(
+  roomType: CreateRoomTypeInput,
+  existingById: Map<string, ExistingRoomType>
+): number {
+  if (roomType.imageUrls !== undefined) {
+    return roomType.imageUrls.length
+  }
+
+  return roomType.id ? (existingById.get(roomType.id)?.images.length ?? 0) : 0
+}
+
+/**
+ * Reconcile an existing room type's photos with `imageUrls`, matching by URL so
+ * an untouched photo keeps its row (and its id): rows whose URL disappeared are
+ * deleted, unknown URLs are created at their index, and surviving rows are
+ * repositioned only when their index actually moved.
+ */
+async function syncRoomTypeImages(
+  tx: Prisma.TransactionClient,
+  roomTypeId: string,
+  existingImages: ExistingRoomTypeImage[],
+  imageUrls: string[]
+): Promise<void> {
+  const staleIds = existingImages.filter(image => !imageUrls.includes(image.img)).map(i => i.id)
+  if (staleIds.length > 0) {
+    await tx.roomTypeImage.deleteMany({ where: { id: { in: staleIds } } })
+  }
+
+  for (let index = 0; index < imageUrls.length; index++) {
+    const url = imageUrls[index]
+    const existingImage = existingImages.find(image => image.img === url)
+
+    if (!existingImage) {
+      await tx.roomTypeImage.create({ data: { roomTypeId, img: url, position: index } })
+    } else if (existingImage.position !== index) {
+      await tx.roomTypeImage.update({ where: { id: existingImage.id }, data: { position: index } })
+    }
+  }
+}
+
 /**
  * Transactionally reconcile the room types attached to `productId` with the
  * provided list:
@@ -121,7 +183,12 @@ export async function syncRoomTypes(
 ): Promise<void> {
   const existing: ExistingRoomType[] = await tx.roomType.findMany({
     where: { productId },
-    select: { id: true, name: true, _count: { select: { rentLines: true } } },
+    select: {
+      id: true,
+      name: true,
+      _count: { select: { rentLines: true } },
+      images: { select: { id: true, img: true, position: true } },
+    },
   })
 
   const incomingIds = new Set(
@@ -137,6 +204,21 @@ export async function syncRoomTypes(
   if (blocked.length > 0) {
     throw new RoomTypeDeletionBlockedError(blocked.map(rt => rt.name))
   }
+
+  // The 20-photo cap is global to the listing, so it is checked against the
+  // *projected* state (establishment photos + every surviving room type) before
+  // any write — an over-budget request must leave the listing untouched.
+  // Room types being removed are excluded: their photos go away with them.
+  const existingById = new Map(existing.map(current => [current.id, current]))
+  const product = await tx.product.findUnique({
+    where: { id: productId },
+    select: { _count: { select: { img: true } } },
+  })
+
+  assertPhotoBudget({
+    establishmentCount: product?._count.img ?? 0,
+    roomTypeCounts: roomTypes.map(roomType => projectedImageCount(roomType, existingById)),
+  })
 
   for (const current of toDelete) {
     await tx.roomType.delete({ where: { id: current.id } })
@@ -160,12 +242,22 @@ export async function syncRoomTypes(
           extras: { set: [], connect: connectData(roomType.extraIds) },
         },
       })
+
+      if (roomType.imageUrls !== undefined) {
+        await syncRoomTypeImages(
+          tx,
+          roomType.id,
+          existingById.get(roomType.id)?.images ?? [],
+          roomType.imageUrls
+        )
+      }
     } else {
       await tx.roomType.create({
         data: {
           productId,
           ...scalarData(roomType, index),
           beds: { create: bedCreateData(roomType) },
+          images: { create: imageCreateData(roomType) },
           specialPrices: { create: specialPriceCreateData(roomType) },
           mealsList: { connect: connectData(roomType.mealIds) },
           includedServices: { connect: connectData(roomType.includedServiceIds) },

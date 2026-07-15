@@ -407,7 +407,7 @@ export async function findProductBySlugOrId(slugOrId: string) {
     // non-hotel products, so this is a no-op for the classic single-unit path.
     roomTypes: {
       orderBy: { position: 'asc' as const },
-      include: { beds: true },
+      include: { beds: true, images: { orderBy: { position: 'asc' as const } } },
     },
     rules: true,
     nearbyPlaces: { take: 10 },
