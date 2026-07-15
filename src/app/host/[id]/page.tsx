@@ -408,6 +408,7 @@ export default function ProductDetails() {
 
             <PropertyRules
               maxPeople={product.maxPeople}
+              isHotel={isHotel}
               rules={
                 product.rules?.[0] || {
                   smokingAllowed: false,

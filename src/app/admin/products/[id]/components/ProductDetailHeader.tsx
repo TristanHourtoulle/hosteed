@@ -22,6 +22,12 @@ interface ProductDetailHeaderProps {
 
 /** Header card with product name, validation status, and key metrics. */
 export function ProductDetailHeader({ product, commissionRates }: ProductDetailHeaderProps) {
+  // For a hotel, `room`/`bathroom` describe a single bookable unit that does not
+  // exist: the inventory is defined per room type. Keep this summary strip
+  // accurate by omitting them (the full record stays visible in the
+  // characteristics card below).
+  const isHotel = product.type?.isHotelType ?? false
+
   return (
     <motion.div initial='hidden' animate='visible' variants={fadeIn}>
       <Card className='border-0 shadow-lg bg-white/90 backdrop-blur-sm rounded-2xl overflow-hidden'>
@@ -52,14 +58,18 @@ export function ProductDetailHeader({ product, commissionRates }: ProductDetailH
                 <span>{product.type.name}</span>
               </div>
             )}
-            <div className='flex items-center gap-1.5'>
-              <Bed className='h-4 w-4 text-gray-400' />
-              <span>{product.room ? Number(product.room) : 0} chambre(s)</span>
-            </div>
-            <div className='flex items-center gap-1.5'>
-              <Bath className='h-4 w-4 text-gray-400' />
-              <span>{product.bathroom ? Number(product.bathroom) : 0} salle(s) de bain</span>
-            </div>
+            {!isHotel && (
+              <>
+                <div className='flex items-center gap-1.5'>
+                  <Bed className='h-4 w-4 text-gray-400' />
+                  <span>{product.room ? Number(product.room) : 0} chambre(s)</span>
+                </div>
+                <div className='flex items-center gap-1.5'>
+                  <Bath className='h-4 w-4 text-gray-400' />
+                  <span>{product.bathroom ? Number(product.bathroom) : 0} salle(s) de bain</span>
+                </div>
+              </>
+            )}
             {commissionRates && (
               <div className='flex items-center gap-1.5'>
                 <Euro className='h-4 w-4 text-gray-400' />

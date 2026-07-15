@@ -522,6 +522,7 @@ export async function validateBooking(
     select: {
       maxPeople: true,
       minPeople: true,
+      type: { select: { isHotelType: true } },
     },
   })
 
@@ -530,17 +531,26 @@ export async function validateBooking(
     return { isValid: false, errors }
   }
 
-  // 2. Vérifier le nombre d'invités
-  if (product.maxPeople && guestCount > product.maxPeople) {
-    errors.push(
-      `Le nombre maximum d'invités est de ${product.maxPeople}. Vous avez sélectionné ${guestCount} personne(s).`
-    )
-  }
+  // 2. Vérifier le nombre d'invités.
+  // `minPeople`/`maxPeople` are product-level fields describing a single
+  // bookable unit, so they do not apply to a hotel: nothing books the whole
+  // property, guests book room types. The authoritative hotel rule
+  // (guestCount <= Σ RoomType.capacity × quantity) is enforced by
+  // `calculateHotelBookingPrice` and the checkout route (VAL_006).
+  const isHotel = product.type?.isHotelType ?? false
 
-  if (product.minPeople && guestCount < product.minPeople) {
-    errors.push(
-      `Le nombre minimum d'invités est de ${product.minPeople}. Vous avez sélectionné ${guestCount} personne(s).`
-    )
+  if (!isHotel) {
+    if (product.maxPeople && guestCount > product.maxPeople) {
+      errors.push(
+        `Le nombre maximum d'invités est de ${product.maxPeople}. Vous avez sélectionné ${guestCount} personne(s).`
+      )
+    }
+
+    if (product.minPeople && guestCount < product.minPeople) {
+      errors.push(
+        `Le nombre minimum d'invités est de ${product.minPeople}. Vous avez sélectionné ${guestCount} personne(s).`
+      )
+    }
   }
 
   // 3. Vérifier que les dates sont valides

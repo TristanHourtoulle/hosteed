@@ -124,7 +124,10 @@ export interface AdminRent {
 }
 
 export interface AdminProductWithRelations extends Product {
-  type: { id: string; name: string } | null
+  // `findProductByIdForAdmin` includes the whole TypeRent row, so `isHotelType`
+  // is available: hotel products must not surface product-level room/capacity
+  // fields as if they described a bookable unit.
+  type: { id: string; name: string; isHotelType?: boolean | null } | null
   equipments: Array<{ id: string; name: string }>
   servicesList: Array<{ id: string; name: string }>
   mealsList: Array<{ id: string; name: string }>

@@ -22,6 +22,8 @@ interface ProductCardProps {
     equipmentCount?: number
     serviceCount?: number
     typeName?: string | null
+    /** Computed by the admin products API from `type.isHotelType`. */
+    isHotel?: boolean
   }
   selected?: boolean
   onToggleSelect?: (id: string) => void
@@ -93,10 +95,17 @@ export function ProductCard({ product, selected, onToggleSelect, onDelete }: Pro
               <MapPin className='h-4 w-4' />
               <span>{locationDisplay}</span>
             </div>
-            <div className='flex items-center gap-1'>
-              <Bed className='h-4 w-4' />
-              <span>{product.room ? Number(product.room) : 0} chambres</span>
-            </div>
+            {/*
+              `room` is a product-level field describing a single bookable unit:
+              for a hotel the real room inventory lives in `roomTypes`, so the
+              chip would show a misleading number. Hide it rather than lie.
+            */}
+            {!product.isHotel && (
+              <div className='flex items-center gap-1'>
+                <Bed className='h-4 w-4' />
+                <span>{product.room ? Number(product.room) : 0} chambres</span>
+              </div>
+            )}
             <div className='flex items-center gap-1'>
               <Euro className='h-4 w-4' />
               <span>{product.basePrice}€ / nuit</span>

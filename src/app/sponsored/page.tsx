@@ -23,7 +23,7 @@ interface PromotedProduct {
     basePrice: string
     maxPeople?: bigint | null
     img?: { img: string }[]
-    type: { name: string }
+    type: { name: string; isHotelType?: boolean | null }
     reviews?: { grade: number }[]
     owner: {
       id: string
@@ -172,7 +172,13 @@ export default function SponsoredPage() {
 
                     {/* Amenities */}
                     <div className='flex items-center gap-4 mb-4 text-sm text-gray-600'>
-                      {promotion.product.maxPeople && (
+                      {/*
+                        `maxPeople` describes a single bookable unit, so it is
+                        meaningless for a hotel (capacity is per room type).
+                        A card is too small for a per-type breakdown: show
+                        nothing rather than a wrong number.
+                      */}
+                      {!promotion.product.type?.isHotelType && promotion.product.maxPeople && (
                         <div className='flex items-center'>
                           <Users className='w-4 h-4 mr-1' />
                           <span>{Number(promotion.product.maxPeople)} pers. max</span>
