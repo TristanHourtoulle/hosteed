@@ -25,7 +25,9 @@
     "test:images:migrate:5": "tsx scripts/test-image-migration.ts --limit=5",
     "images:migrate": "tsx scripts/migrate-images-to-filesystem.ts",
     "images:migrate:dry-run": "tsx scripts/migrate-images-to-filesystem.ts --dry-run",
-    "images:migrate:preview": "tsx scripts/migrate-images-to-filesystem.ts --dry-run --limit 10"
+    "images:migrate:preview": "tsx scripts/migrate-images-to-filesystem.ts --dry-run --limit 10",
+    "images:cleanup": "tsx scripts/cleanup-orphaned-images.ts --dry-run",
+    "images:cleanup:apply": "tsx scripts/cleanup-orphaned-images.ts --apply"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
