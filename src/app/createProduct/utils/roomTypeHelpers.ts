@@ -1,5 +1,7 @@
-import { BED_TYPE_OPTIONS, type RoomTypeFormData } from '../types/roomType'
+import { BED_TYPE_OPTIONS, type RoomTypeFormData, type RoomTypeName } from '../types/roomType'
 import type { CreateRoomTypeInput } from '@/lib/services/room-type.service'
+import type { RoomTypeWithRelations } from '@/types/room-type-db'
+import type { DayEnum } from '@prisma/client'
 
 /**
  * Prefix used for client-only temporary room-type ids (React key + copy
@@ -35,6 +37,50 @@ export function createEmptyRoomType(): RoomTypeFormData {
     mealIds: [],
     includedServiceIds: [],
     extraIds: [],
+  }
+}
+
+function toDate(value: Date | string | null | undefined): Date | null {
+  if (!value) return null
+  return value instanceof Date ? value : new Date(value)
+}
+
+/**
+ * Map a DB room type (with relations) into the wizard's `RoomTypeFormData`.
+ * The DB `id` is preserved so a later PUT updates the existing row rather than
+ * recreating it. Beds are re-expanded to the fixed 4-counter grid (DB only
+ * stores non-zero beds). Numeric fields become strings (form convention).
+ *
+ * Shared by the admin edit wizard and the host edit page (TRI-1028).
+ */
+export function mapDbRoomTypeToForm(roomType: RoomTypeWithRelations): RoomTypeFormData {
+  const bedCountByType = new Map(roomType.beds.map(bed => [bed.bedType, bed.count]))
+
+  return {
+    id: roomType.id,
+    name: roomType.name as RoomTypeName | '',
+    quantity: String(roomType.quantity),
+    capacity: String(roomType.capacity),
+    surface: roomType.surface != null ? String(roomType.surface) : '',
+    smoking: roomType.smoking,
+    basePrice: roomType.basePrice,
+    priceMGA: roomType.priceMGA,
+    beds: BED_TYPE_OPTIONS.map(option => ({
+      bedType: option.value,
+      count: bedCountByType.get(option.value) ?? 0,
+    })),
+    specialPrices: (roomType.specialPrices ?? []).map(sp => ({
+      id: sp.id,
+      pricesMga: sp.pricesMga,
+      pricesEuro: sp.pricesEuro,
+      day: (sp.day ?? []) as DayEnum[],
+      startDate: toDate(sp.startDate),
+      endDate: toDate(sp.endDate),
+      activate: sp.activate,
+    })),
+    mealIds: (roomType.mealsList ?? []).map(m => m.id),
+    includedServiceIds: (roomType.includedServices ?? []).map(s => s.id),
+    extraIds: (roomType.extras ?? []).map(e => e.id),
   }
 }
 

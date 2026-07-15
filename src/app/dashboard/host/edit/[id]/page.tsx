@@ -20,8 +20,10 @@ import { WizardNavigation } from '@/app/createProduct/components/wizard/WizardNa
 import { StepBasicInfo } from '@/app/createProduct/components/wizard/StepBasicInfo'
 import { StepLocation } from '@/app/createProduct/components/wizard/StepLocation'
 import { StepPricing } from '@/app/createProduct/components/wizard/StepPricing'
+import { StepRoomTypes } from '@/app/createProduct/components/wizard/StepRoomTypes'
 import { StepServices } from '@/app/createProduct/components/wizard/StepServices'
 import { StepRulesAndMedia } from '@/app/createProduct/components/wizard/StepRulesAndMedia'
+import { getStepLabels } from '@/app/createProduct/schemas/productFormSchema'
 
 import {
   useProductData,
@@ -30,6 +32,13 @@ import {
 } from '@/app/createProduct/hooks'
 import { useProductWizardForm } from '@/app/createProduct/hooks/useProductWizardForm'
 import type { FormData, ImageFile, SpecialPrice } from '@/app/createProduct/types'
+import type { RoomTypeFormData } from '@/app/createProduct/types/roomType'
+import { canManageProduct } from '@/lib/permissions/product-permissions'
+import {
+  mapProductToFormData,
+  buildHostUpdatePayload,
+  type HostEditProduct,
+} from './hostEditHelpers'
 
 interface ProductImage {
   id: string
@@ -40,6 +49,8 @@ interface LoadedProduct {
   formData: FormData
   images: ImageFile[]
   specialPrices: SpecialPrice[]
+  /** Used to apply the owner / HOST_MANAGER / ADMIN edit rule in the UI. */
+  ownerId: string | null
 }
 
 /**
@@ -53,72 +64,14 @@ async function fetchProductForEdit(productId: string): Promise<LoadedProduct> {
     throw new Error('Produit non trouvé')
   }
 
-  const product = await response.json()
+  const product: HostEditProduct = await response.json()
 
-  const formData: FormData = {
-    name: product.name || '',
-    description: product.description || '',
-    address: product.address || '',
-    completeAddress: product.completeAddress || '',
-    placeId: product.placeId || '',
-    latitude: product.latitude || 0,
-    longitude: product.longitude || 0,
-    phone: product.phone || '',
-    phoneCountry: product.phoneCountry || 'MG',
-    typeId: product.typeId || '',
-    typeRentId: product.typeId || '', // Sync with typeId
-    arriving: product.arriving?.toString() || '15',
-    leaving: product.leaving?.toString() || '12',
-    basePrice: product.basePrice || '',
-    priceMGA: product.priceMGA || '',
-    basePriceMGA: product.priceMGA || '', // Sync with priceMGA
-    specialPrices: product.specialPrices || [],
-    autoAccept: product.autoAccept || false,
-    equipmentIds: product.equipments?.map((e: { id: string }) => e.id) || [],
-    mealIds: product.mealsList?.map((m: { id: string }) => m.id) || [],
-    securityIds: product.securities?.map((s: { id: string }) => s.id) || [],
-    serviceIds: product.servicesList?.map((s: { id: string }) => s.id) || [],
-    includedServiceIds: product.includedServices?.map((s: { id: string }) => s.id) || [],
-    extraIds: product.extras?.map((e: { id: string }) => e.id) || [],
-    highlightIds: product.highlights?.map((h: { id: string }) => h.id) || [],
-    nearbyPlaces:
-      product.nearbyPlaces?.map((p: { name: string; distance: number }) => ({
-        name: p.name,
-        distance: p.distance?.toString() || '',
-        unit: p.distance && p.distance < 1000 ? 'mètres' : 'kilomètres',
-      })) || [],
-    proximityLandmarks: product.proximityLandmarks || [],
-    transportation:
-      product.transportOptions?.map((t: { name: string }) => t.name).join(', ') || '',
-    room: product.room?.toString() || '',
-    bathroom: product.bathroom?.toString() || '',
-    surface: product.surface?.toString() || '',
-    minPeople: product.minPeople?.toString() || '',
-    maxPeople: product.maxPeople?.toString() || '',
-    accessibility: product.accessibility || false,
-    petFriendly: product.petFriendly || false,
-    // Rules (rules is an array from Prisma, take first element)
-    smokingAllowed: product.rules?.[0]?.smokingAllowed || false,
-    petsAllowed: product.rules?.[0]?.petsAllowed || false,
-    eventsAllowed: product.rules?.[0]?.eventsAllowed || false,
-    selfCheckIn: product.rules?.[0]?.selfCheckIn || false,
-    selfCheckInType: product.rules?.[0]?.selfCheckInType || '',
-    // Property info
-    hasStairs: product.propertyInfo?.hasStairs || false,
-    hasElevator: product.propertyInfo?.hasElevator || false,
-    hasHandicapAccess: product.propertyInfo?.hasHandicapAccess || false,
-    hasPetsOnProperty: product.propertyInfo?.hasPetsOnProperty || false,
-    additionalNotes: product.propertyInfo?.additionalNotes || '',
-    isHotel: !!product.hotel,
-    hotelName: product.hotel?.name || '',
-    availableRooms: product.availableRooms?.toString() || '',
-    roomTypes: [],
-  }
+  const formData = mapProductToFormData(product)
 
   // Transform images to ImageFile format.
   // Mark existing images with isExisting flag to prevent re-upload.
   const images: ImageFile[] =
-    product.img?.map((img: ProductImage, index: number) => ({
+    (product as { img?: ProductImage[] }).img?.map((img: ProductImage, index: number) => ({
       id: img.id,
       file: null, // No file object for existing images
       preview: img.img, // URL of the existing image
@@ -131,6 +84,7 @@ async function fetchProductForEdit(productId: string): Promise<LoadedProduct> {
     formData,
     images,
     specialPrices: product.specialPrices || [],
+    ownerId: product.owner?.id ?? null,
   }
 }
 
@@ -171,7 +125,7 @@ export default function EditProductPage() {
   const productData = useProductData()
   const productForm = useProductForm(productData.types, loadedFormData)
   const imageUpload = useImageUpload(loadedImages)
-  const wizard = useProductWizardForm()
+  const wizard = useProductWizardForm(productForm.formData.isHotel)
 
   // UI state
   const [isLoading, setIsLoading] = useState(false)
@@ -185,6 +139,14 @@ export default function EditProductPage() {
   }>({ metaTitle: '', metaDescription: '', keywords: '', slug: '' })
 
   const { formData, setFormData, handleInputChange } = productForm
+
+  const setRoomTypes = (next: RoomTypeFormData[]) =>
+    setFormData(prev => ({ ...prev, roomTypes: next }))
+
+  // Editing is reserved to the listing owner, HOST_MANAGER and ADMIN. The
+  // server enforces this on PUT; this only avoids rendering an editor whose
+  // save would be refused.
+  const canEdit = canManageProduct(session?.user, productQuery.data?.ownerId)
 
   // Sync loaded data
   useEffect(() => {
@@ -282,80 +244,7 @@ export default function EditProductPage() {
     }
 
     try {
-      const updateData = {
-        name: formData.name,
-        description: formData.description,
-        address: formData.address,
-        completeAddress: formData.completeAddress || null,
-        longitude: formData.longitude || 0,
-        latitude: formData.latitude || 0,
-        basePrice: formData.basePrice,
-        priceMGA: formData.priceMGA,
-        room: formData.room ? Number(formData.room) : null,
-        bathroom: formData.bathroom ? Number(formData.bathroom) : null,
-        surface: formData.surface ? Number(formData.surface) : null,
-        arriving: formData.arriving ? Number(formData.arriving) : 15,
-        leaving: formData.leaving ? Number(formData.leaving) : 12,
-        phone: formData.phone,
-        phoneCountry: formData.phoneCountry || 'MG',
-        minPeople: formData.minPeople ? Number(formData.minPeople) : null,
-        maxPeople: formData.maxPeople ? Number(formData.maxPeople) : null,
-        accessibility: formData.accessibility || false,
-        petFriendly: formData.petFriendly || false,
-        autoAccept: formData.autoAccept || false,
-        typeId: formData.typeId,
-        equipmentIds: formData.equipmentIds,
-        serviceIds: formData.serviceIds,
-        mealIds: formData.mealIds,
-        securityIds: formData.securityIds,
-        includedServiceIds: formData.includedServiceIds,
-        extraIds: formData.extraIds,
-        highlightIds: formData.highlightIds,
-        nearbyPlaces: formData.nearbyPlaces.map(place => ({
-          name: place.name,
-          distance: place.unit === 'minutes à pied'
-            ? 0
-            : place.unit === 'kilomètres'
-              ? (place.distance ? Number(place.distance) * 1000 : 0)
-              : (place.distance ? Number(place.distance) : 0),
-          duration: place.unit === 'minutes à pied' ? (place.distance ? Number(place.distance) : 0) : 0,
-          transport: place.unit === 'minutes à pied' ? 'à pied' : place.unit === 'kilomètres' ? 'voiture' : 'à pied',
-        })),
-        proximityLandmarks: formData.proximityLandmarks || [],
-        isHotel: formData.isHotel,
-        hotelInfo: formData.isHotel
-          ? { name: formData.hotelName, availableRooms: Number(formData.availableRooms) }
-          : null,
-        specialPrices: specialPrices.map(sp => ({
-          pricesMga: sp.pricesMga,
-          pricesEuro: sp.pricesEuro,
-          day: sp.day,
-          startDate: sp.startDate,
-          endDate: sp.endDate,
-          activate: sp.activate,
-        })),
-        seoData,
-        transportOptions: formData.transportation
-          ? formData.transportation
-              .split(',')
-              .map((name: string) => ({ name: name.trim(), description: '' }))
-              .filter((t: { name: string }) => t.name.length > 0)
-          : [],
-        rules: {
-          smokingAllowed: formData.smokingAllowed || false,
-          petsAllowed: formData.petsAllowed || false,
-          eventsAllowed: formData.eventsAllowed || false,
-          selfCheckIn: formData.selfCheckIn || false,
-          selfCheckInType: (formData.selfCheckInType as string) || undefined,
-        },
-        propertyInfo: {
-          hasStairs: formData.hasStairs || false,
-          hasElevator: formData.hasElevator || false,
-          hasHandicapAccess: formData.hasHandicapAccess || false,
-          hasPetsOnProperty: formData.hasPetsOnProperty || false,
-          additionalNotes: (formData.additionalNotes as string) || undefined,
-        },
-      }
+      const updateData = buildHostUpdatePayload(formData, specialPrices, seoData)
 
       const response = await fetch(`/api/products/${productId}`, {
         method: 'PUT',
@@ -364,8 +253,12 @@ export default function EditProductPage() {
       })
 
       if (!response.ok) {
-        throw new Error("Erreur lors de la mise a jour de l'annonce")
+        // Surfaces the server's message verbatim — notably the 409 raised when
+        // a room type slated for deletion still has bookings.
+        const errorBody = await response.json().catch(() => ({}))
+        throw new Error(errorBody.error || "Erreur lors de la mise a jour de l'annonce")
       }
+
 
       // Handle images
       const existingImages = imageUpload.selectedFiles.filter(img => img.isExisting && img.url)
@@ -439,6 +332,29 @@ export default function EditProductPage() {
 
   if (!session) return null
 
+  // Mirrors the server-side rule enforced by PUT /api/products/[id]: rendering
+  // an editor whose save would be refused would only waste the user's work.
+  if (!canEdit) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="text-red-600">Accès refusé</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-slate-600">
+              Vous n&apos;êtes pas autorisé à modifier cette annonce. Seul son propriétaire ou un
+              gestionnaire peut la modifier.
+            </p>
+            <Button onClick={() => router.push('/dashboard/host')} className="mt-4">
+              Retour au tableau de bord
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       <motion.div
@@ -465,6 +381,7 @@ export default function EditProductPage() {
         <WizardStepper
           currentStep={wizard.currentStep}
           stepValidation={wizard.stepValidation}
+          labels={getStepLabels(formData.isHotel)}
         />
 
         {/* Error Alert */}
@@ -516,16 +433,28 @@ export default function EditProductPage() {
             />
           )}
           {wizard.currentStep === 2 && (
-            <StepPricing
-              key="step-2"
-              formData={formData}
-              handleInputChange={handleInputChange}
-              specialPrices={specialPrices}
-              setSpecialPrices={setSpecialPrices}
-              extras={productData.extras}
-              hasFieldError={wizard.hasFieldError}
-              getFieldError={wizard.getFieldError}
-            />
+            formData.isHotel ? (
+              <StepRoomTypes
+                key="step-2"
+                roomTypes={formData.roomTypes}
+                setRoomTypes={setRoomTypes}
+                meals={productData.meals}
+                includedServices={productData.includedServices}
+                extras={productData.extras}
+                getFieldError={wizard.getFieldError}
+              />
+            ) : (
+              <StepPricing
+                key="step-2"
+                formData={formData}
+                handleInputChange={handleInputChange}
+                specialPrices={specialPrices}
+                setSpecialPrices={setSpecialPrices}
+                extras={productData.extras}
+                hasFieldError={wizard.hasFieldError}
+                getFieldError={wizard.getFieldError}
+              />
+            )
           )}
           {wizard.currentStep === 3 && (
             <StepServices

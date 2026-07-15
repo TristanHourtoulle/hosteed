@@ -3,6 +3,7 @@ import { findProductById, updateProduct } from '@/lib/services/product.service'
 import { RoomTypeDeletionBlockedError } from '@/lib/services/room-type.service'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/prisma'
+import { canManageProduct } from '@/lib/permissions/product-permissions'
 
 /**
  * Convert BigInt values to numbers for JSON serialization
@@ -88,9 +89,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
       return NextResponse.json({ error: 'Product not found' }, { status: 404 })
     }
 
-    const isOwner = existing.ownerId === session.user.id
-    const canManageAny = ['ADMIN', 'HOST_MANAGER'].includes(session.user.roles as string)
-    if (!isOwner && !canManageAny) {
+    if (!canManageProduct(session.user, existing.ownerId)) {
       console.warn(
         `[PUT /api/products/${id}] forbidden: user=${session.user.id} role=${session.user.roles} owner=${existing.ownerId}`
       )
