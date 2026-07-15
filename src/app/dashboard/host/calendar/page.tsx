@@ -1,14 +1,17 @@
 'use client'
 
-import { useEffect, useState, Suspense, useCallback } from 'react'
+import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useQuery } from '@tanstack/react-query'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
+import { useMutationWithCache } from '@/hooks/useMutationWithCache'
 import { useAuth } from '@/hooks/useAuth'
 import { findAllReservationsByHostId, FormattedRent } from '@/lib/services/rent.service'
+import { findProductBySlugOrId } from '@/lib/services/product.service'
 import { FormattedUnavailability } from '@/lib/services/unavailableRent.service'
 import HostNavbar from '../components/HostNavbar'
 import UnavailabilityModal, { UnavailabilityData } from './UnavailabilityModal'
 import ExportCalendarModal from '@/components/calendar/ExportCalendarModal'
-import { toast } from 'sonner'
 import Link from 'next/link'
 import { Calendar as CalendarIcon } from 'lucide-react'
 
@@ -20,12 +23,8 @@ function CalendarContent() {
     isLoading: isAuthLoading,
   } = useAuth({ required: true, redirectTo: '/auth' })
   const propertyId = searchParams.get('property')
+  const hostId = session?.user?.id
   const [currentDate, setCurrentDate] = useState(new Date())
-  const [reservations, setReservations] = useState<FormattedRent[]>([])
-  const [unavailabilities, setUnavailabilities] = useState<FormattedUnavailability[]>([])
-  const [loading, setLoading] = useState(true)
-  const [propertyName, setPropertyName] = useState<string>('')
-  const [userProducts, setUserProducts] = useState<Array<{ id: string; name: string }>>([])
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedUnavailability, setSelectedUnavailability] = useState<{
@@ -139,148 +138,141 @@ function CalendarContent() {
     })
   }
 
-  const fetchReservations = useCallback(async () => {
-    try {
-      if (!session?.user?.id) return
+  // --- Server reads (React Query) ---
+  const reservationsQuery = useQuery({
+    queryKey: CACHE_TAGS.hostReservations(hostId ?? ''),
+    queryFn: () => findAllReservationsByHostId(hostId!),
+    enabled: !!hostId,
+  })
 
-      const data = await findAllReservationsByHostId(session.user.id)
-
-      // Filtrer par propriété si spécifié
-      const filteredReservations = propertyId
-        ? data.filter(reservation => reservation.propertyId === propertyId)
-        : data
-
-      setReservations(filteredReservations)
-    } catch (error) {
-      console.error('Erreur lors du chargement des réservations:', error)
-      toast.error('Erreur lors du chargement des réservations')
-    }
-  }, [session?.user?.id, propertyId])
-
-  const fetchUnavailabilities = useCallback(async () => {
-    try {
+  const unavailabilitiesQuery = useQuery({
+    queryKey: CACHE_TAGS.hostUnavailability(propertyId ?? undefined),
+    queryFn: async (): Promise<FormattedUnavailability[]> => {
       const params = propertyId ? `?productId=${propertyId}` : ''
       const response = await fetch(`/api/host/unavailability${params}`)
-      if (response.ok) {
-        const data = await response.json()
-        setUnavailabilities(data)
-      } else {
-        toast.error('Erreur lors du chargement des indisponibilités')
+      if (!response.ok) {
+        throw new Error('Erreur lors du chargement des indisponibilités')
       }
-    } catch (error) {
-      console.error('Erreur chargement indisponibilités:', error)
-      toast.error('Erreur lors du chargement des indisponibilités')
-    }
-  }, [propertyId])
+      return response.json()
+    },
+  })
 
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true)
-      await Promise.all([fetchReservations(), fetchUnavailabilities()])
-      setLoading(false)
-    }
-    loadData()
-  }, [fetchReservations, fetchUnavailabilities])
+  const userProductsQuery = useQuery({
+    queryKey: CACHE_TAGS.hostProductsList(),
+    queryFn: async (): Promise<Array<{ id: string; name: string }>> => {
+      const response = await fetch('/api/host/products')
+      if (!response.ok) return []
+      const data = await response.json()
+      return data.products || []
+    },
+    enabled: !!hostId,
+  })
 
-  // Fetch user products for dropdown
-  useEffect(() => {
-    const fetchUserProducts = async () => {
-      if (!session?.user?.id) return
+  const propertyNameQuery = useQuery({
+    queryKey: CACHE_TAGS.product(propertyId ?? ''),
+    queryFn: () => findProductBySlugOrId(propertyId!),
+    enabled: !!propertyId,
+    select: product => product?.name || '',
+  })
 
-      try {
-        const response = await fetch('/api/host/products')
-        if (response.ok) {
-          const data = await response.json()
-          setUserProducts(data.products || [])
-        }
-      } catch (error) {
-        console.error('Error fetching products:', error)
+  // Filtrer les réservations par propriété si spécifié
+  const reservations = propertyId
+    ? (reservationsQuery.data ?? []).filter(reservation => reservation.propertyId === propertyId)
+    : reservationsQuery.data ?? []
+  const unavailabilities = unavailabilitiesQuery.data ?? []
+  const userProducts = userProductsQuery.data ?? []
+  const propertyName = propertyNameQuery.data ?? ''
+  const loading = reservationsQuery.isLoading || unavailabilitiesQuery.isLoading
+
+  // Invalidate the unavailability list plus the guest-facing availability caches
+  // so a blocked date immediately hides the property from booking results.
+  const unavailabilityInvalidationKeys = (productId: string) => [
+    CACHE_TAGS.hostUnavailability(productId),
+    CACHE_TAGS.hostUnavailability(),
+    ['availability', productId] as const,
+    ['room-type-availability', productId] as const,
+  ]
+
+  // --- Mutations (React Query) ---
+  const createUnavailability = useMutationWithCache<void, UnavailabilityData>({
+    mutationFn: async data => {
+      const response = await fetch('/api/host/unavailability', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: data.productId,
+          startDate: data.startDate.toISOString(),
+          endDate: data.endDate.toISOString(),
+          title: data.title,
+          description: data.description || null,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la création')
       }
-    }
+    },
+    invalidateKeys: (_data, data) => unavailabilityInvalidationKeys(data.productId),
+    successMessage: 'Blocage créé avec succès',
+  })
 
-    fetchUserProducts()
-  }, [session?.user?.id])
-
-  // Fetch property name when propertyId changes
-  useEffect(() => {
-    const fetchPropertyName = async () => {
-      if (!propertyId) {
-        setPropertyName('')
-        return
+  const updateUnavailability = useMutationWithCache<void, UnavailabilityData>({
+    mutationFn: async data => {
+      if (!selectedUnavailability?.id) {
+        throw new Error('Aucun blocage sélectionné')
       }
 
-      try {
-        const response = await fetch(`/api/products/${propertyId}`)
-        if (response.ok) {
-          const product = await response.json()
-          setPropertyName(product.name || '')
-        }
-      } catch (error) {
-        console.error('Error fetching property name:', error)
-      }
-    }
+      const response = await fetch(`/api/host/unavailability/${selectedUnavailability.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          startDate: data.startDate.toISOString(),
+          endDate: data.endDate.toISOString(),
+          title: data.title,
+          description: data.description || null,
+        }),
+      })
 
-    fetchPropertyName()
-  }, [propertyId])
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la modification')
+      }
+    },
+    invalidateKeys: (_data, data) => unavailabilityInvalidationKeys(data.productId),
+    successMessage: 'Blocage modifié avec succès',
+  })
+
+  const deleteUnavailability = useMutationWithCache<void, string>({
+    mutationFn: async id => {
+      const response = await fetch(`/api/host/unavailability/${id}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la suppression')
+      }
+    },
+    invalidateKeys: () => {
+      const productId = selectedUnavailability?.productId
+      return productId ? unavailabilityInvalidationKeys(productId) : [CACHE_TAGS.hostUnavailability()]
+    },
+    successMessage: 'Blocage supprimé avec succès',
+    onSuccess: () => setModalOpen(false),
+  })
 
   const handleCreateUnavailability = async (data: UnavailabilityData) => {
-    const response = await fetch('/api/host/unavailability', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        productId: data.productId,
-        startDate: data.startDate.toISOString(),
-        endDate: data.endDate.toISOString(),
-        title: data.title,
-        description: data.description || null,
-      }),
-    })
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Erreur lors de la création')
-    }
-
-    toast.success('Blocage créé avec succès')
-    await fetchUnavailabilities()
+    await createUnavailability.mutateAsync(data)
   }
 
   const handleUpdateUnavailability = async (data: UnavailabilityData) => {
     if (!selectedUnavailability?.id) return
-
-    const response = await fetch(`/api/host/unavailability/${selectedUnavailability.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        startDate: data.startDate.toISOString(),
-        endDate: data.endDate.toISOString(),
-        title: data.title,
-        description: data.description || null,
-      }),
-    })
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Erreur lors de la modification')
-    }
-
-    toast.success('Blocage modifié avec succès')
-    await fetchUnavailabilities()
+    await updateUnavailability.mutateAsync(data)
   }
 
   const handleDeleteUnavailability = async (id: string) => {
-    const response = await fetch(`/api/host/unavailability/${id}`, {
-      method: 'DELETE',
-    })
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Erreur lors de la suppression')
-    }
-
-    toast.success('Blocage supprimé avec succès')
-    await fetchUnavailabilities()
-    setModalOpen(false)
+    await deleteUnavailability.mutateAsync(id)
   }
 
   const handleDayClick = (

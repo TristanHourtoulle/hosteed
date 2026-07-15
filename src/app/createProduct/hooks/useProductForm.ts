@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { FormData } from '../types'
 import { TypeRentInterface } from '@/lib/interface/typeRentInterface'
+import { createEmptyRoomType } from '../utils/roomTypeHelpers'
 
 const initialFormData: FormData = {
   name: '',
@@ -51,6 +52,7 @@ const initialFormData: FormData = {
   isHotel: false,
   hotelName: '',
   availableRooms: '',
+  roomTypes: [],
 }
 
 export const useProductForm = (types: TypeRentInterface[], initialData?: FormData) => {
@@ -73,6 +75,12 @@ export const useProductForm = (types: TypeRentInterface[], initialData?: FormDat
         // Réinitialiser les champs hôtel si ce n'est pas un hôtel
         hotelName: isHotelType ? prev.hotelName : '',
         availableRooms: isHotelType ? prev.availableRooms : '',
+        // Seed one empty room type when switching to a hotel with none defined yet.
+        roomTypes: isHotelType
+          ? prev.roomTypes.length > 0
+            ? prev.roomTypes
+            : [createEmptyRoomType()]
+          : [],
       }))
     } else {
       setFormData(prev => ({

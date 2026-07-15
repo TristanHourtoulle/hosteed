@@ -41,7 +41,18 @@ export async function GET(request: NextRequest) {
       return obj
     }
 
-    const serializedProducts = result.products.map(product => convertBigIntToNumber(product))
+    // Hotel multi-room-type (Lot 5): surface `isHotel` (derived from the product
+    // type) and a lean `roomTypes` list so the shared PromotionForm can let hosts
+    // scope a promotion to a single room type. Mirrors /api/admin/products.
+    const serializedProducts = result.products.map(product => {
+      const serialized = convertBigIntToNumber(product) as Record<string, unknown>
+      const type = serialized.type as { isHotelType?: boolean } | null | undefined
+      return {
+        ...serialized,
+        isHotel: type?.isHotelType ?? false,
+        roomTypes: serialized.roomTypes ?? [],
+      }
+    })
 
     const response = NextResponse.json({
       products: serializedProducts,
@@ -52,8 +63,10 @@ export async function GET(request: NextRequest) {
       hasPreviousPage: result.pagination.hasPrev,
     })
 
-    // Ajouter des headers de cache pour optimiser les performances
-    response.headers.set('Cache-Control', 'private, max-age=300, stale-while-revalidate=600') // 5min cache, 10min stale
+    // This list is per-host and changes on create/edit/delete, so it must never be
+    // served from a stale HTTP cache (a cached empty response hid freshly created
+    // listings from "Mes annonces" — TRI-1009).
+    response.headers.set('Cache-Control', 'private, no-store, max-age=0, must-revalidate')
 
     return response
   } catch (error) {

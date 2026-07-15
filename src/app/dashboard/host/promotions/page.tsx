@@ -1,6 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
+import { useMutationWithCache } from '@/hooks/useMutationWithCache'
 import { toast } from 'sonner'
 import { Plus, ShieldAlert, Filter } from 'lucide-react'
 import { Button } from '@/components/ui/shadcnui/button'
@@ -28,6 +31,9 @@ interface Product {
   id: string
   name: string
   basePrice: string
+  // Hotel multi-room-type (Lot 5): drives the room-type selector in PromotionForm.
+  isHotel?: boolean
+  roomTypes?: { id: string; name: string }[]
   owner?: {
     id: string
     name: string
@@ -46,13 +52,74 @@ interface User {
   lastname: string | null
 }
 
+interface PromotionInput {
+  productId: string
+  discountPercentage: number
+  startDate: string
+  endDate: string
+  roomTypeId: string | null
+}
+
+type CreatePromotionResult =
+  | { type: 'created' }
+  | { type: 'conflict'; overlapping: ProductPromotion[] }
+
+/** Convert the string dates returned by the API into `Date` objects. */
+const withPromotionDates = <T extends ProductPromotion>(promo: T): T => ({
+  ...promo,
+  startDate: new Date(promo.startDate),
+  endDate: new Date(promo.endDate),
+  createdAt: new Date(promo.createdAt),
+  updatedAt: new Date(promo.updatedAt),
+})
+
+async function fetchPromotions(): Promise<PromotionWithProduct[]> {
+  const res = await fetch('/api/promotions')
+  if (!res.ok) return []
+  const data = await res.json()
+  if (!Array.isArray(data)) return []
+  return data.map(withPromotionDates)
+}
+
+async function fetchHostProducts(): Promise<Product[]> {
+  const res = await fetch('/api/host/products')
+  if (!res.ok) return []
+  const data = await res.json()
+  // The API returns a paginated object with `products`, `currentPage`, etc.
+  const productsArray = data.products || data
+  if (!Array.isArray(productsArray)) return []
+  return productsArray.map(
+    (p: Product & { owner?: { id: string; name: string; email: string } }) => ({
+      id: p.id,
+      name: p.name,
+      basePrice: p.basePrice,
+      // Hotel multi-room-type (Lot 5): keep the metadata the PromotionForm
+      // needs to offer a room-type selector for hotel products.
+      isHotel: p.isHotel ?? false,
+      roomTypes: p.roomTypes ?? [],
+      owner: p.owner
+        ? { id: p.owner.id, name: p.owner.name, email: p.owner.email }
+        : undefined,
+    })
+  )
+}
+
+async function fetchPromotionUsers(): Promise<User[]> {
+  const res = await fetch('/api/users')
+  if (!res.ok) return []
+  const data = await res.json()
+  if (!Array.isArray(data)) return []
+  return data.map((u: { id: string; email: string; name?: string; lastname?: string }) => ({
+    id: u.id,
+    email: u.email,
+    name: u.name || null,
+    lastname: u.lastname || null,
+  }))
+}
+
 export default function HostPromotionsPage() {
   const { session } = useAuth({ required: true, redirectTo: '/auth' })
-  const [promotions, setPromotions] = useState<PromotionWithProduct[]>([])
-  const [products, setProducts] = useState<Product[]>([])
-  const [users, setUsers] = useState<User[]>([])
-  const [loading, setLoading] = useState(true)
-  const [submitting, setSubmitting] = useState(false)
+  const queryClient = useQueryClient()
   const [showForm, setShowForm] = useState(false)
   const [selectedOwnerId, setSelectedOwnerId] = useState<string>('all')
   const [cancelingPromotionId, setCancelingPromotionId] = useState<string | null>(null)
@@ -63,209 +130,161 @@ export default function HostPromotionsPage() {
 
   // Modal state
   const [showModal, setShowModal] = useState(false)
-  const [pendingPromotion, setPendingPromotion] = useState<{
-    productId: string
-    discountPercentage: number
-    startDate: string
-    endDate: string
-  } | null>(null)
+  const [pendingPromotion, setPendingPromotion] = useState<PromotionInput | null>(null)
   const [overlappingPromotions, setOverlappingPromotions] = useState<ProductPromotion[]>([])
 
-  useEffect(() => {
-    fetchData()
-  }, [])
+  // --- Server reads (React Query) ---
+  const promotionsQuery = useQuery({
+    queryKey: CACHE_TAGS.promotions(),
+    queryFn: fetchPromotions,
+  })
+  const productsQuery = useQuery({
+    queryKey: CACHE_TAGS.hostProductsList(),
+    queryFn: fetchHostProducts,
+  })
+  const usersQuery = useQuery({
+    queryKey: CACHE_TAGS.users,
+    queryFn: fetchPromotionUsers,
+    enabled: isAdminOrManager,
+  })
 
-  const fetchData = async (showLoadingState = true) => {
-    try {
-      if (showLoadingState) {
-        setLoading(true)
+  const promotions = promotionsQuery.data ?? []
+  const products = productsQuery.data ?? []
+  const users = usersQuery.data ?? []
+  const loading = promotionsQuery.isLoading || productsQuery.isLoading
+
+  // --- Mutations (React Query) ---
+  const createPromotion = useMutationWithCache<CreatePromotionResult, PromotionInput>({
+    mutationFn: async data => {
+      let res: Response
+      try {
+        res = await fetch('/api/promotions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        })
+      } catch {
+        throw new Error('Erreur lors de la création de la promotion')
       }
-
-      // Fetch promotions
-      const promosRes = await fetch('/api/promotions')
-      if (promosRes.ok) {
-        const data = await promosRes.json()
-        // Validation: s'assurer que data est un tableau
-        if (Array.isArray(data)) {
-          // Convertir les dates string en objets Date
-          const promotionsWithDates = data.map(promo => ({
-            ...promo,
-            startDate: new Date(promo.startDate),
-            endDate: new Date(promo.endDate),
-            createdAt: new Date(promo.createdAt),
-            updatedAt: new Date(promo.updatedAt),
-          }))
-          setPromotions(promotionsWithDates)
-        } else {
-          console.error('Invalid promotions data format:', data)
-          setPromotions([])
-          toast.error('Format de données invalide pour les promotions')
-        }
-      } else {
-        setPromotions([])
-      }
-
-      // Fetch products (avec owner pour filtrage admin)
-      const productsRes = await fetch('/api/host/products')
-      if (productsRes.ok) {
-        const data = await productsRes.json()
-        // L'API retourne un objet paginé avec products, currentPage, etc.
-        const productsArray = data.products || data
-
-        // Validation: s'assurer que productsArray est un tableau
-        if (Array.isArray(productsArray)) {
-          setProducts(
-            productsArray.map((p: Product & { owner?: { id: string; name: string; email: string } }) => ({
-              id: p.id,
-              name: p.name,
-              basePrice: p.basePrice,
-              owner: p.owner ? {
-                id: p.owner.id,
-                name: p.owner.name,
-                email: p.owner.email,
-              } : undefined,
-            }))
-          )
-        } else {
-          console.error('Invalid products data format:', data)
-          setProducts([])
-          toast.error('Format de données invalide pour les produits')
-        }
-      } else {
-        setProducts([])
-      }
-
-      // Fetch users (admin/host manager uniquement)
-      if (isAdminOrManager) {
-        try {
-          const usersRes = await fetch('/api/users')
-          if (usersRes.ok) {
-            const usersData = await usersRes.json()
-            if (Array.isArray(usersData)) {
-              setUsers(usersData.map((u: { id: string; email: string; name?: string; lastname?: string }) => ({
-                id: u.id,
-                email: u.email,
-                name: u.name || null,
-                lastname: u.lastname || null,
-              })))
-            }
-          }
-        } catch (error) {
-          console.error('Erreur lors du chargement des utilisateurs:', error)
-        }
-      }
-    } catch (error) {
-      console.error('Erreur lors du chargement:', error)
-      toast.error('Erreur lors du chargement des données')
-      setPromotions([])
-      setProducts([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleSubmit = async (data: {
-    productId: string
-    discountPercentage: number
-    startDate: string
-    endDate: string
-  }) => {
-    try {
-      setSubmitting(true)
-
-      const res = await fetch('/api/promotions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      })
-
-      const responseData = await res.json()
-
+      const responseData = await res.json().catch(() => ({}))
       if (res.status === 409) {
-        // Conflit détecté - afficher la modal
-        setPendingPromotion(data)
-        // Convertir les dates des promotions en conflit
-        const overlappingWithDates = responseData.overlappingPromotions.map((promo: ProductPromotion) => ({
-          ...promo,
-          startDate: new Date(promo.startDate),
-          endDate: new Date(promo.endDate),
-          createdAt: new Date(promo.createdAt),
-          updatedAt: new Date(promo.updatedAt),
-        }))
-        setOverlappingPromotions(overlappingWithDates)
+        const overlapping = (responseData.overlappingPromotions ?? []).map(withPromotionDates)
+        return { type: 'conflict', overlapping }
+      }
+      if (!res.ok) {
+        throw new Error(responseData.error || 'Erreur lors de la création')
+      }
+      return { type: 'created' }
+    },
+    invalidateKeys: (result, vars) =>
+      result.type === 'created'
+        ? [CACHE_TAGS.promotions(), CACHE_TAGS.product(vars.productId)]
+        : [],
+    onSuccess: (result, vars) => {
+      if (result.type === 'conflict') {
+        setPendingPromotion(vars)
+        setOverlappingPromotions(result.overlapping)
         setShowModal(true)
-      } else if (res.ok) {
-        await fetchData(false) // Recharger sans afficher le skeleton
+      } else {
         toast.success('Promotion créée avec succès !')
         setShowForm(false)
-      } else {
-        toast.error(responseData.error || 'Erreur lors de la création')
       }
-    } catch (error) {
-      console.error('Erreur lors de la soumission:', error)
-      toast.error('Erreur lors de la création de la promotion')
-    } finally {
-      setSubmitting(false)
-    }
-  }
+    },
+    onError: error => {
+      toast.error(
+        error instanceof Error ? error.message : 'Erreur lors de la création de la promotion'
+      )
+    },
+  })
 
-  const handleConfirmOverlap = async () => {
-    try {
-      setSubmitting(true)
-
-      const res = await fetch('/api/promotions/confirm-overlap', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          promotionData: pendingPromotion,
-          overlappingIds: overlappingPromotions.map(p => p.id),
-        }),
-      })
-
-      if (res.ok) {
-        await fetchData(false) // Recharger sans afficher le skeleton
-        toast.success('Promotion créée ! Les promotions précédentes ont été désactivées.')
-        setShowModal(false)
-        setShowForm(false)
-        setPendingPromotion(null)
-        setOverlappingPromotions([])
-      } else {
-        const data = await res.json()
-        toast.error(data.error || 'Erreur lors de la création')
+  const confirmOverlap = useMutationWithCache<true, void>({
+    mutationFn: async () => {
+      let res: Response
+      try {
+        res = await fetch('/api/promotions/confirm-overlap', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            promotionData: pendingPromotion,
+            overlappingIds: overlappingPromotions.map(p => p.id),
+          }),
+        })
+      } catch {
+        throw new Error('Erreur lors de la confirmation')
       }
-    } catch (error) {
-      console.error('Erreur:', error)
-      toast.error('Erreur lors de la confirmation')
-    } finally {
-      setSubmitting(false)
-    }
-  }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Erreur lors de la création')
+      }
+      return true
+    },
+    invalidateKeys: () =>
+      pendingPromotion
+        ? [CACHE_TAGS.promotions(), CACHE_TAGS.product(pendingPromotion.productId)]
+        : [CACHE_TAGS.promotions()],
+    onSuccess: () => {
+      toast.success('Promotion créée ! Les promotions précédentes ont été désactivées.')
+      setShowModal(false)
+      setShowForm(false)
+      setPendingPromotion(null)
+      setOverlappingPromotions([])
+    },
+    onError: error => {
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de la confirmation')
+    },
+  })
 
-  const handleCancelPromotion = async (promotionId: string) => {
-    try {
-      setCancelingPromotionId(promotionId)
-      const res = await fetch(`/api/promotions/${promotionId}`, {
-        method: 'DELETE',
-      })
-
-      if (res.ok) {
-        // Mise à jour optimiste de l'état local
-        setPromotions(prevPromotions =>
-          prevPromotions.map(promo =>
-            promo.id === promotionId ? { ...promo, isActive: false } : promo
-          )
+  const cancelPromotion = useMutationWithCache<
+    string,
+    string,
+    { previous?: PromotionWithProduct[] }
+  >({
+    mutationFn: async promotionId => {
+      let res: Response
+      try {
+        res = await fetch(`/api/promotions/${promotionId}`, { method: 'DELETE' })
+      } catch {
+        throw new Error("Erreur lors de l'annulation")
+      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || "Erreur lors de l'annulation")
+      }
+      return promotionId
+    },
+    optimistic: {
+      onMutate: promotionId => {
+        const previous = queryClient.getQueryData<PromotionWithProduct[]>(CACHE_TAGS.promotions())
+        queryClient.setQueryData<PromotionWithProduct[]>(CACHE_TAGS.promotions(), old =>
+          old ? old.map(p => (p.id === promotionId ? { ...p, isActive: false } : p)) : old
         )
-        toast.success('Promotion annulée')
-      } else {
-        const data = await res.json()
-        toast.error(data.error || "Erreur lors de l'annulation")
-      }
-    } catch (error) {
-      console.error('Erreur:', error)
-      toast.error("Erreur lors de l'annulation")
-    } finally {
+        return { previous }
+      },
+      rollback: context => {
+        if (context?.previous) {
+          queryClient.setQueryData(CACHE_TAGS.promotions(), context.previous)
+        }
+      },
+    },
+    invalidateKeys: promotionId => {
+      const productId = promotions.find(p => p.id === promotionId)?.product?.id
+      return productId
+        ? [CACHE_TAGS.promotions(), CACHE_TAGS.product(productId)]
+        : [CACHE_TAGS.promotions()]
+    },
+    successMessage: 'Promotion annulée',
+    onSuccess: () => setCancelingPromotionId(null),
+    onError: error => {
       setCancelingPromotionId(null)
-    }
+      toast.error(error instanceof Error ? error.message : "Erreur lors de l'annulation")
+    },
+  })
+
+  const submitting = createPromotion.isPending || confirmOverlap.isPending
+
+  const handleCancelPromotion = (promotionId: string) => {
+    setCancelingPromotionId(promotionId)
+    cancelPromotion.mutate(promotionId)
   }
 
   if (loading) {
@@ -373,7 +392,9 @@ export default function HostPromotionsPage() {
           <h2 className='text-lg sm:text-xl font-semibold mb-4'>Créer une nouvelle promotion</h2>
           <PromotionForm
             products={products}
-            onSubmit={handleSubmit}
+            onSubmit={async data => {
+              await createPromotion.mutateAsync(data).catch(() => {})
+            }}
             loading={submitting}
             isAdminOrManager={isAdminOrManager}
             currentUserId={session?.user?.id || ''}
@@ -462,7 +483,7 @@ export default function HostPromotionsPage() {
           setPendingPromotion(null)
           setOverlappingPromotions([])
         }}
-        onConfirm={handleConfirmOverlap}
+        onConfirm={() => confirmOverlap.mutate()}
         overlappingPromotions={overlappingPromotions}
         newPromotion={pendingPromotion || { discountPercentage: 0, startDate: '', endDate: '' }}
         loading={submitting}

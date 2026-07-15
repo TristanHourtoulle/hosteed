@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { findAllTypeRent } from '@/lib/services/typeRent.service'
+import { findAllTypeRentForForm } from '@/lib/services/typeRent.service'
 import { findAllEquipments } from '@/lib/services/equipments.service'
 import { findAllMeals } from '@/lib/services/meals.service'
 import { findAllServices } from '@/lib/services/services.service'
@@ -85,7 +85,7 @@ export const useProductData = () => {
           highlightsData,
           usersData,
         ] = await Promise.all([
-          findAllTypeRent(),
+          findAllTypeRentForForm(),
           findAllEquipments(),
           findAllMeals(),
           findAllSecurity(),

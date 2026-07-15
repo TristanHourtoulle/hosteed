@@ -71,6 +71,7 @@ export const useProductLoader = (productId?: string) => {
       isHotel: false,
       hotelName: '',
       availableRooms: '',
+      roomTypes: [],
     },
     images: [],
     specialPrices: [],
@@ -153,6 +154,7 @@ export const useProductLoader = (productId?: string) => {
           isHotel: !!product.hotel,
           hotelName: product.hotel?.name || '',
           availableRooms: product.availableRooms?.toString() || '',
+          roomTypes: [],
         }
 
         // Transform images to ImageFile format

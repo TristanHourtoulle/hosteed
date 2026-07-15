@@ -7,11 +7,43 @@ import { findAllUserByRoles } from '@/lib/services/user.service'
 import { availabilityCacheService } from '@/lib/cache/redis-cache.service'
 import { invalidateProductCache } from '@/lib/cache/invalidation'
 import { BookingConflictError, BookingValidationError } from '@/lib/errors/booking.errors'
-import { checkRentIsAvailable } from './rent-availability.service'
+import {
+  checkRentIsAvailable,
+  assertRoomTypesAvailableInTx,
+  type RequestedRoomTypeLine,
+} from './rent-availability.service'
 import { buildOverlapWhereClause, normalizeDates } from './rent-overlap.utils'
-import { calculateCompleteBookingPrice } from './booking-pricing.service'
+import {
+  calculateCompleteBookingPrice,
+  calculateHotelBookingPrice,
+} from './booking-pricing.service'
 import { logger } from '@/lib/logger'
 
+/** Normalized pricing fields written onto a `Rent`, shared by both booking modes. */
+interface RentPricingFields {
+  basePricePerNight: number
+  numberOfNights: number
+  subtotal: number
+  totalSavings: number
+  promotionApplied: boolean
+  specialPriceApplied: boolean
+  extrasTotal: number
+  clientCommission: number
+  hostCommission: number
+  platformAmount: number
+  hostAmount: number
+  totalAmount: number
+  extrasDetails: Array<{
+    extraId: string
+    name: string
+    quantity: number
+    pricePerUnit: number
+    total: number
+  }>
+  /** Per-type unit prices (basePrice snapshots) for `RentRoomType` rows. */
+  roomLineUnitPrices?: Record<string, string>
+  pricingSnapshot: Prisma.InputJsonValue
+}
 
 export interface FormattedRent {
   id: string
@@ -177,6 +209,37 @@ export async function findAllRentByProduct(id: string): Promise<RentWithDates | 
 }
 
 /**
+ * Run a booking transaction with a bounded serialization-abort retry (TRI-125).
+ *
+ * Under `Serializable`, concurrent conflicting transactions abort with Prisma
+ * `P2034` (write conflict / deadlock). Without a retry, legitimate bookings are
+ * lost. This retries ONLY on `P2034` (bounded, jittered backoff) and re-throws
+ * every other error — notably {@link BookingConflictError} — immediately, so a
+ * genuine overbooking conflict is never retried.
+ *
+ * @template T
+ * @param {() => Promise<T>} fn - Thunk that opens the `$transaction`
+ * @returns {Promise<T>} The transaction result
+ */
+async function runBookingTransaction<T>(fn: () => Promise<T>): Promise<T> {
+  const MAX_ATTEMPTS = 3
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fn()
+    } catch (error) {
+      const isSerializationAbort =
+        error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034'
+      if (isSerializationAbort && attempt < MAX_ATTEMPTS) {
+        const backoffMs = 15 * attempt + Math.random() * 15
+        await new Promise(resolve => setTimeout(resolve, backoffMs))
+        continue
+      }
+      throw error
+    }
+  }
+}
+
+/**
  * Create a new rent with atomic availability check using a Prisma serializable transaction.
  * Prevents race condition double bookings by re-checking availability inside the transaction.
  *
@@ -205,6 +268,12 @@ export async function createRent(params: {
   stripeId: string
   prices: number
   selectedExtras?: Array<{ extraId: string; quantity: number }>
+  /**
+   * Hotel multi-room-type selection (Lot 3/4). When present and non-empty the
+   * booking is guarded per room type; when absent the legacy single-unit /
+   * count-based establishment guard is used (behavior unchanged).
+   */
+  selectedRoomTypes?: RequestedRoomTypeLine[]
 }): Promise<RentWithRelations> {
   if (
     !params.productId ||
@@ -249,130 +318,238 @@ export async function createRent(params: {
 
   const shouldAutoAccept = productSettings?.autoAccept || false
 
-  // Calculate complete pricing
-  const pricingDetails = await calculateCompleteBookingPrice(
-    params.productId,
-    params.arrivingDate,
-    params.leavingDate,
-    params.peopleNumber,
-    params.selectedExtras || [],
-    productSettings?.ownerId
-  )
+  const isHotelBooking =
+    Array.isArray(params.selectedRoomTypes) && params.selectedRoomTypes.length > 0
 
-  // Atomic check-then-create: prevents race condition double bookings
-  const createdRent = await prisma.$transaction(async (tx) => {
-    // Re-check availability inside transaction (definitive check with row-level isolation)
-    const { normalizedArrival, normalizedLeaving, dayAfterArrival } = normalizeDates(
-      params.arrivingDate,
-      params.leavingDate
-    )
-
-    const productInfo = await tx.product.findUnique({
-      where: { id: params.productId },
-      select: { availableRooms: true },
-    })
-
-    const overlapWhere = buildOverlapWhereClause(
+  // Calculate complete pricing (server-side authority). Hotel bookings price
+  // each selected room type; single-unit bookings keep the legacy path.
+  const now = new Date().toISOString()
+  let pricingFields: RentPricingFields
+  if (isHotelBooking) {
+    const hotelPricing = await calculateHotelBookingPrice(
       params.productId,
-      normalizedArrival,
-      normalizedLeaving,
-      dayAfterArrival
+      params.selectedRoomTypes!,
+      params.arrivingDate,
+      params.leavingDate,
+      params.peopleNumber,
+      params.selectedExtras || [],
+      productSettings?.ownerId
     )
-
-    if (productInfo?.availableRooms && productInfo.availableRooms > 1) {
-      const conflictCount = await tx.rent.count({ where: overlapWhere })
-      if (conflictCount >= productInfo.availableRooms) {
-        throw new BookingConflictError('Aucune chambre disponible pour cette période')
-      }
-    } else {
-      const conflict = await tx.rent.findFirst({ where: overlapWhere })
-      if (conflict) {
-        throw new BookingConflictError('Il existe déjà une réservation sur cette période')
-      }
+    const nights = hotelPricing.summary.numberOfNights
+    pricingFields = {
+      basePricePerNight: nights > 0 ? hotelPricing.subtotal / nights : hotelPricing.subtotal,
+      numberOfNights: nights,
+      subtotal: hotelPricing.subtotal,
+      totalSavings: hotelPricing.totalSavings,
+      promotionApplied: hotelPricing.summary.promotionApplied,
+      specialPriceApplied: hotelPricing.summary.specialPriceApplied,
+      extrasTotal: hotelPricing.extrasTotal,
+      clientCommission: hotelPricing.clientCommission,
+      hostCommission: hotelPricing.hostCommission,
+      platformAmount: hotelPricing.platformAmount,
+      hostAmount: hotelPricing.hostAmount,
+      totalAmount: hotelPricing.totalAmount,
+      extrasDetails: hotelPricing.extrasDetails,
+      roomLineUnitPrices: Object.fromEntries(
+        hotelPricing.lines.map(l => [l.roomTypeId, l.unitPrice])
+      ),
+      pricingSnapshot: JSON.parse(
+        JSON.stringify({
+          roomTypeLines: hotelPricing.lines.map(l => ({
+            roomTypeId: l.roomTypeId,
+            quantity: l.quantity,
+            unitPrice: l.unitPrice,
+            lineSubtotal: l.lineSubtotal,
+          })),
+          extrasDetails: hotelPricing.extrasDetails,
+          summary: hotelPricing.summary,
+          calculatedAt: now,
+        })
+      ),
     }
-
-    // Create rent inside the transaction
-    const rent = await tx.rent.create({
-      data: {
-        productId: params.productId,
-        userId: params.userId,
-        arrivingDate: params.arrivingDate,
-        leavingDate: params.leavingDate,
-        numberPeople: BigInt(params.peopleNumber),
-        notes: BigInt(0),
-        accepted: shouldAutoAccept,
-        confirmed: shouldAutoAccept,
-        prices: BigInt(params.prices),
-        stripeId: params.stripeId || null,
-        options: {
-          connect: params.options.map(optionId => ({ id: optionId })),
-        },
-        basePricePerNight: pricingDetails.basePricing.averageNightlyPrice,
-        numberOfNights: pricingDetails.basePricing.numberOfNights,
-        subtotal: pricingDetails.basePricing.subtotal,
-        discountAmount: pricingDetails.basePricing.totalSavings,
-        promotionApplied: pricingDetails.basePricing.promotionApplied,
-        specialPriceApplied: pricingDetails.basePricing.specialPriceApplied,
-        totalSavings: pricingDetails.basePricing.totalSavings,
-        extrasTotal: pricingDetails.extrasTotal,
-        clientCommission: pricingDetails.clientCommission,
-        hostCommission: pricingDetails.hostCommission,
-        platformAmount: pricingDetails.platformAmount,
-        hostAmount: pricingDetails.hostAmount,
-        totalAmount: pricingDetails.totalAmount,
-        pricingSnapshot: JSON.parse(JSON.stringify({
+  } else {
+    const pricingDetails = await calculateCompleteBookingPrice(
+      params.productId,
+      params.arrivingDate,
+      params.leavingDate,
+      params.peopleNumber,
+      params.selectedExtras || [],
+      productSettings?.ownerId
+    )
+    pricingFields = {
+      basePricePerNight: pricingDetails.basePricing.averageNightlyPrice,
+      numberOfNights: pricingDetails.basePricing.numberOfNights,
+      subtotal: pricingDetails.basePricing.subtotal,
+      totalSavings: pricingDetails.basePricing.totalSavings,
+      promotionApplied: pricingDetails.basePricing.promotionApplied,
+      specialPriceApplied: pricingDetails.basePricing.specialPriceApplied,
+      extrasTotal: pricingDetails.extrasTotal,
+      clientCommission: pricingDetails.clientCommission,
+      hostCommission: pricingDetails.hostCommission,
+      platformAmount: pricingDetails.platformAmount,
+      hostAmount: pricingDetails.hostAmount,
+      totalAmount: pricingDetails.totalAmount,
+      extrasDetails: pricingDetails.extrasDetails,
+      pricingSnapshot: JSON.parse(
+        JSON.stringify({
           dailyBreakdown: pricingDetails.basePricing.dailyBreakdown,
           extrasDetails: pricingDetails.extrasDetails,
           summary: pricingDetails.summary,
-          calculatedAt: new Date().toISOString(),
-        })),
-      },
-      include: {
-        product: {
+          calculatedAt: now,
+        })
+      ),
+    }
+  }
+
+  // Atomic check-then-create: prevents race condition double bookings.
+  // Wrapped in a P2034-only serialization-abort retry (TRI-125).
+  const createdRent = await runBookingTransaction(() =>
+    prisma.$transaction(
+      async tx => {
+        // Re-check availability inside transaction (definitive check with row-level isolation)
+        const { normalizedArrival, normalizedLeaving, dayAfterArrival } = normalizeDates(
+          params.arrivingDate,
+          params.leavingDate
+        )
+
+        if (isHotelBooking) {
+          // Per-type race-safe guard: counts RentRoomType.quantity per room type
+          // inside the Serializable transaction (overbooking-critical, TRI-125).
+          // The RentRoomType lines are created below, inside this same `tx`, so
+          // their quantities accumulate for concurrent bookings' guards.
+          await assertRoomTypesAvailableInTx(
+            tx,
+            params.selectedRoomTypes!,
+            params.arrivingDate,
+            params.leavingDate
+          )
+        } else {
+          // Legacy establishment-level guard — unchanged behavior.
+          const productInfo = await tx.product.findUnique({
+            where: { id: params.productId },
+            select: { availableRooms: true },
+          })
+
+          const overlapWhere = buildOverlapWhereClause(
+            params.productId,
+            normalizedArrival,
+            normalizedLeaving,
+            dayAfterArrival
+          )
+
+          if (productInfo?.availableRooms && productInfo.availableRooms > 1) {
+            const conflictCount = await tx.rent.count({ where: overlapWhere })
+            if (conflictCount >= productInfo.availableRooms) {
+              throw new BookingConflictError('Aucune chambre disponible pour cette période')
+            }
+          } else {
+            const conflict = await tx.rent.findFirst({ where: overlapWhere })
+            if (conflict) {
+              throw new BookingConflictError('Il existe déjà une réservation sur cette période')
+            }
+          }
+        }
+
+        // Create rent inside the transaction
+        const rent = await tx.rent.create({
+          data: {
+            productId: params.productId,
+            userId: params.userId,
+            arrivingDate: params.arrivingDate,
+            leavingDate: params.leavingDate,
+            numberPeople: BigInt(params.peopleNumber),
+            notes: BigInt(0),
+            accepted: shouldAutoAccept,
+            confirmed: shouldAutoAccept,
+            prices: BigInt(params.prices),
+            stripeId: params.stripeId || null,
+            options: {
+              connect: params.options.map(optionId => ({ id: optionId })),
+            },
+            basePricePerNight: pricingFields.basePricePerNight,
+            numberOfNights: pricingFields.numberOfNights,
+            subtotal: pricingFields.subtotal,
+            discountAmount: pricingFields.totalSavings,
+            promotionApplied: pricingFields.promotionApplied,
+            specialPriceApplied: pricingFields.specialPriceApplied,
+            totalSavings: pricingFields.totalSavings,
+            extrasTotal: pricingFields.extrasTotal,
+            clientCommission: pricingFields.clientCommission,
+            hostCommission: pricingFields.hostCommission,
+            platformAmount: pricingFields.platformAmount,
+            hostAmount: pricingFields.hostAmount,
+            totalAmount: pricingFields.totalAmount,
+            pricingSnapshot: pricingFields.pricingSnapshot,
+          },
           include: {
-            img: true,
-            type: true,
-            owner: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
+            product: {
+              include: {
+                img: true,
+                type: true,
+                owner: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                  },
+                },
               },
             },
+            user: true,
+            options: true,
+            extras: true,
           },
-        },
-        user: true,
-        options: true,
-        extras: true,
-      },
-    })
+        })
 
-    // Create RentExtra entries inside the same transaction
-    if (params.selectedExtras && params.selectedExtras.length > 0) {
-      for (const extra of params.selectedExtras) {
-        const extraDetail = pricingDetails.extrasDetails.find(e => e.extraId === extra.extraId)
-        if (extraDetail) {
-          await tx.rentExtra.create({
-            data: {
+        // Persist RentRoomType lines inside the SAME transaction so overlapping
+        // quantities accumulate for concurrent per-type availability guards.
+        // `unitPrice` snapshots `HotelBookingPriceResult.lines[].unitPrice`
+        // (the RoomType.basePrice at booking time).
+        if (isHotelBooking) {
+          const unitPriceById = pricingFields.roomLineUnitPrices ?? {}
+
+          await tx.rentRoomType.createMany({
+            data: params.selectedRoomTypes!.map(line => ({
               rentId: rent.id,
-              extraId: extra.extraId,
-              quantity: extra.quantity,
-              totalPrice: extraDetail.total,
-            },
+              roomTypeId: line.roomTypeId,
+              quantity: line.quantity,
+              unitPrice: unitPriceById[line.roomTypeId] ?? '0',
+            })),
           })
         }
-      }
-    }
 
-    return rent
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
+        // Create RentExtra entries inside the same transaction
+        if (params.selectedExtras && params.selectedExtras.length > 0) {
+          for (const extra of params.selectedExtras) {
+            const extraDetail = pricingFields.extrasDetails.find(e => e.extraId === extra.extraId)
+            if (extraDetail) {
+              await tx.rentExtra.create({
+                data: {
+                  rentId: rent.id,
+                  extraId: extra.extraId,
+                  quantity: extra.quantity,
+                  totalPrice: extraDetail.total,
+                },
+              })
+            }
+          }
+        }
+
+        return rent
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    )
+  )
 
   // Invalidate availability cache after booking creation
   try {
     await availabilityCacheService.invalidateAvailability(params.productId)
     await invalidateProductCache(params.productId)
   } catch (cacheError) {
-    logger.warn({ productId: params.productId, error: cacheError }, 'Failed to invalidate cache after booking creation')
+    logger.warn(
+      { productId: params.productId, error: cacheError },
+      'Failed to invalidate cache after booking creation'
+    )
   }
 
   // Send notifications (non-blocking)
@@ -390,7 +567,10 @@ export async function createRent(params: {
     },
   })
   if (!request) {
-    logger.error({ rentId: createdRent.id }, 'Product not found for notification after rent creation')
+    logger.error(
+      { rentId: createdRent.id },
+      'Product not found for notification after rent creation'
+    )
     return createdRent
   }
 
@@ -416,59 +596,82 @@ export async function createRent(params: {
     return createdRent
   }
 
-  await sendTemplatedMail(createdRent.product.owner.email, 'Nouvelle réservation !', 'new-book.html', {
-    bookId: createdRent.id,
-    name: createdRent.product.owner.name || '',
-    bookUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
-  })
-
-  if (product.autoAccept) {
+  // Post-commit notifications are non-fatal: the Rent + RentRoomType rows are
+  // already persisted, so an email provider failure (Brevo 401/timeout/5xx) MUST
+  // NOT reject `createRent` — that would report a successful booking as failed to
+  // the webhook/caller and risk a retry → double booking/charge (TRI-1022).
+  try {
     await sendTemplatedMail(
-      createdRent.user.email,
-      'Réservation en confirmé 🏨',
-      'confirmation-reservation.html',
+      createdRent.product.owner.email,
+      'Nouvelle réservation !',
+      'new-book.html',
       {
-        name: createdRent.user.name || '',
-        listing_title: createdRent.product.name,
-        listing_adress: createdRent.product.address,
-        check_in: createdRent.product.arriving,
-        check_out: createdRent.product.leaving,
-        categories: createdRent.product.type.name,
-        phone_number: createdRent.product.phone,
-        arriving_date: createdRent.arrivingDate.toDateString(),
-        leaving_date: createdRent.leavingDate.toDateString(),
-        reservationUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
-        complete_address: createdRent.product.completeAddress || '',
-        proximity_landmarks:
-          createdRent.product.proximityLandmarks &&
-          createdRent.product.proximityLandmarks.length > 0
-            ? createdRent.product.proximityLandmarks.join(', ')
-            : '',
+        bookId: createdRent.id,
+        name: createdRent.product.owner.name || '',
+        bookUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
       }
     )
-  } else {
-    await sendTemplatedMail(
-      createdRent.user.email,
-      'Réservation en attente 🏨',
-      'waiting-approve.html',
-      {
-        name: createdRent.user.name || '',
-        listing_title: createdRent.product.name,
-        listing_adress: createdRent.product.address,
-        check_in: createdRent.product.arriving,
-        check_out: createdRent.product.leaving,
-        categories: createdRent.product.type.name,
-        phone_number: createdRent.product.phone,
-        arriving_date: createdRent.arrivingDate.toDateString(),
-        leaving_date: createdRent.leavingDate.toDateString(),
-        reservationUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
-        complete_address: createdRent.product.completeAddress || '',
-        proximity_landmarks:
-          createdRent.product.proximityLandmarks &&
-          createdRent.product.proximityLandmarks.length > 0
-            ? createdRent.product.proximityLandmarks.join(', ')
-            : '',
-      }
+  } catch (error) {
+    logger.warn(
+      { rentId: createdRent.id, error },
+      'Owner notification email failed to send after booking creation'
+    )
+  }
+
+  try {
+    if (product.autoAccept) {
+      await sendTemplatedMail(
+        createdRent.user.email,
+        'Réservation en confirmé 🏨',
+        'confirmation-reservation.html',
+        {
+          name: createdRent.user.name || '',
+          listing_title: createdRent.product.name,
+          listing_adress: createdRent.product.address,
+          check_in: createdRent.product.arriving,
+          check_out: createdRent.product.leaving,
+          categories: createdRent.product.type.name,
+          phone_number: createdRent.product.phone,
+          arriving_date: createdRent.arrivingDate.toDateString(),
+          leaving_date: createdRent.leavingDate.toDateString(),
+          reservationUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
+          complete_address: createdRent.product.completeAddress || '',
+          proximity_landmarks:
+            createdRent.product.proximityLandmarks &&
+            createdRent.product.proximityLandmarks.length > 0
+              ? createdRent.product.proximityLandmarks.join(', ')
+              : '',
+        }
+      )
+    } else {
+      await sendTemplatedMail(
+        createdRent.user.email,
+        'Réservation en attente 🏨',
+        'waiting-approve.html',
+        {
+          name: createdRent.user.name || '',
+          listing_title: createdRent.product.name,
+          listing_adress: createdRent.product.address,
+          check_in: createdRent.product.arriving,
+          check_out: createdRent.product.leaving,
+          categories: createdRent.product.type.name,
+          phone_number: createdRent.product.phone,
+          arriving_date: createdRent.arrivingDate.toDateString(),
+          leaving_date: createdRent.leavingDate.toDateString(),
+          reservationUrl: process.env.NEXTAUTH_URL + '/reservation/' + createdRent.id,
+          complete_address: createdRent.product.completeAddress || '',
+          proximity_landmarks:
+            createdRent.product.proximityLandmarks &&
+            createdRent.product.proximityLandmarks.length > 0
+              ? createdRent.product.proximityLandmarks.join(', ')
+              : '',
+        }
+      )
+    }
+  } catch (error) {
+    logger.warn(
+      { rentId: createdRent.id, error },
+      'Guest notification email failed to send after booking creation'
     )
   }
 

@@ -9,6 +9,7 @@ import { CreateProductInput } from '@/lib/interface/userInterface'
 import { invalidateProductCache } from '@/lib/cache/invalidation'
 import { create as createHotel, findHotelByManagerId } from '@/lib/services/hotel.service'
 import { createSpecialPrices } from '@/lib/services/specialPrices.service'
+import { syncRoomTypes, type CreateRoomTypeInput } from '@/lib/services/room-type.service'
 
 // Interface pour les données SEO
 export interface SEOData {
@@ -388,6 +389,12 @@ export async function findProductBySlugOrId(slugOrId: string) {
     extras: { take: 15 },
     highlights: { take: 10 },
     hotel: true,
+    // Per-type inventory for the guest hotel booking flow (Lot 4). Empty for
+    // non-hotel products, so this is a no-op for the classic single-unit path.
+    roomTypes: {
+      orderBy: { position: 'asc' as const },
+      include: { beds: true },
+    },
     rules: true,
     nearbyPlaces: { take: 10 },
     transportOptions: { take: 10 },
@@ -719,7 +726,13 @@ export async function findAllProductByHostIdPaginated(
         select: { id: true, img: true },
       },
       type: {
-        select: { name: true, id: true },
+        select: { name: true, id: true, isHotelType: true },
+      },
+      // Hotel multi-room-type (Lot 5): expose types (id + name only) so hosts can
+      // scope a promotion to a single room type. Empty for non-hotel products.
+      roomTypes: {
+        select: { id: true, name: true },
+        orderBy: { position: 'asc' as const },
       },
       owner: {
         select: {
@@ -750,7 +763,13 @@ export async function findAllProductByHostIdPaginated(
         select: { id: true, img: true },
       },
       type: {
-        select: { name: true, id: true },
+        select: { name: true, id: true, isHotelType: true },
+      },
+      // Hotel multi-room-type (Lot 5): expose types (id + name only) so hosts can
+      // scope a promotion to a single room type. Empty for non-hotel products.
+      roomTypes: {
+        select: { id: true, name: true },
+        orderBy: { position: 'asc' as const },
       },
       owner: {
         select: {
@@ -1218,6 +1237,14 @@ export async function createProduct(data: CreateProductInput) {
         console.error("Erreur lors de la gestion de l'hôtel:", hotelError)
         // Ne pas faire échouer la création du produit pour un problème d'hôtel
       }
+    }
+
+    // Hotel multi-room-type (Lot 1): create the establishment's room types.
+    if (data.roomTypes && data.roomTypes.length > 0) {
+      const roomTypes: CreateRoomTypeInput[] = data.roomTypes
+      await prisma.$transaction(async tx => {
+        await syncRoomTypes(tx, createdProduct.id, roomTypes)
+      })
     }
 
     // Récupérer le produit avec toutes ses relations
@@ -2104,6 +2131,8 @@ interface UpdateProductInput {
   }
   isHotel?: boolean
   hotelInfo?: { name: string; availableRooms: number }
+  // Hotel multi-room-type (Lot 1): full room-type list to reconcile
+  roomTypes?: CreateRoomTypeInput[]
   // SEO data
   seoData?: {
     metaTitle?: string
@@ -2399,6 +2428,14 @@ export async function updateProduct(productId: string, data: UpdateProductInput)
         hotel: true,
       },
     })
+
+    // Hotel multi-room-type (Lot 1): reconcile the establishment's room types.
+    if (data.roomTypes !== undefined) {
+      const roomTypes: CreateRoomTypeInput[] = data.roomTypes
+      await prisma.$transaction(async tx => {
+        await syncRoomTypes(tx, productId, roomTypes)
+      })
+    }
 
     // Invalidate cache
     await invalidateProductCache()

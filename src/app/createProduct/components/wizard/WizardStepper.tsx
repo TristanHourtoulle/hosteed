@@ -7,13 +7,14 @@ import { STEP_LABELS } from '../../schemas/productFormSchema'
 interface WizardStepperProps {
   currentStep: number
   stepValidation: boolean[]
+  labels?: readonly string[]
 }
 
-export function WizardStepper({ currentStep, stepValidation }: WizardStepperProps) {
+export function WizardStepper({ currentStep, stepValidation, labels = STEP_LABELS }: WizardStepperProps) {
   return (
     <div className="w-full">
       <div className="flex items-center justify-between">
-        {STEP_LABELS.map((label, index) => {
+        {labels.map((label, index) => {
           const isCompleted = stepValidation[index] && index < currentStep
           const isCurrent = index === currentStep
           const isPast = index < currentStep

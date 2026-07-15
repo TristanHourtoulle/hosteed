@@ -26,7 +26,10 @@ import CancellationPolicy from './components/CancellationPolicy'
 import PropertyReviews from './components/PropertyReviews'
 import HostInformation from './components/HostInformation'
 import BookingCard from './components/BookingCard'
+import HotelBookingCard from './components/HotelBookingCard'
+import { RoomTypesSection } from './components/RoomTypesSection'
 import AdminPromoteButton from './components/AdminPromoteButton'
+import type { RoomTypeView } from '@/types/roomType'
 
 interface Reviews {
   id: string
@@ -132,6 +135,8 @@ interface Product {
     id: string
     name: string
   }[]
+  type?: { id: string; name: string; isHotelType?: boolean }
+  roomTypes?: RoomTypeView[]
 }
 
 export default function ProductDetails() {
@@ -284,6 +289,8 @@ export default function ProductDetails() {
     )
   }
 
+  const isHotel = Boolean(product.type?.isHotelType && product.roomTypes && product.roomTypes.length > 0)
+
   return (
     <div className='min-h-screen bg-white'>
       <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'>
@@ -366,6 +373,15 @@ export default function ProductDetails() {
           <div className='lg:col-span-2 space-y-10'>
             <PropertyOverview product={product} />
 
+            {isHotel && product.roomTypes && (
+              <RoomTypesSection
+                roomTypes={product.roomTypes}
+                selection={{}}
+                onSelectionChange={() => {}}
+                readOnly
+              />
+            )}
+
             <PropertyHighlights
               product={{ certified: product.certified, autoAccept: product.autoAccept }}
             />
@@ -421,14 +437,23 @@ export default function ProductDetails() {
           </div>
 
           <div className='lg:col-span-1'>
-            <BookingCard
-              product={product}
-              globalGrade={globalGrade}
-              formData={formData}
-              handleDateChange={handleDateChange}
-              isAvailable={isAvailable}
-              today={today}
-            />
+            {isHotel && product.roomTypes ? (
+              <HotelBookingCard
+                product={product}
+                roomTypes={product.roomTypes}
+                globalGrade={globalGrade}
+                today={today}
+              />
+            ) : (
+              <BookingCard
+                product={product}
+                globalGrade={globalGrade}
+                formData={formData}
+                handleDateChange={handleDateChange}
+                isAvailable={isAvailable}
+                today={today}
+              />
+            )}
           </div>
         </div>
       </div>

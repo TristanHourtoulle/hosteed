@@ -27,6 +27,11 @@ export const createCheckoutSessionSchema = z.object({
     phone: z.string(),
     specialRequests: z.string(),
     selectedExtras: z.string(),
+    /**
+     * Hotel multi-room-type selection, JSON-encoded `[{roomTypeId,quantity}]`.
+     * Absent for classic single-unit bookings (byte-for-byte unchanged path).
+     */
+    roomTypeLines: z.string().optional(),
   }),
 })
 

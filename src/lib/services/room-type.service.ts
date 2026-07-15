@@ -1,0 +1,178 @@
+import { BedType, DayEnum, Prisma } from '@prisma/client'
+
+/**
+ * Room-type service (hotel multi-room-type — Lot 1 / TRI-994).
+ *
+ * Owns the transactional synchronisation of a Product's room types and their
+ * nested beds / special prices / per-type catalog links. Consumed by
+ * `product.service.ts` (create/update) and, in later lots, by the host wizard
+ * and admin editor.
+ */
+
+export interface CreateRoomTypeBedInput {
+  bedType: BedType
+  count: number
+}
+
+export interface CreateRoomTypeSpecialPriceInput {
+  pricesMga: string
+  pricesEuro: string
+  day: DayEnum[]
+  startDate: Date | null
+  endDate: Date | null
+  activate: boolean
+}
+
+/**
+ * Input shape for creating or updating a single room type.
+ * `id` is present only when editing an existing room type; absent → create.
+ */
+export interface CreateRoomTypeInput {
+  id?: string
+  name: string
+  quantity: number
+  capacity: number
+  surface?: number | null
+  smoking?: boolean
+  basePrice: string
+  priceMGA: string
+  position?: number
+  beds?: CreateRoomTypeBedInput[]
+  specialPrices?: CreateRoomTypeSpecialPriceInput[]
+  mealIds?: string[]
+  includedServiceIds?: string[]
+  serviceIds?: string[]
+  extraIds?: string[]
+}
+
+type ExistingRoomType = {
+  id: string
+  name: string
+  _count: { rentLines: number }
+}
+
+/**
+ * Thrown when a room type slated for deletion still has booking history
+ * (`RentRoomType` uses `onDelete: Restrict`). Carries the human-readable room
+ * type names so callers (admin edit PUT) can surface a clear soft-block message
+ * instead of crashing. The message keeps the word "booking" for stable matching.
+ */
+export class RoomTypeDeletionBlockedError extends Error {
+  readonly roomTypeNames: string[]
+
+  constructor(roomTypeNames: string[]) {
+    const list = roomTypeNames.join(', ')
+    super(
+      `Cannot delete room type(s) with existing bookings (RentRoomType): ${list}`
+    )
+    this.name = 'RoomTypeDeletionBlockedError'
+    this.roomTypeNames = roomTypeNames
+  }
+}
+
+function scalarData(roomType: CreateRoomTypeInput, index: number) {
+  return {
+    name: roomType.name,
+    quantity: roomType.quantity,
+    capacity: roomType.capacity,
+    surface: roomType.surface ?? null,
+    smoking: roomType.smoking ?? false,
+    basePrice: roomType.basePrice,
+    priceMGA: roomType.priceMGA,
+    position: roomType.position ?? index,
+  }
+}
+
+function bedCreateData(roomType: CreateRoomTypeInput) {
+  return (roomType.beds ?? []).map(bed => ({ bedType: bed.bedType, count: bed.count }))
+}
+
+function specialPriceCreateData(roomType: CreateRoomTypeInput) {
+  return (roomType.specialPrices ?? []).map(sp => ({
+    pricesMga: sp.pricesMga,
+    pricesEuro: sp.pricesEuro,
+    day: sp.day,
+    startDate: sp.startDate,
+    endDate: sp.endDate,
+    activate: sp.activate,
+  }))
+}
+
+function connectData(ids: string[] | undefined) {
+  return (ids ?? []).map(id => ({ id }))
+}
+
+/**
+ * Transactionally reconcile the room types attached to `productId` with the
+ * provided list:
+ * - room types with a known `id` are updated (beds, special prices and catalog
+ *   links are fully replaced);
+ * - room types without an `id` are created;
+ * - existing room types absent from the list are deleted, unless they carry
+ *   booking history (`rentLines` > 0), in which case an error is thrown so the
+ *   caller can surface a soft-block (RentRoomType uses onDelete Restrict).
+ *
+ * Must run inside a Prisma transaction; the caller passes the transaction client.
+ */
+export async function syncRoomTypes(
+  tx: Prisma.TransactionClient,
+  productId: string,
+  roomTypes: CreateRoomTypeInput[]
+): Promise<void> {
+  const existing: ExistingRoomType[] = await tx.roomType.findMany({
+    where: { productId },
+    select: { id: true, name: true, _count: { select: { rentLines: true } } },
+  })
+
+  const incomingIds = new Set(
+    roomTypes.map(roomType => roomType.id).filter((id): id is string => Boolean(id))
+  )
+  const existingIds = new Set(existing.map(roomType => roomType.id))
+
+  // Determine which existing room types are being removed, then soft-block the
+  // whole operation up-front if any of them carry booking history (so no
+  // partial delete happens before we detect the conflict).
+  const toDelete = existing.filter(current => !incomingIds.has(current.id))
+  const blocked = toDelete.filter(current => current._count.rentLines > 0)
+  if (blocked.length > 0) {
+    throw new RoomTypeDeletionBlockedError(blocked.map(rt => rt.name))
+  }
+
+  for (const current of toDelete) {
+    await tx.roomType.delete({ where: { id: current.id } })
+  }
+
+  // Create or update.
+  for (let index = 0; index < roomTypes.length; index++) {
+    const roomType = roomTypes[index]
+    const isExisting = roomType.id !== undefined && existingIds.has(roomType.id)
+
+    if (isExisting && roomType.id) {
+      await tx.roomType.update({
+        where: { id: roomType.id },
+        data: {
+          ...scalarData(roomType, index),
+          beds: { deleteMany: {}, create: bedCreateData(roomType) },
+          specialPrices: { deleteMany: {}, create: specialPriceCreateData(roomType) },
+          mealsList: { set: [], connect: connectData(roomType.mealIds) },
+          includedServices: { set: [], connect: connectData(roomType.includedServiceIds) },
+          servicesList: { set: [], connect: connectData(roomType.serviceIds) },
+          extras: { set: [], connect: connectData(roomType.extraIds) },
+        },
+      })
+    } else {
+      await tx.roomType.create({
+        data: {
+          productId,
+          ...scalarData(roomType, index),
+          beds: { create: bedCreateData(roomType) },
+          specialPrices: { create: specialPriceCreateData(roomType) },
+          mealsList: { connect: connectData(roomType.mealIds) },
+          includedServices: { connect: connectData(roomType.includedServiceIds) },
+          servicesList: { connect: connectData(roomType.serviceIds) },
+          extras: { connect: connectData(roomType.extraIds) },
+        },
+      })
+    }
+  }
+}

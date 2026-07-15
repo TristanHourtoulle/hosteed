@@ -9,7 +9,7 @@ export function useFavorites(productId: string) {
 
   const checkFavoriteStatus = useCallback(async () => {
     try {
-      const response = await fetch(`/api/favorites/${productId}`)
+      const response = await fetch(`/api/favorites/${productId}`, { cache: 'no-store' })
       if (response.ok) {
         const data = await response.json()
         setIsFavorite(data.isFavorite)

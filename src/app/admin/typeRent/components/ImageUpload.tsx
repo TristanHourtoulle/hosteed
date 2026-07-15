@@ -6,6 +6,18 @@ import { Button } from '@/components/ui/shadcnui/button'
 import { Label } from '@/components/ui/shadcnui/label'
 import imageCompression from 'browser-image-compression'
 import Image from 'next/image'
+import { useMutationWithCache } from '@/hooks/useMutationWithCache'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
+
+interface UploadedImage {
+  thumb: string
+  medium: string
+  full: string
+}
+
+interface UploadResponse {
+  images: UploadedImage[]
+}
 
 interface ImageUploadProps {
   currentImage?: string | null
@@ -23,6 +35,33 @@ export default function ImageUpload({
   const [preview, setPreview] = useState<string | null>(currentImage || null)
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Wrap the image upload so a successful upload refreshes the parent dataset
+  // (type-rent detail or homepage) through the shared React Query cache.
+  const uploadMutation = useMutationWithCache<UploadResponse, string>({
+    mutationFn: async (base64String): Promise<UploadResponse> => {
+      const response = await fetch('/api/images/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          images: [base64String],
+          entityType,
+          entityId,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Erreur lors de l'upload de l'image")
+      }
+
+      return response.json()
+    },
+    invalidateKeys: entityId
+      ? entityType === 'homepage'
+        ? [CACHE_TAGS.adminHomepage()]
+        : [CACHE_TAGS.adminTypeRent(entityId)]
+      : [],
+  })
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -59,26 +98,10 @@ export default function ImageUpload({
         // If we have an entityId, upload immediately
         if (entityId) {
           try {
-            const response = await fetch('/api/images/upload', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                images: [base64String],
-                entityType,
-                entityId,
-              }),
-            })
-
-            if (response.ok) {
-              const data = await response.json()
-              const uploadedUrl = data.images[0]?.full || base64String
-              onImageChange(uploadedUrl)
-            } else {
-              // Fallback to base64 if upload fails
-              onImageChange(base64String)
-            }
-          } catch (error) {
-            console.error('Upload error:', error)
+            const data = await uploadMutation.mutateAsync(base64String)
+            const uploadedUrl = data.images[0]?.full || base64String
+            onImageChange(uploadedUrl)
+          } catch {
             // Fallback to base64 if upload fails
             onImageChange(base64String)
           }

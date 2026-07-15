@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/prisma'
+import { privateNoStore } from '@/lib/cache/cache-headers'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
@@ -51,7 +54,13 @@ export async function GET(request: NextRequest) {
           },
           room: true,
           type: {
+            select: { id: true, name: true, isHotelType: true },
+          },
+          // Hotel multi-room-type (Lot 5): expose types so admins can scope
+          // a promotion to a single room type.
+          roomTypes: {
             select: { id: true, name: true },
+            orderBy: { position: 'asc' },
           },
           owner: {
             select: { id: true, name: true, email: true },
@@ -77,6 +86,7 @@ export async function GET(request: NextRequest) {
       equipmentCount: product._count?.equipments || 0,
       serviceCount: product._count?.servicesList || 0,
       typeName: product.type?.name || null,
+      isHotel: product.type?.isHotelType ?? false,
     }))
 
     if (!rawProducts) {
@@ -96,9 +106,10 @@ export async function GET(request: NextRequest) {
       },
     }
 
-    // Set optimized cache headers for admin data
+    // Authenticated, per-admin list that changes on validate/reject/edit: it
+    // must never be served from a shared/CDN or stale browser cache (TRI-1014).
     const headers = new Headers()
-    headers.set('Cache-Control', 'public, max-age=15, s-maxage=15') // 15 seconds cache for fresh admin data
+    headers.set('Cache-Control', privateNoStore())
     headers.set('X-Response-Time', Date.now().toString())
 
     return NextResponse.json(response, { headers })

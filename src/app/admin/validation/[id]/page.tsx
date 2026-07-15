@@ -29,6 +29,7 @@ import { ProductDetails } from './components/ProductDetails'
 import { ProductSidebar } from './components/ProductSidebar'
 import { ComparisonView } from './components/ComparisonView'
 import { ProductEditWizard } from './components/ProductEditWizard'
+import type { RoomTypeWithRelations } from './components/review/roomTypeTypes'
 
 interface ValidationHistoryEntry {
   id: string
@@ -126,6 +127,7 @@ interface Product {
     additionalNotes?: string
   } | null
   hotel?: { id: string; name: string }[] // ✅ Array because it's one-to-many
+  roomTypes?: RoomTypeWithRelations[]
   includedServices?: { id: string; name: string; description: string | null; icon: string | null }[]
   extras?: {
     id: string

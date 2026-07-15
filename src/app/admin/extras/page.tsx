@@ -1,6 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
+import { useMutationWithCache } from '@/hooks/useMutationWithCache'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -46,6 +49,22 @@ interface ProductExtra {
   }
 }
 
+interface ExtraFormData {
+  name: string
+  description: string
+  priceEUR: string
+  priceMGA: string
+  type: ExtraPriceType | ''
+}
+
+interface ExtraPayload {
+  name: string
+  description: string
+  priceEUR: number
+  priceMGA: number
+  type: ExtraPriceType | ''
+}
+
 const PRICE_TYPE_LABELS: Record<ExtraPriceType, string> = {
   PER_DAY: 'Par jour',
   PER_PERSON: 'Par personne',
@@ -53,45 +72,95 @@ const PRICE_TYPE_LABELS: Record<ExtraPriceType, string> = {
   PER_BOOKING: 'Par réservation',
 }
 
+async function fetchExtras(): Promise<ProductExtra[]> {
+  const response = await fetch('/api/admin/extras', {
+    cache: 'no-store',
+    headers: {
+      'Cache-Control': 'no-cache',
+    },
+  })
+  if (!response.ok) {
+    throw new Error('Erreur lors du chargement des extras')
+  }
+  return response.json()
+}
+
 export default function ExtrasPage() {
-  const [extras, setExtras] = useState<ProductExtra[]>([])
-  const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingExtra, setEditingExtra] = useState<ProductExtra | null>(null)
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ExtraFormData>({
     name: '',
     description: '',
     priceEUR: '',
     priceMGA: '',
-    type: '' as ExtraPriceType | '',
+    type: '',
+  })
+
+  const {
+    data: extras = [],
+    isLoading: loading,
+    isError,
+  } = useQuery({
+    queryKey: CACHE_TAGS.adminExtras(),
+    queryFn: fetchExtras,
   })
 
   useEffect(() => {
-    fetchExtras()
-  }, [])
-
-  const fetchExtras = async () => {
-    try {
-      const response = await fetch('/api/admin/extras', {
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache',
-        },
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setExtras(data)
-      } else {
-        toast.error('Erreur lors du chargement des extras')
-      }
-    } catch {
+    if (isError) {
       toast.error('Erreur lors du chargement des extras')
-    } finally {
-      setLoading(false)
     }
+  }, [isError])
+
+  const resetForm = () => {
+    setFormData({ name: '', description: '', priceEUR: '', priceMGA: '', type: '' })
+    setEditingExtra(null)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const saveExtra = useMutationWithCache<unknown, { id?: string; body: ExtraPayload }>({
+    mutationFn: async ({ id, body }) => {
+      const url = id ? `/api/admin/extras/${id}` : '/api/admin/extras'
+      const method = id ? 'PUT' : 'POST'
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        throw new Error(error.error || 'Une erreur est survenue')
+      }
+      return response.json().catch(() => null)
+    },
+    invalidateKeys: [CACHE_TAGS.adminExtras()],
+    onSuccess: (_data, variables) => {
+      toast.success(variables.id ? 'Extra mis à jour avec succès' : 'Extra créé avec succès')
+      setDialogOpen(false)
+      resetForm()
+    },
+    onError: error => {
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de la sauvegarde')
+    },
+  })
+
+  const deleteExtra = useMutationWithCache<unknown, string>({
+    mutationFn: async id => {
+      const response = await fetch(`/api/admin/extras/${id}`, {
+        method: 'DELETE',
+      })
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        throw new Error(error.error || 'Erreur lors de la suppression')
+      }
+      return response.json().catch(() => null)
+    },
+    invalidateKeys: [CACHE_TAGS.adminExtras()],
+    successMessage: 'Extra supprimé avec succès',
+    onError: error => {
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de la suppression')
+    },
+  })
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!formData.name.trim() || !formData.priceEUR || !formData.priceMGA || !formData.type) {
@@ -113,35 +182,16 @@ export default function ExtrasPage() {
       return
     }
 
-    try {
-      const url = editingExtra ? `/api/admin/extras/${editingExtra.id}` : '/api/admin/extras'
-
-      const method = editingExtra ? 'PUT' : 'POST'
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...formData,
-          priceEUR,
-          priceMGA,
-        }),
-      })
-
-      if (response.ok) {
-        toast.success(editingExtra ? 'Extra mis à jour avec succès' : 'Extra créé avec succès')
-        setDialogOpen(false)
-        resetForm()
-        fetchExtras()
-      } else {
-        const error = await response.json()
-        toast.error(error.error || 'Une erreur est survenue')
-      }
-    } catch {
-      toast.error('Erreur lors de la sauvegarde')
-    }
+    saveExtra.mutate({
+      id: editingExtra?.id,
+      body: {
+        name: formData.name,
+        description: formData.description,
+        type: formData.type,
+        priceEUR,
+        priceMGA,
+      },
+    })
   }
 
   const handleEdit = (extra: ProductExtra) => {
@@ -156,31 +206,12 @@ export default function ExtrasPage() {
     setDialogOpen(true)
   }
 
-  const handleDelete = async (extra: ProductExtra) => {
+  const handleDelete = (extra: ProductExtra) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cet extra ?')) {
       return
     }
 
-    try {
-      const response = await fetch(`/api/admin/extras/${extra.id}`, {
-        method: 'DELETE',
-      })
-
-      if (response.ok) {
-        toast.success('Extra supprimé avec succès')
-        fetchExtras()
-      } else {
-        const error = await response.json()
-        toast.error(error.error || 'Erreur lors de la suppression')
-      }
-    } catch {
-      toast.error('Erreur lors de la suppression')
-    }
-  }
-
-  const resetForm = () => {
-    setFormData({ name: '', description: '', priceEUR: '', priceMGA: '', type: '' })
-    setEditingExtra(null)
+    deleteExtra.mutate(extra.id)
   }
 
   const handleDialogOpenChange = (open: boolean) => {
@@ -310,7 +341,9 @@ export default function ExtrasPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button type='submit'>{editingExtra ? 'Mettre à jour' : 'Créer'}</Button>
+                <Button type='submit' disabled={saveExtra.isPending}>
+                  {editingExtra ? 'Mettre à jour' : 'Créer'}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>

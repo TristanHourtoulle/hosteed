@@ -1,6 +1,99 @@
-import { useMutation, UseMutationOptions } from '@tanstack/react-query'
+import { useMutation, UseMutationOptions, UseMutationResult } from '@tanstack/react-query'
+import { queryClient } from '@/lib/cache/query-client'
 import { invalidateClientCache } from '@/lib/cache/client-invalidation'
 import { toast } from 'sonner'
+
+type QueryKey = readonly unknown[]
+
+/**
+ * Optional optimistic-update configuration.
+ * `onMutate` runs before the mutation and returns a context snapshot used by
+ * `rollback` to restore state if the mutation fails.
+ */
+interface OptimisticConfig<TVars, TContext> {
+  onMutate: (variables: TVars) => TContext | Promise<TContext>
+  rollback?: (context: TContext | undefined, variables: TVars, error: unknown) => void
+}
+
+export interface UseMutationWithCacheOptions<TData, TVars, TContext = unknown> {
+  /** The async mutation to run. */
+  mutationFn: (variables: TVars) => Promise<TData>
+  /**
+   * Query keys to invalidate on success via the shared QueryClient. Either a
+   * static array of keys or a factory computed from the mutation result and
+   * variables (useful when the invalidated id only exists after the mutation).
+   */
+  invalidateKeys?: QueryKey[] | ((data: TData, variables: TVars) => QueryKey[])
+  /** Runs after invalidation on success. */
+  onSuccess?: (data: TData, variables: TVars) => void | Promise<void>
+  /** Runs on failure, after any optimistic rollback. */
+  onError?: (error: unknown, variables: TVars, context: TContext | undefined) => void
+  /** Optional optimistic update + rollback. */
+  optimistic?: OptimisticConfig<TVars, TContext>
+  /** Toast shown on success. */
+  successMessage?: string
+  /** Toast shown on failure. */
+  errorMessage?: string
+}
+
+/**
+ * Generic mutation hook that invalidates the given React Query keys on success.
+ *
+ * Model for migrating pages off `useState` + raw `fetch`: pass the mutation and
+ * the `CACHE_TAGS.*(...)` keys it affects, and the shared cache stays coherent
+ * without each caller touching the invalidation layer.
+ */
+export function useMutationWithCache<TData = unknown, TVars = void, TContext = unknown>(
+  options: UseMutationWithCacheOptions<TData, TVars, TContext>
+): UseMutationResult<TData, unknown, TVars, TContext> {
+  const {
+    mutationFn,
+    invalidateKeys,
+    onSuccess,
+    onError,
+    optimistic,
+    successMessage,
+    errorMessage,
+  } = options
+
+  return useMutation<TData, unknown, TVars, TContext>({
+    mutationFn,
+    onMutate: optimistic ? variables => optimistic.onMutate(variables) : undefined,
+    onSuccess: async (data, variables) => {
+      const keys =
+        typeof invalidateKeys === 'function' ? invalidateKeys(data, variables) : invalidateKeys
+
+      if (keys && keys.length > 0) {
+        await Promise.all(keys.map(queryKey => queryClient.invalidateQueries({ queryKey })))
+      }
+
+      if (successMessage) {
+        toast.success(successMessage)
+      }
+
+      if (onSuccess) {
+        await onSuccess(data, variables)
+      }
+    },
+    onError: (error, variables, context) => {
+      if (optimistic?.rollback) {
+        optimistic.rollback(context, variables, error)
+      }
+
+      if (errorMessage) {
+        toast.error(errorMessage)
+      }
+
+      if (onError) {
+        onError(error, variables, context)
+      }
+    },
+  })
+}
+
+/* -------------------------------------------------------------------------- */
+/* Domain-scoped mutation helper (invalidates via invalidateClientCache).     */
+/* -------------------------------------------------------------------------- */
 
 type MutationConfig = {
   invalidate?: {
@@ -17,9 +110,11 @@ type MutationConfig = {
 }
 
 /**
- * Hook pour les mutations avec invalidation automatique du cache
+ * Domain-scoped mutation hook: invalidates predefined cache families through
+ * `invalidateClientCache`. Backs the static-data / product / user helpers
+ * below; new page migrations should prefer `useMutationWithCache`.
  */
-export function useMutationWithCache<TData, TError, TVariables, TContext = unknown>(
+export function useDomainMutationWithCache<TData, TError, TVariables, TContext = unknown>(
   mutationFn: (variables: TVariables) => Promise<TData>,
   config: MutationConfig,
   options?: Omit<UseMutationOptions<TData, TError, TVariables, TContext>, 'mutationFn'>
@@ -31,9 +126,7 @@ export function useMutationWithCache<TData, TError, TVariables, TContext = unkno
     ...options,
     mutationFn,
     onSuccess: async (...args) => {
-      // const [data, variables] = args
-
-      // Invalidation automatique du cache
+      // Automatic cache invalidation.
       if (config.invalidate) {
         await Promise.all(
           [
@@ -66,23 +159,19 @@ export function useMutationWithCache<TData, TError, TVariables, TContext = unkno
         )
       }
 
-      // Message de succès
       if (config.successMessage) {
         toast.success(config.successMessage)
       }
 
-      // Callback utilisateur
       if (originalOnSuccess) {
         await originalOnSuccess(...args)
       }
     },
     onError: (...args) => {
-      // Message d'erreur
       if (config.errorMessage) {
         toast.error(config.errorMessage)
       }
 
-      // Callback utilisateur
       if (originalOnError) {
         originalOnError(...args)
       }
@@ -90,13 +179,13 @@ export function useMutationWithCache<TData, TError, TVariables, TContext = unkno
   })
 }
 
-// Helpers pour des cas d'usage courants
+// Helpers for common domain use cases.
 export const useProductMutation = <TData, TError, TVariables, TContext = unknown>(
   mutationFn: (variables: TVariables) => Promise<TData>,
   productId?: string,
   options?: Omit<UseMutationOptions<TData, TError, TVariables, TContext>, 'mutationFn'>
 ) => {
-  return useMutationWithCache(
+  return useDomainMutationWithCache(
     mutationFn,
     {
       invalidate: {
@@ -112,7 +201,7 @@ export const useStaticDataMutation = <TData, TError, TVariables, TContext = unkn
   dataType: 'equipments' | 'meals' | 'services' | 'security' | 'typeRent',
   options?: Omit<UseMutationOptions<TData, TError, TVariables, TContext>, 'mutationFn'>
 ) => {
-  return useMutationWithCache(
+  return useDomainMutationWithCache(
     mutationFn,
     {
       invalidate: {
@@ -128,7 +217,7 @@ export const useUserMutation = <TData, TError, TVariables, TContext = unknown>(
   userId: string,
   options?: Omit<UseMutationOptions<TData, TError, TVariables, TContext>, 'mutationFn'>
 ) => {
-  return useMutationWithCache(
+  return useDomainMutationWithCache(
     mutationFn,
     {
       invalidate: {

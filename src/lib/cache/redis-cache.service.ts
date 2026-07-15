@@ -31,6 +31,7 @@ export const CACHE_TTL = {
   USER_PROFILE: getCacheTTL('USER_PROFILE', 1800), // 30 minutes
   USER_ACTIVITY: getCacheTTL('USER_ACTIVITY', 86400), // 24 hours
   STATIC_DATA: getCacheTTL('STATIC_DATA', 86400), // 24 hours
+  STATIC_DATA_DERIVED: getCacheTTL('STATIC_DATA_DERIVED', 300), // 5 minutes (count-derived, not truly static)
   SEARCH_FILTERS: getCacheTTL('SEARCH_FILTERS', 1800), // 30 minutes
   RATE_LIMIT: getCacheTTL('RATE_LIMIT', 3600), // 1 hour
   ANALYTICS: getCacheTTL('ANALYTICS', 3600), // 1 hour
@@ -272,7 +273,11 @@ class RedisCache {
         return
       }
 
-      // ✅ FIXED: Validate value before serialization
+      // Validate value before serialization. Empty arrays ARE cached here on
+      // purpose: legitimately-empty results (e.g. a user with no favorites) must
+      // cache normally to avoid a permanent cache miss. The never-cache-empty
+      // guard lives solely in StaticDataCacheService.getStaticDataWithCache,
+      // where an empty list signals a transient/cold-start state.
       if (value === null || value === undefined) {
         console.warn(`[REDIS] Attempting to cache null/undefined value for key: ${key}`)
         return
@@ -668,57 +673,22 @@ export class ProductCacheService {
   }
 
   /**
-   * Cache individual product data
+   * Invalidate product-related cache.
+   * Uses the SCAN-based (production-safe) invalidation for pattern deletes.
+   * When `productId` is omitted (bulk product mutations), only the shared
+   * search/host lists are cleared.
    */
-  async cacheProduct(productId: string, productData: OptimizedProduct): Promise<void> {
-    await this.cache.set(`product:${productId}`, productData, CACHE_TTL.PRODUCT_DETAILS)
-  }
+  async invalidateProductCache(productId?: string): Promise<void> {
+    const tasks: Promise<unknown>[] = [
+      this.cache.invalidatePatternSafe('search:*'), // Invalidate all search results
+      this.cache.invalidatePatternSafe('host:*:products:*'), // Invalidate host product lists
+    ]
 
-  async getCachedProduct(productId: string): Promise<OptimizedProduct | null> {
-    return await this.cache.get(`product:${productId}`)
-  }
-
-  /**
-   * Cache host products - addresses slow host dashboard
-   */
-  async cacheHostProducts(
-    hostId: string,
-    page: number,
-    products: OptimizedProduct[],
-    pagination: { page: number; limit: number; total: number; hasNext: boolean; hasPrev: boolean }
-  ): Promise<void> {
-    const cacheKey = `host:${hostId}:products:page:${page}`
-    const cacheData = {
-      products,
-      pagination,
-      timestamp: Date.now(),
-      hostId: hostId, // For debugging
+    if (productId) {
+      tasks.push(this.cache.delete(`product:${productId}`))
     }
 
-    // Use configurable TTL for host product lists
-    await this.cache.set(cacheKey, cacheData, CACHE_TTL.PRODUCT_LIST)
-  }
-
-  async getCachedHostProducts(
-    hostId: string,
-    page: number
-  ): Promise<{
-    products: OptimizedProduct[]
-    pagination: { total: number; pages: number; page: number; limit: number }
-  } | null> {
-    const cacheKey = `host:${hostId}:products:page:${page}`
-    return await this.cache.get(cacheKey)
-  }
-
-  /**
-   * Invalidate product-related cache
-   */
-  async invalidateProductCache(productId: string): Promise<void> {
-    await Promise.all([
-      this.cache.delete(`product:${productId}`),
-      this.cache.invalidatePattern('search:*'), // Invalidate all search results
-      this.cache.invalidatePattern('host:*:products:*'), // Invalidate host product lists
-    ])
+    await Promise.all(tasks)
   }
 
   private generateSearchKey(filters: OptimizedProductFilters): string {
@@ -813,103 +783,7 @@ export class AvailabilityCacheService {
    * Invalidate availability cache when booking is made
    */
   async invalidateAvailability(productId: string): Promise<void> {
-    await this.cache.invalidatePattern(`availability:${productId}:*`)
-  }
-}
-
-export class UserSessionCacheService {
-  private cache: RedisCache
-
-  constructor(cache: RedisCache) {
-    this.cache = cache
-  }
-
-  /**
-   * Cache user session data - reduces database queries
-   */
-  async cacheUserSession(sessionId: string, sessionData: Record<string, unknown>): Promise<void> {
-    const enhancedSessionData = {
-      ...sessionData,
-      cachedAt: Date.now(),
-      sessionId: sessionId,
-    }
-    await this.cache.set(`session:${sessionId}`, enhancedSessionData, CACHE_TTL.USER_SESSION)
-  }
-
-  async getCachedUserSession(sessionId: string): Promise<Record<string, unknown> | null> {
-    return await this.cache.get(`session:${sessionId}`)
-  }
-
-  /**
-   * Cache user preferences and activity
-   */
-  async cacheUserActivity(
-    userId: string,
-    activity: { type: string; data: Record<string, unknown>; timestamp: number }
-  ): Promise<void> {
-    try {
-      const cacheKey = `user:${userId}:activity`
-      const client = this.cache.getClient()
-
-      if (!this.cache.isRedisAvailable() || !client) return
-
-      // Keep last 50 activities using Redis lists
-      await client.lpush(cacheKey, JSON.stringify(activity))
-      await client.ltrim(cacheKey, 0, 49) // Keep only last 50 items
-      await client.expire(cacheKey, CACHE_TTL.USER_ACTIVITY) // Use configurable TTL
-    } catch (error) {
-      console.error(`Failed to cache user activity for user ${userId}:`, error)
-    }
-  }
-
-  /**
-   * Get user activity history
-   */
-  async getUserActivity(
-    userId: string,
-    limit: number = 20
-  ): Promise<Array<{ type: string; data: Record<string, unknown>; timestamp: number }>> {
-    try {
-      const cacheKey = `user:${userId}:activity`
-      const client = this.cache.getClient()
-
-      if (!this.cache.isRedisAvailable() || !client) return []
-
-      const activities = await client.lrange(cacheKey, 0, limit - 1)
-      return activities.map(activity => JSON.parse(activity))
-    } catch (error) {
-      console.error(`Failed to get user activity for user ${userId}:`, error)
-      return []
-    }
-  }
-
-  /**
-   * Rate limiting cache
-   */
-  async checkRateLimit(
-    identifier: string,
-    limit: number,
-    windowSeconds: number
-  ): Promise<{ allowed: boolean; remaining: number; resetTime: number }> {
-    const cacheKey = `rate_limit:${identifier}:${Math.floor(Date.now() / (windowSeconds * 1000))}`
-
-    try {
-      const count = await this.cache.increment(cacheKey)
-      const resetTime = Math.ceil(Date.now() / (windowSeconds * 1000)) * windowSeconds * 1000
-
-      return {
-        allowed: count <= limit,
-        remaining: Math.max(0, limit - count),
-        resetTime,
-      }
-    } catch {
-      // Fail open - allow requests if cache fails
-      return {
-        allowed: true,
-        remaining: limit,
-        resetTime: Date.now() + windowSeconds * 1000,
-      }
-    }
+    await this.cache.invalidatePatternSafe(`availability:${productId}:*`)
   }
 }
 
@@ -921,11 +795,21 @@ export class StaticDataCacheService {
   }
 
   /**
-   * Cache static data with long TTL (24 hours)
+   * Resolve the TTL for a given static data type.
+   * `typeRent` carries per-category product counts, so it is derived from
+   * mutable product data rather than being truly static and must expire on a
+   * minutes-scale. All other static types keep the long 24h TTL.
+   */
+  private getTTLForType(type: string): number {
+    return type === 'typeRent' ? CACHE_TTL.STATIC_DATA_DERIVED : CACHE_TTL.STATIC_DATA
+  }
+
+  /**
+   * Cache static data with a type-appropriate TTL
    */
   async cacheStaticData(type: string, data: unknown): Promise<void> {
     const cacheKey = `static:${type}`
-    await this.cache.set(cacheKey, data, CACHE_TTL.STATIC_DATA)
+    await this.cache.set(cacheKey, data, this.getTTLForType(type))
   }
 
   /**
@@ -942,27 +826,38 @@ export class StaticDataCacheService {
   async getStaticDataWithCache<T>(type: string, fetchFunction: () => Promise<T>): Promise<T> {
     const cacheKey = `static:${type}`
 
+    // Read from cache in isolation. A cache-layer failure must fall through to a
+    // single fetchFunction call below — it must NOT trigger a retry that would
+    // call fetchFunction (i.e. hit the database) a second time.
+    let cached: T | null = null
     try {
-      // Try to get from cache first
-      const cached = await this.cache.get<T>(cacheKey)
-      if (cached !== null && cached !== undefined) {
-        return cached
-      }
-
-      // Cache miss - fetch from database
-      const data = await fetchFunction()
-
-      // Cache the result
-      if (data !== null && data !== undefined) {
-        await this.cache.set(cacheKey, data, CACHE_TTL.STATIC_DATA)
-      }
-
-      return data
+      cached = await this.cache.get<T>(cacheKey)
     } catch (error) {
-      console.error(`Error in static data cache for ${type}:`, error)
-      // Fallback to direct database call
-      return await fetchFunction()
+      console.error(`Error reading static data cache for ${type}:`, error)
     }
+    if (cached !== null && cached !== undefined) {
+      return cached
+    }
+
+    // Cache miss - fetch from the database exactly once. If this throws (e.g. a
+    // DB outage), let it propagate: retrying here would issue a duplicate query
+    // and still surface the same error.
+    const data = await fetchFunction()
+
+    // Cache the result. Never cache empty arrays: an empty static list is almost
+    // always a transient/cold-start state and caching it would poison the cache
+    // (e.g. an empty type dropdown) until the TTL expires. This is the sole
+    // never-cache-empty guard — the generic set() caches empty results normally.
+    const isEmptyArray = Array.isArray(data) && data.length === 0
+    if (data !== null && data !== undefined && !isEmptyArray) {
+      try {
+        await this.cache.set(cacheKey, data, this.getTTLForType(type))
+      } catch (error) {
+        console.error(`Error writing static data cache for ${type}:`, error)
+      }
+    }
+
+    return data
   }
 
   /**
@@ -977,7 +872,7 @@ export class StaticDataCacheService {
    * Invalidate all static data
    */
   async invalidateAllStaticData(): Promise<number> {
-    return await this.cache.invalidatePattern('static:*')
+    return await this.cache.invalidatePatternSafe('static:*')
   }
 
   /**
@@ -999,79 +894,20 @@ export class StaticDataCacheService {
 }
 
 // ================================
-// CACHE INVALIDATION STRATEGIES
-// ================================
-
-export class CacheInvalidationService {
-  private cache: RedisCache
-  private productCache: ProductCacheService
-  private availabilityCache: AvailabilityCacheService
-
-  constructor(cache: RedisCache) {
-    this.cache = cache
-    this.productCache = new ProductCacheService(cache)
-    this.availabilityCache = new AvailabilityCacheService(cache)
-  }
-
-  /**
-   * Invalidate all caches related to a product
-   */
-  async onProductUpdate(productId: string): Promise<void> {
-    await Promise.all([
-      this.productCache.invalidateProductCache(productId),
-      this.availabilityCache.invalidateAvailability(productId),
-      this.cache.invalidatePattern('search:*'), // Product updates affect search
-    ])
-  }
-
-  /**
-   * Invalidate caches when booking is made
-   */
-  async onBookingCreated(productId: string, hostId: string): Promise<void> {
-    await Promise.all([
-      this.availabilityCache.invalidateAvailability(productId),
-      this.cache.invalidatePattern(`host:${hostId}:*`), // Update host dashboard
-    ])
-  }
-
-  /**
-   * Invalidate user-specific caches
-   */
-  async onUserUpdate(userId: string): Promise<void> {
-    await Promise.all([
-      this.cache.invalidatePattern(`session:*:${userId}`),
-      this.cache.invalidatePattern(`user:${userId}:*`),
-      this.cache.invalidatePattern(`host:${userId}:*`),
-    ])
-  }
-
-  /**
-   * Clear all caches (maintenance operation)
-   */
-  async clearAllCache(): Promise<number> {
-    return await this.cache.invalidatePattern('*')
-  }
-}
-
-// ================================
 // SINGLETON INSTANCES
 // ================================
 
 let redisCache: RedisCache
 let productCacheService: ProductCacheService
 let availabilityCacheService: AvailabilityCacheService
-let userSessionCacheService: UserSessionCacheService
 let staticDataCacheService: StaticDataCacheService
-let cacheInvalidationService: CacheInvalidationService
 
 export function initializeCache() {
   if (!redisCache) {
     redisCache = new RedisCache()
     productCacheService = new ProductCacheService(redisCache)
     availabilityCacheService = new AvailabilityCacheService(redisCache)
-    userSessionCacheService = new UserSessionCacheService(redisCache)
     staticDataCacheService = new StaticDataCacheService(redisCache)
-    cacheInvalidationService = new CacheInvalidationService(redisCache)
   }
 }
 
@@ -1080,13 +916,6 @@ if (process.env.NODE_ENV !== 'test') {
   initializeCache()
 }
 
-export {
-  redisCache,
-  productCacheService,
-  availabilityCacheService,
-  userSessionCacheService,
-  staticDataCacheService,
-  cacheInvalidationService,
-}
+export { redisCache, productCacheService, availabilityCacheService, staticDataCacheService }
 
 export default RedisCache

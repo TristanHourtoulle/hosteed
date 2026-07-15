@@ -3,6 +3,9 @@ import { auth } from '@/lib/auth'
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
+import { privateNoStore } from '@/lib/cache/cache-headers'
+
+export const dynamic = 'force-dynamic'
 
 const prisma = new PrismaClient()
 
@@ -88,9 +91,10 @@ export async function GET(request: NextRequest) {
       },
     }
 
-    // Set optimized cache headers for admin data
+    // Authenticated, per-admin list that changes on create/role-update: it must
+    // never be served from a shared/CDN or stale browser cache (TRI-1014).
     const headers = new Headers()
-    headers.set('Cache-Control', 'public, max-age=15, s-maxage=15') // 15 seconds cache for fresh admin data
+    headers.set('Cache-Control', privateNoStore())
     headers.set('X-Response-Time', Date.now().toString())
 
     return NextResponse.json(response, { headers })

@@ -1,5 +1,6 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -26,6 +27,9 @@ import ExtraSelectionStep from '@/components/booking/ExtraSelectionStep'
 import PhoneInput from '@/components/ui/PhoneInput'
 import { formatCurrency, formatNumber } from '@/lib/utils/formatNumber'
 import { DailyBreakdownList } from '@/components/booking/DailyBreakdownList'
+import { calculateHotelBookingPrice } from '@/lib/services/booking-pricing.service'
+import { parseReservationRoomTypes } from '../lib/roomTypeSelection'
+import type { RoomLineSummary } from '@/types/roomType'
 
 const RESERVATION_MESSAGES = {
   DATES_UNAVAILABLE_TOAST:
@@ -57,6 +61,14 @@ export default function ReservationPage() {
   const checkInParam = searchParams.get('checkIn')
   const checkOutParam = searchParams.get('checkOut')
   const guestsParam = searchParams.get('guests')
+  const roomTypesParam = searchParams.get('roomTypes')
+
+  // Hotel multi-room-type selection (from the detail page deep-link).
+  const hotelRoomLines = useMemo(
+    () => parseReservationRoomTypes(roomTypesParam),
+    [roomTypesParam]
+  )
+  const isHotelBooking = hotelRoomLines.length > 0
 
   // Step management and extras state
   const [step, setStep] = useState(2)
@@ -140,6 +152,32 @@ export default function ReservationPage() {
   })
 
   const isAvailable = availabilityData?.available ?? null
+
+  // Hotel: server-authoritative per-type pricing (mirrors the checkout route).
+  const { data: hotelPricing } = useQuery({
+    queryKey: [
+      'reservation-hotel-pricing',
+      product?.id ?? '',
+      roomTypesParam ?? '',
+      watchedArrivingDate,
+      watchedLeavingDate,
+      watchedPeopleNumber,
+      selectedExtraIds.join(','),
+    ],
+    queryFn: () =>
+      calculateHotelBookingPrice(
+        product!.id,
+        hotelRoomLines,
+        new Date(watchedArrivingDate),
+        new Date(watchedLeavingDate),
+        watchedPeopleNumber,
+        selectedExtraIds.map(extraId => ({ extraId, quantity: 1 })),
+        product?.owner?.id
+      ),
+    enabled:
+      isHotelBooking && !!product?.id && !!watchedArrivingDate && !!watchedLeavingDate,
+    staleTime: 1000 * 60,
+  })
 
   useEffect(() => {
     if (availabilityData && !availabilityData.available) {
@@ -255,6 +293,9 @@ export default function ReservationPage() {
             selectedExtras: JSON.stringify(
               selectedExtraIds.map(extraId => ({ extraId, quantity: 1 }))
             ),
+            ...(isHotelBooking
+              ? { roomTypeLines: JSON.stringify(hotelRoomLines) }
+              : {}),
           },
         }),
       })
@@ -304,12 +345,42 @@ export default function ReservationPage() {
   }
 
   const nights = bookingPricing?.numberOfNights || calculateNights()
-  const subtotal = bookingPricing?.subtotal || parseFloat(product.basePrice) * nights
-  const totalSavings = bookingPricing?.totalSavings || 0
-  const hasPromotions = bookingPricing?.promotionApplied || false
-  const hasSpecialPrices = bookingPricing?.specialPriceApplied || false
-  const serviceFee = priceCalculation ? Math.round(priceCalculation.clientCommission) : 0
-  const total = calculateTotalPrice()
+
+  // Hotel bookings derive every displayed amount from the per-type pricing
+  // result; single-unit bookings keep the exact legacy calculation.
+  const hotelRoomLineSummaries: RoomLineSummary[] =
+    isHotelBooking && hotelPricing
+      ? hotelPricing.lines.map(line => ({
+          roomTypeId: line.roomTypeId,
+          name:
+            product.roomTypes?.find(rt => rt.id === line.roomTypeId)?.name ?? line.roomTypeId,
+          quantity: line.quantity,
+          unitPricePerNight:
+            line.unitPricing?.averageNightlyPrice ?? (parseFloat(line.unitPrice) || 0),
+          lineSubtotal: line.lineSubtotal,
+        }))
+      : []
+
+  const subtotal =
+    isHotelBooking && hotelPricing
+      ? hotelPricing.subtotal
+      : bookingPricing?.subtotal || parseFloat(product.basePrice) * nights
+  const totalSavings =
+    isHotelBooking && hotelPricing ? hotelPricing.totalSavings : bookingPricing?.totalSavings || 0
+  const hasPromotions = isHotelBooking
+    ? Boolean(hotelPricing?.summary.promotionApplied)
+    : bookingPricing?.promotionApplied || false
+  const hasSpecialPrices = isHotelBooking
+    ? Boolean(hotelPricing?.summary.specialPriceApplied)
+    : bookingPricing?.specialPriceApplied || false
+  const serviceFee =
+    isHotelBooking && hotelPricing
+      ? Math.round(hotelPricing.clientCommission)
+      : priceCalculation
+        ? Math.round(priceCalculation.clientCommission)
+        : 0
+  const total =
+    isHotelBooking && hotelPricing ? Math.round(hotelPricing.totalAmount) : calculateTotalPrice()
 
   return (
     <div className='min-h-screen bg-gray-50'>
@@ -666,7 +737,28 @@ export default function ReservationPage() {
                         <DailyBreakdownList dailyBreakdown={bookingPricing.dailyBreakdown} />
                       )}
 
+                    {/* Base price — per room type (hotel) or single unit */}
+                    {isHotelBooking && hotelRoomLineSummaries.length > 0 && (
+                      <div className='space-y-2'>
+                        {hotelRoomLineSummaries.map(line => (
+                          <div key={line.roomTypeId} className='flex justify-between items-start'>
+                            <div className='flex-1 pr-2 text-sm sm:text-base text-gray-600'>
+                              {line.name} × {line.quantity}
+                              <span className='block text-xs text-gray-500'>
+                                {formatCurrency(line.unitPricePerNight, 'EUR')} / nuit · {nights}{' '}
+                                nuit{nights > 1 ? 's' : ''}
+                              </span>
+                            </div>
+                            <span className='font-medium text-sm sm:text-base flex-shrink-0'>
+                              {formatCurrency(line.lineSubtotal, 'EUR', 0)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
                     {/* Base price */}
+                    {!isHotelBooking && (
                     <div className='space-y-2'>
                       <div className='flex justify-between items-start'>
                         <div className='flex-1 pr-2'>
@@ -693,6 +785,7 @@ export default function ReservationPage() {
                         </span>
                       </div>
                     </div>
+                    )}
 
                     {/* Extra options */}
                     {extrasCost > 0 && (

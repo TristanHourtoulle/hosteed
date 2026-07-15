@@ -26,8 +26,11 @@ import {
   Sparkles,
   Gift,
 } from 'lucide-react'
+import { DynamicIcon } from '@/lib/utils/iconMapping'
 import ImageGallery from './ImageGallery'
 import { ExtraPriceType } from '@prisma/client'
+import type { RoomTypeWithRelations } from './review/roomTypeTypes'
+import { RoomTypesSummary } from './review/RoomTypesSummary'
 
 interface Product {
   id: string
@@ -95,6 +98,7 @@ interface Product {
     type: ExtraPriceType
   }[]
   highlights?: { id: string; name: string; description: string | null; icon: string | null }[]
+  roomTypes?: RoomTypeWithRelations[]
 }
 
 interface ProductDetailsProps {
@@ -257,13 +261,22 @@ export function ProductDetails({ product }: ProductDetailsProps) {
               </div>
             </div>
 
-            {product.availableRooms && (
+            {product.roomTypes && product.roomTypes.length > 0 ? (
               <div className='flex items-center'>
                 <Building className='h-4 w-4 text-gray-400 mr-2' />
                 <span className='text-sm'>
-                  {Number(product.availableRooms)} chambre(s) disponible(s) (Hôtel)
+                  {product.roomTypes.length} type(s) de chambre (Hôtel)
                 </span>
               </div>
+            ) : (
+              product.availableRooms && (
+                <div className='flex items-center'>
+                  <Building className='h-4 w-4 text-gray-400 mr-2' />
+                  <span className='text-sm'>
+                    {Number(product.availableRooms)} chambre(s) disponible(s) (Hôtel)
+                  </span>
+                </div>
+              )
             )}
           </div>
 
@@ -337,6 +350,11 @@ export function ProductDetails({ product }: ProductDetailsProps) {
         </CardContent>
       </Card>
 
+      {/* Types de chambres (hôtel multi-type) */}
+      {product.roomTypes && product.roomTypes.length > 0 && (
+        <RoomTypesSummary roomTypes={product.roomTypes} />
+      )}
+
       {/* Équipements */}
       {product.equipments && product.equipments.length > 0 && (
         <Card>
@@ -347,7 +365,7 @@ export function ProductDetails({ product }: ProductDetailsProps) {
             <div className='grid grid-cols-2 md:grid-cols-3 gap-3'>
               {product.equipments.map((equipment, index) => (
                 <div key={index} className='flex items-center space-x-2'>
-                  <span className='text-lg'>{equipment.icon}</span>
+                  <DynamicIcon name={equipment.icon} className='h-5 w-5 text-gray-600' />
                   <span className='text-sm'>{equipment.name}</span>
                 </div>
               ))}
@@ -433,7 +451,9 @@ export function ProductDetails({ product }: ProductDetailsProps) {
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               {product.includedServices.map((service) => (
                 <div key={service.id} className='flex items-start space-x-3 p-3 bg-gray-50 rounded-lg'>
-                  {service.icon && <span className='text-xl'>{service.icon}</span>}
+                  {service.icon && (
+                    <DynamicIcon name={service.icon} className='h-5 w-5 text-gray-600' />
+                  )}
                   <div className='flex-1'>
                     <h4 className='font-medium text-sm'>{service.name}</h4>
                     {service.description && (
@@ -493,7 +513,9 @@ export function ProductDetails({ product }: ProductDetailsProps) {
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               {product.highlights.map((highlight) => (
                 <div key={highlight.id} className='flex items-start space-x-3 p-3 bg-blue-50 rounded-lg'>
-                  {highlight.icon && <span className='text-xl'>{highlight.icon}</span>}
+                  {highlight.icon && (
+                    <DynamicIcon name={highlight.icon} className='h-5 w-5 text-gray-600' />
+                  )}
                   <div className='flex-1'>
                     <h4 className='font-medium text-sm'>{highlight.name}</h4>
                     {highlight.description && (

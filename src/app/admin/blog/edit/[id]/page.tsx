@@ -1,8 +1,11 @@
 'use client'
 
-import { useState, useEffect, use, useCallback } from 'react'
+import { useState, useEffect, use } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
+import { useMutationWithCache } from '@/hooks/useMutationWithCache'
 import { useBlogAuth } from '@/hooks/useMultiRoleAuth'
 import { LazyMarkdownEditor, LazyMarkdownViewer } from '@/components/dynamic/LazyComponents'
 import {
@@ -59,18 +62,24 @@ interface PageProps {
   params: Promise<{ id: string }>
 }
 
+interface UpdatePostPayload {
+  title: string
+  content: string
+  image: string
+  seoData: SEOData
+}
+
+class PostNotFoundError extends Error {}
+
 export default function EditPostPage({ params }: PageProps) {
   const resolvedParams = use(params)
   const { isAuthorized, isLoading, session } = useBlogAuth()
   const router = useRouter()
 
-  const [post, setPost] = useState<Post | null>(null)
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [images, setImages] = useState<File[]>([])
   const [currentImage, setCurrentImage] = useState<string>('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isLoadingPost, setIsLoadingPost] = useState(true)
   const [seoData, setSeoData] = useState<SEOData>({
     metaTitle: '',
     metaDescription: '',
@@ -78,53 +87,90 @@ export default function EditPostPage({ params }: PageProps) {
     slug: '',
   })
 
-  const fetchPost = useCallback(async () => {
-    try {
-      setIsLoadingPost(true)
-      const response = await fetch(`/api/posts/${resolvedParams.id}`)
+  const userId = session?.user?.id
+  const userRoles = session?.user?.roles
 
+  const {
+    data: post,
+    isLoading: isLoadingPost,
+    error: postError,
+  } = useQuery<Post>({
+    queryKey: CACHE_TAGS.adminBlogPost(resolvedParams.id),
+    queryFn: async () => {
+      const response = await fetch(`/api/posts/${resolvedParams.id}`)
       if (!response.ok) {
         if (response.status === 404) {
-          toast.error('Article non trouvé')
-          router.push('/admin/blog')
-          return
+          throw new PostNotFoundError('Article non trouvé')
         }
         throw new Error("Erreur lors du chargement de l'article")
       }
+      return response.json()
+    },
+    enabled: !!isAuthorized && !!userId,
+    retry: false,
+  })
 
-      const postData = await response.json()
+  // Populate the form and enforce ownership once the post is loaded.
+  useEffect(() => {
+    if (!post) return
 
-      // Check if user can edit this post
-      if (session?.user?.roles !== 'ADMIN' && postData.author.id !== session?.user?.id) {
-        toast.error('Vous ne pouvez modifier que vos propres articles')
-        router.push('/admin/blog')
-        return
-      }
-
-      setPost(postData)
-      setTitle(postData.title)
-      setContent(postData.content)
-      setCurrentImage(postData.image || '')
-      setSeoData({
-        metaTitle: postData.metaTitle || postData.title,
-        metaDescription: postData.metaDescription || '',
-        keywords: postData.keywords || '',
-        slug: postData.slug || '',
-      })
-    } catch (error) {
-      console.error('Error fetching post:', error)
-      toast.error("Erreur lors du chargement de l'article")
+    if (userRoles !== 'ADMIN' && post.author.id !== userId) {
+      toast.error('Vous ne pouvez modifier que vos propres articles')
       router.push('/admin/blog')
-    } finally {
-      setIsLoadingPost(false)
+      return
     }
-  }, [resolvedParams.id, session, router])
+
+    setTitle(post.title)
+    setContent(post.content)
+    setCurrentImage(post.image || '')
+    setSeoData({
+      metaTitle: post.metaTitle || post.title,
+      metaDescription: post.metaDescription || '',
+      keywords: post.keywords || '',
+      slug: post.slug || '',
+    })
+  }, [post, userRoles, userId, router])
 
   useEffect(() => {
-    if (isAuthorized && session?.user?.id) {
-      fetchPost()
+    if (!postError) return
+    if (postError instanceof PostNotFoundError) {
+      toast.error('Article non trouvé')
+    } else {
+      toast.error("Erreur lors du chargement de l'article")
     }
-  }, [isAuthorized, session, fetchPost])
+    router.push('/admin/blog')
+  }, [postError, router])
+
+  const updatePost = useMutationWithCache<unknown, UpdatePostPayload>({
+    mutationFn: async body => {
+      const response = await fetch(`/api/posts/${resolvedParams.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      })
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Erreur lors de la mise à jour')
+      }
+      return response.json().catch(() => null)
+    },
+    invalidateKeys: [CACHE_TAGS.adminBlogPost(resolvedParams.id), CACHE_TAGS.adminBlog()],
+    onSuccess: () => {
+      toast.success('Article mis à jour avec succès !', {
+        description: 'Vos modifications ont été sauvegardées',
+      })
+      router.push('/admin/blog')
+    },
+    onError: error => {
+      toast.error(
+        error instanceof Error ? error.message : "Erreur lors de la mise à jour de l'article"
+      )
+    },
+  })
+
+  const isSubmitting = updatePost.isPending
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -144,60 +190,31 @@ export default function EditPostPage({ params }: PageProps) {
       return
     }
 
-    if (!session?.user?.id) {
+    if (!userId) {
       toast.error('Vous devez être connecté pour modifier un article')
       return
     }
 
-    setIsSubmitting(true)
+    let imageToUse = currentImage
 
-    try {
-      let imageToUse = currentImage
-
-      if (images.length > 0) {
-        // Convert new image to base64
-        const reader = new FileReader()
-        reader.readAsDataURL(images[0])
-        await new Promise(resolve => {
-          reader.onload = () => {
-            imageToUse = reader.result as string
-            resolve(null)
-          }
-        })
-      }
-
-      const response = await fetch(`/api/posts/${resolvedParams.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title,
-          content,
-          image: imageToUse,
-          seoData,
-        }),
+    if (images.length > 0) {
+      // Convert new image to base64
+      const reader = new FileReader()
+      reader.readAsDataURL(images[0])
+      await new Promise(resolve => {
+        reader.onload = () => {
+          imageToUse = reader.result as string
+          resolve(null)
+        }
       })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Erreur lors de la mise à jour')
-      }
-
-      await response.json()
-      toast.success('Article mis à jour avec succès !', {
-        description: 'Vos modifications ont été sauvegardées',
-      })
-
-      router.push('/admin/blog')
-    } catch (error) {
-      console.error('Error updating post:', error)
-      const errorMessage =
-        error instanceof Error ? error.message : "Erreur lors de la mise à jour de l'article"
-      toast.error(errorMessage)
-    } finally {
-      setIsSubmitting(false)
     }
+
+    updatePost.mutate({
+      title,
+      content,
+      image: imageToUse,
+      seoData,
+    })
   }
 
   if (isLoading || isLoadingPost || !isAuthorized) {

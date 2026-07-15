@@ -28,10 +28,14 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { productId, discountPercentage, startDate, endDate } = body
+    const { productId, discountPercentage, startDate, endDate, roomTypeId } = body
 
     if (!productId || !discountPercentage || !startDate || !endDate) {
       return NextResponse.json({ error: 'Données manquantes' }, { status: 400 })
+    }
+
+    if (roomTypeId != null && typeof roomTypeId !== 'string') {
+      return NextResponse.json({ error: 'roomTypeId invalide' }, { status: 400 })
     }
 
     // Vérifier que l'utilisateur est le propriétaire du produit (sauf si ADMIN)
@@ -56,6 +60,7 @@ export async function POST(request: NextRequest) {
 
     const data: CreatePromotionInput = {
       productId,
+      roomTypeId: (roomTypeId as string | null | undefined) ?? null,
       discountPercentage: parseFloat(discountPercentage),
       startDate: new Date(startDate),
       endDate: new Date(endDate),

@@ -56,7 +56,7 @@ export function useUserRentStatistics() {
   const userId = session?.user?.id
 
   return useQuery({
-    queryKey: ['rent-statistics', userId],
+    queryKey: CACHE_TAGS.rentStatistics(userId),
     queryFn: async () => {
       if (!userId) return null
       return getUserRentStatistics(userId)
@@ -87,7 +87,7 @@ export function useCancelReservation() {
         queryKey: CACHE_TAGS.reservation(rentId),
       })
       queryClient.invalidateQueries({
-        queryKey: ['rent-statistics', userId],
+        queryKey: CACHE_TAGS.rentStatistics(userId),
       })
     },
     onError: error => {

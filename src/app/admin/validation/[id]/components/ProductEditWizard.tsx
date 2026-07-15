@@ -3,97 +3,30 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Edit3 } from 'lucide-react'
-import { toast } from 'sonner'
 
 import ErrorAlert, { ErrorDetails } from '@/components/ui/ErrorAlert'
-import { parseCreateProductError, createValidationError } from '@/lib/utils/errorHandler'
+import { parseCreateProductError } from '@/lib/utils/errorHandler'
+import { useMutationWithCache } from '@/hooks/useMutationWithCache'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
 
 import { WizardStepper } from '@/app/createProduct/components/wizard/WizardStepper'
 import { WizardNavigation } from '@/app/createProduct/components/wizard/WizardNavigation'
 import { StepBasicInfo } from '@/app/createProduct/components/wizard/StepBasicInfo'
 import { StepLocation } from '@/app/createProduct/components/wizard/StepLocation'
 import { StepPricing } from '@/app/createProduct/components/wizard/StepPricing'
+import { StepRoomTypes } from '@/app/createProduct/components/wizard/StepRoomTypes'
 import { StepServices } from '@/app/createProduct/components/wizard/StepServices'
 import { StepRulesAndMedia } from '@/app/createProduct/components/wizard/StepRulesAndMedia'
 
 import { useProductData, useProductForm, useImageUpload } from '@/app/createProduct/hooks'
 import { useProductWizardForm } from '@/app/createProduct/hooks/useProductWizardForm'
+import { getStepLabels } from '@/app/createProduct/schemas/productFormSchema'
 import { generateImageId } from '@/app/createProduct/utils/formHelpers'
-import type { ImageFile, ProductFormData } from '@/types/product-form'
+import type { ImageFile } from '@/types/product-form'
+import type { RoomTypeFormData } from '@/app/createProduct/types/roomType'
 
 import type { Product, ProductEditFormProps } from './ProductEditForm/types'
-
-function formatHour(hour: number): string {
-  return `${hour.toString().padStart(2, '0')}:00`
-}
-
-function parseHour(timeStr: string): number {
-  if (!timeStr) return 0
-  const hour = parseInt(timeStr.split(':')[0])
-  return isNaN(hour) ? 0 : hour
-}
-
-function buildInitialFormData(product: Product): ProductFormData {
-  return {
-    name: product.name,
-    description: product.description,
-    address: product.address,
-    completeAddress: '',
-    placeId: '',
-    latitude: product.latitude || 0,
-    longitude: product.longitude || 0,
-    phone: product.phone || '',
-    phoneCountry: product.phoneCountry || 'MG',
-    typeId: product.type?.id || '',
-    typeRentId: product.type?.id || '',
-    room: product.room?.toString() || '',
-    bathroom: product.bathroom?.toString() || '',
-    arriving: product.arriving ? formatHour(product.arriving) : '',
-    leaving: product.leaving ? formatHour(product.leaving) : '',
-    basePrice: product.basePrice,
-    priceMGA: product.priceMGA || '',
-    basePriceMGA: product.priceMGA || '',
-    specialPrices: [],
-    autoAccept: false,
-    equipmentIds: product.equipments?.map(e => e.id) || [],
-    mealIds: product.mealsList?.map(m => m.id) || [],
-    securityIds: product.securities?.map(s => s.id) || [],
-    serviceIds: product.servicesList?.map(s => s.id) || [],
-    includedServiceIds: product.includedServices?.map(s => s.id) || [],
-    extraIds: product.extras?.map(e => e.id) || [],
-    highlightIds: product.highlights?.map(h => h.id) || [],
-    surface: product.surface?.toString() || '',
-    minPeople: product.minPeople?.toString() || '',
-    maxPeople: product.maxPeople?.toString() || '',
-    accessibility: product.propertyInfo?.hasHandicapAccess || false,
-    petFriendly: product.propertyInfo?.hasPetsOnProperty || false,
-    nearbyPlaces:
-      product.nearbyPlaces?.map(place => ({
-        name: place.name,
-        distance: place.distance || '',
-        unit: (place.distance && parseFloat(place.distance) < 1000
-          ? 'mètres'
-          : 'kilomètres') as 'mètres' | 'kilomètres',
-      })) || [],
-    proximityLandmarks: [],
-    transportation:
-      product.transportOptions?.map(t => t.name).join(', ') || '',
-    smokingAllowed: product.rules?.smokingAllowed || false,
-    petsAllowed: product.rules?.petsAllowed || false,
-    eventsAllowed: product.rules?.eventsAllowed || false,
-    selfCheckIn: product.rules?.selfCheckIn || false,
-    selfCheckInType: product.rules?.selfCheckInType || '',
-    hasStairs: product.propertyInfo?.hasStairs || false,
-    hasElevator: product.propertyInfo?.hasElevator || false,
-    hasHandicapAccess: product.propertyInfo?.hasHandicapAccess || false,
-    hasPetsOnProperty: product.propertyInfo?.hasPetsOnProperty || false,
-    additionalNotes: product.propertyInfo?.additionalNotes || '',
-    isHotel: !!(product.hotel && product.hotel.length > 0),
-    hotelName:
-      product.hotel && product.hotel.length > 0 ? product.hotel[0].name : '',
-    availableRooms: product.availableRooms?.toString() || '',
-  }
-}
+import { buildInitialFormData, buildUpdatePayload } from './ProductEditWizard.helpers'
 
 function buildExistingImages(product: Product): ImageFile[] {
   if (!product.img || product.img.length === 0) return []
@@ -113,10 +46,9 @@ export function ProductEditWizard({ product, onSave, onCancel }: ProductEditForm
   const productForm = useProductForm(productData.types, initialFormData)
   const existingImages = buildExistingImages(product)
   const imageUpload = useImageUpload(existingImages)
-  const wizard = useProductWizardForm()
+  const wizard = useProductWizardForm(productForm.formData.isHotel)
 
   // UI state
-  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<ErrorDetails | null>(null)
   const [seoData, setSeoData] = useState<{
     metaTitle?: string
@@ -131,6 +63,9 @@ export function ProductEditWizard({ product, onSave, onCancel }: ProductEditForm
   })
 
   const { formData, setFormData, handleInputChange } = productForm
+
+  const setRoomTypes = (next: RoomTypeFormData[]) =>
+    setFormData(prev => ({ ...prev, roomTypes: next }))
 
   // Upload new images to server
   const uploadNewImagesToServer = async (
@@ -182,12 +117,10 @@ export function ProductEditWizard({ product, onSave, onCancel }: ProductEditForm
     wizard.nextStep()
   }
 
-  // Form submission - PUT instead of POST
-  const handleSubmit = async () => {
-    setIsLoading(true)
-    setError(null)
-
-    try {
+  // Form submission - PUT instead of POST, wrapped so the product cache and the
+  // validation datasets are invalidated on success.
+  const saveMutation = useMutationWithCache<Product, void>({
+    mutationFn: async (): Promise<Product> => {
       // Separate existing images from new uploads
       const existingImageUrls = imageUpload.selectedFiles
         .filter(img => img.isExisting && img.url)
@@ -204,74 +137,8 @@ export function ProductEditWizard({ product, onSave, onCancel }: ProductEditForm
 
       const allImageUrls = [...existingImageUrls, ...newImageUrls]
 
-      // Prepare update payload
-      const updateData = {
-        name: formData.name,
-        description: formData.description,
-        address: formData.address,
-        completeAddress: formData.completeAddress || null,
-        longitude: formData.longitude || product.longitude || 0,
-        latitude: formData.latitude || product.latitude || 0,
-        basePrice: formData.basePrice,
-        priceMGA: formData.priceMGA || null,
-        room: formData.room ? parseInt(formData.room) : null,
-        bathroom: formData.bathroom ? parseInt(formData.bathroom) : null,
-        surface: formData.surface ? Number(formData.surface) : null,
-        minPeople: formData.minPeople ? Number(formData.minPeople) : null,
-        maxPeople: formData.maxPeople ? Number(formData.maxPeople) : null,
-        arriving: parseHour(formData.arriving),
-        leaving: parseHour(formData.leaving),
-        autoAccept: formData.autoAccept || false,
-        phone: formData.phone,
-        phoneCountry: formData.phoneCountry || 'MG',
-        typeId: formData.typeId,
-        equipmentIds: formData.equipmentIds,
-        serviceIds: formData.serviceIds,
-        mealIds: formData.mealIds,
-        securityIds: formData.securityIds,
-        includedServiceIds: formData.includedServiceIds,
-        extraIds: formData.extraIds,
-        highlightIds: formData.highlightIds,
-        nearbyPlaces: formData.nearbyPlaces.map(place => ({
-          name: place.name,
-          distance: place.distance ? Number(place.distance) : 0,
-          duration: 0,
-          transport: place.unit === 'kilomètres' ? 'voiture' : 'à pied',
-        })),
-        isHotel: formData.isHotel,
-        hotelInfo: formData.isHotel
-          ? {
-              name: formData.hotelName,
-              availableRooms: Number(formData.availableRooms) || 0,
-            }
-          : undefined,
-        transportOptions: formData.transportation
-          ? formData.transportation
-              .split(',')
-              .map((name: string) => ({ name: name.trim(), description: '' }))
-              .filter((t: { name: string }) => t.name.length > 0)
-          : undefined,
-        rules: {
-          smokingAllowed: formData.smokingAllowed || false,
-          petsAllowed: formData.petsAllowed || false,
-          eventsAllowed: formData.eventsAllowed || false,
-          selfCheckIn: formData.selfCheckIn || false,
-          selfCheckInType: (formData.selfCheckInType as string) || undefined,
-        },
-        propertyInfo: {
-          hasStairs: formData.hasStairs || false,
-          hasElevator: formData.hasElevator || false,
-          hasHandicapAccess: formData.hasHandicapAccess || false,
-          hasPetsOnProperty: formData.hasPetsOnProperty || false,
-          additionalNotes: (formData.additionalNotes as string) || undefined,
-        },
-        seoData: {
-          metaTitle: seoData.metaTitle,
-          metaDescription: seoData.metaDescription,
-          keywords: seoData.keywords,
-          slug: seoData.slug,
-        },
-      }
+      // Prepare update payload (hydrated room types are reconciled server-side)
+      const updateData = buildUpdatePayload(formData, seoData, product)
 
       // PUT to update the product
       const response = await fetch(`/api/products/${product.id}`, {
@@ -305,14 +172,27 @@ export function ProductEditWizard({ product, onSave, onCancel }: ProductEditForm
         }
       }
 
-      toast.success('Annonce mise à jour avec succes!')
-      onSave(updatedProduct as unknown as Product)
-    } catch (err) {
-      console.error('Error updating product:', err)
+      return updatedProduct as unknown as Product
+    },
+    invalidateKeys: [
+      CACHE_TAGS.product(product.id),
+      CACHE_TAGS.productValidation(product.id),
+      CACHE_TAGS.productsValidation,
+    ],
+    successMessage: 'Annonce mise à jour avec succes!',
+    onSuccess: updatedProduct => {
+      onSave(updatedProduct)
+    },
+    onError: err => {
       setError(parseCreateProductError(err))
-    } finally {
-      setIsLoading(false)
-    }
+    },
+  })
+
+  const isLoading = saveMutation.isPending
+
+  const handleSubmit = () => {
+    setError(null)
+    saveMutation.mutate()
   }
 
   return (
@@ -341,6 +221,7 @@ export function ProductEditWizard({ product, onSave, onCancel }: ProductEditForm
         <WizardStepper
           currentStep={wizard.currentStep}
           stepValidation={wizard.stepValidation}
+          labels={getStepLabels(formData.isHotel)}
         />
 
         {/* Error Alert */}
@@ -391,23 +272,35 @@ export function ProductEditWizard({ product, onSave, onCancel }: ProductEditForm
               getFieldError={wizard.getFieldError}
             />
           )}
-          {wizard.currentStep === 2 && (
-            <StepPricing
-              key="step-2"
-              formData={formData}
-              handleInputChange={handleInputChange}
-              specialPrices={productData.specialPrices}
-              setSpecialPrices={productData.setSpecialPrices}
-              extras={productData.extras}
-              hasFieldError={wizard.hasFieldError}
-              getFieldError={wizard.getFieldError}
-            />
-          )}
+          {wizard.currentStep === 2 &&
+            (formData.isHotel ? (
+              <StepRoomTypes
+                key="step-2"
+                roomTypes={formData.roomTypes}
+                setRoomTypes={setRoomTypes}
+                meals={productData.meals}
+                includedServices={productData.includedServices}
+                extras={productData.extras}
+                getFieldError={wizard.getFieldError}
+              />
+            ) : (
+              <StepPricing
+                key="step-2"
+                formData={formData}
+                handleInputChange={handleInputChange}
+                specialPrices={productData.specialPrices}
+                setSpecialPrices={productData.setSpecialPrices}
+                extras={productData.extras}
+                hasFieldError={wizard.hasFieldError}
+                getFieldError={wizard.getFieldError}
+              />
+            ))}
           {wizard.currentStep === 3 && (
             <StepServices
               key="step-3"
               formData={formData}
               setFormData={setFormData}
+              isHotel={formData.isHotel}
               equipments={productData.equipments}
               meals={productData.meals}
               securities={productData.securities}

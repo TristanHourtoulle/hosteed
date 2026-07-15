@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
     const productId = searchParams.get('productId')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
+    const roomTypeId = searchParams.get('roomTypeId')
 
     if (!productId || !startDate || !endDate) {
       return NextResponse.json(
@@ -29,7 +30,9 @@ export async function GET(request: NextRequest) {
     const overlapping = await findOverlappingPromotions(
       productId,
       new Date(startDate),
-      new Date(endDate)
+      new Date(endDate),
+      undefined,
+      roomTypeId ?? null
     )
 
     return NextResponse.json({

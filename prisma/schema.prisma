@@ -35,9 +35,10 @@ model Equipment {
 }
 
 model Services {
-  id       String    @id @default(cuid())
-  name     String
-  products Product[] @relation("ProductToServices")
+  id        String     @id @default(cuid())
+  name      String
+  products  Product[]  @relation("ProductToServices")
+  roomTypes RoomType[] @relation("ServicesToRoomType")
 }
 
 // Nouveaux modèles pour la gestion des services et extras
@@ -48,10 +49,11 @@ model IncludedService {
   description String?
   icon        String? // Nom de l'icône pour l'affichage
   userId      String? // Si null = service global, si défini = service personnel
-  products    Product[] @relation("ProductToIncludedService")
-  user        User?     @relation("UserIncludedServices", fields: [userId], references: [id], onDelete: Cascade)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  products    Product[]  @relation("ProductToIncludedService")
+  roomTypes   RoomType[] @relation("IncludedServiceToRoomType")
+  user        User?      @relation("UserIncludedServices", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }
 
 model ProductExtra {
@@ -63,6 +65,7 @@ model ProductExtra {
   type        ExtraPriceType
   userId      String? // Si null = extra global, si défini = extra personnel
   products    Product[]      @relation("ProductToProductExtra")
+  roomTypes   RoomType[]     @relation("ProductExtraToRoomType")
   rentExtras  RentExtra[] // Relation avec les réservations
   user        User?          @relation("UserExtras", fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime       @default(now())
@@ -103,9 +106,10 @@ enum ExtraPriceType {
 }
 
 model Meals {
-  id       String    @id @default(cuid())
-  name     String
-  products Product[] @relation("MealsToProduct")
+  id        String     @id @default(cuid())
+  name      String
+  products  Product[]  @relation("MealsToProduct")
+  roomTypes RoomType[] @relation("MealsToRoomType")
 }
 
 model TypeRoom {
@@ -181,7 +185,7 @@ model Product {
   certified        Boolean           @default(false)
   contract         Boolean           @default(false)
   sizeRoom         Int?
-  availableRooms   Int? // Nombre de chambres disponibles pour les hôtels
+  availableRooms   Int? // DEPRECATED (Lot 6 removal): superseded by RoomType.quantity
   ownerId          String // ID du propriétaire du produit
   options          Options[]
   type             TypeRent          @relation(fields: [typeId], references: [id])
@@ -228,6 +232,9 @@ model Product {
 
   // Promotions system
   promotions ProductPromotion[] @relation("ProductPromotions")
+
+  // Hotel multi-room-type (Lot 1) — one establishment has N room types
+  roomTypes RoomType[]
 
   // SEO fields
   metaTitle       String?
@@ -377,7 +384,7 @@ model Options {
 
 model Rent {
   id           String        @id @default(cuid())
-  stripeId     String?
+  stripeId     String?       @unique
   productId    String
   userId       String
   numberPeople BigInt
@@ -400,6 +407,7 @@ model Rent {
   RentRejection RentRejection?
   UserRating    UserRating[] // Nouvelle relation pour les notes bidirectionnelles
   extras        RentExtra[] // Relation avec les extras sélectionnés
+  roomTypeLines RentRoomType[] // Hotel multi-room-type booking lines (Lot 1)
 
   // ============================================
   // DETAILED PRICING BREAKDOWN
@@ -1062,6 +1070,11 @@ model ProductPromotion {
   productId String
   product   Product  @relation("ProductPromotions", fields: [productId], references: [id], onDelete: Cascade)
 
+  // Hotel multi-room-type (Lot 1): null → applies to the whole establishment
+  // (current behavior, unchanged); set → applies to that one room type only.
+  roomTypeId String?
+  roomType   RoomType? @relation("RoomTypePromotions", fields: [roomTypeId], references: [id], onDelete: Cascade)
+
   // Détails de la promotion
   discountPercentage Float // Pourcentage de réduction (ex: 10 pour -10%)
   startDate          DateTime
@@ -1086,6 +1099,7 @@ model ProductPromotion {
   @@index([isActive])
   @@index([startDate, endDate])
   @@index([productId, isActive, startDate, endDate])
+  @@index([roomTypeId])
 }
 
 // Paramètres de tarification par hôte
@@ -1197,4 +1211,107 @@ model EmailEvent {
   @@index([email, event])
   @@index([createdAt])
   @@map("email_events")
+}
+
+// ============================================================================
+// HOTEL MULTI-ROOM-TYPE (Lot 1 / TRI-994)
+// ----------------------------------------------------------------------------
+// One establishment (Product with TypeRent.isHotelType = true) has N RoomType,
+// each grouping several identical rooms via `quantity`. Guests can book several
+// room types in one reservation (RentRoomType lines). Prices, special prices,
+// blocked dates, promotions, included meals/services and extras are per type;
+// photos, equipment and security stay at the establishment (Product) level.
+// ============================================================================
+
+enum BedType {
+  SIMPLE
+  DOUBLE
+  KING
+  GRAND_KING
+}
+
+model RoomType {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name      String // "Double" | "Triple" | "Quadruple" | "Suite" | "Familiale" | "Studio" | "Appartement" | "Lit en dortoir" | …
+  quantity  Int // number of identical rooms of this type
+  capacity  Int // max guests per room
+  surface   Int? // m²
+  smoking   Boolean @default(false)
+  basePrice String // EUR — mirrors Product.basePrice string convention
+  priceMGA  String // MGA
+  position  Int     @default(0)
+
+  beds          RoomTypeBed[]
+  specialPrices RoomTypeSpecialPrice[]
+  blockedDates  RoomTypeBlockedDate[]
+  rentLines     RentRoomType[]
+  promotions    ProductPromotion[]    @relation("RoomTypePromotions")
+
+  // Per-type included meals/services/extras — parallel implicit M2N to the
+  // existing shared catalogs. Product-level relations are left untouched.
+  mealsList        Meals[]           @relation("MealsToRoomType")
+  includedServices IncludedService[] @relation("IncludedServiceToRoomType")
+  servicesList     Services[]        @relation("ServicesToRoomType")
+  extras           ProductExtra[]    @relation("ProductExtraToRoomType")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+  @@index([productId, position])
+}
+
+model RoomTypeBed {
+  id         String   @id @default(cuid())
+  roomTypeId String
+  roomType   RoomType @relation(fields: [roomTypeId], references: [id], onDelete: Cascade)
+  bedType    BedType
+  count      Int      @default(1)
+
+  @@index([roomTypeId])
+}
+
+// Mirrors SpecialPrices but keyed by roomTypeId (same field names/types).
+model RoomTypeSpecialPrice {
+  id         String    @id @default(cuid())
+  pricesMga  String
+  pricesEuro String
+  day        DayEnum[]
+  startDate  DateTime?
+  endDate    DateTime?
+  activate   Boolean   @default(true)
+  roomTypeId String
+  roomType   RoomType  @relation(fields: [roomTypeId], references: [id], onDelete: Cascade)
+
+  @@index([roomTypeId])
+  @@index([activate])
+  @@index([startDate, endDate])
+}
+
+model RoomTypeBlockedDate {
+  id         String   @id @default(cuid())
+  roomTypeId String
+  roomType   RoomType @relation(fields: [roomTypeId], references: [id], onDelete: Cascade)
+  startDate  DateTime
+  endDate    DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([roomTypeId])
+  @@index([startDate, endDate])
+}
+
+model RentRoomType {
+  id         String   @id @default(cuid())
+  rentId     String
+  rent       Rent     @relation(fields: [rentId], references: [id], onDelete: Cascade)
+  roomTypeId String
+  roomType   RoomType @relation(fields: [roomTypeId], references: [id]) // default onDelete = Restrict → preserves booking history
+  quantity   Int      @default(1)
+  unitPrice  String // EUR snapshot at booking time
+  createdAt  DateTime @default(now())
+
+  @@index([rentId])
+  @@index([roomTypeId])
 }

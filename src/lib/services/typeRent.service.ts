@@ -14,7 +14,16 @@ export async function findTypeById(id: string): Promise<TypeRent | null> {
   }
 }
 
-export async function findAllTypeRent(): Promise<TypeRent[]> {
+/**
+ * Shared implementation backing both `findAllTypeRent` and
+ * `findAllTypeRentForForm`. Fetches every rent type with its approved-product
+ * count, exposes `productCount`, and sorts by count (descending).
+ *
+ * @param includeEmpty When false, categories with zero approved products are
+ *   filtered out (public listing). When true, every category is returned
+ *   (form/admin context, safe on a fresh database).
+ */
+async function findTypeRents({ includeEmpty }: { includeEmpty: boolean }): Promise<TypeRent[]> {
   try {
     const result = await prisma.typeRent.findMany({
       include: {
@@ -30,18 +39,34 @@ export async function findAllTypeRent(): Promise<TypeRent[]> {
       },
     })
 
-    // Add productCount, filter out empty categories, and sort by count (descending)
-    return result
-      .map(type => ({
-        ...type,
-        productCount: type._count.products,
-      }))
-      .filter(type => type._count.products > 0)
-      .sort((a, b) => b._count.products - a._count.products) as unknown as TypeRent[]
+    const withCount = result.map(type => ({
+      ...type,
+      productCount: type._count.products,
+    }))
+
+    const filtered = includeEmpty ? withCount : withCount.filter(type => type._count.products > 0)
+
+    return filtered.sort(
+      (a, b) => b._count.products - a._count.products
+    ) as unknown as TypeRent[]
   } catch (error) {
     console.error('Erreur lors de la recherche des types de location:', error)
     return []
   }
+}
+
+export async function findAllTypeRent(): Promise<TypeRent[]> {
+  return findTypeRents({ includeEmpty: false })
+}
+
+/**
+ * Returns ALL rent types, including those with zero approved products.
+ * Unlike `findAllTypeRent`, this variant does NOT hide empty categories, so it
+ * is safe to populate the product creation wizard dropdown on a fresh database.
+ * Intended for form/admin contexts only.
+ */
+export async function findAllTypeRentForForm(): Promise<TypeRent[]> {
+  return findTypeRents({ includeEmpty: true })
 }
 
 export async function createTypeRent(

@@ -1,5 +1,5 @@
 import { revalidateTag, revalidatePath } from 'next/cache'
-import { staticDataCacheService } from '@/lib/cache/redis-cache.service'
+import { productCacheService, staticDataCacheService } from '@/lib/cache/redis-cache.service'
 
 /**
  * Invalidation centralisée du cache
@@ -18,6 +18,10 @@ export async function invalidateProductCache(productId?: string) {
   revalidateTag('static-data', 'max')
   await staticDataCacheService.invalidateStaticData('typeRent')
 
+  // Invalider le cache Redis produit (product:{id} + search:* + host:*).
+  // Couvre les écritures de prix/promo qui passent par invalidateProductCache.
+  await productCacheService.invalidateProductCache(productId)
+
   // Invalider les pages concernées
   revalidatePath('/search')
   revalidatePath('/search-optimized')
@@ -33,6 +37,9 @@ export async function invalidateStaticDataCache(
   // Invalider le cache serveur pour les données statiques
   revalidateTag('static-data', 'max')
   revalidateTag(type, 'max')
+
+  // Invalider le cache Redis static:{type} (mirror typeRent.service.ts)
+  await staticDataCacheService.invalidateStaticData(type)
 
   // Invalider les pages qui utilisent ces données
   revalidatePath('/search')

@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { useAuth } from '@/hooks/useAuth'
+import { useQueryClient } from '@tanstack/react-query'
+import { useUserFavorites } from '@/hooks/useFavoritesOptimized'
+import { useMutationWithCache } from '@/hooks/useMutationWithCache'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
 import Link from 'next/link'
 import { Heart, Star, MapPin, Trash2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/shadcnui/card'
 import { Button } from '@/components/ui/shadcnui/button'
-import { toast } from 'sonner'
 import Image from 'next/image'
 import { getCityFromAddress } from '@/lib/utils'
 
@@ -25,59 +27,60 @@ interface FavoriteProduct {
   }
 }
 
+interface FavoritesResponse {
+  favorites?: FavoriteProduct[]
+}
+
 export default function FavoritesPage() {
-  const {
-    session,
-    isLoading: isAuthLoading,
-    isAuthenticated,
-  } = useAuth({ required: true, redirectTo: '/auth' })
-  const [favorites, setFavorites] = useState<FavoriteProduct[]>([])
-  const [loading, setLoading] = useState(true)
+  const { session, isLoading: isAuthLoading } = useAuth({ required: true, redirectTo: '/auth' })
+  const userId = session?.user?.id
+  const queryClient = useQueryClient()
 
-  useEffect(() => {
-    if (isAuthenticated && session?.user?.id) {
-      fetchFavorites()
-    }
-  }, [isAuthenticated, session?.user?.id])
+  // Server read via the shared favorites cache (CACHE_TAGS.favorites(userId)).
+  const favoritesQuery = useUserFavorites()
+  const favorites: FavoriteProduct[] =
+    (favoritesQuery.data as FavoritesResponse | FavoriteProduct[] | undefined) &&
+    !Array.isArray(favoritesQuery.data)
+      ? (favoritesQuery.data as FavoritesResponse).favorites ?? []
+      : []
+  const loading = favoritesQuery.isLoading
 
-  const fetchFavorites = async () => {
-    try {
-      const response = await fetch('/api/favorites')
-      if (response.ok) {
-        const data = await response.json()
-        setFavorites(data.favorites)
-      } else {
-        toast.error('Erreur lors du chargement des favoris')
-      }
-    } catch (error) {
-      console.error('Error fetching favorites:', error)
-      toast.error('Erreur lors du chargement des favoris')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const removeFromFavorites = async (productId: string) => {
-    try {
+  const removeFavorite = useMutationWithCache<string, string, { previous?: unknown }>({
+    mutationFn: async productId => {
       const response = await fetch('/api/favorites', {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId }),
       })
-
-      if (response.ok) {
-        setFavorites(prev => prev.filter(fav => fav.productId !== productId))
-        toast.success('Retiré des favoris')
-      } else {
-        toast.error('Erreur lors de la suppression')
+      if (!response.ok) {
+        throw new Error('Erreur lors de la suppression')
       }
-    } catch (error) {
-      console.error('Error removing favorite:', error)
-      toast.error('Erreur lors de la suppression')
-    }
-  }
+      return productId
+    },
+    optimistic: {
+      onMutate: productId => {
+        const key = CACHE_TAGS.favorites(userId ?? '')
+        const previous = queryClient.getQueryData(key)
+        queryClient.setQueryData(key, (old: FavoritesResponse | undefined) =>
+          old?.favorites
+            ? { ...old, favorites: old.favorites.filter(fav => fav.productId !== productId) }
+            : old
+        )
+        return { previous }
+      },
+      rollback: context => {
+        if (context?.previous !== undefined) {
+          queryClient.setQueryData(CACHE_TAGS.favorites(userId ?? ''), context.previous)
+        }
+      },
+    },
+    invalidateKeys: productId => [
+      CACHE_TAGS.favorites(userId ?? ''),
+      CACHE_TAGS.favoriteStatus(userId ?? '', productId),
+    ],
+    successMessage: 'Retiré des favoris',
+    errorMessage: 'Erreur lors de la suppression',
+  })
 
   const getAverageRating = (reviews: { grade: number }[]) => {
     if (!reviews || reviews.length === 0) return 0
@@ -130,7 +133,6 @@ export default function FavoritesPage() {
               const product = favorite.product
               const averageRating = getAverageRating(product.reviews)
               const hasImages = product.img && product.img.length > 0
-              console.log('createdAt', favorite.createdAt)
 
               return (
                 <Card
@@ -161,7 +163,7 @@ export default function FavoritesPage() {
 
                       {/* Remove from favorites button */}
                       <button
-                        onClick={() => removeFromFavorites(product.id)}
+                        onClick={() => removeFavorite.mutate(product.id)}
                         className='absolute top-3 right-3 p-2 rounded-full bg-white/90 hover:bg-white shadow-sm hover:shadow-md transition-all duration-200 group/remove'
                       >
                         <Trash2 className='w-4 h-4 text-gray-600 group-hover/remove:text-red-500 transition-colors' />

@@ -2,6 +2,7 @@
 'use server'
 import { RentStatus } from '@prisma/client'
 import prisma from '@/lib/prisma'
+import { BLOCKING_RENT_STATUSES } from './rent-overlap.utils'
 
 export interface FormattedRent {
   id: string
@@ -59,7 +60,8 @@ export async function checkHotelRoomAvailability(
     const existingRents = await prisma.rent.findMany({
       where: {
         productId: productId,
-        status: RentStatus.RESERVED,
+        // TRI-1002: count WAITING + RESERVED + CHECKIN as occupying (CHECKOUT freed).
+        status: { in: [...BLOCKING_RENT_STATUSES] },
         OR: [
           // Réservation qui commence pendant la période
           {
@@ -178,7 +180,8 @@ export async function checkRentIsAvailable(
     const existingRents = await prisma.rent.findMany({
       where: {
         productId: productId,
-        status: RentStatus.RESERVED,
+        // TRI-1002: count WAITING + RESERVED + CHECKIN as occupying (CHECKOUT freed).
+        status: { in: [...BLOCKING_RENT_STATUSES] },
         OR: [
           // Réservation qui commence pendant la période (arrivingDate < endDate car endDate est exclu)
           {
@@ -247,7 +250,6 @@ export async function checkRentIsAvailable(
         ],
       },
     })
-    console.log(existingUnavailable)
 
     if (existingUnavailable.length > 0) {
       return {

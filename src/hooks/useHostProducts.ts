@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { ProductValidation } from '@prisma/client'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
 
 interface ProductPromotion {
   id: string
@@ -20,6 +21,11 @@ interface Product {
   originalProductId?: string | null
   img?: { img: string }[]
   promotions?: ProductPromotion[]
+  // Hotel multi-room-type (Lot 5): lets the shared PromotionForm scope a
+  // promotion to a single room type. `isHotel` is derived from the product
+  // type; `roomTypes` is empty for non-hotel products.
+  isHotel?: boolean
+  roomTypes?: { id: string; name: string }[]
 }
 
 interface HostProductsResponse {
@@ -35,7 +41,9 @@ async function fetchHostProducts(
   page: number = 1,
   limit: number = 20
 ): Promise<HostProductsResponse> {
-  const response = await fetch(`/api/host/products?page=${page}&limit=${limit}`)
+  const response = await fetch(`/api/host/products?page=${page}&limit=${limit}`, {
+    cache: 'no-store',
+  })
 
   if (!response.ok) {
     throw new Error('Erreur lors du chargement des produits')
@@ -46,7 +54,7 @@ async function fetchHostProducts(
 
 export function useHostProducts(page: number = 1, limit: number = 20, enabled: boolean = true) {
   return useQuery({
-    queryKey: ['host-products', page, limit],
+    queryKey: CACHE_TAGS.hostProducts(page, limit),
     queryFn: () => fetchHostProducts(page, limit),
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes

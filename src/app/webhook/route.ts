@@ -159,6 +159,9 @@ export async function POST(req: Request): Promise<Response> {
                 selectedExtras: session.metadata.selectedExtras
                   ? JSON.parse(session.metadata.selectedExtras)
                   : [],
+                selectedRoomTypes: session.metadata.roomTypeLines
+                  ? JSON.parse(session.metadata.roomTypeLines)
+                  : undefined,
               })
 
               logger.info({ rentId: newRent.id }, 'Rent created successfully from session')
@@ -298,6 +301,9 @@ export async function POST(req: Request): Promise<Response> {
           selectedExtras: session.metadata.selectedExtras
             ? JSON.parse(session.metadata.selectedExtras)
             : [],
+          selectedRoomTypes: session.metadata.roomTypeLines
+            ? JSON.parse(session.metadata.roomTypeLines)
+            : undefined,
         })
 
         // Update rent status

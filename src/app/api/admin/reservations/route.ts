@@ -4,6 +4,9 @@ import prisma from '@/lib/prisma'
 import { RentStatus } from '@prisma/client'
 import { z } from 'zod'
 import { logger } from '@/lib/logger'
+import { privateNoStore } from '@/lib/cache/cache-headers'
+
+export const dynamic = 'force-dynamic'
 
 const querySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
@@ -122,8 +125,11 @@ export async function GET(request: NextRequest) {
 
     const totalPages = Math.ceil(totalItems / limit)
 
+    // Authenticated, per-admin list that changes on booking status
+    // transitions: it must never be served from a shared/CDN or stale browser
+    // cache (TRI-1014).
     const headers = new Headers()
-    headers.set('Cache-Control', 'public, max-age=15, s-maxage=15')
+    headers.set('Cache-Control', privateNoStore())
     headers.set('X-Response-Time', Date.now().toString())
 
     return NextResponse.json(

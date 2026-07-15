@@ -34,7 +34,11 @@ import {
   Trash2,
   Hotel,
 } from 'lucide-react'
-import { findAllTypeRent, createTypeRent, updateTypeRent } from '@/lib/services/typeRent.service'
+import {
+  findAllTypeRentForForm,
+  createTypeRent,
+  updateTypeRent,
+} from '@/lib/services/typeRent.service'
 import { TypeRentInterface } from '@/lib/interface/typeRentInterface'
 import DeleteTypeModal from './components/DeleteTypeModal'
 import ImageUpload from './components/ImageUpload'
@@ -101,7 +105,7 @@ export default function TypeRentPage() {
   useEffect(() => {
     const fetchTypeRents = async () => {
       try {
-        const typeRentData = await findAllTypeRent()
+        const typeRentData = await findAllTypeRentForForm()
         if (typeRentData) {
           setTypeRents(typeRentData)
         }

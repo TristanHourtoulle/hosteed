@@ -2,6 +2,14 @@
 import prisma from '@/lib/prisma'
 import { ProductPromotion, PricingPriority, SpecialPrices } from '@prisma/client'
 
+/**
+ * Structural minimum required by {@link applyPricingLogicForDay}: it only reads
+ * `pricesEuro`. Lets the shared per-day pricing logic accept both the
+ * establishment-level `SpecialPrices` and the per-type `RoomTypeSpecialPrice`
+ * (identical field shape keyed by `roomTypeId`) without behavior change.
+ */
+export type SpecialPriceLike = Pick<SpecialPrices, 'pricesEuro'> & Partial<SpecialPrices>
+
 // ============================================
 // TYPES & INTERFACES
 // ============================================
@@ -16,7 +24,7 @@ export interface DailyPriceBreakdown {
   specialPriceValue?: number
   savings: number
   appliedPromotion?: ProductPromotion | null
-  appliedSpecialPrice?: SpecialPrices | null
+  appliedSpecialPrice?: SpecialPriceLike | null
 }
 
 export interface BookingPriceResult {
@@ -151,7 +159,7 @@ async function getActiveSpecialPriceForDate(
 function applyPricingLogicForDay(
   basePrice: number,
   promotion: ProductPromotion | null,
-  specialPrice: SpecialPrices | null,
+  specialPrice: SpecialPriceLike | null,
   priority: PricingPriority,
   date: Date
 ): DailyPriceBreakdown {
@@ -549,5 +557,375 @@ export async function validateBooking(
   return {
     isValid: errors.length === 0,
     errors,
+  }
+}
+
+// ============================================
+// PER-ROOM-TYPE PRICING (hotel multi-room)
+// ============================================
+
+/**
+ * A single priced room-type line of a hotel booking.
+ */
+export interface HotelBookingPriceLine {
+  roomTypeId: string
+  quantity: number
+  /** `RoomType.basePrice` snapshot — Lot 4 stores this on `RentRoomType.unitPrice`. */
+  unitPrice: string
+  /** Day-by-day price for ONE room of this type. */
+  unitPricing: BookingPriceResult
+  /** `unitPricing.subtotal * quantity`. */
+  lineSubtotal: number
+}
+
+/**
+ * Full multi-room-type booking price. Canonical result consumed by the guest
+ * booking flow + Stripe (Lot 4). `totalAmount` = Σ line subtotals + extras,
+ * then commissions.
+ */
+/** A priced extra line, mirroring `calculateCompleteBookingPrice.extrasDetails`. */
+export interface HotelBookingExtraDetail {
+  extraId: string
+  name: string
+  quantity: number
+  pricePerUnit: number
+  total: number
+}
+
+export interface HotelBookingPriceResult {
+  lines: HotelBookingPriceLine[]
+  /** Rooms subtotal = Σ `lineSubtotal`. */
+  subtotal: number
+  extrasTotal: number
+  /** Per-extra breakdown (used to persist `RentExtra` rows). */
+  extrasDetails: HotelBookingExtraDetail[]
+  totalSavings: number
+  clientCommission: number
+  hostCommission: number
+  platformAmount: number
+  hostAmount: number
+  totalAmount: number
+  summary: {
+    numberOfNights: number
+    subtotal: number
+    totalSavings: number
+    extrasTotal: number
+    clientCommission: number
+    totalAmount: number
+    promotionApplied: boolean
+    specialPriceApplied: boolean
+  }
+}
+
+/**
+ * Resolve the active promotion for a room type on a given date.
+ * A type-specific promotion (`roomTypeId === X`) takes precedence over a
+ * product-wide one (`roomTypeId === null`); this is deterministic, NOT
+ * "most advantageous".
+ */
+async function getActivePromotionForRoomTypeDate(
+  productId: string,
+  roomTypeId: string,
+  date: Date
+): Promise<ProductPromotion | null> {
+  const promotions = await prisma.productPromotion.findMany({
+    where: {
+      productId,
+      isActive: true,
+      startDate: { lte: date },
+      endDate: { gte: date },
+      OR: [{ roomTypeId }, { roomTypeId: null }],
+    },
+    orderBy: { createdAt: 'desc' },
+  })
+
+  return (
+    promotions.find(p => p.roomTypeId === roomTypeId) ??
+    promotions.find(p => p.roomTypeId === null) ??
+    null
+  )
+}
+
+/**
+ * Resolve the active per-type special price for a room type on a given date.
+ * Mirrors {@link getActiveSpecialPriceForDate} but keyed by `roomTypeId`.
+ */
+async function getActiveSpecialPriceForRoomTypeDate(
+  roomTypeId: string,
+  date: Date
+): Promise<SpecialPriceLike | null> {
+  const currentDay = date.toLocaleDateString('en-US', { weekday: 'long' }) as
+    | 'Monday'
+    | 'Tuesday'
+    | 'Wednesday'
+    | 'Thursday'
+    | 'Friday'
+    | 'Saturday'
+    | 'Sunday'
+
+  const specialPrices = await prisma.roomTypeSpecialPrice.findMany({
+    where: {
+      roomTypeId,
+      activate: true,
+      day: { has: currentDay },
+    },
+  })
+
+  const validSpecialPrices = specialPrices.filter(sp => {
+    if (!sp.startDate && !sp.endDate) return true
+    if (sp.startDate && sp.endDate) return date >= sp.startDate && date <= sp.endDate
+    if (sp.startDate) return date >= sp.startDate
+    if (sp.endDate) return date <= sp.endDate
+    return true
+  })
+
+  return validSpecialPrices.length > 0 ? validSpecialPrices[0] : null
+}
+
+/**
+ * Day-by-day price for ONE room of a type, using `RoomType.basePrice`,
+ * per-type special prices and per-type promotions.
+ *
+ * @param {string} roomTypeId - Room type identifier
+ * @param {Date} startDate - Booking start date
+ * @param {Date} endDate - Booking end date
+ * @param {string} [ownerId] - Host id (for pricing-priority settings)
+ * @returns {Promise<BookingPriceResult>} Per-type day-by-day pricing
+ * @throws {Error} When the room type is unknown or the date range is invalid
+ */
+export async function calculateRoomTypeBookingPrice(
+  roomTypeId: string,
+  startDate: Date,
+  endDate: Date,
+  ownerId?: string
+): Promise<BookingPriceResult> {
+  const roomType = await prisma.roomType.findUnique({
+    where: { id: roomTypeId },
+    select: { basePrice: true, productId: true },
+  })
+
+  if (!roomType) {
+    throw new Error('Room type not found')
+  }
+
+  if (startDate >= endDate) {
+    throw new Error('End date must be after start date')
+  }
+
+  const basePrice = parseFloat(roomType.basePrice)
+  const settings = await getHostPricingSettings(ownerId)
+
+  const dailyBreakdown: DailyPriceBreakdown[] = []
+  const currentDate = new Date(startDate)
+  currentDate.setHours(12, 0, 0, 0) // Midday to avoid timezone edge cases
+
+  while (currentDate < endDate) {
+    const promotion = await getActivePromotionForRoomTypeDate(
+      roomType.productId,
+      roomTypeId,
+      currentDate
+    )
+    const specialPrice = await getActiveSpecialPriceForRoomTypeDate(roomTypeId, currentDate)
+
+    dailyBreakdown.push(
+      applyPricingLogicForDay(
+        basePrice,
+        promotion,
+        specialPrice,
+        settings.promotionPriority,
+        new Date(currentDate)
+      )
+    )
+
+    currentDate.setDate(currentDate.getDate() + 1)
+  }
+
+  const subtotal = dailyBreakdown.reduce((sum, day) => sum + day.finalPrice, 0)
+  const totalSavings = dailyBreakdown.reduce((sum, day) => sum + day.savings, 0)
+  const numberOfNights = dailyBreakdown.length
+  const averageNightlyPrice = numberOfNights > 0 ? subtotal / numberOfNights : 0
+
+  return {
+    dailyBreakdown,
+    subtotal,
+    totalSavings,
+    averageNightlyPrice,
+    numberOfNights,
+    promotionApplied: dailyBreakdown.some(day => day.promotionApplied),
+    specialPriceApplied: dailyBreakdown.some(day => day.specialPriceApplied),
+    priority: settings.promotionPriority,
+  }
+}
+
+/**
+ * Full multi-room-type booking price (canonical signature consumed by Lot 4).
+ * Prices each selected room type day-by-day, sums line subtotals, adds extras,
+ * then applies commissions on the aggregated rooms subtotal.
+ *
+ * @param {string} productId - Product (establishment) identifier
+ * @param {Array<{ roomTypeId: string; quantity: number }>} lines - Selected room types + quantities
+ * @param {Date} startDate - Booking start date
+ * @param {Date} endDate - Booking end date
+ * @param {number} guestCount - Number of guests (for PER_PERSON extras)
+ * @param {Array<{ extraId: string; quantity: number }>} selectedExtras - Selected extras
+ * @param {string} [ownerId] - Host id (for pricing-priority settings)
+ * @returns {Promise<HotelBookingPriceResult>} Full priced hotel booking
+ * @throws {Error} When `lines` is empty or the product is not found
+ */
+export async function calculateHotelBookingPrice(
+  productId: string,
+  lines: Array<{ roomTypeId: string; quantity: number }>,
+  startDate: Date,
+  endDate: Date,
+  guestCount: number,
+  selectedExtras: Array<{ extraId: string; quantity: number }>,
+  ownerId?: string
+): Promise<HotelBookingPriceResult> {
+  if (!lines || lines.length === 0) {
+    throw new Error('At least one room type must be selected')
+  }
+
+  // 1. Fetch base prices + capacity for all selected room types (snapshot for
+  //    unitPrice and authoritative guest-capacity enforcement).
+  const roomTypeIds = lines.map(l => l.roomTypeId)
+  const roomTypes = await prisma.roomType.findMany({
+    where: { id: { in: roomTypeIds } },
+    select: { id: true, basePrice: true, capacity: true },
+  })
+  const basePriceById = new Map(roomTypes.map(rt => [rt.id, rt.basePrice]))
+
+  // Enforce the guest count against the selected room types' total capacity.
+  // Authoritative — never trust the client. Rule:
+  //   guestCount <= Σ(RoomType.capacity × quantity)
+  // A missing room type contributes 0 seats so tampered ids cannot inflate it.
+  const capacityById = new Map(roomTypes.map(rt => [rt.id, rt.capacity]))
+  const totalCapacity = lines.reduce(
+    (sum, line) => sum + (capacityById.get(line.roomTypeId) ?? 0) * line.quantity,
+    0
+  )
+  if (guestCount > totalCapacity) {
+    throw new Error(
+      `Le nombre de voyageurs (${guestCount}) dépasse la capacité maximale des chambres ` +
+        `sélectionnées (${totalCapacity} personne${totalCapacity > 1 ? 's' : ''} au total). ` +
+        `Veuillez réduire le nombre de voyageurs ou ajouter des chambres.`
+    )
+  }
+
+  // 2. Price each line day-by-day.
+  const pricedLines: HotelBookingPriceLine[] = []
+  for (const line of lines) {
+    const unitPricing = await calculateRoomTypeBookingPrice(
+      line.roomTypeId,
+      startDate,
+      endDate,
+      ownerId
+    )
+    pricedLines.push({
+      roomTypeId: line.roomTypeId,
+      quantity: line.quantity,
+      unitPrice: basePriceById.get(line.roomTypeId) ?? '0',
+      unitPricing,
+      lineSubtotal: unitPricing.subtotal * line.quantity,
+    })
+  }
+
+  const roomsSubtotal = pricedLines.reduce((sum, l) => sum + l.lineSubtotal, 0)
+  const totalSavings = pricedLines.reduce(
+    (sum, l) => sum + l.unitPricing.totalSavings * l.quantity,
+    0
+  )
+  const numberOfNights = pricedLines[0].unitPricing.numberOfNights
+
+  // 3. Fetch product (typeId for commissions) + selected extras.
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: {
+      typeId: true,
+      extras: {
+        where: { id: { in: selectedExtras.map(e => e.extraId) } },
+      },
+    },
+  })
+
+  if (!product) {
+    throw new Error('Produit non trouvé')
+  }
+
+  // 4. Compute extras (same multiplier rules as calculateCompleteBookingPrice).
+  let extrasTotal = 0
+  const extrasDetails: Array<{
+    extraId: string
+    name: string
+    quantity: number
+    pricePerUnit: number
+    total: number
+  }> = []
+
+  for (const selectedExtra of selectedExtras) {
+    const extra = product.extras.find(e => e.id === selectedExtra.extraId)
+    if (!extra) continue
+
+    const pricePerUnit = extra.priceEUR
+    let multiplier = selectedExtra.quantity
+
+    switch (extra.type) {
+      case 'PER_DAY':
+        multiplier = numberOfNights * selectedExtra.quantity
+        break
+      case 'PER_PERSON':
+        multiplier = guestCount * selectedExtra.quantity
+        break
+      case 'PER_DAY_PERSON':
+        multiplier = numberOfNights * guestCount * selectedExtra.quantity
+        break
+      case 'PER_BOOKING':
+        multiplier = selectedExtra.quantity
+        break
+    }
+
+    const totalForExtra = pricePerUnit * multiplier
+    extrasTotal += totalForExtra
+
+    extrasDetails.push({
+      extraId: extra.id,
+      name: extra.name,
+      quantity: multiplier,
+      pricePerUnit,
+      total: totalForExtra,
+    })
+  }
+
+  // 5. Commissions on aggregated rooms subtotal (+ extras).
+  const { calculateTotalRentPrice } = await import('./commission.service')
+  const commissionCalc = await calculateTotalRentPrice(
+    numberOfNights > 0 ? roomsSubtotal / numberOfNights : roomsSubtotal,
+    numberOfNights,
+    extrasTotal,
+    product.typeId
+  )
+
+  const totalAmount = commissionCalc.totalPrice
+
+  return {
+    lines: pricedLines,
+    subtotal: roomsSubtotal,
+    extrasTotal,
+    extrasDetails,
+    totalSavings,
+    clientCommission: commissionCalc.clientCommission,
+    hostCommission: commissionCalc.hostCommission,
+    platformAmount: commissionCalc.hostCommission + commissionCalc.clientCommission,
+    hostAmount: commissionCalc.hostReceives,
+    totalAmount,
+    summary: {
+      numberOfNights,
+      subtotal: roomsSubtotal,
+      totalSavings,
+      extrasTotal,
+      clientCommission: commissionCalc.clientCommission,
+      totalAmount,
+      promotionApplied: pricedLines.some(l => l.unitPricing.promotionApplied),
+      specialPriceApplied: pricedLines.some(l => l.unitPricing.specialPriceApplied),
+    },
   }
 }

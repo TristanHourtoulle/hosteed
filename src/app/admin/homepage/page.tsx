@@ -2,6 +2,9 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
+import { useMutationWithCache } from '@/hooks/useMutationWithCache'
 import { useAuth } from '@/hooks/useAuth'
 import { isAdmin } from '@/hooks/useAdminAuth'
 import Link from 'next/link'
@@ -17,6 +20,19 @@ import { Button } from '@/components/ui/shadcnui/button'
 import { Alert, AlertDescription } from '@/components/ui/shadcnui/alert'
 import { ArrowLeft, Home, Image as ImageIcon, CheckCircle, Loader2 } from 'lucide-react'
 import ImageUpload from '@/app/admin/typeRent/components/ImageUpload'
+
+interface HomepageSettings {
+  heroBackgroundImage: string | null
+  howItWorksImage: string | null
+}
+
+async function fetchHomepageSettings(): Promise<HomepageSettings> {
+  const response = await fetch('/api/homepage-settings')
+  if (!response.ok) {
+    throw new Error('Erreur lors du chargement des paramètres')
+  }
+  return response.json()
+}
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -48,10 +64,8 @@ export default function HomepageSettingsPage() {
     isAuthenticated,
   } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const [heroImage, setHeroImage] = useState<string | null>(null)
   const [howItWorksImage, setHowItWorksImage] = useState<string | null>(null)
@@ -62,53 +76,57 @@ export default function HomepageSettingsPage() {
     }
   }, [isAuthenticated, session, router])
 
+  const { data: settings, isLoading: loading, isError } = useQuery({
+    queryKey: CACHE_TAGS.adminHomepage(),
+    queryFn: fetchHomepageSettings,
+  })
+
   useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const response = await fetch('/api/homepage-settings')
-        if (response.ok) {
-          const data = await response.json()
-          setHeroImage(data.heroBackgroundImage || null)
-          setHowItWorksImage(data.howItWorksImage || null)
-        }
-      } catch (err) {
-        setError('Erreur lors du chargement des paramètres')
-        console.error(err)
-      } finally {
-        setLoading(false)
-      }
+    if (settings) {
+      setHeroImage(settings.heroBackgroundImage || null)
+      setHowItWorksImage(settings.howItWorksImage || null)
     }
-    fetchSettings()
-  }, [])
+  }, [settings])
 
-  const handleSave = async () => {
-    setIsSubmitting(true)
-    setError(null)
-    setSuccess(null)
+  useEffect(() => {
+    if (isError) {
+      setError('Erreur lors du chargement des paramètres')
+    }
+  }, [isError])
 
-    try {
+  const saveSettings = useMutationWithCache<unknown, HomepageSettings>({
+    mutationFn: async body => {
       const response = await fetch('/api/homepage-settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          heroBackgroundImage: heroImage,
-          howItWorksImage: howItWorksImage,
-        }),
+        body: JSON.stringify(body),
       })
-
-      if (response.ok) {
-        setSuccess('Paramètres sauvegardés avec succès !')
-        setTimeout(() => setSuccess(null), 3000)
-      } else {
-        setError('Erreur lors de la sauvegarde des paramètres')
+      if (!response.ok) {
+        throw new Error('Erreur lors de la sauvegarde des paramètres')
       }
-    } catch (err) {
-      console.error('Erreur lors de la sauvegarde:', err)
+      return response.json().catch(() => null)
+    },
+    invalidateKeys: [CACHE_TAGS.adminHomepage()],
+    onSuccess: () => {
+      setError(null)
+      setSuccess('Paramètres sauvegardés avec succès !')
+      setTimeout(() => setSuccess(null), 3000)
+    },
+    onError: () => {
       setError('Erreur lors de la sauvegarde des paramètres')
-    } finally {
-      setIsSubmitting(false)
-    }
+    },
+  })
+
+  const handleSave = () => {
+    setError(null)
+    setSuccess(null)
+    saveSettings.mutate({
+      heroBackgroundImage: heroImage,
+      howItWorksImage: howItWorksImage,
+    })
   }
+
+  const isSubmitting = saveSettings.isPending
 
   if (isAuthLoading || loading) {
     return (

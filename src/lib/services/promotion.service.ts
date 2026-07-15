@@ -8,6 +8,12 @@ import { invalidateProductCache } from '@/lib/cache/invalidation'
 
 export interface CreatePromotionInput {
   productId: string
+  /**
+   * Hotel multi-room-type (Lot 5): when set, the promotion applies to that one
+   * room type only; when null/undefined it applies to the whole establishment
+   * (existing behavior, unchanged for non-hotel products).
+   */
+  roomTypeId?: string | null
   discountPercentage: number
   startDate: Date
   endDate: Date
@@ -49,27 +55,35 @@ export async function findOverlappingPromotions(
   productId: string,
   startDate: Date,
   endDate: Date,
-  excludePromotionId?: string
+  excludePromotionId?: string,
+  roomTypeId?: string | null
 ): Promise<ProductPromotion[]> {
+  const dateOverlap = {
+    OR: [
+      // La nouvelle promotion commence pendant une promotion existante
+      { AND: [{ startDate: { lte: startDate } }, { endDate: { gte: startDate } }] },
+      // La nouvelle promotion se termine pendant une promotion existante
+      { AND: [{ startDate: { lte: endDate } }, { endDate: { gte: endDate } }] },
+      // La nouvelle promotion englobe une promotion existante
+      { AND: [{ startDate: { gte: startDate } }, { endDate: { lte: endDate } }] },
+    ],
+  }
+
+  // Room-type scoping (Lot 5): a per-type promotion only conflicts with another
+  // promotion of the same type or an establishment-wide (null) one. An
+  // establishment-wide check (roomTypeId null/undefined) conflicts with any
+  // promotion, so no room-type filter is added.
+  const and: Array<Record<string, unknown>> = [dateOverlap]
+  if (roomTypeId) {
+    and.push({ OR: [{ roomTypeId }, { roomTypeId: null }] })
+  }
+
   const overlapping = await prisma.productPromotion.findMany({
     where: {
       productId,
       isActive: true,
       id: excludePromotionId ? { not: excludePromotionId } : undefined,
-      OR: [
-        // La nouvelle promotion commence pendant une promotion existante
-        {
-          AND: [{ startDate: { lte: startDate } }, { endDate: { gte: startDate } }],
-        },
-        // La nouvelle promotion se termine pendant une promotion existante
-        {
-          AND: [{ startDate: { lte: endDate } }, { endDate: { gte: endDate } }],
-        },
-        // La nouvelle promotion englobe une promotion existante
-        {
-          AND: [{ startDate: { gte: startDate } }, { endDate: { lte: endDate } }],
-        },
-      ],
+      AND: and,
     },
     include: {
       product: {
@@ -87,8 +101,14 @@ export async function findOverlappingPromotions(
  * Crée une promotion (vérifie d'abord les chevauchements)
  */
 export async function createPromotion(data: CreatePromotionInput): Promise<CreatePromotionResult> {
-  // 1. Vérifier les promotions qui se chevauchent
-  const overlapping = await findOverlappingPromotions(data.productId, data.startDate, data.endDate)
+  // 1. Vérifier les promotions qui se chevauchent (scoped to the room type)
+  const overlapping = await findOverlappingPromotions(
+    data.productId,
+    data.startDate,
+    data.endDate,
+    undefined,
+    data.roomTypeId ?? null
+  )
 
   if (overlapping.length > 0) {
     return {
@@ -98,9 +118,11 @@ export async function createPromotion(data: CreatePromotionInput): Promise<Creat
   }
 
   // 2. Vérifier que la promotion ne fait pas perdre d'argent à la plateforme
+  // (per-type base price when scoped to a room type)
   const { isValid, maxAllowedPercentage } = await validatePromotionCommission(
     data.productId,
-    data.discountPercentage
+    data.discountPercentage,
+    data.roomTypeId ?? null
   )
 
   if (!isValid) {
@@ -117,6 +139,7 @@ export async function createPromotion(data: CreatePromotionInput): Promise<Creat
   const promotion = await prisma.productPromotion.create({
     data: {
       productId: data.productId,
+      roomTypeId: data.roomTypeId ?? null,
       discountPercentage: data.discountPercentage,
       startDate: data.startDate,
       endDate: data.endDate,
@@ -148,6 +171,7 @@ export async function confirmPromotionWithOverlap(
     const newPromotion = await tx.productPromotion.create({
       data: {
         productId: data.productId,
+        roomTypeId: data.roomTypeId ?? null,
         discountPercentage: data.discountPercentage,
         startDate: data.startDate,
         endDate: data.endDate,
@@ -193,7 +217,8 @@ export async function updatePromotion(
       data.productId || current.productId,
       data.startDate || current.startDate,
       data.endDate || current.endDate,
-      id // Exclure la promotion actuelle
+      id, // Exclure la promotion actuelle
+      data.roomTypeId !== undefined ? data.roomTypeId : current.roomTypeId
     )
 
     if (overlapping.length > 0) {
@@ -337,54 +362,76 @@ export interface ValidatePromotionCommissionResult {
 /**
  * Valider qu'une promotion ne fait pas perdre d'argent à la plateforme.
  * Retourne également le pourcentage maximum autorisé pour ce produit.
+ *
+ * Hotel multi-room-type (Lot 5): when `roomTypeId` is provided, the commission
+ * is validated against that room type's own base price (per-type pricing),
+ * falling back to the establishment base price if the room type is missing.
  */
 export async function validatePromotionCommission(
   productId: string,
-  discountPercentage: number
+  discountPercentage: number,
+  roomTypeId?: string | null
 ): Promise<ValidatePromotionCommissionResult> {
-  const product = await prisma.product.findUnique({
-    where: { id: productId },
-    include: {
-      type: {
-        include: {
-          commission: true,
+  // The product and room-type lookups are independent, so run them concurrently
+  // when a roomTypeId is supplied to avoid a sequential round-trip.
+  const [product, roomType] = await Promise.all([
+    prisma.product.findUnique({
+      where: { id: productId },
+      include: {
+        type: {
+          include: {
+            commission: true,
+          },
         },
       },
-    },
-  })
+    }),
+    roomTypeId
+      ? prisma.roomType.findUnique({
+          where: { id: roomTypeId },
+          select: { basePrice: true },
+        })
+      : Promise.resolve(null),
+  ])
 
   if (!product) {
     throw new Error('Produit non trouvé')
   }
 
-  const basePrice = parseFloat(product.basePrice)
+  let basePrice = parseFloat(product.basePrice)
+  if (roomType) {
+    basePrice = parseFloat(roomType.basePrice)
+  }
+
   const commission = product.type.commission
 
   if (!commission) {
     return { isValid: true, maxAllowedPercentage: 99 }
   }
 
+  // Commission rates are stored as fractions (e.g. 0.15 for 15%), consistent
+  // with how the admin form persists them (parseFloat(input) / 100) and how
+  // commission.service.ts consumes them (basePrice * rate).
   const totalRate = commission.hostCommissionRate + commission.clientCommissionRate
   const totalFixed = commission.hostCommissionFixed + commission.clientCommissionFixed
 
   // Calcul du pourcentage maximum autorisé :
-  // discountedPrice × totalRate / 100 + totalFixed >= 1
-  // basePrice × (1 - maxDiscount/100) >= (1 - totalFixed) / (totalRate / 100)
+  // discountedPrice × totalRate + totalFixed >= 1
+  // basePrice × (1 - maxDiscount/100) >= (1 - totalFixed) / totalRate
   let maxAllowedPercentage: number
   if (totalRate === 0) {
     // Aucune commission en pourcentage : seul le fixe compte
     maxAllowedPercentage = totalFixed >= 1 ? 99 : 0
   } else {
-    const minDiscountedPrice = (1 - totalFixed) / (totalRate / 100)
+    const minDiscountedPrice = (1 - totalFixed) / totalRate
     maxAllowedPercentage = Math.floor((1 - minDiscountedPrice / basePrice) * 100)
     maxAllowedPercentage = Math.max(0, Math.min(99, maxAllowedPercentage))
   }
 
   const discountedPrice = basePrice * (1 - discountPercentage / 100)
   const platformRevenue =
-    (discountedPrice * commission.hostCommissionRate) / 100 +
+    discountedPrice * commission.hostCommissionRate +
     commission.hostCommissionFixed +
-    (discountedPrice * commission.clientCommissionRate) / 100 +
+    discountedPrice * commission.clientCommissionRate +
     commission.clientCommissionFixed
 
   return {

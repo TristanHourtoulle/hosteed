@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
 import { isFullAdmin } from '@/hooks/useAdminAuth'
+import { CACHE_TAGS } from '@/lib/cache/query-client'
+import { useMutationWithCache } from '@/hooks/useMutationWithCache'
 import { Button } from '@/components/ui/shadcnui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -29,6 +32,38 @@ interface CommissionSettings {
   updatedAt: string
 }
 
+interface CommissionSettingsFormData {
+  hostCommissionRate: number
+  hostCommissionFixed: number
+  clientCommissionRate: number
+  clientCommissionFixed: number
+}
+
+/** Error carrying a server-provided message, so handlers can surface it. */
+class ApiError extends Error {}
+
+async function fetchCommissionSettings(): Promise<CommissionSettings> {
+  const response = await fetch('/api/admin/commission-settings')
+  if (!response.ok) {
+    throw new Error('Erreur lors du chargement des paramètres')
+  }
+  return response.json()
+}
+
+async function saveCommissionSettings(
+  formData: CommissionSettingsFormData
+): Promise<void> {
+  const response = await fetch('/api/admin/commission-settings', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(formData),
+  })
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new ApiError(error.error || 'Une erreur est survenue')
+  }
+}
+
 export default function CommissionSettingsPage() {
   const {
     session,
@@ -36,10 +71,7 @@ export default function CommissionSettingsPage() {
     isAuthenticated,
   } = useAuth({ required: true, redirectTo: '/auth' })
   const router = useRouter()
-  const [settings, setSettings] = useState<CommissionSettings | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<CommissionSettingsFormData>({
     hostCommissionRate: 0,
     hostCommissionFixed: 0,
     clientCommissionRate: 0,
@@ -53,31 +85,27 @@ export default function CommissionSettingsPage() {
     }
   }, [isAuthenticated, session, router])
 
-  useEffect(() => {
-    fetchSettings()
-  }, [])
+  const { data: settings, isLoading } = useQuery({
+    queryKey: CACHE_TAGS.adminCommissionSettings(),
+    queryFn: fetchCommissionSettings,
+  })
 
-  const fetchSettings = async () => {
-    try {
-      const response = await fetch('/api/admin/commission-settings')
-      if (response.ok) {
-        const data = await response.json()
-        setSettings(data)
-        setFormData({
-          hostCommissionRate: data.hostCommissionRate,
-          hostCommissionFixed: data.hostCommissionFixed,
-          clientCommissionRate: data.clientCommissionRate,
-          clientCommissionFixed: data.clientCommissionFixed,
-        })
-      } else {
-        toast.error('Erreur lors du chargement des paramètres')
-      }
-    } catch {
-      toast.error('Erreur lors du chargement des paramètres')
-    } finally {
-      setLoading(false)
+  // Seed the editable form from the fetched settings.
+  useEffect(() => {
+    if (settings) {
+      setFormData({
+        hostCommissionRate: settings.hostCommissionRate,
+        hostCommissionFixed: settings.hostCommissionFixed,
+        clientCommissionRate: settings.clientCommissionRate,
+        clientCommissionFixed: settings.clientCommissionFixed,
+      })
     }
-  }
+  }, [settings])
+
+  const saveMutation = useMutationWithCache<void, CommissionSettingsFormData>({
+    mutationFn: saveCommissionSettings,
+    invalidateKeys: [CACHE_TAGS.adminCommissionSettings()],
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -94,27 +122,11 @@ export default function CommissionSettingsPage() {
       return
     }
 
-    setSaving(true)
     try {
-      const response = await fetch('/api/admin/commission-settings', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      })
-
-      if (response.ok) {
-        toast.success('Paramètres de commission mis à jour avec succès')
-        fetchSettings()
-      } else {
-        const error = await response.json()
-        toast.error(error.error || 'Une erreur est survenue')
-      }
-    } catch {
-      toast.error('Erreur lors de la sauvegarde')
-    } finally {
-      setSaving(false)
+      await saveMutation.mutateAsync(formData)
+      toast.success('Paramètres de commission mis à jour avec succès')
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : 'Erreur lors de la sauvegarde')
     }
   }
 
@@ -126,7 +138,7 @@ export default function CommissionSettingsPage() {
     return `${value.toFixed(2)}€`
   }
 
-  if (isAuthLoading || loading) {
+  if (isAuthLoading || isLoading) {
     return (
       <div className='min-h-screen flex items-center justify-center'>
         <div className='flex flex-col items-center gap-4'>
@@ -325,9 +337,9 @@ export default function CommissionSettingsPage() {
             </div>
 
             <div className='flex justify-end'>
-              <Button type='submit' disabled={saving}>
+              <Button type='submit' disabled={saveMutation.isPending}>
                 <Save className='w-4 h-4 mr-2' />
-                {saving ? 'Sauvegarde...' : 'Sauvegarder les paramètres'}
+                {saveMutation.isPending ? 'Sauvegarde...' : 'Sauvegarder les paramètres'}
               </Button>
             </div>
           </form>

@@ -9,6 +9,7 @@ import {
   type CommissionCalculation,
 } from '@/lib/services/commission.service'
 import { formatCurrency } from '@/lib/utils/formatNumber'
+import type { RoomLineSummary } from '@/types/roomType'
 
 interface ExtraWithPricing {
   id: string
@@ -32,6 +33,12 @@ interface BookingCostSummaryProps {
   dailyBreakdown?: DailyBreakdownItem[]
   subtotalOverride?: number
   totalSavings?: number
+  /**
+   * Hotel multi-room-type lines. When provided, the single "Hébergement" row
+   * is replaced by one row per line and the base total becomes Σ lineSubtotal
+   * (overriding `subtotalOverride`). Absent ⇒ classic single-unit rendering.
+   */
+  roomLines?: RoomLineSummary[]
 }
 
 export function BookingCostSummary({
@@ -47,6 +54,7 @@ export function BookingCostSummary({
   dailyBreakdown,
   subtotalOverride,
   totalSavings = 0,
+  roomLines,
 }: BookingCostSummaryProps) {
   const [commissionCalc, setCommissionCalc] = useState<CommissionCalculation | null>(null)
 
@@ -64,7 +72,12 @@ export function BookingCostSummary({
     currency
   )
 
-  const baseTotal = subtotalOverride ?? fallbackCalc.baseTotal
+  const hasRoomLines = roomLines != null && roomLines.length > 0
+  const roomLinesTotal = hasRoomLines
+    ? roomLines!.reduce((sum, line) => sum + line.lineSubtotal, 0)
+    : 0
+
+  const baseTotal = hasRoomLines ? roomLinesTotal : (subtotalOverride ?? fallbackCalc.baseTotal)
   const extrasTotal = fallbackCalc.extrasTotal
   const grandTotal = baseTotal + extrasTotal
 
@@ -85,13 +98,30 @@ export function BookingCostSummary({
     <div className={`bg-gray-50 rounded-lg p-4 space-y-3 ${className}`}>
       <h3 className='font-semibold text-lg'>Récapitulatif des coûts</h3>
 
-      {/* Prix de base */}
-      <div className='flex justify-between items-center'>
-        <span>
-          Hébergement ({numberOfDays} jour{numberOfDays > 1 ? 's' : ''})
-        </span>
-        <span className='font-medium'>{formatCurrency(baseTotal, currency)}</span>
-      </div>
+      {/* Prix de base : par type de chambre (hôtel) ou ligne unique */}
+      {hasRoomLines ? (
+        <div className='space-y-2'>
+          {roomLines!.map(line => (
+            <div key={line.roomTypeId} className='flex justify-between items-start'>
+              <span className='flex-1 pr-2'>
+                {line.name} × {line.quantity}
+                <span className='block text-xs text-gray-500'>
+                  {formatCurrency(line.unitPricePerNight, currency)} / nuit ·{' '}
+                  {numberOfDays} nuit{numberOfDays > 1 ? 's' : ''}
+                </span>
+              </span>
+              <span className='font-medium'>{formatCurrency(line.lineSubtotal, currency)}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className='flex justify-between items-center'>
+          <span>
+            Hébergement ({numberOfDays} jour{numberOfDays > 1 ? 's' : ''})
+          </span>
+          <span className='font-medium'>{formatCurrency(baseTotal, currency)}</span>
+        </div>
+      )}
 
       {/* Savings badge */}
       {totalSavings > 0 && (

@@ -1,6 +1,19 @@
 'use server'
 import prisma from '@/lib/prisma'
 import { RentStatus } from '@prisma/client'
+import { availabilityCacheService } from '@/lib/cache/redis-cache.service'
+
+/**
+ * Best-effort availability cache invalidation. A cache failure must never
+ * bubble out of (and roll back the perception of) a successful mutation.
+ */
+async function safeInvalidateAvailability(productId: string): Promise<void> {
+  try {
+    await availabilityCacheService.invalidateAvailability(productId)
+  } catch (cacheError) {
+    console.error('Failed to invalidate availability cache:', cacheError)
+  }
+}
 
 export interface UnavailableRentService {
   id: string
@@ -150,6 +163,10 @@ export async function createUnavailableRent(
         },
       },
     })
+
+    // Blocking dates changes availability for this product
+    await safeInvalidateAvailability(productId)
+
     return request
   } catch (e) {
     console.error(e)
@@ -270,10 +287,15 @@ export async function updateUnavailableRent(
     if (data.title !== undefined) updateData.title = data.title.trim()
     if (data.description !== undefined) updateData.description = data.description?.trim() || null
 
-    return await prisma.unAvailableProduct.update({
+    const updated = await prisma.unAvailableProduct.update({
       where: { id },
       data: updateData,
     })
+
+    // Updating a block (dates) changes availability for this product
+    await safeInvalidateAvailability(existing.productId)
+
+    return updated
   } catch (e) {
     console.error(e)
     throw e
@@ -293,6 +315,9 @@ export async function deleteUnavailableRent(id: string) {
     await prisma.unAvailableProduct.delete({
       where: { id },
     })
+
+    // Removing a block frees up availability for this product
+    await safeInvalidateAvailability(existing.productId)
 
     return { success: true }
   } catch (e) {
