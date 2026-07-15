@@ -2,8 +2,8 @@
  * Unit tests for the server-side StripeService wrapper.
  *
  * The `stripe` SDK is mocked at the boundary — no real network calls. The
- * module reads STRIPE_SECRET_KEY at eval time, so the service is `require`d
- * lazily after the env var is set.
+ * module reads STRIPE_SECRET_KEY at eval time, so the service is loaded
+ * lazily (via `jest.requireActual`) after the env var is set.
  */
 
 const mockCheckoutCreate = jest.fn()
@@ -24,14 +24,16 @@ jest.mock('stripe', () =>
   }))
 )
 
-type StripeServiceType = typeof import('../stripe').StripeService
-let StripeService: StripeServiceType
+type StripeModule = typeof import('../stripe')
+let StripeService: StripeModule['StripeService']
+
+const loadStripeModule = (): StripeModule => jest.requireActual<StripeModule>('../stripe')
 
 beforeAll(() => {
   jest.spyOn(console, 'log').mockImplementation(() => {})
   jest.spyOn(console, 'error').mockImplementation(() => {})
   process.env.STRIPE_SECRET_KEY = 'sk_test_dummy'
-  StripeService = require('../stripe').StripeService
+  StripeService = loadStripeModule().StripeService
 })
 
 beforeEach(() => {
@@ -174,7 +176,7 @@ describe('StripeService when Stripe is not configured', () => {
     await jest.isolateModulesAsync(async () => {
       const previous = process.env.STRIPE_SECRET_KEY
       delete process.env.STRIPE_SECRET_KEY
-      const { StripeService: Unconfigured } = require('../stripe')
+      const { StripeService: Unconfigured } = loadStripeModule()
       process.env.STRIPE_SECRET_KEY = previous
 
       const checkout = await Unconfigured.createCheckoutSession({
