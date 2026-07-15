@@ -11,6 +11,15 @@ export interface RoomTypeBedView {
   count: number
 }
 
+/**
+ * A single room-type photo. `img` is the stored full-size URL (`/uploads/...`)
+ * and MUST be rendered through `getFullSizeImageUrl` from
+ * `@/lib/utils/imageUtils`, which adds the `/api/images/serve` indirection.
+ */
+export interface RoomTypeImageView {
+  img: string
+}
+
 export interface RoomTypeView {
   id: string
   name: string
@@ -23,6 +32,11 @@ export interface RoomTypeView {
   priceMGA: string
   position: number
   beds: RoomTypeBedView[]
+  /**
+   * Ordered room-type photos. Optional: hotels created before per-room-type
+   * photos existed have none, and those cards must render exactly as before.
+   */
+  images?: RoomTypeImageView[]
 }
 
 /**
