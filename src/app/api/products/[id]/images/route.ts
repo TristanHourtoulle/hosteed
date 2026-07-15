@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+import { assertPhotoBudget, PhotoBudgetExceededError } from '@/lib/photos/photoBudget'
 import fs from 'fs/promises'
 import path from 'path'
 
@@ -98,6 +99,25 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         `[PUT /api/products/${productId}/images] forbidden: user=${session.user.id} role=${session.user.roles} owner=${product.owner.id}`
       )
       return NextResponse.json({ error: 'Non autorisé' }, { status: 403 })
+    }
+
+    // Le quota de 20 photos est global à l'annonce : les photos des types de
+    // chambre comptent dans le même budget. Vérifié avant toute suppression
+    // pour qu'une requête refusée ne modifie rien.
+    const roomTypeImageCount = await prisma.roomTypeImage.count({
+      where: { roomType: { productId } },
+    })
+
+    try {
+      assertPhotoBudget({
+        establishmentCount: imageUrls.length,
+        roomTypeCounts: [roomTypeImageCount],
+      })
+    } catch (error) {
+      if (error instanceof PhotoBudgetExceededError) {
+        return NextResponse.json({ error: error.message }, { status: 400 })
+      }
+      throw error
     }
 
     // Étape 1: Identifier les images à supprimer
