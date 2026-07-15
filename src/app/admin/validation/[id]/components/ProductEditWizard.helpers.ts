@@ -1,10 +1,14 @@
-import type { DayEnum } from '@prisma/client'
 import type { ProductFormData } from '@/types/product-form'
-import type { RoomTypeFormData, RoomTypeName } from '@/app/createProduct/types/roomType'
-import { BED_TYPE_OPTIONS } from '@/app/createProduct/types/roomType'
-import { buildRoomTypesPayload } from '@/app/createProduct/utils/roomTypeHelpers'
+import {
+  buildRoomTypesPayload,
+  mapDbRoomTypeToForm,
+} from '@/app/createProduct/utils/roomTypeHelpers'
 import type { CreateRoomTypeInput } from '@/lib/services/room-type.service'
-import type { Product, RoomTypeWithRelations } from './ProductEditForm/types'
+import type { Product } from './ProductEditForm/types'
+
+// Re-exported for backward compatibility: the mapper now lives with the other
+// room-type helpers so the host edit page can reuse it (TRI-1028).
+export { mapDbRoomTypeToForm }
 
 function formatHour(hour: number): string {
   return `${hour.toString().padStart(2, '0')}:00`
@@ -14,48 +18,6 @@ function parseHour(timeStr: string): number {
   if (!timeStr) return 0
   const hour = parseInt(timeStr.split(':')[0])
   return isNaN(hour) ? 0 : hour
-}
-
-function toDate(value: Date | string | null | undefined): Date | null {
-  if (!value) return null
-  return value instanceof Date ? value : new Date(value)
-}
-
-/**
- * Map a DB room type (with relations) into the wizard's `RoomTypeFormData`.
- * The DB `id` is preserved so a later PUT updates the existing row rather than
- * recreating it. Beds are re-expanded to the fixed 4-counter grid (DB only
- * stores non-zero beds). Numeric fields become strings (form convention).
- */
-export function mapDbRoomTypeToForm(roomType: RoomTypeWithRelations): RoomTypeFormData {
-  const bedCountByType = new Map(roomType.beds.map(bed => [bed.bedType, bed.count]))
-
-  return {
-    id: roomType.id,
-    name: roomType.name as RoomTypeName | '',
-    quantity: String(roomType.quantity),
-    capacity: String(roomType.capacity),
-    surface: roomType.surface != null ? String(roomType.surface) : '',
-    smoking: roomType.smoking,
-    basePrice: roomType.basePrice,
-    priceMGA: roomType.priceMGA,
-    beds: BED_TYPE_OPTIONS.map(option => ({
-      bedType: option.value,
-      count: bedCountByType.get(option.value) ?? 0,
-    })),
-    specialPrices: (roomType.specialPrices ?? []).map(sp => ({
-      id: sp.id,
-      pricesMga: sp.pricesMga,
-      pricesEuro: sp.pricesEuro,
-      day: (sp.day ?? []) as DayEnum[],
-      startDate: toDate(sp.startDate),
-      endDate: toDate(sp.endDate),
-      activate: sp.activate,
-    })),
-    mealIds: (roomType.mealsList ?? []).map(m => m.id),
-    includedServiceIds: (roomType.includedServices ?? []).map(s => s.id),
-    extraIds: (roomType.extras ?? []).map(e => e.id),
-  }
 }
 
 /** Build the wizard's initial `ProductFormData` from an existing product. */
